@@ -47,55 +47,6 @@ public class BaseGantrySnapshotFlowServiceImpl extends ServiceImpl<BaseGantrySna
     }
 
 
-    /**
-     * 新增或者修改门架抓拍流水
-     *
-     * @param baseGantrySnapshotFlow 门架抓拍流水
-     * @return 结果
-     */
-    @Transactional(rollbackFor = Exception.class)
-    @Override
-    public AjaxResult saveBaseGantrySnapshotFlow(BaseGantrySnapshotFlow baseGantrySnapshotFlow)
-    {
-        if (CommonUtil.isNotBlank(baseGantrySnapshotFlow.getId()))
-        {
-            // 修改
-            baseGantrySnapshotFlowMapper.updateById(baseGantrySnapshotFlow);
-        }
-        else
-        {
-            // 新增 主键
-            baseGantrySnapshotFlowMapper.insert(baseGantrySnapshotFlow);
-        }
-        return AjaxResult.success("操作成功！",baseGantrySnapshotFlow.getId());
-    }
-
-    /**
-     * 批量删除门架抓拍流水
-     *
-     * @param bigIds 需要删除的门架抓拍流水ID
-     * @return 结果
-     */
-    @Transactional(rollbackFor = Exception.class)
-    @Override
-    public AjaxResult deleteBaseGantrySnapshotFlowByIds(Long[] bigIds)
-    {
-        int count = baseGantrySnapshotFlowMapper.deleteBaseGantrySnapshotFlowByIds(bigIds);
-        return AjaxResult.success(count);
-    }
-
-    /**
-     * 删除门架抓拍流水信息
-     *
-     * @param bigId 门架抓拍流水ID
-     * @return 结果
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public AjaxResult deleteBaseGantrySnapshotFlowById(Long bigId)
-    {
-        int count = baseGantrySnapshotFlowMapper.deleteBaseGantrySnapshotFlowById(bigId);
-        return AjaxResult.success(count);
-    }
 
 
 

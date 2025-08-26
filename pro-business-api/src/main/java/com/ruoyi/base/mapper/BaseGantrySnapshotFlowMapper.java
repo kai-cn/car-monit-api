@@ -29,20 +29,6 @@ public interface BaseGantrySnapshotFlowMapper extends BaseMapper<BaseGantrySnaps
      */
     List<BaseGantrySnapshotFlow> selectBaseGantrySnapshotFlowList(BaseGantrySnapshotFlow baseGantrySnapshotFlow);
 
-    /**
-     * 批量删除门架抓拍流水
-     *
-     * @param bigIds 需要删除的数据ID
-     * @return 结果
-     */
-    int deleteBaseGantrySnapshotFlowByIds(Long[] bigIds);
 
-    /**
-     * 删除门架抓拍流水
-     *
-     * @param bigId 门架抓拍流水ID
-     * @return 结果
-     */
-    int deleteBaseGantrySnapshotFlowById(Long bigId);
 
 }

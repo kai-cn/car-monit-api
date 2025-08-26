@@ -29,20 +29,6 @@ public interface IBaseGantrySnapshotFlowService extends IService<BaseGantrySnaps
     List<BaseGantrySnapshotFlow> selectBaseGantrySnapshotFlowList(BaseGantrySnapshotFlow baseGantrySnapshotFlow);
 
 
-    /**
-     * 新增或者修改门架抓拍流水
-     *
-     * @param baseGantrySnapshotFlow 门架抓拍流水
-     * @return 结果
-     */
-    AjaxResult saveBaseGantrySnapshotFlow(BaseGantrySnapshotFlow baseGantrySnapshotFlow);
 
-    /**
-     * 批量删除门架抓拍流水
-     *
-     * @param bigIds 需要删除的门架抓拍流水ID
-     * @return 结果
-     */
-    AjaxResult deleteBaseGantrySnapshotFlowByIds(Long[] bigIds);
 
 }

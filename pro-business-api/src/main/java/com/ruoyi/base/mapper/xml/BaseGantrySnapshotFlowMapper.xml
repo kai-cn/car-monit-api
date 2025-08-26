@@ -166,7 +166,7 @@
         <if test="epsId != null "> and t.eps_id = #{epsId}</if>
         <if test="tenantId != null "> and t.tenant_id = #{tenantId}</if>
         <if test="createBy != null "> and t.create_by = #{createBy}</if>
-        order by t.create_time desc,t.id
+        order by t.id desc
     </select>
 
     <select id="selectBaseGantrySnapshotFlowById" parameterType="Long" resultMap="BaseGantrySnapshotFlowResult">
@@ -177,14 +177,4 @@
     </select>
 
 
-    <update id="deleteBaseGantrySnapshotFlowById" parameterType="Long">
-        update base_gantry_snapshot_flow set del_flag = '1' where big_id = #{bigId}
-    </update>
-
-    <update id="deleteBaseGantrySnapshotFlowByIds" parameterType="String">
-        update base_gantry_snapshot_flow set del_flag = '1' where big_id in
-        <foreach item="bigId" collection="array" open="(" separator="," close=")">
-            #{bigId}
-        </foreach>
-    </update>
 </mapper>
