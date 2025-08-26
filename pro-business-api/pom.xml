@@ -15,12 +15,6 @@
     <description>pro-business-api</description>
 
     <dependencies>
-        <!--rabbitmq消息队列-->
-        <dependency>
-            <groupId>com.ruoyi</groupId>
-            <artifactId>ec-base-rabbitmq</artifactId>
-        </dependency>
-
         <!--通用组件-->
         <dependency>
             <groupId>com.ruoyi</groupId>
