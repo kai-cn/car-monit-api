@@ -3,16 +3,16 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <artifactId>ec-api</artifactId>
+        <artifactId>pro-api</artifactId>
         <groupId>com.ruoyi</groupId>
         <version>1.0</version>
     </parent>
 
     <groupId>com.ruoyi</groupId>
-    <artifactId>ec-business-api</artifactId>
+    <artifactId>pro-business-api</artifactId>
     <version>1.0</version>
-    <name>ec-business-api</name>
-    <description>ec-business-api</description>
+    <name>pro-business-api</name>
+    <description>pro-business-api</description>
 
     <dependencies>
         <!--rabbitmq消息队列-->
@@ -24,7 +24,7 @@
         <!--通用组件-->
         <dependency>
             <groupId>com.ruoyi</groupId>
-            <artifactId>ec-base-common</artifactId>
+            <artifactId>pro-base-common</artifactId>
         </dependency>
     </dependencies>
 

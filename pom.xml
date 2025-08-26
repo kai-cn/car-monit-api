@@ -12,7 +12,7 @@
     </parent>
 
     <groupId>com.ruoyi</groupId>
-    <artifactId>ec-api</artifactId>
+    <artifactId>pro-api</artifactId>
     <version>1.0</version>
     <packaging>pom</packaging>
 
@@ -30,10 +30,8 @@
     </properties>
 
     <modules>
-        <module>ec-base-rabbitmq</module>
-        <module>ec-base-common</module>
-        <module>ec-business-api</module>
-        <module>ec-transfer-ware-api</module>
+        <module>pro-base-common</module>
+        <module>pro-business-api</module>
     </modules>
 
     <dependencyManagement>
@@ -41,13 +39,7 @@
             <!-- 通用工具-->
             <dependency>
                 <groupId>com.ruoyi</groupId>
-                <artifactId>ec-base-common</artifactId>
-                <version>${api.version}</version>
-            </dependency>
-            <!-- 消息中间件-->
-            <dependency>
-                <groupId>com.ruoyi</groupId>
-                <artifactId>ec-base-rabbitmq</artifactId>
+                <artifactId>pro-base-common</artifactId>
                 <version>${api.version}</version>
             </dependency>
         </dependencies>

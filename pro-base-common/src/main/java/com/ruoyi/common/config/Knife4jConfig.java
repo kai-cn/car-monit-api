@@ -42,9 +42,9 @@ public class Knife4jConfig implements WebMvcConfigurer {
 
     private ApiInfo apiInfo() {
         return new ApiInfoBuilder()
-                .title("电商API接口文档")
-                .description("电商API接口文档")
-                .contact(new Contact("ec-api",null,null))
+                .title("API接口文档")
+                .description("API接口文档")
+                .contact(new Contact("pro-api",null,null))
                 .version("1.0")
                 .build();
     }
