@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.modules.mapper.CategoryPointsInfoMapper">
+
+    <resultMap type="com.ruoyi.modules.entity.CategoryPointsInfo" id="CategoryPointsInfoResult">
+        <result property="id" column="id"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="storeType" column="store_type"/>
+        <result property="name" column="name"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="level" column="level"/>
+        <result property="oneCategoryId" column="one_category_id"/>
+        <result property="twoCategoryId" column="two_category_id"/>
+        <result property="threeCategoryId" column="three_category_id"/>
+        <result property="oneCategoryName" column="one_category_name"/>
+        <result property="twoCategoryName" column="two_category_name"/>
+        <result property="threeCategoryName" column="three_category_name"/>
+        <result property="isCount" column="is_count"/>
+        <result property="supportRates" column="support_rates"/>
+        <result property="transactionRates" column="transaction_rates"/>
+        <result property="pointsRates" column="points_rates"/>
+        <result property="sort" column="sort"/>
+        <result property="epsId" column="eps_id"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="tenantId" column="tenant_id"/>
+
+    </resultMap>
+
+    <sql id="selectCategoryPointsInfoVo">
+        t.id,
+        t.category_id,
+        t.store_type,
+        t.name,
+        t.parent_id,
+        t.level,
+        t.one_category_id,
+        t.two_category_id,
+        t.three_category_id,
+        t.one_category_name,
+        t.two_category_name,
+        t.three_category_name,
+        t.is_count,
+        0 + cast(ifnull(t.support_rates,0) as char) support_rates,
+        0 + cast(ifnull(t.transaction_rates,0) as char) transaction_rates,
+        0 + cast(ifnull(t.points_rates,0) as char) points_rates,
+        t.sort,
+        t.eps_id,
+        t.del_flag,
+        t.create_by,
+        t.create_time,
+        t.update_by,
+        t.update_time,
+        t.tenant_id
+    </sql>
+
+
+    <select id="selectCategoryPointsInfoList" parameterType="com.ruoyi.modules.entity.CategoryPointsInfo" resultMap="CategoryPointsInfoResult">
+        SELECT
+        <include refid="selectCategoryPointsInfoVo"/>
+        FROM ec_category_points_info t
+        WHERE t.del_flag = '0'
+        <if test="id != null  and id != ''">and t.id = #{id}</if>
+        <if test="categoryId != null  and categoryId != ''">and t.category_id = #{categoryId}</if>
+        <if test="storeType != null  and storeType != ''">and t.store_type = #{storeType}</if>
+        <if test="name != null  and name != ''">and t.name like concat('%', #{name}, '%')</if>
+        <if test="parentId != null  and parentId != ''">and t.parent_id = #{parentId}</if>
+        <if test="level != null  and level != ''">and t.level = #{level}</if>
+        <if test="oneCategoryName != null  and oneCategoryName != ''">and t.one_category_name like concat('%',
+            #{oneCategoryName}, '%')
+        </if>
+        <if test="twoCategoryName != null  and twoCategoryName != ''">and t.two_category_name like concat('%',
+            #{twoCategoryName}, '%')
+        </if>
+        <if test="threeCategoryName != null  and threeCategoryName != ''">and t.three_category_name like concat('%',
+            #{threeCategoryName}, '%')
+        </if>
+        <if test="isCount != null  and isCount != ''">and t.is_count = #{isCount}</if>
+        <if test="supportRates != null  and supportRates != ''">and t.support_rates = #{supportRates}</if>
+        <if test="transactionRates != null  and transactionRates != ''">and t.transaction_rates = #{transactionRates}
+        </if>
+        <if test="pointsRates != null  and pointsRates != ''">and t.points_rates = #{pointsRates}</if>
+        <if test="createBy != null ">and t.create_by = #{createBy}</if>
+        order by t.create_time desc,t.id
+    </select>
+
+    <select id="selectCategoryPointsInfoById" parameterType="String" resultMap="CategoryPointsInfoResult">
+        select
+        <include refid="selectCategoryPointsInfoVo"/>
+        from ec_category_points_info t
+        where t.id = #{id}
+    </select>
+
+    <insert id="insertCategoryPointsInfo" parameterType="com.ruoyi.modules.entity.CategoryPointsInfo">
+        insert into ec_category_points_info
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null">id,</if>
+            <if test="categoryId != null">category_id,</if>
+            <if test="storeType != null">store_type,</if>
+            <if test="name != null">name,</if>
+            <if test="parentId != null">parent_id,</if>
+            <if test="level != null">level,</if>
+            <if test="oneCategoryId != null">one_category_id,</if>
+            <if test="twoCategoryId != null">two_category_id,</if>
+            <if test="threeCategoryId != null">three_category_id,</if>
+            <if test="oneCategoryName != null">one_category_name,</if>
+            <if test="twoCategoryName != null">two_category_name,</if>
+            <if test="threeCategoryName != null">three_category_name,</if>
+            <if test="sort != null">sort,</if>
+            <if test="epsId != null">eps_id,</if>
+            <if test="delFlag != null">del_flag,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="tenantId != null">tenant_id,</if>
+            <if test="isCount != null">is_count,</if>
+            <if test="supportRates != null">support_rates,</if>
+            <if test="transactionRates != null">transaction_rates,</if>
+            <if test="pointsRates != null">points_rates,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null">#{id},</if>
+            <if test="categoryId != null">#{categoryId},</if>
+            <if test="storeType != null">#{storeType},</if>
+            <if test="name != null">#{name},</if>
+            <if test="parentId != null">#{parentId},</if>
+            <if test="level != null">#{level},</if>
+            <if test="oneCategoryId != null">#{oneCategoryId},</if>
+            <if test="twoCategoryId != null">#{twoCategoryId},</if>
+            <if test="threeCategoryId != null">#{threeCategoryId},</if>
+            <if test="oneCategoryName != null">#{oneCategoryName},</if>
+            <if test="twoCategoryName != null">#{twoCategoryName},</if>
+            <if test="threeCategoryName != null">#{threeCategoryName},</if>
+            <if test="sort != null">#{sort},</if>
+            <if test="epsId != null">#{epsId},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="tenantId != null">#{tenantId},</if>
+            <if test="isCount != null">#{isCount},</if>
+            <if test="supportRates != null">#{supportRates},</if>
+            <if test="transactionRates != null">#{transactionRates},</if>
+            <if test="pointsRates != null">#{pointsRates},</if>
+        </trim>
+    </insert>
+
+
+    <insert id="batchedSaveCategoryPoints" parameterType="com.ruoyi.modules.entity.CategoryPointsInfo">
+        insert into ec_category_points_info
+        (
+            id,
+            category_id,
+            store_type,
+            name,
+            parent_id,
+            level,
+            one_category_id,
+            two_category_id,
+            three_category_id,
+            one_category_name,
+            two_category_name,
+            three_category_name,
+            is_count,
+            support_rates,
+            transaction_rates,
+            points_rates,
+            create_by,
+            create_time
+        )values
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.id, jdbcType=VARCHAR},
+            #{item.categoryId, jdbcType=VARCHAR},
+            #{item.storeType, jdbcType=VARCHAR},
+            #{item.name, jdbcType=VARCHAR},
+            #{item.parentId, jdbcType=VARCHAR},
+            #{item.level, jdbcType=VARCHAR},
+            #{item.oneCategoryId, jdbcType=VARCHAR},
+            #{item.twoCategoryId, jdbcType=VARCHAR},
+            #{item.threeCategoryId, jdbcType=VARCHAR},
+            #{item.oneCategoryName, jdbcType=VARCHAR},
+            #{item.twoCategoryName, jdbcType=VARCHAR},
+            #{item.threeCategoryName, jdbcType=VARCHAR},
+            #{item.isCount, jdbcType=VARCHAR},
+            #{item.supportRates, jdbcType=VARCHAR},
+            #{item.transactionRates, jdbcType=VARCHAR},
+            #{item.pointsRates, jdbcType=VARCHAR},
+            #{item.createBy, jdbcType=BIGINT},
+            #{item.createTime, jdbcType=TIMESTAMP}
+            )
+        </foreach>
+    </insert>
+
+    <update id="updateCategoryPointsInfo" parameterType="com.ruoyi.modules.entity.CategoryPointsInfo">
+        update ec_category_points_info
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="categoryId != null">category_id = #{categoryId},</if>
+            <if test="storeType != null">store_type = #{storeType},</if>
+            <if test="name != null">name = #{name},</if>
+            <if test="parentId != null">parent_id = #{parentId},</if>
+            <if test="level != null">level = #{level},</if>
+            <if test="oneCategoryId != null">one_category_id = #{oneCategoryId},</if>
+            <if test="twoCategoryId != null">two_category_id = #{twoCategoryId},</if>
+            <if test="threeCategoryId != null">three_category_id = #{threeCategoryId},</if>
+            <if test="oneCategoryName != null">one_category_name = #{oneCategoryName},</if>
+            <if test="twoCategoryName != null">two_category_name = #{twoCategoryName},</if>
+            <if test="threeCategoryName != null">three_category_name = #{threeCategoryName},</if>
+            <if test="sort != null">sort = #{sort},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="isCount != null">is_count = #{isCount},</if>
+            <if test="supportRates != null">support_rates = #{supportRates},</if>
+            <if test="transactionRates != null">transaction_rates = #{transactionRates},</if>
+            <if test="pointsRates != null">points_rates = #{pointsRates},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <update id="deleteCategoryPointsInfoById" parameterType="String">
+        update ec_category_points_info
+        set del_flag = '1'
+        where id = #{id}
+    </update>
+
+    <update id="deleteCategoryPointsInfoByIds" parameterType="String">
+        update ec_category_points_info set del_flag = '1' where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+</mapper>

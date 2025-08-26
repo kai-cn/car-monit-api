@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.modules.mapper.EcGoodsInfoMapper">
+
+    <resultMap type="com.ruoyi.modules.entity.EcGoodsInfo" id="EcGoodsInfoResult">
+        <result property="id" column="id"/>
+        <result property="outsideSource" column="outside_source"/>
+        <result property="storeId" column="store_id"/>
+        <result property="storeName" column="store_name"/>
+        <result property="goodsName" column="goods_name"/>
+        <result property="goodsNo" column="goods_no"/>
+        <result property="itemNo" column="item_no"/>
+        <result property="oneCategoryName" column="one_category_name"/>
+        <result property="twoCategoryName" column="two_category_name"/>
+        <result property="threeCategoryName" column="three_category_name"/>
+        <result property="fourCategoryName" column="four_category_name"/>
+        <result property="brand" column="brand"/>
+        <result property="jdMoney" column="jd_money"/>
+        <result property="inventory" column="inventory"/>
+        <result property="goodStatus" column="good_status"/>
+        <result property="goodsCategory" column="goods_category"/>
+        <result property="goodsCategoryName" column="goods_category_name"/>
+        <result property="picUrl" column="pic_url"/>
+        <result property="remark" column="remark"/>
+        <result property="status" column="status"/>
+        <result property="sort" column="sort"/>
+        <result property="epsId" column="eps_id"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="tenantId" column="tenant_id"/>
+    </resultMap>
+
+    <sql id="selectEcGoodsInfoVo">
+        t.id,
+        t.outside_source,
+        t.store_id,
+        t.store_name,
+        t.goods_name,
+        t.goods_no,
+        t.item_no,
+        t.one_category_name,
+        t.two_category_name,
+        t.three_category_name,
+        t.four_category_name,
+        t.brand,
+        t.jd_money,
+        t.inventory,
+        t.good_status,
+        t.goods_category,
+        t.pic_url,
+        t.remark,
+        t.status,
+        t.sort,
+        t.eps_id,
+        t.del_flag,
+        t.create_by,
+        t.create_time,
+        t.update_by,
+        t.update_time,
+        t.tenant_id
+    </sql>
+
+
+    <select id="selectEcGoodsInfoByGoodsNoAndStoreId" parameterType="String" resultMap="EcGoodsInfoResult">
+        select
+        <include refid="selectEcGoodsInfoVo"/>
+        from ec_goods_info t
+        where t.store_id = #{storeId}
+        and t.goods_no = #{goodsNo}
+    </select>
+
+    <insert id="insertEcGoodsInfoBatch" parameterType="com.ruoyi.modules.entity.EcGoodsInfo">
+        insert into ec_goods_info(
+        id,
+        outside_source,
+        store_id,
+        store_name,
+        goods_name,
+        goods_no,
+        item_no,
+        one_category_name,
+        two_category_name,
+        three_category_name,
+        four_category_name,
+        brand,
+        jd_money,
+        inventory,
+        good_status,
+        goods_category,
+        pic_url,
+        remark,
+        status,
+        sort,
+        eps_id,
+        del_flag,
+        create_by,
+        create_time,
+        update_by,
+        update_time,
+        tenant_id
+        )values
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.id, jdbcType=VARCHAR},
+            #{item.outsideSource, jdbcType=VARCHAR},
+            #{item.storeId, jdbcType=VARCHAR},
+            #{item.storeName, jdbcType=VARCHAR},
+            #{item.goodsName, jdbcType=VARCHAR},
+            #{item.goodsNo, jdbcType=VARCHAR},
+            #{item.itemNo, jdbcType=VARCHAR},
+            #{item.oneCategoryName, jdbcType=VARCHAR},
+            #{item.twoCategoryName, jdbcType=VARCHAR},
+            #{item.threeCategoryName, jdbcType=VARCHAR},
+            #{item.fourCategoryName, jdbcType=VARCHAR},
+            #{item.brand, jdbcType=VARCHAR},
+            #{item.jdMoney, jdbcType=DECIMAL},
+            #{item.inventory, jdbcType=VARCHAR},
+            #{item.goodStatus, jdbcType=VARCHAR},
+            #{item.goodsCategory, jdbcType=VARCHAR},
+            #{item.picUrl, jdbcType=VARCHAR},
+            #{item.remark, jdbcType=VARCHAR},
+            #{item.status, jdbcType=VARCHAR},
+            #{item.sort, jdbcType=VARCHAR},
+            #{item.epsId, jdbcType=VARCHAR},
+            #{item.delFlag, jdbcType=VARCHAR},
+            #{item.createBy, jdbcType=BIGINT},
+            #{item.createTime, jdbcType=TIMESTAMP},
+            #{item.updateBy, jdbcType=BIGINT},
+            #{item.updateTime, jdbcType=TIMESTAMP},
+            #{item.tenantId, jdbcType=VARCHAR}
+            )
+        </foreach>
+    </insert>
+
+    <select id="getShopInfoList" resultType="com.ruoyi.modules.entity.ShopInfo">
+        select * from shop_info t
+        WHERE t.del_flag = '0'
+        and t.shop_id in
+        <foreach item="shopId" collection="list" open="(" separator="," close=")">
+            #{shopId}
+        </foreach>
+    </select>
+
+</mapper>
