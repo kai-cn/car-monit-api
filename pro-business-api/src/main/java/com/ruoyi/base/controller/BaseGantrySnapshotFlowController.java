@@ -32,7 +32,6 @@ public class BaseGantrySnapshotFlowController extends BaseController {
     @GetMapping("/list")
     public TableDataInfo list(BaseGantrySnapshotFlow baseGantrySnapshotFlow) {
         startPage();
-        // baseGantrySnapshotFlow.setTenantId(SecurityUtils.getTenantId()); // 查询我自己单位的租户
         List<BaseGantrySnapshotFlow> list = baseGantrySnapshotFlowService.selectBaseGantrySnapshotFlowList(baseGantrySnapshotFlow);
         return getDataTable(list);
     }
@@ -42,7 +41,7 @@ public class BaseGantrySnapshotFlowController extends BaseController {
      * 获取门架抓拍流水详细信息
      */
     @GetMapping(value = "/{bigId}")
-    public AjaxResult getInfo(@PathVariable("bigId") Long bigId) {
+    public AjaxResult getInfo(@PathVariable("bigId") String bigId) {
         return AjaxResult.success(baseGantrySnapshotFlowService.selectBaseGantrySnapshotFlowById(bigId));
     }
 

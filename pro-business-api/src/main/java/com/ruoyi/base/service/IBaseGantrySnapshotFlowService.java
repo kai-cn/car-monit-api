@@ -18,7 +18,7 @@ public interface IBaseGantrySnapshotFlowService extends IService<BaseGantrySnaps
      * @param bigId 门架抓拍流水ID
      * @return 门架抓拍流水
      */
-    BaseGantrySnapshotFlow selectBaseGantrySnapshotFlowById(Long bigId);
+    BaseGantrySnapshotFlow selectBaseGantrySnapshotFlowById(String bigId);
 
     /**
      * 查询门架抓拍流水列表

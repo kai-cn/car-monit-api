@@ -31,7 +31,7 @@ public class BaseGantrySnapshotFlowServiceImpl extends ServiceImpl<BaseGantrySna
      * @return 门架抓拍流水
      */
     @Override
-    public BaseGantrySnapshotFlow selectBaseGantrySnapshotFlowById(Long bigId) {
+    public BaseGantrySnapshotFlow selectBaseGantrySnapshotFlowById(String bigId) {
         return baseGantrySnapshotFlowMapper.selectBaseGantrySnapshotFlowById(bigId);
     }
 

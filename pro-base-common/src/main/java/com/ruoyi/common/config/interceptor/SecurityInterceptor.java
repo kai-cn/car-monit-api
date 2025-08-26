@@ -1,3 +1,4 @@
+/*
 package com.ruoyi.common.config.interceptor;
 
 import com.alibaba.fastjson.JSON;
@@ -42,12 +43,14 @@ public class SecurityInterceptor implements HandlerInterceptor {
         return true;
     }
 
-    /**
+    */
+/**
      * 是否有权限
      *
      * @param handler
      * @return
-     */
+     *//*
+
     private boolean hasPermission(HttpServletRequest request, HttpServletResponse response, Object handler) {
         if (handler instanceof HandlerMethod) {
             HandlerMethod handlerMethod = (HandlerMethod) handler;
@@ -98,3 +101,4 @@ public class SecurityInterceptor implements HandlerInterceptor {
         // TODO
     }
 }
+*/

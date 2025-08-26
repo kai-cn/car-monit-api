@@ -166,10 +166,10 @@
         <if test="epsId != null "> and t.eps_id = #{epsId}</if>
         <if test="tenantId != null "> and t.tenant_id = #{tenantId}</if>
         <if test="createBy != null "> and t.create_by = #{createBy}</if>
-        order by t.id desc
+        order by t.big_id desc
     </select>
 
-    <select id="selectBaseGantrySnapshotFlowById" parameterType="Long" resultMap="BaseGantrySnapshotFlowResult">
+    <select id="selectBaseGantrySnapshotFlowById" parameterType="String" resultMap="BaseGantrySnapshotFlowResult">
          select
          <include refid="selectBaseGantrySnapshotFlowVo"/>
          from base_gantry_snapshot_flow t
