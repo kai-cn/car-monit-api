@@ -1,4 +1,4 @@
-package com.ruoyi.common.util;
+package com.ruoyi.common.utils;
 
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;

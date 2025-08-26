@@ -1,4 +1,4 @@
-package com.ruoyi.common.util;
+package com.ruoyi.common.utils;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;

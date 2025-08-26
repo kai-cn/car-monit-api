@@ -4,7 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.ruoyi.common.config.annotation.PermissionAnon;
 import com.ruoyi.common.config.annotation.ValidHeader;
 import com.ruoyi.common.config.base.Result;
-import com.ruoyi.common.config.constant.Constants;
+import com.ruoyi.common.constant.Constants;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

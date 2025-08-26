@@ -1,6 +1,7 @@
-package com.ruoyi.common.util;
+package com.ruoyi.common.utils;
 
 import org.apache.commons.lang3.time.DateFormatUtils;
+
 import java.lang.management.ManagementFactory;
 import java.sql.Timestamp;
 import java.text.ParseException;

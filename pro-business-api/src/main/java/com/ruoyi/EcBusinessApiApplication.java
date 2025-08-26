@@ -12,7 +12,7 @@ import java.net.UnknownHostException;
 
 @Slf4j
 @SpringBootApplication
-@MapperScan(value={"com.ruoyi.modules.**.mapper*"})
+@MapperScan(value={"com.ruoyi.base.**.mapper*"})
 public class EcBusinessApiApplication {
 
     public static void main(String[] args) throws UnknownHostException {
