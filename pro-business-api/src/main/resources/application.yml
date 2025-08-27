@@ -23,7 +23,7 @@ spring:
         timeBetweenEvictionRunsMillis: 60000
         # 配置一个连接在池中最小生存的时间，单位是毫秒
         minEvictableIdleTimeMillis: 300000
-        validationQuery: SELECT 1 FROM DUAL
+        validationQuery: SELECT version()
         testWhileIdle: true
         testOnBorrow: false
         testOnReturn: false
@@ -36,10 +36,10 @@ spring:
         connectionProperties: druid.stat.mergeSql\=true;druid.stat.slowSqlMillis\=5000
       datasource:
         master:
-          url: jdbc:mysql://172.30.100.201:13306/carmonitdb?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
-          username: carmonitUser
-          password: carmonitUser@202507
-          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:postgresql://172.30.100.109:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+          username: gaussdb
+          password: OpenGauss@123
+          driver-class-name: org.postgresql.Driver
   #redis 配置
   redis:
     database: 8
