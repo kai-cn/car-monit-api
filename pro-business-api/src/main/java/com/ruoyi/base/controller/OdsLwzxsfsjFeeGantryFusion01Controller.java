@@ -17,7 +17,7 @@ import java.util.List;
  * @date 2025-08-29
  */
 @RestController
-@RequestMapping("/manager/feeGantry")
+@RequestMapping("/base/feeGantry")
 public class OdsLwzxsfsjFeeGantryFusion01Controller extends BaseController {
 
     @Autowired
