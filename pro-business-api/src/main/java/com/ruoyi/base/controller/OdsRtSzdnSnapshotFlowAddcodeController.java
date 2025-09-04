@@ -5,6 +5,8 @@ import com.ruoyi.base.service.IOdsRtSzdnSnapshotFlowAddcodeService;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
+import com.ruoyi.common.utils.DateUtils;
+import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,8 +32,18 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
     public TableDataInfo list(OdsRtSzdnSnapshotFlowAddcode odsRtSzdnSnapshotFlowAddcode) {
         startPage();
         List<OdsRtSzdnSnapshotFlowAddcode> list = odsRtSzdnSnapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeList(odsRtSzdnSnapshotFlowAddcode);
+        if (null !=list && list.size() > 0){
+            for (OdsRtSzdnSnapshotFlowAddcode rtn :list){
+                rtn.setId(StringUtils.getUUID());
+                // 抓拍时间格式化
+                if (null != rtn.getSnapshottime()) {
+                    rtn.setSnapshottimeStr( DateUtils.parseDateToStr(DateUtils.YYYY_MM_DD_HH_MM_SS, rtn.getSnapshottime()));
+                }
+            }
+        }
         return getDataTable(list);
     }
+
     /**
      * 获取门架抓拍流水详细信息
      */

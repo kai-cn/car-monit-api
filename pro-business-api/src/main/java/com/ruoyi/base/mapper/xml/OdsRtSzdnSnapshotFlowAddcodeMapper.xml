@@ -123,8 +123,8 @@
         <if test="snapshottime != null "> and t.snapshottime = #{snapshottime}</if>
         <if test="receivedtimeunix != null "> and t.receivedtimeunix = #{receivedtimeunix}</if>
         <if test="receivedtime != null "> and t.receivedtime = #{receivedtime}</if>
-        <if test="platenumber != null  and platenumber != ''"> and t.platenumber = #{platenumber}</if>
-        <if test="platecolor != null  and platecolor != ''"> and t.platecolor = #{platecolor}</if>
+        <if test="platenumber != null  and platenumber != ''"> and t.platenumber like concat('%', #{platenumber}, '%')</if>
+        <if test="platecolor != null  and platecolor != ''"> and t.platecolor like concat('%', #{platecolor}, '%')</if>
         <if test="platecolorcode != null "> and t.platecolorcode = #{platecolorcode}</if>
         <if test="platetype != null  and platetype != ''"> and t.platetype = #{platetype}</if>
         <if test="platetypecode != null "> and t.platetypecode = #{platetypecode}</if>
@@ -138,6 +138,8 @@
         <if test="snappicturepath != null  and snappicturepath != ''"> and t.snappicturepath = #{snappicturepath}</if>
         <if test="loadtime != null "> and t.loadtime = #{loadtime}</if>
         <if test="gradelevel != null "> and t.gradelevel = #{gradelevel}</if>
+        <if test="applyTime1 != null  and applyTime1 != ''">and t.create_time >= STR_TO_DATE(#{applyTime1},'%Y-%m-%d')</if>
+        <if test="applyTime2 != null  and applyTime2 != ''">and t.create_time <![CDATA[<]]> date_add(STR_TO_DATE(#{applyTime2},'%Y-%m-%d'), interval 1 day) </if>
         order by t.big_id
     </select>
 

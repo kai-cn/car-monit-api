@@ -1,6 +1,7 @@
 package com.ruoyi.base.domain;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -117,8 +118,7 @@ public class OdsRtSzdnSnapshotFlowAddcode implements Custom {
     @Excel(name = "抓拍时间Unix格式")
     private Long snapshottimeunix;
 
-    /** $column.columnComment */
-    @Excel(name = "${comment}", readConverterExp = "$column.readConverterExp()")
+    /** 抓拍时间 */
     private Date snapshottime;
 
     /** 接收时间Unix格式 */
@@ -190,6 +190,23 @@ public class OdsRtSzdnSnapshotFlowAddcode implements Custom {
     /** 分类分级 */
     @Excel(name = "分类分级")
     private Integer gradelevel;
+
+
+
+    // 临时生成ID
+    @TableField(exist = false)
+    private String id;
+
+    // 临时生成ID
+    @TableField(exist = false)
+    private String snapshottimeStr;
+
+    // 时间查询
+    @TableField(exist = false)
+    private String applyTime1;
+
+    @TableField(exist = false)
+    private String applyTime2;
 
 
 }
