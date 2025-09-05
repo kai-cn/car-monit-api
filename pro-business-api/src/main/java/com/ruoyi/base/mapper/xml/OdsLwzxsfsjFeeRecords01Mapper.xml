@@ -402,7 +402,7 @@
         <if test="vehicleclass != null  and vehicleclass != ''"> and t.vehicleclass = #{vehicleclass}</if>
         <if test="vehiclehight != null "> and t.vehiclehight = #{vehiclehight}</if>
         <if test="vehiclelength != null "> and t.vehiclelength = #{vehiclelength}</if>
-        <if test="vehicleplate != null  and vehicleplate != ''"> and t.vehicleplate = #{vehicleplate}</if>
+        <if test="vehicleplate != null  and vehicleplate != ''"> and t.vehicleplate like concat('%', #{vehicleplate}, '%')</if>
         <if test="vehicleseat != null  and vehicleseat != ''"> and t.vehicleseat = #{vehicleseat}</if>
         <if test="vehiclesign != null  and vehiclesign != ''"> and t.vehiclesign = #{vehiclesign}</if>
         <if test="vehicletype != null  and vehicletype != ''"> and t.vehicletype = #{vehicletype}</if>

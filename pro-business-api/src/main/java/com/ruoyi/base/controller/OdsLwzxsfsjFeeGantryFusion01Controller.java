@@ -36,10 +36,6 @@ public class OdsLwzxsfsjFeeGantryFusion01Controller extends BaseController {
         if (null !=list && list.size() > 0){
             for (OdsLwzxsfsjFeeGantryFusion01 rtn :list){
                 rtn.setId(StringUtils.getUUID());
-                // 抓拍时间格式化
-//                if (null != rtn.getCreatetime()) {
-//                    rtn.setCreateTimeStr( DateUtils.parseDateToStr(DateUtils.YYYY_MM_DD_HH_MM_SS, rtn.getCreatetime()));
-//                }
             }
         }
 

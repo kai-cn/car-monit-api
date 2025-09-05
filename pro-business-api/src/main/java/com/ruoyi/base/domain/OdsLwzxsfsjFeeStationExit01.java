@@ -50,7 +50,7 @@ public class OdsLwzxsfsjFeeStationExit01 implements Custom {
     private Integer enaxlecount;
 
     /** 进站时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @Excel(name = "进站时间", width = 30, dateFormat = "yyyy-MM-dd")
     private Date entime;
 
@@ -91,7 +91,7 @@ public class OdsLwzxsfsjFeeStationExit01 implements Custom {
     private String entryoperatorid;
 
     /** 出站时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @Excel(name = "出站时间", width = 30, dateFormat = "yyyy-MM-dd")
     private Date extime;
 
@@ -220,8 +220,8 @@ public class OdsLwzxsfsjFeeStationExit01 implements Custom {
     private String shift;
 
     /** 接收时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    @Excel(name = "接收时间", width = 30, dateFormat = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @Excel(name = "接收时间", width = 30, dateFormat = "yyyy-MM-dd HH:mm:ss")
     private Date receivetime;
 
     /** 最短收费金额 */
@@ -273,8 +273,8 @@ public class OdsLwzxsfsjFeeStationExit01 implements Custom {
     private String transtype;
 
     /** 加载时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    @Excel(name = "加载时间", width = 30, dateFormat = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss" , timezone = "GMT+8")
+    @Excel(name = "加载时间", width = 30, dateFormat = "yyyy-MM-dd HH:mm:ss")
     private Date loadTime;
 
     /** 车辆状态标识 */

@@ -175,7 +175,7 @@
         <if test="feemileage != null "> and t.feemileage = #{feemileage}</if>
         <if test="identification != null  and identification != ''"> and t.identification = #{identification}</if>
         <if test="feerate != null "> and t.feerate = #{feerate}</if>
-        <if test="identifyvehicleid != null  and identifyvehicleid != ''"> and t.identifyvehicleid = #{identifyvehicleid}</if>
+        <if test="identifyvehicleid != null  and identifyvehicleid != ''"> and t.identifyvehicleid like concat('%', #{identifyvehicleid}, '%')</if>
         <if test="lanetype != null  and lanetype != ''"> and t.lanetype = #{lanetype}</if>
         <if test="mediano != null  and mediano != ''"> and t.mediano = #{mediano}</if>
         <if test="mediatype != null  and mediatype != ''"> and t.mediatype = #{mediatype}</if>

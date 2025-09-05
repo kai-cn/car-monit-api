@@ -29,7 +29,6 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
     @GetMapping("/list")
     public TableDataInfo list(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01) {
         startPage();
-        // odsLwzxsfsjFeeRecords01.setTenantId(SecurityUtils.getTenantId()); // 查询我自己单位的租户
         List<OdsLwzxsfsjFeeRecords01> list = odsLwzxsfsjFeeRecords01Service.selectOdsLwzxsfsjFeeRecords01List(odsLwzxsfsjFeeRecords01);
         return getDataTable(list);
     }
