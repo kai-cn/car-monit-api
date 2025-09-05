@@ -234,6 +234,10 @@
         <if test="vid != null  and vid != ''"> and t.vid = #{vid}</if>
         <if test="loadTime != null "> and t.load_time = #{loadTime}</if>
         <if test="gradeLevel != null "> and t.grade_level = #{gradeLevel}</if>
+        <if test="inApplyTime1 != null  and inApplyTime1 != ''">and t.entime >= to_timestamp(#{inApplyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
+        <if test="inApplyTime2 != null  and inApplyTime2 != ''">and t.entime &lt;= to_timestamp(#{inApplyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
+        <if test="outApplyTime1 != null  and outApplyTime1 != ''">and t.extime >= to_timestamp(#{outApplyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
+        <if test="outApplyTime2 != null  and outApplyTime2 != ''">and t.extime &lt;= to_timestamp(#{outApplyTime2},'yyyy-mm-dd HH24:MI:SS') </if>
         order by t.big_id
     </select>
 

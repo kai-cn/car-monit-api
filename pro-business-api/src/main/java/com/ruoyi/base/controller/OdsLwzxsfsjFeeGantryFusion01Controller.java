@@ -1,10 +1,13 @@
 package com.ruoyi.base.controller;
 
 import com.ruoyi.base.domain.OdsLwzxsfsjFeeGantryFusion01;
+import com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowAddcode;
 import com.ruoyi.base.service.IOdsLwzxsfsjFeeGantryFusion01Service;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
+import com.ruoyi.common.utils.DateUtils;
+import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +33,16 @@ public class OdsLwzxsfsjFeeGantryFusion01Controller extends BaseController {
     public TableDataInfo list(OdsLwzxsfsjFeeGantryFusion01 odsLwzxsfsjFeeGantryFusion01) {
         startPage();
         List<OdsLwzxsfsjFeeGantryFusion01> list = odsLwzxsfsjFeeGantryFusion01Service.selectOdsLwzxsfsjFeeGantryFusion01List(odsLwzxsfsjFeeGantryFusion01);
+        if (null !=list && list.size() > 0){
+            for (OdsLwzxsfsjFeeGantryFusion01 rtn :list){
+                rtn.setId(StringUtils.getUUID());
+                // 抓拍时间格式化
+//                if (null != rtn.getCreatetime()) {
+//                    rtn.setCreateTimeStr( DateUtils.parseDateToStr(DateUtils.YYYY_MM_DD_HH_MM_SS, rtn.getCreatetime()));
+//                }
+            }
+        }
+
         return getDataTable(list);
     }
 

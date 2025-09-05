@@ -1,5 +1,6 @@
 package com.ruoyi.base.domain;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ruoyi.common.annotation.Excel;
@@ -49,7 +50,7 @@ public class OdsLwzxsfsjFeeGantryFusion01 implements Custom {
     private Long enaxlecount;
 
     /** 入站时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @Excel(name = "入站时间", width = 30, dateFormat = "yyyy-MM-dd")
     private Date entime;
 
@@ -94,7 +95,7 @@ public class OdsLwzxsfsjFeeGantryFusion01 implements Custom {
     private String entryoperatorid;
 
     /** 出站时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd  HH:mm:ss", timezone = "GMT+8")
     @Excel(name = "出站时间", width = 30, dateFormat = "yyyy-MM-dd")
     private Date extime;
 
@@ -315,5 +316,16 @@ public class OdsLwzxsfsjFeeGantryFusion01 implements Custom {
     @Excel(name = "分类分级")
     private Long gradeLevel;
 
+    // 时间查询
+    @TableField(exist = false)
+    private String inApplyTime1;
 
+    @TableField(exist = false)
+    private String inApplyTime2;
+
+    @TableField(exist = false)
+    private String outApplyTime1;
+
+    @TableField(exist = false)
+    private String outApplyTime2;
 }
