@@ -138,8 +138,8 @@
         <if test="snappicturepath != null  and snappicturepath != ''"> and t.snappicturepath = #{snappicturepath}</if>
         <if test="loadtime != null "> and t.loadtime = #{loadtime}</if>
         <if test="gradelevel != null "> and t.gradelevel = #{gradelevel}</if>
-        <if test="applyTime1 != null  and applyTime1 != ''">and t.snapshottime >= to_date(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
-        <if test="applyTime2 != null  and applyTime2 != ''">and t.snapshottime <![CDATA[<]]> to_date(#{applyTime2},'yyyy-mm-dd HH24:MI:SS') +1 </if>
+        <if test="applyTime1 != null  and applyTime1 != ''">and t.snapshottime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
+        <if test="applyTime2 != null  and applyTime2 != ''">and t.snapshottime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS')  </if>
         order by t.big_id
     </select>
 
