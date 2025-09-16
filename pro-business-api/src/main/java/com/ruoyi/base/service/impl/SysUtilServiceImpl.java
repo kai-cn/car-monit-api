@@ -28,6 +28,18 @@ public class SysUtilServiceImpl implements ISysUtilService {
     private RedisCache redisCache;
 
     /**
+     * 设置cache key
+     *
+     * @param configKey 参数键
+     * @return 缓存键key
+     */
+    private String getCacheKey(String configKey)
+    {
+        return Constants.trail + configKey;
+    }
+
+
+    /**
      * 新增或者修改车辆信息
      *
      * @param sysUtil 基础类
@@ -47,7 +59,14 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
 
         String carNo = "云HPU838";
-        redisCache.setCacheObject(Constants.trail + carNo, JSON.toJSON(list));
+        redisCache.setCacheObject(getCacheKey(carNo), JSON.toJSONString(list));
+
+        String carNo1 = "云HPU834";
+        TrailBo bo3 = new TrailBo("706b9d6d-84f8-46c6-a4ff-3ebb03823a53","GantryCapture","2025-09-14 14:43:29", null,"gantryip:36.100.120.66");
+        list.add(bo3);
+        TrailBo bo4 = new TrailBo("706b9d6d-84f8-46c6-a4ff-3ebb03823a53","GantryCapture","2025-09-14 14:43:29", null,"gantryip:36.100.120.66");
+        list.add(bo4);
+        redisCache.setCacheObject(getCacheKey(carNo1), JSON.toJSONString(list));
 
        //  List<TrailBo> rtnlist = JSONUtil.toList(jsonArray, TrailBo.class);
 

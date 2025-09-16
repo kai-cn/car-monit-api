@@ -42,7 +42,7 @@ spring:
           driver-class-name: org.postgresql.Driver
   #redis 配置
   redis:
-    database: 8
+    database: 5
     host: 172.30.100.102
     port: 6379
     password: redis321

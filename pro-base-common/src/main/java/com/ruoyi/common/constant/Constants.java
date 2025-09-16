@@ -271,7 +271,7 @@ public class Constants
     /**
      * 车俩
      */
-    public static final String trail = "trail";
+    public static final String trail = "trail:";
 
 
 
