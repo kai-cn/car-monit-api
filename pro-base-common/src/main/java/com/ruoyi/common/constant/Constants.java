@@ -268,6 +268,12 @@ public class Constants
     public static final String D_ANNO = "anno-yes";
 
 
+    /**
+     * 车俩
+     */
+    public static final String trail = "trail";
+
+
 
 
 }
