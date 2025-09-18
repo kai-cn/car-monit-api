@@ -44,7 +44,8 @@
         <result property="snappicturepath"    column="snappicturepath"    />
         <result property="loadtime"    column="loadtime"    />
         <result property="gradelevel"    column="gradelevel"    />
-
+        <result property="datauuid"    column="datauuid"    />
+        <result property="reserve3"    column="reserve3"    />
     </resultMap>
 
     <sql id="selectOdsRtSzdnSnapshotFlowAddcodeVo">
@@ -88,7 +89,9 @@
         t.cardirection,
         t.snappicturepath,
         t.loadtime,
-        t.gradelevel
+        t.gradelevel,
+        t.datauuid,
+        t.reserve3
     </sql>
 
 
@@ -138,6 +141,8 @@
         <if test="snappicturepath != null  and snappicturepath != ''"> and t.snappicturepath = #{snappicturepath}</if>
         <if test="loadtime != null "> and t.loadtime = #{loadtime}</if>
         <if test="gradelevel != null "> and t.gradelevel = #{gradelevel}</if>
+        <if test="datauuid != null  and datauuid != ''"> and t.datauuid = #{datauuid}</if>
+        <if test="reserve3 != null  and reserve3 != ''"> and t.reserve3 = #{reserve3}</if>
         <if test="applyTime1 != null  and applyTime1 != ''">and t.snapshottime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
         <if test="applyTime2 != null  and applyTime2 != ''">and t.snapshottime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS')  </if>
         order by t.big_id
