@@ -1,13 +1,12 @@
 package com.ruoyi.base.controller;
 
+import com.ruoyi.base.domain.CarParaVO;
 import com.ruoyi.base.domain.SysUtil;
 import com.ruoyi.base.service.ISysUtilService;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/base/sysutil")
@@ -26,11 +25,11 @@ public class SysUtilController extends BaseController {
 
 
     /**
-     * 获取收费站基础信息详细信息
+     * 同步轨迹
      */
-    @GetMapping(value = "/getRedis")
-    public AjaxResult getRedis(SysUtil sysUtil) {
-        return sysUtilService.getRedis(sysUtil);
+    @PostMapping(value = "/syncTrack")
+    public AjaxResult syncTrack(@RequestBody CarParaVO carParaVO) {
+        return sysUtilService.syncTrack(carParaVO);
     }
 
 

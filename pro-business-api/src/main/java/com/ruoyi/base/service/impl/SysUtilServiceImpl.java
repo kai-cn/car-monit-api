@@ -3,6 +3,7 @@ package com.ruoyi.base.service.impl;
 
 import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson.JSON;
+import com.ruoyi.base.domain.CarParaVO;
 import com.ruoyi.base.domain.SysUtil;
 import com.ruoyi.base.domain.TrailBo;
 import com.ruoyi.base.service.ISysUtilService;
@@ -90,13 +91,13 @@ public class SysUtilServiceImpl implements ISysUtilService {
     }
 
     /**
-     * 取得数据
+     * 同步轨迹
      *
-     * @param sysUtil 基础类
+     * @param carParaVO carParaVO 车俩列表
      * @return 结果
      */
-    public AjaxResult getRedis(SysUtil sysUtil){
-        return AjaxResult.success();
+    public AjaxResult syncTrack(CarParaVO carParaVO){
+        return AjaxResult.success(carParaVO);
     }
 
 

@@ -1,5 +1,6 @@
 package com.ruoyi.base.service;
 
+import com.ruoyi.base.domain.CarParaVO;
 import com.ruoyi.base.domain.SysUtil;
 import com.ruoyi.common.core.domain.AjaxResult;
 
@@ -21,12 +22,12 @@ public interface ISysUtilService {
 
 
     /**
-     * 取得数据
+     * 同步轨迹
      *
-     * @param sysUtil 基础类
+     * @param carParaVO carParaVO 车俩列表
      * @return 结果
      */
-    AjaxResult getRedis(SysUtil sysUtil);
+    AjaxResult syncTrack(CarParaVO carParaVO);
 
 
 }
