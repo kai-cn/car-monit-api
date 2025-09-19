@@ -33,4 +33,13 @@ public class SysUtilController extends BaseController {
     }
 
 
+    /**
+     * 同步可疑车俩
+     */
+    @PostMapping(value = "/syncSuspiciousCar")
+    public AjaxResult syncSuspiciousCar(@RequestBody CarParaVO carParaVO) {
+        return AjaxResult.success();
+    }
+
+
 }
