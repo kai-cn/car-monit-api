@@ -238,7 +238,6 @@
         <if test="inApplyTime2 != null  and inApplyTime2 != ''">and t.entime <![CDATA[<=]]> to_timestamp(#{inApplyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
         <if test="outApplyTime1 != null  and outApplyTime1 != ''">and t.extime >= to_timestamp(#{outApplyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
         <if test="outApplyTime2 != null  and outApplyTime2 != ''">and t.extime <![CDATA[<=]]> to_timestamp(#{outApplyTime2},'yyyy-mm-dd HH24:MI:SS') </if>
-        order by t.big_id
     </select>
 
     <select id="selectOdsLwzxsfsjFeeGantryFusion01ById" parameterType="String" resultMap="OdsLwzxsfsjFeeGantryFusion01Result">

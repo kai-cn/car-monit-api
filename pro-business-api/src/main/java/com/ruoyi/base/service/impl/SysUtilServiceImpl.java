@@ -11,6 +11,7 @@ import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,7 +106,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
         for (CarVO carVO : carlist) {
             String carNo = carVO.getCarNo();
             String keyValue = redisCache.getCacheObject(getCacheKey(carNo));
-            List<TrailBo> josnList = JSON.parseArray(keyValue, TrailBo.class);
+            List<TrailBo> josnList = new ArrayList<TrailBo>();
+            if (CommonUtil.isNotBlank(keyValue)){
+                josnList =JSON.parseArray(keyValue, TrailBo.class);
+            }
             mapCar.put(carNo, josnList);
         }
         return AjaxResult.success(this.changeData(mapCar));

@@ -36,7 +36,6 @@
         <if test="ip != null  and ip != ''"> and t.ip = #{ip}</if>
         <if test="brand != null  and brand != ''"> and t.brand = #{brand}</if>
         <if test="type != null  and type != ''"> and t.type = #{type}</if>
-        order by t.id
     </select>
 
     <select id="selectOdsSzdnGantryIpById" parameterType="Long" resultMap="OdsSzdnGantryIpResult">

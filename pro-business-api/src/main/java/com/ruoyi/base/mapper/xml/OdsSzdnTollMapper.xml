@@ -87,7 +87,6 @@
         <if test="sectionCode != null  and sectionCode != ''"> and t.section_code = #{sectionCode}</if>
         <if test="tollOrgCode != null  and tollOrgCode != ''"> and t.toll_org_code = #{tollOrgCode}</if>
         <if test="isAccess != null  and isAccess != ''"> and t.is_access = #{isAccess}</if>
-        order by t.id
     </select>
 
     <select id="selectOdsSzdnTollById" parameterType="String" resultMap="OdsSzdnTollResult">

@@ -211,7 +211,6 @@
         <if test="vehiclesign != null  and vehiclesign != ''"> and t.vehiclesign = #{vehiclesign}</if>
         <if test="gradeLevel != null  and gradeLevel != ''"> and t.grade_level = #{gradeLevel}</if>
         <if test="vehiclesignid != null  and vehiclesignid != ''"> and t.vehiclesignid = #{vehiclesignid}</if>
-        order by t.big_id
     </select>
 
     <select id="selectOdsLwzxsfsjFeeStationExit01ById" parameterType="String" resultMap="OdsLwzxsfsjFeeStationExit01Result">

@@ -411,7 +411,6 @@
         <if test="verifycode != null  and verifycode != ''"> and t.verifycode = #{verifycode}</if>
         <if test="loadTime != null "> and t.load_time = #{loadTime}</if>
         <if test="gradeLevel != null "> and t.grade_level = #{gradeLevel}</if>
-        order by t.big_id
     </select>
 
     <select id="selectOdsLwzxsfsjFeeRecords01ById" parameterType="String" resultMap="OdsLwzxsfsjFeeRecords01Result">
