@@ -5,18 +5,6 @@ import lombok.Data;
 @Data
 public class TrailBo {
 
-    public TrailBo() {
-
-    }
-
-    public TrailBo(String pointUuid,String stateType,String captureTime,Boolean direction,String locationCode) {
-        this.pointUuid = pointUuid;
-        this.stateType = stateType;
-        this.captureTime = captureTime;
-        this.direction = direction;
-        this.locationCode = locationCode;
-    }
-
     //  流水唯一标识符:用于标识单条抓拍或收费流水的唯一性，支持去重、追踪和跨表关联
     private String pointUuid;
 
