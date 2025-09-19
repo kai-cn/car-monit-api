@@ -11,7 +11,9 @@ import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 服务区基础信息Service业务层处理
@@ -33,14 +35,26 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
     @Autowired
     private IZdataTrailTracksService zdataTrailTracksService;
+
     @Autowired
     private IOdsSzdnProvinceBorderVehicleWeightNewstructureService provinceBorderVehicleWeightNewstructureService;
+
     @Autowired
     private IOdsRtSzdnSnapshotFlowAddcodeService snapshotFlowAddcodeService;
+
     @Autowired
     private IOdsRtSzdnSnapshotFlowProvcaptureAddcodeService provcaptureAddcodeService;
+
     @Autowired
     private IOdsRtSzdnSnapshotFlowStationcaptureAddcodeService stationcaptureAddcodeService;
+
+
+    @Autowired
+    private IOdsSzdnTollStationIpService odsSzdnTollStationIpService;
+
+
+    @Autowired
+    private IOdsSzdnGantryIpService odsSzdnGantryIpService;
 
 
     /**
@@ -87,6 +101,24 @@ public class SysUtilServiceImpl implements ISysUtilService {
      */
     public AjaxResult syncTrack(CarParaVO carParaVO) {
         List<CarVO> carlist = carParaVO.getCarlist();
+        Map<String, List<TrailBo>> mapCar = new HashMap<>();
+        for (CarVO carVO : carlist) {
+            String carNo = carVO.getCarNo();
+            String keyValue = redisCache.getCacheObject(getCacheKey(carNo));
+            List<TrailBo> josnList = JSON.parseArray(keyValue, TrailBo.class);
+            mapCar.put(carNo, josnList);
+        }
+        return AjaxResult.success(this.changeData(mapCar));
+    }
+
+
+    /**
+     * 数据转换
+     *
+     * @param mapCar
+     * @return 结果
+     */
+    public Map<String, List<TrailBo>> changeData(Map<String, List<TrailBo>> mapCar) {
 
         String borderWeighingCaptureUUids = ""; // 省界称重
         String gantryCaptureUUids = ""; // 门架抓拍
@@ -94,95 +126,162 @@ public class SysUtilServiceImpl implements ISysUtilService {
         String serviceAreaCaptureUUids = ""; // 服务区抓拍
         String stationCaptureUUids = ""; // 收费站抓拍
 
-        Map<String, List<TrailBo>> mapCar = new HashMap<>();
-        for (CarVO carVO : carlist) {
-            String carNo = carVO.getCarNo();
-            String keyValue = redisCache.getCacheObject(carNo);
-            List<TrailBo> josnList = JSON.parseArray(keyValue, TrailBo.class);
+        if (null == mapCar) {
+            return mapCar;
+        }
+
+        int countNum = 0;
+
+        for (Map.Entry<String, List<TrailBo>> entry : mapCar.entrySet()) {
+            String carNo = entry.getKey();
+            List<TrailBo> josnList = entry.getValue();
             for (TrailBo trailBo : josnList) {
+                trailBo.setPointFlag("0"); // 无数据
+                trailBo.setLocationFlag("0");
                 String stateType = CommonUtil.isNull(trailBo.getStateType());
+                String pointUuid = trailBo.getPointUuid();
                 switch (stateType) {
                     case BORDER_WEIGHING_CAPTURE:
-                        borderWeighingCaptureUUids += trailBo.getPointUuid() +",";
+                        // 省界称重
+                        borderWeighingCaptureUUids += pointUuid + ",";
                         break;
                     case GANTRY_CAPTURE:
-                        gantryCaptureUUids += trailBo.getPointUuid() +",";
+                        // 门架抓拍
+                        gantryCaptureUUids += pointUuid + ",";
                         break;
                     case PROV_CAPTURE:
-                        provCaptureUUids += trailBo.getPointUuid() +",";
+                        // 省界抓拍
+                        provCaptureUUids += pointUuid + ",";
                         break;
                     case SERVICE_AREA_CAPTURE:
-                        serviceAreaCaptureUUids += trailBo.getPointUuid() +",";
+                        // 服务区抓拍
+                        serviceAreaCaptureUUids += pointUuid + ",";
                         break;
                     case STATION_CAPTURE:
-                        stationCaptureUUids += trailBo.getPointUuid() +",";
+                        // 收费站抓拍
+                        stationCaptureUUids += pointUuid + ",";
                         break;
                 }
             }
-            mapCar.put(carNo, josnList);
-
+            countNum++;
         }
-        Map<String, OdsSzdnProvinceBorderVehicleWeightNewstructure> weightNewstructureMap = new HashMap<>();
-        Map<String, OdsRtSzdnSnapshotFlowAddcode> snapshotFlowAddcodeMap = new HashMap<>();
-        Map<String, OdsRtSzdnSnapshotFlowProvcaptureAddcode> provcaptureAddcodeMap = new HashMap<>();
-        Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> stationcaptureAddcodeMap = new HashMap<>();
 
+        // 没有数据
+        if (countNum == 0) {
+            return mapCar;
+        }
+
+        // 省界称重
+        Map<String, OdsSzdnProvinceBorderVehicleWeightNewstructure> weightNewstructureMap = new HashMap<>();
         borderWeighingCaptureUUids = CommonUtil.deleteEnd(borderWeighingCaptureUUids);
-        if (!borderWeighingCaptureUUids.isEmpty()) {
+        if (CommonUtil.isNotBlank(borderWeighingCaptureUUids)) {
             weightNewstructureMap = provinceBorderVehicleWeightNewstructureService.selectOdsSzdnProvinceBorderVehicleWeightNewstructureByQueryUuids(borderWeighingCaptureUUids);
         }
+
+        // 门架抓拍
+        Map<String, OdsRtSzdnSnapshotFlowAddcode> snapshotFlowAddcodeMap = new HashMap<>();
         gantryCaptureUUids = CommonUtil.deleteEnd(gantryCaptureUUids);
-        if (!gantryCaptureUUids.isEmpty()) {
+        if (CommonUtil.isNotBlank(gantryCaptureUUids)) {
             snapshotFlowAddcodeMap = snapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeByQueryUuids(gantryCaptureUUids);
         }
+
+        // 省界抓拍
+        Map<String, OdsRtSzdnSnapshotFlowProvcaptureAddcode> provcaptureAddcodeMap = new HashMap<>();
         provCaptureUUids = CommonUtil.deleteEnd(provCaptureUUids);
-        if (!provCaptureUUids.isEmpty()) {
+        if (CommonUtil.isNotBlank(provCaptureUUids)) {
             provcaptureAddcodeMap = provcaptureAddcodeService.selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeByQueryUuids(provCaptureUUids);
         }
+
+        // 收费站抓拍
+        Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> stationcaptureAddcodeMap = new HashMap<>();
         stationCaptureUUids = CommonUtil.deleteEnd(stationCaptureUUids);
         if (!stationCaptureUUids.isEmpty()) {
             stationcaptureAddcodeMap = stationcaptureAddcodeService.selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByQueryUuids(stationCaptureUUids);
         }
 
+        // 收费站ip
+        Map<String, OdsSzdnTollStationIp> szdnTollMap = odsSzdnTollStationIpService.selectStationIpMap();
+
+        // 门架IP
+        Map<String, OdsSzdnGantryIp> szdnGantryMap = odsSzdnGantryIpService.selectOdsSzdnGantryIpMap();
+
 
         for (Map.Entry<String, List<TrailBo>> entry : mapCar.entrySet()) {
-            List<TrailBo> trailBoList = entry.getValue();
-            for (TrailBo trailBo : trailBoList) {
-                String stateType = CommonUtil.isNull(trailBo.getStateType());
+            String carNo = entry.getKey();
+            List<TrailBo> josnList = entry.getValue();
+            for (TrailBo trailBo : josnList) {
+
+                // --------------抓拍信息
                 String pointUuid = trailBo.getPointUuid();
+                String locationCode = CommonUtil.isNull(trailBo.getLocationCode()); // 设备IP地址
+                String stateType = CommonUtil.isNull(trailBo.getStateType());  // 流水来源类型标识:可作为维度字段，用于回溯数据来源、确定查找目标表
+
+                // ----------位置信息
+                String[] locationCodeStr = locationCode.split(":");
+                String ip ="";
+                String ipType = "";
+                if (locationCodeStr.length > 1){
+                    ip = CommonUtil.isNull(locationCodeStr[1]);
+                }
+
+
                 switch (stateType) {
                     case BORDER_WEIGHING_CAPTURE:
-                        OdsSzdnProvinceBorderVehicleWeightNewstructure obj1 = weightNewstructureMap.get(pointUuid);
-                        if (obj1 != null) {
-                            trailBo.setPointJosn(JSON.toJSONString(obj1));
+                        // 省界称重
+                        if (weightNewstructureMap.containsKey(pointUuid)){
+                            trailBo.setPointJosn(JSON.toJSONString(weightNewstructureMap.get(pointUuid)));
+                            trailBo.setPointFlag("1"); // 有数据
                         }
+                        ipType = "gantryip";
                         break;
                     case GANTRY_CAPTURE:
-                        OdsRtSzdnSnapshotFlowAddcode obj2 = snapshotFlowAddcodeMap.get(pointUuid);
-                        if (obj2 != null) {
-                            trailBo.setPointJosn(JSON.toJSONString(obj2));
+                        // 门架抓拍
+                        if (snapshotFlowAddcodeMap.containsKey(pointUuid)){
+                            trailBo.setPointJosn(JSON.toJSONString(snapshotFlowAddcodeMap.get(pointUuid)));
+                            trailBo.setPointFlag("1"); // 有数据
                         }
+                        ipType = "gantryip";
                         break;
                     case PROV_CAPTURE:
-                        OdsRtSzdnSnapshotFlowProvcaptureAddcode obj3 = provcaptureAddcodeMap.get(pointUuid);
-                        if (obj3 != null) {
-                            trailBo.setPointJosn(JSON.toJSONString(obj3));
+                        // 省界抓拍
+                        if (provcaptureAddcodeMap.containsKey(pointUuid)){
+                            trailBo.setPointJosn(JSON.toJSONString(provcaptureAddcodeMap.get(pointUuid)));
+                            trailBo.setPointFlag("1"); // 有数据
                         }
+                        ipType = "gantryip";
                         break;
                     case SERVICE_AREA_CAPTURE:
+                        // 服务区抓拍
                         break;
                     case STATION_CAPTURE:
-                        OdsRtSzdnSnapshotFlowStationcaptureAddcode obj5 = stationcaptureAddcodeMap.get(pointUuid);
-                        if (obj5 != null) {
-                            trailBo.setPointJosn(JSON.toJSONString(obj5));
+                        // 收费站抓拍
+                        if (stationcaptureAddcodeMap.containsKey(pointUuid)){
+                            trailBo.setPointJosn(JSON.toJSONString(stationcaptureAddcodeMap.get(pointUuid)));
+                            trailBo.setPointFlag("1"); // 有数据
                         }
+                        ipType = "stationip";
                         break;
+                }
+
+                if (CommonUtil.isNotBlank(ip)){
+                    if (ipType.equals("gantryip")){
+                        if (szdnGantryMap.containsKey(ip)){
+                            trailBo.setLocationJosn(JSON.toJSONString(szdnGantryMap.get(ip)));
+                            trailBo.setLocationFlag("1"); // 有数据
+                        }
+                    }
+
+                    if (ipType.equals("stationip")){
+                        if (szdnTollMap.containsKey(ip)){
+                            trailBo.setLocationJosn(JSON.toJSONString(szdnTollMap.get(ip)));
+                            trailBo.setLocationFlag("1"); // 有数据
+                        }
+                    }
                 }
             }
 
         }
-
-        return AjaxResult.success(mapCar);
+        return mapCar;
     }
 
 

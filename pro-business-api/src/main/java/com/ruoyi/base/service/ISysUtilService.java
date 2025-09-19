@@ -2,7 +2,11 @@ package com.ruoyi.base.service;
 
 import com.ruoyi.base.domain.CarParaVO;
 import com.ruoyi.base.domain.SysUtil;
+import com.ruoyi.base.domain.TrailBo;
 import com.ruoyi.common.core.domain.AjaxResult;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * 共用类接口表
@@ -28,6 +32,15 @@ public interface ISysUtilService {
      * @return 结果
      */
     AjaxResult syncTrack(CarParaVO carParaVO);
+
+
+    /**
+     * 数据转换
+     *
+     * @param mapCar
+     * @return 结果
+     */
+    Map<String, List<TrailBo>> changeData(Map<String, List<TrailBo>> mapCar);
 
 
 }
