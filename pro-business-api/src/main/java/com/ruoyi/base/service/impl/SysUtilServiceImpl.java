@@ -8,12 +8,11 @@ import com.ruoyi.base.service.IZdataTrailTracksService;
 import com.ruoyi.common.constant.Constants;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.redis.RedisCache;
+import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 /**
  * 服务区基础信息Service业务层处理
@@ -77,13 +76,32 @@ public class SysUtilServiceImpl implements ISysUtilService {
     public AjaxResult syncTrack(CarParaVO carParaVO) {
         List<CarVO> carlist = carParaVO.getCarlist();
 
+        String BorderWeighingCaptureUUids = ""; // 省界称重
+        String gantryCaptureUUids = ""; // 门架抓拍
+        String provCaptureUUids = ""; // 省界抓拍
+        String serviceAreaCaptureUUids = ""; // 服务区抓拍
+        String stationCaptureUUids = ""; // 收费站抓拍
+
+        Map<String, List<TrailBo>> mapCar = new HashMap<>();
         for (CarVO carVO : carlist) {
             String carNo = carVO.getCarNo();
             String keyValue = redisCache.getCacheObject(carNo);
             List<TrailBo> josnList = JSON.parseArray(keyValue, TrailBo.class);
+            for (TrailBo trailBo :josnList){
+                if (CommonUtil.isNull(trailBo.getStateType()).equals("BorderWeighingCapture")){
+                    BorderWeighingCaptureUUids += trailBo.getPointUuid() +",";
+                }
+            }
+            mapCar.put(carNo,josnList);
+
+        }
+        BorderWeighingCaptureUUids = CommonUtil.deleteEnd(BorderWeighingCaptureUUids);
+        if (!BorderWeighingCaptureUUids.equals("")){
+
         }
 
-        return AjaxResult.success(carParaVO);
+
+        return AjaxResult.success(mapCar);
     }
 
 

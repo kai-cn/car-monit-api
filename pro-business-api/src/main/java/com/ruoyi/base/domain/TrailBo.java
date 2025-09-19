@@ -8,6 +8,9 @@ public class TrailBo {
     //  流水唯一标识符:用于标识单条抓拍或收费流水的唯一性，支持去重、追踪和跨表关联
     private String pointUuid;
 
+    // pointUuid josn对象
+    private String pointJosn;
+
     // 流水来源类型标识:可作为维度字段，用于回溯数据来源、确定查找目标表
     private String stateType;
 
