@@ -49,8 +49,7 @@ public class OdsSzdnProvinceBorderVehicleWeightNewstructureServiceImpl extends S
     }
 
     @Override
-    public Map<String, OdsSzdnProvinceBorderVehicleWeightNewstructure> selectOdsSzdnProvinceBorderVehicleWeightNewstructureByQueryUuids(OdsSzdnProvinceBorderVehicleWeightNewstructure bo) {
-        String queryUuids = bo.getQueryUuids();
+    public Map<String, OdsSzdnProvinceBorderVehicleWeightNewstructure> selectOdsSzdnProvinceBorderVehicleWeightNewstructureByQueryUuids(String queryUuids) {
         if(StringUtils.isNotBlank(queryUuids)) {
             List<String> uuidList = Arrays.stream(queryUuids.split(",")).collect(Collectors.toList());
             return odsSzdnProvinceBorderVehicleWeightNewstructureMapper.selectOdsSzdnProvinceBorderVehicleWeightNewstructureByUuidList(uuidList);

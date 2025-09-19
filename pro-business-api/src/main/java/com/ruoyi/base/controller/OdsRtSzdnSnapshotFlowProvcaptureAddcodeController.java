@@ -47,11 +47,6 @@ public class OdsRtSzdnSnapshotFlowProvcaptureAddcodeController extends BaseContr
         return AjaxResult.success(odsRtSzdnSnapshotFlowProvcaptureAddcodeService.selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeById(bigId));
     }
 
-    @GetMapping("/map")
-    public Map<String, OdsRtSzdnSnapshotFlowProvcaptureAddcode> map(OdsRtSzdnSnapshotFlowProvcaptureAddcode bo) {
-        bo.setQueryUuids("e4b3a3ad-6ac2-4a32-900d-f1e81c0988c7,ba0cfd6f-6d16-44fa-82f3-93b2e3fde1b7,91dfe837-1285-44c6-b4c8-7a62f7a3ad3048861e72-5ebf-4699-b068-4e7099ca05fc");
-        return odsRtSzdnSnapshotFlowProvcaptureAddcodeService.selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeByQueryUuids(bo);
-    }
 
 
 }

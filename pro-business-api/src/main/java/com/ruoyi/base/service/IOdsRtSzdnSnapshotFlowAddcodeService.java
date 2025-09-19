@@ -29,5 +29,5 @@ public interface IOdsRtSzdnSnapshotFlowAddcodeService extends IService<OdsRtSzdn
      */
     List<OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeList(OdsRtSzdnSnapshotFlowAddcode odsRtSzdnSnapshotFlowAddcode);
 
-    Map<String, OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeByQueryUuids(OdsRtSzdnSnapshotFlowAddcode bo);
+    Map<String, OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeByQueryUuids(String queryUuids);
 }

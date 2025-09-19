@@ -49,8 +49,7 @@ public class OdsRtSzdnSnapshotFlowStationcaptureAddcodeServiceImpl extends Servi
     }
 
     @Override
-    public Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByQueryUuids(OdsRtSzdnSnapshotFlowStationcaptureAddcode bo) {
-        String queryUuids = bo.getQueryUuids();
+    public Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByQueryUuids(String queryUuids) {
         if(StringUtils.isNotBlank(queryUuids)) {
             String[] split = queryUuids.split(",");
             List<String> uuidList = Arrays.stream(split).collect(Collectors.toList());

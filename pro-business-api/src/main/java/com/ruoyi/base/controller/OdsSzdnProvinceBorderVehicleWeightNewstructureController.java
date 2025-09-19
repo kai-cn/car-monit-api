@@ -47,11 +47,6 @@ public class OdsSzdnProvinceBorderVehicleWeightNewstructureController extends Ba
         return AjaxResult.success(odsSzdnProvinceBorderVehicleWeightNewstructureService.selectOdsSzdnProvinceBorderVehicleWeightNewstructureById(dataSource));
     }
 
-    @GetMapping("/map")
-    public Map<String, OdsSzdnProvinceBorderVehicleWeightNewstructure> map(OdsSzdnProvinceBorderVehicleWeightNewstructure bo) {
-        bo.setQueryUuids("18f8e2af-6ebe-4b33-8f37-a688f441de37,7379e7aa-e325-449b-9728-b8f6940c77f1,67fb6580-6b8a-4649-abd7-632dc71c4799");
-        return odsSzdnProvinceBorderVehicleWeightNewstructureService.selectOdsSzdnProvinceBorderVehicleWeightNewstructureByQueryUuids(bo);
-    }
 
 
 
