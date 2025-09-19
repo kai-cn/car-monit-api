@@ -3,6 +3,8 @@ package com.ruoyi.base.service;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.base.domain.OdsSzdnTollStationIp;
 import java.util.List;
+import java.util.Map;
+
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
@@ -28,6 +30,15 @@ public interface IOdsSzdnTollStationIpService extends IService<OdsSzdnTollStatio
      */
     List<OdsSzdnTollStationIp> selectOdsSzdnTollStationIpList(OdsSzdnTollStationIp odsSzdnTollStationIp);
 
+
+
+    /**
+     * 查询收费站ip列表
+     *
+     * @param
+     * @return 收费站ip集合
+     */
+    Map<String,OdsSzdnTollStationIp> selectStationIpMap();
 
 
 }

@@ -8,6 +8,9 @@ public class TrailBo {
     //  流水唯一标识符:用于标识单条抓拍或收费流水的唯一性，支持去重、追踪和跨表关联
     private String pointUuid;
 
+    // 是否有值 O否 1是
+    private String pointFlag;
+
     // pointUuid josn对象
     private String pointJosn;
 
@@ -22,4 +25,8 @@ public class TrailBo {
 
     // 设备IP地址:可通过映射表解析IP→实体设施（门架、收费站、服务区等），实现设备到道路设施的转换
     private String locationCode;
+
+    // 位置josn 对象
+    private String locationJosn;
+
 }

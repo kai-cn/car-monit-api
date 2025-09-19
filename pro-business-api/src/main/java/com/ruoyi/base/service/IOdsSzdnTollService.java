@@ -5,6 +5,7 @@ import com.ruoyi.base.domain.OdsSzdnToll;
 import com.ruoyi.common.core.domain.AjaxResult;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 收费站基础信息Service接口
@@ -28,4 +29,12 @@ public interface IOdsSzdnTollService extends IService<OdsSzdnToll> {
      * @return 收费站基础信息集合
      */
     List<OdsSzdnToll> selectOdsSzdnTollList(OdsSzdnToll odsSzdnToll);
+
+    /**
+     * 查询收费站基础信息列表
+     *
+     * @param odsSzdnToll 收费站基础信息
+     * @return 收费站基础信息集合
+     */
+    Map<String,OdsSzdnToll> selectOdsSzdnTollMap(OdsSzdnToll odsSzdnToll);
 }
