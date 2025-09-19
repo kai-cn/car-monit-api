@@ -37,7 +37,6 @@
         <if test="enterTime != null "> and t.enter_time = #{enterTime}</if>
         <if test="exitTime != null "> and t.exit_time = #{exitTime}</if>
         <if test="trailPoints != null  and trailPoints != ''"> and t.trail_points = #{trailPoints}</if>
-        order by t.big_id
     </select>
 
     <select id="selectZdataTrailTracksById" parameterType="String" resultMap="ZdataTrailTracksResult">
