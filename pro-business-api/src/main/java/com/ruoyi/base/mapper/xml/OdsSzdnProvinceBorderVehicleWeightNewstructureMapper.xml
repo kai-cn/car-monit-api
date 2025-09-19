@@ -120,5 +120,17 @@
          where t.dataSource = #{dataSource}
     </select>
 
+    <select id="selectOdsSzdnProvinceBorderVehicleWeightNewstructureByUuidList" resultType="java.util.Map">
+        select
+        <include refid="selectOdsSzdnProvinceBorderVehicleWeightNewstructureVo"/>
+        from ods_szdn_province_border_vehicle_weight_newstructure t
+        <where>
+            datauuid in
+            <foreach collection="uuidList" open="(" separator="," close=")" item="item">
+                #{item}
+            </foreach>
+        </where>
+    </select>
+
 
 </mapper>

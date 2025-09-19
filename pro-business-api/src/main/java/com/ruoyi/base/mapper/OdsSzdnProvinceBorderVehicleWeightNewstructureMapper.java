@@ -2,8 +2,11 @@ package com.ruoyi.base.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ruoyi.base.domain.OdsSzdnProvinceBorderVehicleWeightNewstructure;
+import org.apache.ibatis.annotations.MapKey;
+import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 省界称重Mapper接口
@@ -29,5 +32,6 @@ public interface OdsSzdnProvinceBorderVehicleWeightNewstructureMapper extends Ba
      */
     List<OdsSzdnProvinceBorderVehicleWeightNewstructure> selectOdsSzdnProvinceBorderVehicleWeightNewstructureList(OdsSzdnProvinceBorderVehicleWeightNewstructure odsSzdnProvinceBorderVehicleWeightNewstructure);
 
-
+    @MapKey("datauuid")
+    Map<String, OdsSzdnProvinceBorderVehicleWeightNewstructure> selectOdsSzdnProvinceBorderVehicleWeightNewstructureByUuidList(@Param("uuidList") List<String> uuidList);
 }

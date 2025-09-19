@@ -1,16 +1,18 @@
 package com.ruoyi.base.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.ruoyi.common.core.domain.AjaxResult;
-import com.ruoyi.common.utils.CommonUtil;
 import com.ruoyi.base.mapper.OdsSzdnProvinceBorderVehicleWeightNewstructureMapper;
 import com.ruoyi.base.domain.OdsSzdnProvinceBorderVehicleWeightNewstructure;
 import com.ruoyi.base.service.IOdsSzdnProvinceBorderVehicleWeightNewstructureService;
+import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 省界称重Service业务层处理
@@ -46,8 +48,13 @@ public class OdsSzdnProvinceBorderVehicleWeightNewstructureServiceImpl extends S
         return odsSzdnProvinceBorderVehicleWeightNewstructureMapper.selectOdsSzdnProvinceBorderVehicleWeightNewstructureList(odsSzdnProvinceBorderVehicleWeightNewstructure);
     }
 
-
-
-
-
+    @Override
+    public Map<String, OdsSzdnProvinceBorderVehicleWeightNewstructure> selectOdsSzdnProvinceBorderVehicleWeightNewstructureByQueryUuids(OdsSzdnProvinceBorderVehicleWeightNewstructure bo) {
+        String queryUuids = bo.getQueryUuids();
+        if(StringUtils.isNotBlank(queryUuids)) {
+            List<String> uuidList = Arrays.stream(queryUuids.split(",")).collect(Collectors.toList());
+            return odsSzdnProvinceBorderVehicleWeightNewstructureMapper.selectOdsSzdnProvinceBorderVehicleWeightNewstructureByUuidList(uuidList);
+        }
+        return Collections.emptyMap();
+    }
 }

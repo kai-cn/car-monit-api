@@ -2,9 +2,12 @@ package com.ruoyi.base.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowAddcode;
+import org.apache.ibatis.annotations.MapKey;
+import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 门架抓拍流水Mapper接口
@@ -29,4 +32,7 @@ public interface OdsRtSzdnSnapshotFlowAddcodeMapper extends BaseMapper<OdsRtSzdn
      * @return 门架抓拍流水集合
      */
     List<OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeList(OdsRtSzdnSnapshotFlowAddcode odsRtSzdnSnapshotFlowAddcode);
+
+    @MapKey("datauuid")
+    Map<String, OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeByUuidList(@Param("uuidList") List<String> uuidList);
 }

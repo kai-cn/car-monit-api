@@ -3,6 +3,8 @@ package com.ruoyi.base.service;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowStationcaptureAddcode;
 import java.util.List;
+import java.util.Map;
+
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
@@ -29,5 +31,5 @@ public interface IOdsRtSzdnSnapshotFlowStationcaptureAddcodeService extends ISer
     List<OdsRtSzdnSnapshotFlowStationcaptureAddcode> selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeList(OdsRtSzdnSnapshotFlowStationcaptureAddcode odsRtSzdnSnapshotFlowStationcaptureAddcode);
 
 
-
+    Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByQueryUuids(OdsRtSzdnSnapshotFlowStationcaptureAddcode bo);
 }

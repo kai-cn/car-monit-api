@@ -3,6 +3,8 @@ package com.ruoyi.base.service;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowProvcaptureAddcode;
 import java.util.List;
+import java.util.Map;
+
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
@@ -27,6 +29,8 @@ public interface IOdsRtSzdnSnapshotFlowProvcaptureAddcodeService extends IServic
      * @return 省界抓拍集合
      */
     List<OdsRtSzdnSnapshotFlowProvcaptureAddcode> selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeList(OdsRtSzdnSnapshotFlowProvcaptureAddcode odsRtSzdnSnapshotFlowProvcaptureAddcode);
+
+    Map<String, OdsRtSzdnSnapshotFlowProvcaptureAddcode> selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeByQueryUuids(OdsRtSzdnSnapshotFlowProvcaptureAddcode odsRtSzdnSnapshotFlowProvcaptureAddcode);
 
 
 

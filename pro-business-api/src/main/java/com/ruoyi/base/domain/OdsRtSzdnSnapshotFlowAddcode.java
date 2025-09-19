@@ -214,5 +214,7 @@ public class OdsRtSzdnSnapshotFlowAddcode implements Custom {
     @TableField(exist = false)
     private String applyTime2;
 
+    @TableField(exist = false)
+    private String queryUuids;
 
 }

@@ -206,5 +206,8 @@ public class OdsSzdnProvinceBorderVehicleWeightNewstructure implements Custom {
 
     private String reserve3;
 
+    @TableField(exist = false)
+    private String queryUuids;
+
 
 }

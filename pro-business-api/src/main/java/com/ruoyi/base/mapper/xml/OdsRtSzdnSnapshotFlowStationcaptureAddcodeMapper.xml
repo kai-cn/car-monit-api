@@ -117,7 +117,6 @@
         <if test="maindirection != null  and maindirection != ''"> and t.maindirection = #{maindirection}</if>
         <if test="maindirectionname != null  and maindirectionname != ''"> and t.maindirectionname like concat('%', #{maindirectionname}, '%')</if>
         <if test="reserve3 != null  and reserve3 != ''"> and t.reserve3 = #{reserve3}</if>
-        order by t.big_id
     </select>
 
     <select id="selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeById" parameterType="Long" resultMap="OdsRtSzdnSnapshotFlowStationcaptureAddcodeResult">
@@ -125,6 +124,18 @@
          <include refid="selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeVo"/>
          from ods_rt_szdn_snapshot_flow_stationcapture_addcode t
          where t.big_id = #{bigId}
+    </select>
+
+    <select id="selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByUuidList" resultType="java.util.Map">
+        select
+        <include refid="selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeVo"/>
+        from ods_rt_szdn_snapshot_flow_stationcapture_addcode t
+        <where>
+            datauuid in
+            <foreach collection="uuidList" open="(" separator="," close=")" item="item">
+                #{item}
+            </foreach>
+        </where>
     </select>
 
 

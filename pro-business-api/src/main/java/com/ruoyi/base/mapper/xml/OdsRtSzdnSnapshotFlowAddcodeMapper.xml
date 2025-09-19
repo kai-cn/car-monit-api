@@ -145,7 +145,6 @@
         <if test="reserve3 != null  and reserve3 != ''"> and t.reserve3 = #{reserve3}</if>
         <if test="applyTime1 != null  and applyTime1 != ''">and t.snapshottime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
         <if test="applyTime2 != null  and applyTime2 != ''">and t.snapshottime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS')  </if>
-        order by t.big_id
     </select>
 
     <select id="selectOdsRtSzdnSnapshotFlowAddcodeById" parameterType="String" resultMap="OdsRtSzdnSnapshotFlowAddcodeResult">
@@ -153,6 +152,18 @@
          <include refid="selectOdsRtSzdnSnapshotFlowAddcodeVo"/>
          from ods_rt_szdn_snapshot_flow_addcode t
          where t.big_id = #{bigId}
+    </select>
+
+    <select id="selectOdsRtSzdnSnapshotFlowAddcodeByUuidList" resultType="java.util.Map">
+        select
+        <include refid="selectOdsRtSzdnSnapshotFlowAddcodeVo"/>
+        from ods_rt_szdn_snapshot_flow_addcode t
+        <where>
+            datauuid in
+            <foreach collection="uuidList" open="(" separator="," close=")" item="item">
+                #{item}
+            </foreach>
+        </where>
     </select>
 
 </mapper>

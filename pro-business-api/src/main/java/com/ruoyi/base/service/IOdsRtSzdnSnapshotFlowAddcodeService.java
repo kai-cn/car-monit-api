@@ -2,9 +2,9 @@ package com.ruoyi.base.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowAddcode;
-import com.ruoyi.common.core.domain.AjaxResult;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 门架抓拍流水Service接口
@@ -28,4 +28,6 @@ public interface IOdsRtSzdnSnapshotFlowAddcodeService extends IService<OdsRtSzdn
      * @return 门架抓拍流水集合
      */
     List<OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeList(OdsRtSzdnSnapshotFlowAddcode odsRtSzdnSnapshotFlowAddcode);
+
+    Map<String, OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeByQueryUuids(OdsRtSzdnSnapshotFlowAddcode bo);
 }

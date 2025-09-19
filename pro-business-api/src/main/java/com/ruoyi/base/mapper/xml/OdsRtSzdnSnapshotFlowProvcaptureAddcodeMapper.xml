@@ -261,7 +261,6 @@
         <if test="reserve1 != null  and reserve1 != ''"> and t.reserve1 = #{reserve1}</if>
         <if test="reserve2 != null  and reserve2 != ''"> and t.reserve2 = #{reserve2}</if>
         <if test="reserve3 != null  and reserve3 != ''"> and t.reserve3 = #{reserve3}</if>
-        order by t.big_id
     </select>
 
     <select id="selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeById" parameterType="Long" resultMap="OdsRtSzdnSnapshotFlowProvcaptureAddcodeResult">
@@ -269,6 +268,18 @@
          <include refid="selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeVo"/>
          from ods_rt_szdn_snapshot_flow_provcapture_addcode t
          where t.big_id = #{bigId}
+    </select>
+
+    <select id="selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeByUuidList" resultType="java.util.Map">
+        SELECT
+        <include refid="selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeVo"/>
+        FROM ods_rt_szdn_snapshot_flow_provcapture_addcode t
+        <where>
+            datauuid in
+            <foreach collection="uuidList" open="(" separator="," close=")" item="item">
+                #{item}
+            </foreach>
+        </where>
     </select>
 
 
