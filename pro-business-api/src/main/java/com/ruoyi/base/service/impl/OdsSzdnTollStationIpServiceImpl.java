@@ -57,6 +57,7 @@ public class OdsSzdnTollStationIpServiceImpl extends ServiceImpl<OdsSzdnTollStat
      * @param
      * @return 收费站ip集合
      */
+    @Override
     public Map<String,OdsSzdnTollStationIp> selectStationIpMap(){
         Map<String,OdsSzdnTollStationIp> map = new HashMap<String,OdsSzdnTollStationIp>();
         // 收费站ip列表
@@ -64,11 +65,11 @@ public class OdsSzdnTollStationIpServiceImpl extends ServiceImpl<OdsSzdnTollStat
         // 收费站map
         Map<String,OdsSzdnToll> odsSzdnTollMap = odsSzdnTollService.selectOdsSzdnTollMap(new OdsSzdnToll());
         for (OdsSzdnTollStationIp rtn : list) {
-            String key = CommonUtil.isNull(rtn.getTollCode()); // 收费站ip
+            String key = CommonUtil.isNull(rtn.getTollCode()); // 收费站编号
             if (odsSzdnTollMap.containsKey(key)){
                 rtn.setOdsSzdnToll(odsSzdnTollMap.get(key));
             }
-            map.put(CommonUtil.isNull(rtn.getId()),rtn);
+            map.put(CommonUtil.isNull(rtn.getIp()),rtn);
         }
         return map;
     }

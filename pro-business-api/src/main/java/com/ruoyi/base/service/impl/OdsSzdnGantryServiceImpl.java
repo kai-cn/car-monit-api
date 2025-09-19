@@ -10,7 +10,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 门架信息Service业务层处理
@@ -45,4 +47,22 @@ public class OdsSzdnGantryServiceImpl extends ServiceImpl<OdsSzdnGantryMapper, O
     public List<OdsSzdnGantry> selectOdsSzdnGantryList(OdsSzdnGantry odsSzdnGantry) {
         return odsSzdnGantryMapper.selectOdsSzdnGantryList(odsSzdnGantry);
     }
+
+
+    /**
+     * 查询门架信息列表
+     *
+     * @param odsSzdnGantry 门架信息
+     * @return 门架信息集合
+     */
+    @Override
+    public Map<String, OdsSzdnGantry> selectOdsSzdnGantryMap(OdsSzdnGantry odsSzdnGantry) {
+        Map<String, OdsSzdnGantry> map = new HashMap<String, OdsSzdnGantry>();
+        List<OdsSzdnGantry> list = odsSzdnGantryMapper.selectOdsSzdnGantryList(odsSzdnGantry);
+        for (OdsSzdnGantry rtn : list) {
+            map.put(CommonUtil.isNull(rtn.getGantryCode()),rtn);
+        }
+        return map;
+    }
+
 }

@@ -54,6 +54,7 @@ public class OdsSzdnTollServiceImpl extends ServiceImpl<OdsSzdnTollMapper, OdsSz
      * @param odsSzdnToll 收费站基础信息
      * @return 收费站基础信息集合
      */
+    @Override
     public Map<String, OdsSzdnToll> selectOdsSzdnTollMap(OdsSzdnToll odsSzdnToll) {
         Map<String, OdsSzdnToll> map = new HashMap<String, OdsSzdnToll>();
         List<OdsSzdnToll> list = odsSzdnTollMapper.selectOdsSzdnTollList(odsSzdnToll);

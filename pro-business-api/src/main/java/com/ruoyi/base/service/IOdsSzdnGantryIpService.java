@@ -4,6 +4,7 @@ import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.base.domain.OdsSzdnGantryIp;
 
 import java.util.List;
+import java.util.Map;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -29,6 +30,14 @@ public interface IOdsSzdnGantryIpService extends IService<OdsSzdnGantryIp> {
      * @return 省界设备ip集合
      */
     List<OdsSzdnGantryIp> selectOdsSzdnGantryIpList(OdsSzdnGantryIp odsSzdnGantryIp);
+
+
+    /**
+     * 查询省界设备ip列表
+     *
+     * @return 省界设备ip集合
+     */
+    Map<String,OdsSzdnGantryIp> selectOdsSzdnGantryIpMap();
 
 
 }
