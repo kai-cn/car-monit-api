@@ -270,7 +270,7 @@
          where t.big_id = #{bigId}
     </select>
 
-    <select id="selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeByUuidList" resultType="java.util.Map">
+    <select id="selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeByUuidList" resultType="OdsRtSzdnSnapshotFlowProvcaptureAddcodeResult">
         SELECT
         <include refid="selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeVo"/>
         FROM ods_rt_szdn_snapshot_flow_provcapture_addcode t

@@ -30,6 +30,11 @@ public interface IOdsRtSzdnSnapshotFlowProvcaptureAddcodeService extends IServic
      */
     List<OdsRtSzdnSnapshotFlowProvcaptureAddcode> selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeList(OdsRtSzdnSnapshotFlowProvcaptureAddcode odsRtSzdnSnapshotFlowProvcaptureAddcode);
 
+    /**
+     * 根据UUID 查询
+     * @param queryUuids
+     * @return
+     */
     Map<String, OdsRtSzdnSnapshotFlowProvcaptureAddcode> selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeByQueryUuids(String queryUuids);
 
 
