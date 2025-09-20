@@ -32,6 +32,10 @@ public interface OdsSzdnProvinceBorderVehicleWeightNewstructureMapper extends Ba
      */
     List<OdsSzdnProvinceBorderVehicleWeightNewstructure> selectOdsSzdnProvinceBorderVehicleWeightNewstructureList(OdsSzdnProvinceBorderVehicleWeightNewstructure odsSzdnProvinceBorderVehicleWeightNewstructure);
 
-    @MapKey("datauuid")
-    Map<String, OdsSzdnProvinceBorderVehicleWeightNewstructure> selectOdsSzdnProvinceBorderVehicleWeightNewstructureByUuidList(@Param("uuidList") List<String> uuidList);
+    /**
+     * 查询省界称重 : 通过IDS查询
+     *
+     * @return 省界称重
+     */
+    List<OdsSzdnProvinceBorderVehicleWeightNewstructure> selectOdsSzdnProvinceBorderVehicleWeightNewstructureByUuidList(@Param("uuidList") List<String> uuidList);
 }

@@ -1,15 +1,15 @@
 package com.ruoyi.base.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.ruoyi.base.mapper.OdsSzdnProvinceBorderVehicleWeightNewstructureMapper;
 import com.ruoyi.base.domain.OdsSzdnProvinceBorderVehicleWeightNewstructure;
+import com.ruoyi.base.mapper.OdsSzdnProvinceBorderVehicleWeightNewstructureMapper;
 import com.ruoyi.base.service.IOdsSzdnProvinceBorderVehicleWeightNewstructureService;
 import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -48,12 +48,21 @@ public class OdsSzdnProvinceBorderVehicleWeightNewstructureServiceImpl extends S
         return odsSzdnProvinceBorderVehicleWeightNewstructureMapper.selectOdsSzdnProvinceBorderVehicleWeightNewstructureList(odsSzdnProvinceBorderVehicleWeightNewstructure);
     }
 
+    /**
+     * 查询省界称重 : 通过IDS查询
+     *
+     * @return 省界称重
+     */
     @Override
     public Map<String, OdsSzdnProvinceBorderVehicleWeightNewstructure> selectOdsSzdnProvinceBorderVehicleWeightNewstructureByQueryUuids(String queryUuids) {
+        Map<String, OdsSzdnProvinceBorderVehicleWeightNewstructure> map = new HashMap<>();
         if(StringUtils.isNotBlank(queryUuids)) {
             List<String> uuidList = Arrays.stream(queryUuids.split(",")).collect(Collectors.toList());
-            return odsSzdnProvinceBorderVehicleWeightNewstructureMapper.selectOdsSzdnProvinceBorderVehicleWeightNewstructureByUuidList(uuidList);
+            List<OdsSzdnProvinceBorderVehicleWeightNewstructure> list =  odsSzdnProvinceBorderVehicleWeightNewstructureMapper.selectOdsSzdnProvinceBorderVehicleWeightNewstructureByUuidList(uuidList);
+            for (OdsSzdnProvinceBorderVehicleWeightNewstructure rtn : list) {
+                map.put(rtn.getDatauuid(),rtn);
+            }
         }
-        return Collections.emptyMap();
+        return map;
     }
 }

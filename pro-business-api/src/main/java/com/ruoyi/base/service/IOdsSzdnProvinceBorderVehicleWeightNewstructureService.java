@@ -30,6 +30,10 @@ public interface IOdsSzdnProvinceBorderVehicleWeightNewstructureService extends 
      */
     List<OdsSzdnProvinceBorderVehicleWeightNewstructure> selectOdsSzdnProvinceBorderVehicleWeightNewstructureList(OdsSzdnProvinceBorderVehicleWeightNewstructure odsSzdnProvinceBorderVehicleWeightNewstructure);
 
-
+    /**
+     * 查询省界称重 : 通过IDS查询
+     *
+     * @return 省界称重
+     */
     Map<String, OdsSzdnProvinceBorderVehicleWeightNewstructure> selectOdsSzdnProvinceBorderVehicleWeightNewstructureByQueryUuids(String queryUuids);
 }
