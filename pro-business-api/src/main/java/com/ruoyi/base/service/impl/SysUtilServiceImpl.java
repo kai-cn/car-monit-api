@@ -233,7 +233,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     case BORDER_WEIGHING_CAPTURE:
                         // 省界称重
                         if (weightNewstructureMap.containsKey(pointUuid)){
-                            trailBo.setPointJosn(JSON.toJSONString(weightNewstructureMap.get(pointUuid)));
+                            trailBo.setBorderWeighingCaptureBO(weightNewstructureMap.get(pointUuid));
                             trailBo.setPointFlag("1"); // 有数据
                         }
                         ipType = "gantryip";
@@ -241,7 +241,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     case GANTRY_CAPTURE:
                         // 门架抓拍
                         if (snapshotFlowAddcodeMap.containsKey(pointUuid)){
-                            trailBo.setPointJosn(JSON.toJSONString(snapshotFlowAddcodeMap.get(pointUuid)));
+                            trailBo.setGantryCaptureBO(snapshotFlowAddcodeMap.get(pointUuid));
                             trailBo.setPointFlag("1"); // 有数据
                         }
                         ipType = "gantryip";
@@ -249,7 +249,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     case PROV_CAPTURE:
                         // 省界抓拍
                         if (provcaptureAddcodeMap.containsKey(pointUuid)){
-                            trailBo.setPointJosn(JSON.toJSONString(provcaptureAddcodeMap.get(pointUuid)));
+                            trailBo.setProvCaptureBO(provcaptureAddcodeMap.get(pointUuid));
                             trailBo.setPointFlag("1"); // 有数据
                         }
                         ipType = "gantryip";
@@ -260,7 +260,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     case STATION_CAPTURE:
                         // 收费站抓拍
                         if (stationcaptureAddcodeMap.containsKey(pointUuid)){
-                            trailBo.setPointJosn(JSON.toJSONString(stationcaptureAddcodeMap.get(pointUuid)));
+                            trailBo.setStationCapture(stationcaptureAddcodeMap.get(pointUuid));
                             trailBo.setPointFlag("1"); // 有数据
                         }
                         ipType = "stationip";
@@ -268,16 +268,19 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 }
 
                 if (CommonUtil.isNotBlank(ip)){
+                    trailBo.setIpType(ipType);
+                    // 门架ip
                     if (ipType.equals("gantryip")){
                         if (szdnGantryMap.containsKey(ip)){
-                            trailBo.setLocationJosn(JSON.toJSONString(szdnGantryMap.get(ip)));
+                            trailBo.setGantryIpBO(szdnGantryMap.get(ip));
                             trailBo.setLocationFlag("1"); // 有数据
                         }
                     }
 
+                    // 收费站ip
                     if (ipType.equals("stationip")){
                         if (szdnTollMap.containsKey(ip)){
-                            trailBo.setLocationJosn(JSON.toJSONString(szdnTollMap.get(ip)));
+                            trailBo.setStationIpBO(szdnTollMap.get(ip));
                             trailBo.setLocationFlag("1"); // 有数据
                         }
                     }
