@@ -30,6 +30,10 @@ public interface IOdsRtSzdnSnapshotFlowStationcaptureAddcodeService extends ISer
      */
     List<OdsRtSzdnSnapshotFlowStationcaptureAddcode> selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeList(OdsRtSzdnSnapshotFlowStationcaptureAddcode odsRtSzdnSnapshotFlowStationcaptureAddcode);
 
-
+    /**
+     * 根据UUID 查询
+     * @param queryUuids
+     * @return
+     */
     Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByQueryUuids(String queryUuids);
 }
