@@ -33,6 +33,10 @@ public interface OdsRtSzdnSnapshotFlowAddcodeMapper extends BaseMapper<OdsRtSzdn
      */
     List<OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeList(OdsRtSzdnSnapshotFlowAddcode odsRtSzdnSnapshotFlowAddcode);
 
-    @MapKey("datauuid")
-    Map<String, OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeByUuidList(@Param("uuidList") List<String> uuidList);
+    /**
+     * 通过UUID 查询
+     * @param uuidList
+     * @return
+     */
+    List<OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeByUuidList(@Param("uuidList") List<String> uuidList);
 }

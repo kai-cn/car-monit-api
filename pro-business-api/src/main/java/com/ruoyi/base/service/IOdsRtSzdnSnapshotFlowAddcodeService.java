@@ -29,5 +29,10 @@ public interface IOdsRtSzdnSnapshotFlowAddcodeService extends IService<OdsRtSzdn
      */
     List<OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeList(OdsRtSzdnSnapshotFlowAddcode odsRtSzdnSnapshotFlowAddcode);
 
+    /**
+     * 通过UUID 查询
+     * @param queryUuids
+     * @return
+     */
     Map<String, OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeByQueryUuids(String queryUuids);
 }

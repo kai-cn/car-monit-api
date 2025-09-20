@@ -8,10 +8,7 @@ import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -48,12 +45,21 @@ public class OdsRtSzdnSnapshotFlowAddcodeServiceImpl extends ServiceImpl<OdsRtSz
         return odsRtSzdnSnapshotFlowAddcodeMapper.selectOdsRtSzdnSnapshotFlowAddcodeList(odsRtSzdnSnapshotFlowAddcode);
     }
 
+    /**
+     * 通过UUID 查询
+     * @param queryUuids
+     * @return
+     */
     @Override
     public Map<String, OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeByQueryUuids(String queryUuids) {
+        Map<String, OdsRtSzdnSnapshotFlowAddcode> map = new HashMap<>();
         if(StringUtils.isNotBlank(queryUuids)) {
             List<String> uuidList = Arrays.stream(queryUuids.split(",")).collect(Collectors.toList());
-            return odsRtSzdnSnapshotFlowAddcodeMapper.selectOdsRtSzdnSnapshotFlowAddcodeByUuidList(uuidList);
+            List<OdsRtSzdnSnapshotFlowAddcode> list =  odsRtSzdnSnapshotFlowAddcodeMapper.selectOdsRtSzdnSnapshotFlowAddcodeByUuidList(uuidList);
+            for (OdsRtSzdnSnapshotFlowAddcode rtn : list) {
+                map.put(rtn.getDatauuid(),rtn);
+            }
         }
-        return Collections.emptyMap();
+        return map;
     }
 }
