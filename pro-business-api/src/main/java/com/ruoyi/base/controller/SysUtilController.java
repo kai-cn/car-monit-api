@@ -2,11 +2,16 @@ package com.ruoyi.base.controller;
 
 import com.ruoyi.base.domain.CarParaVO;
 import com.ruoyi.base.domain.SysUtil;
+import com.ruoyi.base.domain.TrailBo;
 import com.ruoyi.base.service.ISysUtilService;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/base/sysutil")
@@ -28,7 +33,7 @@ public class SysUtilController extends BaseController {
      * 同步轨迹
      */
     @PostMapping(value = "/syncTrack")
-    public AjaxResult syncTrack(@RequestBody CarParaVO carParaVO) {
+    public Map<String, List<TrailBo>> syncTrack(@RequestBody CarParaVO carParaVO) {
         return sysUtilService.syncTrack(carParaVO);
     }
 
@@ -37,8 +42,9 @@ public class SysUtilController extends BaseController {
      * 同步可疑车俩
      */
     @PostMapping(value = "/syncSuspiciousCar")
-    public AjaxResult syncSuspiciousCar(@RequestBody CarParaVO carParaVO) {
-        return AjaxResult.success();
+    public Map<String, List<TrailBo>> syncSuspiciousCar(@RequestBody CarParaVO carParaVO) {
+        Map<String, List<TrailBo>> mapCar = new HashMap<>();
+        return mapCar;
     }
 
 

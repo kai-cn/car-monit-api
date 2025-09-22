@@ -2,6 +2,8 @@ package com.ruoyi.base.service.impl;
 
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.ruoyi.base.domain.*;
 import com.ruoyi.base.service.*;
 import com.ruoyi.common.constant.Constants;
@@ -11,6 +13,7 @@ import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -100,7 +103,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
      * @param carParaVO carParaVO 车俩列表
      * @return 结果
      */
-    public AjaxResult syncTrack(CarParaVO carParaVO) {
+    public Map<String, List<TrailBo>> syncTrack(CarParaVO carParaVO) {
         List<CarVO> carlist = carParaVO.getCarlist();
         Map<String, List<TrailBo>> mapCar = new HashMap<>();
         for (CarVO carVO : carlist) {
@@ -112,7 +115,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             }
             mapCar.put(carNo, josnList);
         }
-        return AjaxResult.success(this.changeData(mapCar));
+        return this.changeData(mapCar);
     }
 
 
@@ -233,24 +236,68 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     case BORDER_WEIGHING_CAPTURE:
                         // 省界称重
                         if (weightNewstructureMap.containsKey(pointUuid)){
-                            trailBo.setBorderWeighingCaptureBO(weightNewstructureMap.get(pointUuid));
+                            OdsSzdnProvinceBorderVehicleWeightNewstructure  borderWeighingCaptureBO = weightNewstructureMap.get(pointUuid);
+                            trailBo.setBorderWeighingCaptureBO(borderWeighingCaptureBO);
                             trailBo.setPointFlag("1"); // 有数据
+
+                            // 抓拍照片
+                            String imagesStr = CommonUtil.isNull(borderWeighingCaptureBO.getWeighingImagesArry());
+                            if (CommonUtil.isNotBlank(imagesStr)){
+                                String imagesSrc = "";
+                                JSONArray imgesJsonArray = JSON.parseArray(imagesStr);
+                                for (int zz = 0; zz < imgesJsonArray.size(); zz++) {
+                                    JSONObject imageTempJosn = imgesJsonArray.getJSONObject(zz);
+                                    if (null !=imageTempJosn){
+                                        String tempImageSrc = CommonUtil.isNull(imageTempJosn.getString("snapPicturePath"));
+                                        if (CommonUtil.isNotBlank(tempImageSrc)){
+                                            imagesSrc += tempImageSrc +",";
+                                        }
+                                    }
+                                }
+                                trailBo.setImagesArry(CommonUtil.deleteEnd(imagesSrc)); // 抓拍照片
+                            }
                         }
                         ipType = "gantryip";
                         break;
                     case GANTRY_CAPTURE:
                         // 门架抓拍
                         if (snapshotFlowAddcodeMap.containsKey(pointUuid)){
-                            trailBo.setGantryCaptureBO(snapshotFlowAddcodeMap.get(pointUuid));
+                            OdsRtSzdnSnapshotFlowAddcode  gantryCaptureBO = snapshotFlowAddcodeMap.get(pointUuid);
+                            trailBo.setGantryCaptureBO(gantryCaptureBO);
                             trailBo.setPointFlag("1"); // 有数据
+
+                            trailBo.setDevCode(gantryCaptureBO.getGantrycode()); // 设备编号
+                            trailBo.setDevName(gantryCaptureBO.getGantryname());  // 设备名称
+                            trailBo.setImagesArry(gantryCaptureBO.getSnappicturepath()); // 抓拍照片
+                            trailBo.setLon(gantryCaptureBO.getLon()); // 经度
+                            trailBo.setLat(gantryCaptureBO.getLat()); // 维度
+
                         }
                         ipType = "gantryip";
                         break;
                     case PROV_CAPTURE:
                         // 省界抓拍
                         if (provcaptureAddcodeMap.containsKey(pointUuid)){
-                            trailBo.setProvCaptureBO(provcaptureAddcodeMap.get(pointUuid));
+                            String imagesSrc = "";
+                            OdsRtSzdnSnapshotFlowProvcaptureAddcode  provCaptureBO = provcaptureAddcodeMap.get(pointUuid);
+                            trailBo.setProvCaptureBO(provCaptureBO);
                             trailBo.setPointFlag("1"); // 有数据
+
+                            // 车牌图路径
+                            if (CommonUtil.isNotBlank(provCaptureBO.getPlateimage())){
+                                imagesSrc += provCaptureBO.getPlateimage() +",";
+                            }
+
+                            // 车身图路径
+                            if (CommonUtil.isNotBlank(provCaptureBO.getSideimage())){
+                                imagesSrc += provCaptureBO.getSideimage() +",";
+                            }
+
+                            // 车头图路径
+                            if (CommonUtil.isNotBlank(provCaptureBO.getHeadimage())){
+                                imagesSrc += provCaptureBO.getHeadimage() +",";
+                            }
+                            trailBo.setImagesArry(CommonUtil.deleteEnd(imagesSrc)); // 抓拍照片
                         }
                         ipType = "gantryip";
                         break;
@@ -260,8 +307,14 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     case STATION_CAPTURE:
                         // 收费站抓拍
                         if (stationcaptureAddcodeMap.containsKey(pointUuid)){
-                            trailBo.setStationCapture(stationcaptureAddcodeMap.get(pointUuid));
+                            OdsRtSzdnSnapshotFlowStationcaptureAddcode  stationCapture = stationcaptureAddcodeMap.get(pointUuid);
+                            trailBo.setStationCapture(stationCapture);
                             trailBo.setPointFlag("1"); // 有数据
+
+                            trailBo.setDevCode(stationCapture.getTollcode()); // 设备编号
+                            trailBo.setDevName(stationCapture.getTollname());  // 设备名称
+                            trailBo.setImagesArry(stationCapture.getSnappicturepath()); // 抓拍照片
+
                         }
                         ipType = "stationip";
                         break;
@@ -272,16 +325,48 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     // 门架ip
                     if (ipType.equals("gantryip")){
                         if (szdnGantryMap.containsKey(ip)){
-                            trailBo.setGantryIpBO(szdnGantryMap.get(ip));
+                            OdsSzdnGantryIp  gantryIpBO = szdnGantryMap.get(ip);
+                            trailBo.setGantryIpBO(gantryIpBO);
                             trailBo.setLocationFlag("1"); // 有数据
+
+                            trailBo.setDevCode(gantryIpBO.getGantryCode()); // 设备编号
+                            trailBo.setDevName(gantryIpBO.getGantryName());  // 设备名称
+
+                            OdsSzdnGantry odsSzdnGantry = gantryIpBO.getOdsSzdnGantry();
+                            if (null != odsSzdnGantry) {
+                                if (CommonUtil.isNotBlank(odsSzdnGantry.getLon())){
+                                    trailBo.setLon(new BigDecimal(odsSzdnGantry.getLon())); // 经度
+                                }
+
+                                if (CommonUtil.isNotBlank(odsSzdnGantry.getLat())){
+                                    trailBo.setLat(new BigDecimal(odsSzdnGantry.getLat())); // 经度
+                                }
+                            }
+
                         }
                     }
 
                     // 收费站ip
                     if (ipType.equals("stationip")){
                         if (szdnTollMap.containsKey(ip)){
-                            trailBo.setStationIpBO(szdnTollMap.get(ip));
+
+                            OdsSzdnTollStationIp  stationIpBO =  szdnTollMap.get(ip);
+                            trailBo.setStationIpBO(stationIpBO);
                             trailBo.setLocationFlag("1"); // 有数据
+
+                            trailBo.setDevCode(stationIpBO.getTollCode()); // 设备编号
+                            trailBo.setDevName(stationIpBO.getTollName());  // 设备名称
+
+                            OdsSzdnToll odsSzdnToll = stationIpBO.getOdsSzdnToll();
+                            if (null != odsSzdnToll){
+                                if (CommonUtil.isNotBlank(odsSzdnToll.getLongitude())){
+                                    trailBo.setLon(new BigDecimal(odsSzdnToll.getLongitude())); // 经度
+                                }
+
+                                if (CommonUtil.isNotBlank(odsSzdnToll.getLatitude())){
+                                    trailBo.setLat(new BigDecimal(odsSzdnToll.getLatitude())); // 经度
+                                }
+                            }
                         }
                     }
                 }

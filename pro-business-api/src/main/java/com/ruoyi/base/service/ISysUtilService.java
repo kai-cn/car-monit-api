@@ -31,7 +31,7 @@ public interface ISysUtilService {
      * @param carParaVO carParaVO 车俩列表
      * @return 结果
      */
-    AjaxResult syncTrack(CarParaVO carParaVO);
+    Map<String, List<TrailBo>> syncTrack(CarParaVO carParaVO);
 
 
     /**
