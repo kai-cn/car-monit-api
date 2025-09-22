@@ -207,7 +207,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         // 收费站抓拍
         Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> stationcaptureAddcodeMap = new HashMap<>();
         stationCaptureUUids = CommonUtil.deleteEnd(stationCaptureUUids);
-        if (!stationCaptureUUids.isEmpty()) {
+        if (CommonUtil.isNotBlank(stationCaptureUUids)) {
             stationcaptureAddcodeMap = stationcaptureAddcodeService.selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByQueryUuids(stationCaptureUUids);
         }
 
