@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ruoyi.base.domain.OdsSzdnGantryIp;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 省界设备ipMapper接口
@@ -30,4 +31,5 @@ public interface OdsSzdnGantryIpMapper extends BaseMapper<OdsSzdnGantryIp> {
     List<OdsSzdnGantryIp> selectOdsSzdnGantryIpList(OdsSzdnGantryIp odsSzdnGantryIp);
 
 
+    Set<String> selectIPSet();
 }

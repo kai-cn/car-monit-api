@@ -1,7 +1,9 @@
 package com.ruoyi.base.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.ruoyi.base.domain.CarParaVO;
 import com.ruoyi.base.domain.ZdataTrailTracks;
+import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
@@ -30,4 +32,7 @@ public interface ZdataTrailTracksMapper extends BaseMapper<ZdataTrailTracks> {
     List<ZdataTrailTracks> selectZdataTrailTracksList(ZdataTrailTracks zdataTrailTracks);
 
 
+    List<ZdataTrailTracks> getLatestTrail(@Param("carNoList") List<String> carNoList);
+
+    List<ZdataTrailTracks> getHistoryTrail(CarParaVO carParaVO);
 }

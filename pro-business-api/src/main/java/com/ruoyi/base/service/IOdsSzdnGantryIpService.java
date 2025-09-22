@@ -5,6 +5,7 @@ import com.ruoyi.base.domain.OdsSzdnGantryIp;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -40,4 +41,5 @@ public interface IOdsSzdnGantryIpService extends IService<OdsSzdnGantryIp> {
     Map<String,OdsSzdnGantryIp> selectOdsSzdnGantryIpMap();
 
 
+    Set<String> selectIPSet();
 }

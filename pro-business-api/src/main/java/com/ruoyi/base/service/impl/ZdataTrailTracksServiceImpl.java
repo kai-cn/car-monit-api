@@ -1,14 +1,12 @@
 package com.ruoyi.base.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.ruoyi.common.core.domain.AjaxResult;
-import com.ruoyi.common.utils.CommonUtil;
+import com.ruoyi.base.domain.CarParaVO;
 import com.ruoyi.base.mapper.ZdataTrailTracksMapper;
 import com.ruoyi.base.domain.ZdataTrailTracks;
 import com.ruoyi.base.service.IZdataTrailTracksService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -46,6 +44,13 @@ public class ZdataTrailTracksServiceImpl extends ServiceImpl<ZdataTrailTracksMap
         return zdataTrailTracksMapper.selectZdataTrailTracksList(zdataTrailTracks);
     }
 
+    @Override
+    public List<ZdataTrailTracks> getLatestTrail(List<String> carNoList) {
+        return zdataTrailTracksMapper.getLatestTrail(carNoList);
+    }
 
-
+    @Override
+    public List<ZdataTrailTracks> getHistoryTrail(CarParaVO carParaVO) {
+        return zdataTrailTracksMapper.getHistoryTrail(carParaVO);
+    }
 }

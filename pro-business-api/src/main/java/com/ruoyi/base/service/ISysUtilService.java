@@ -43,4 +43,7 @@ public interface ISysUtilService {
     Map<String, List<TrailBo>> changeData(Map<String, List<TrailBo>> mapCar);
 
 
+    Map<String, List<TrailBo>> syncSuspiciousCar(CarParaVO carParaVO);
+
+    Map<String, List<TrailBo>> carTrackQuery(CarParaVO carParaVO);
 }

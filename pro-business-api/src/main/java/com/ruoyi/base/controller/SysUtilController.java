@@ -43,8 +43,15 @@ public class SysUtilController extends BaseController {
      */
     @PostMapping(value = "/syncSuspiciousCar")
     public Map<String, List<TrailBo>> syncSuspiciousCar(@RequestBody CarParaVO carParaVO) {
-        Map<String, List<TrailBo>> mapCar = new HashMap<>();
-        return mapCar;
+        return sysUtilService.syncSuspiciousCar(carParaVO);
+    }
+
+    /**
+     * 轨迹查询
+     */
+    @PostMapping(value = "/carTrackQuery")
+    public Map<String, List<TrailBo>> carTrackQuery(@RequestBody CarParaVO carParaVO) {
+        return sysUtilService.carTrackQuery(carParaVO);
     }
 
 

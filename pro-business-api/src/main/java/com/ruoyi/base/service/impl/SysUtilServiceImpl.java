@@ -4,20 +4,25 @@ package com.ruoyi.base.service.impl;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.TypeReference;
 import com.ruoyi.base.domain.*;
 import com.ruoyi.base.service.*;
 import com.ruoyi.common.constant.Constants;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.utils.CommonUtil;
+import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 服务区基础信息Service业务层处理
@@ -386,5 +391,48 @@ public class SysUtilServiceImpl implements ISysUtilService {
         return mapCar;
     }
 
+    @Override
+    public Map<String, List<TrailBo>> syncSuspiciousCar(CarParaVO carParaVO) {
+        List<String> carNoList = new ArrayList<>();
+        if(!CollectionUtils.isEmpty(carParaVO.getCarlist())) {
+            carNoList = carParaVO.getCarlist().stream().map(CarVO::getCarNo).collect(Collectors.toList());
+        }
+        List<ZdataTrailTracks> list = zdataTrailTracksService.getLatestTrail(carNoList);
+        Map<String, List<TrailBo>> map = getCarMap(list);
+        return this.changeData(map);
+    }
 
+
+
+    @Override
+    public Map<String, List<TrailBo>> carTrackQuery(CarParaVO carParaVO) {
+        List<ZdataTrailTracks> list = zdataTrailTracksService.getHistoryTrail(carParaVO);
+        Map<String, List<TrailBo>> map = getCarMap(list);
+        return this.changeData(map);
+    }
+
+    private Map<String, List<TrailBo>> getCarMap(List<ZdataTrailTracks> list) {
+        Set<String> set = odsSzdnGantryIpService.selectIPSet();
+        Map<String, List<TrailBo>> map = new HashMap<>();
+        for (ZdataTrailTracks tracks : list) {
+            String plateKey = tracks.getPlateKey();
+            String trailPoints = tracks.getTrailPoints();
+            if(StringUtils.isNotBlank(trailPoints)) {
+                List<TrailBo> trailPointList = JSON.parseObject(trailPoints, new TypeReference<List<TrailBo>>() {
+                });
+//                List<TrailBo> trailPointList = JSON.parseArray(trailPoints, TrailBo.class);
+                trailPointList.stream().filter(TrailBo::getDirectionIn).findFirst()
+                        .ifPresent(item -> {
+                            if(StringUtils.isNotBlank(item.getLocationCode())) {
+                                String ip = item.getLocationCode().split(":")[1];
+                                map.put(plateKey, trailPointList);//筛选出吉安东进入的
+                                /*if (set.contains(ip)) {
+                                    map.put(plateKey, trailPointList);//筛选出吉安东进入的
+                                }*/
+                            }
+                        });
+            }
+        }
+        return map;
+    }
 }

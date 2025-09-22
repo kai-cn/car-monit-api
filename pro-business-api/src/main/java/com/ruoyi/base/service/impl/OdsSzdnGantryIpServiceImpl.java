@@ -12,9 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 省界设备ipService业务层处理
@@ -75,6 +73,8 @@ public class OdsSzdnGantryIpServiceImpl extends ServiceImpl<OdsSzdnGantryIpMappe
 
     }
 
-
-
+    @Override
+    public Set<String> selectIPSet() {
+        return odsSzdnGantryIpMapper.selectIPSet();
+    }
 }
