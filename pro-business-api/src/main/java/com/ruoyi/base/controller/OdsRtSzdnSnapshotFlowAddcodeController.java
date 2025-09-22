@@ -3,15 +3,16 @@ package com.ruoyi.base.controller;
 import com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowAddcode;
 import com.ruoyi.base.service.IOdsRtSzdnSnapshotFlowAddcodeService;
 import com.ruoyi.common.core.controller.BaseController;
-import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 门架抓拍流水Controller
@@ -49,8 +50,8 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
      * 获取门架抓拍流水详细信息
      */
     @GetMapping(value = "/{bigId}")
-    public AjaxResult getInfo(@PathVariable("bigId") String bigId) {
-        return AjaxResult.success(odsRtSzdnSnapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeById(bigId));
+    public OdsRtSzdnSnapshotFlowAddcode getInfo(@PathVariable("bigId") String bigId) {
+        return  odsRtSzdnSnapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeById(bigId);
     }
 
 
