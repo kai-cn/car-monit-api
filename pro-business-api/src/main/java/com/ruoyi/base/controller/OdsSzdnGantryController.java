@@ -46,7 +46,7 @@ public class OdsSzdnGantryController extends BaseController {
      * @return
      */
     @GetMapping(value = "/listAll")
-    public AjaxResult getListAll() {
-        return AjaxResult.success(odsSzdnGantryService.list());
+    public List<OdsSzdnGantry> getListAll() {
+        return odsSzdnGantryService.list();
     }
 }

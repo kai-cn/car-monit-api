@@ -85,8 +85,8 @@ public class OdsYhglVBaseOrg implements Custom {
     private String orgIsYhAutarky;
 
     /** 加载时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone="GMT+8")
-    @Excel(name = "加载时间", width = 30, dateFormat = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    @Excel(name = "加载时间", width = 30, dateFormat = "yyyy-MM-dd")
     private Date loadTime;
 
     /** 分类分级 */

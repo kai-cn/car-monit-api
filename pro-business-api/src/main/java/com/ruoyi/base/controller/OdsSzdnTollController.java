@@ -6,7 +6,10 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -45,7 +48,7 @@ public class OdsSzdnTollController extends BaseController {
      * 获取收费站基础信息列表
      */
     @GetMapping(value = "/listAll")
-    public AjaxResult getListAll() {
-        return AjaxResult.success(odsSzdnTollService.list());
+    public List<OdsSzdnToll> getListAll() {
+        return odsSzdnTollService.list();
     }
 }

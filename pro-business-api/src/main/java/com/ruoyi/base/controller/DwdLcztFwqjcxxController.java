@@ -46,7 +46,7 @@ public class DwdLcztFwqjcxxController extends BaseController {
     * 获取服务区基础信息列表
      */
     @GetMapping(value = "/listAll")
-    public AjaxResult getListAll() {
-        return AjaxResult.success(dwdLcztFwqjcxxService.list());
+    public List<DwdLcztFwqjcxx> getListAll() {
+        return dwdLcztFwqjcxxService.list();
     }
 }

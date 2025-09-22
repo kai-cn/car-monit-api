@@ -46,7 +46,7 @@ public class OdsSzdnSectionController extends BaseController {
      * @return
      */
     @GetMapping(value = "/listAll")
-    public AjaxResult getListAll() {
-        return AjaxResult.success(odsSzdnSectionService.list());
+    public List<OdsSzdnSection> getListAll() {
+        return odsSzdnSectionService.list();
     }
 }
