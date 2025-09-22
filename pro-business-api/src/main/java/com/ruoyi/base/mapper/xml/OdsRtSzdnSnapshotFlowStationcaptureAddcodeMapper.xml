@@ -126,7 +126,7 @@
          where t.big_id = #{bigId}
     </select>
 
-    <select id="selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByUuidList" resultType="OdsRtSzdnSnapshotFlowStationcaptureAddcodeResult">
+    <select id="selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByUuidList" resultMap="OdsRtSzdnSnapshotFlowStationcaptureAddcodeResult">
         select
         <include refid="selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeVo"/>
         from ods_rt_szdn_snapshot_flow_stationcapture_addcode t

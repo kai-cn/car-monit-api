@@ -120,7 +120,7 @@
          where t.dataSource = #{dataSource}
     </select>
 
-    <select id="selectOdsSzdnProvinceBorderVehicleWeightNewstructureByUuidList" resultType="OdsSzdnProvinceBorderVehicleWeightNewstructureResult">
+    <select id="selectOdsSzdnProvinceBorderVehicleWeightNewstructureByUuidList" resultMap="OdsSzdnProvinceBorderVehicleWeightNewstructureResult">
         select
         <include refid="selectOdsSzdnProvinceBorderVehicleWeightNewstructureVo"/>
         from ods_szdn_province_border_vehicle_weight_newstructure t
