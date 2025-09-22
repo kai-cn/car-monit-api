@@ -80,5 +80,12 @@ public class TrailBo {
     /** 维度 */
     private BigDecimal lat;
 
+    // 入栈口
+    private String firtStationCode;
+
+    // 设备名称
+    private String firtStationName;
+
+
 
 }

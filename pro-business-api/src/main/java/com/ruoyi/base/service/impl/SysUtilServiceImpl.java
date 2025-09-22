@@ -216,6 +216,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
         for (Map.Entry<String, List<TrailBo>> entry : mapCar.entrySet()) {
             String carNo = entry.getKey();
             List<TrailBo> josnList = entry.getValue();
+
+            int stationCount = 0;
+
             for (TrailBo trailBo : josnList) {
 
                 // --------------抓拍信息
@@ -314,6 +317,13 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             trailBo.setDevCode(stationCapture.getTollcode()); // 设备编号
                             trailBo.setDevName(stationCapture.getTollname());  // 设备名称
                             trailBo.setImagesArry(stationCapture.getSnappicturepath()); // 抓拍照片
+
+                            if (stationCount == 0){
+                                trailBo.setFirtStationCode(stationCapture.getTollcode());
+                                trailBo.setFirtStationName(stationCapture.getTollname());
+                                stationCount ++;
+                            }
+
 
                         }
                         ipType = "stationip";
