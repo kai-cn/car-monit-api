@@ -67,10 +67,9 @@
         (select t.*, ROW_NUMBER() OVER (PARTITION BY t.uuid ORDER BY t.create_time desc )  rid
         from zdata_trail_tracks t
         <where>
-            k.type = 0
             <if test="carNo != null  and carNo != ''"> and t.plate_key = #{carNo} </if>
-            <if test="applyTime1 != null  and applyTime1 != ''">and t.create_time >= STR_TO_DATE(#{applyTime1},'%Y-%m-%d %H:%i:%s')</if>
-            <if test="applyTime2 != null  and applyTime2 != ''">and t.create_time <![CDATA[<=]]> STR_TO_DATE(#{applyTime2},'%Y-%m-%d %H:%i:%s') </if>
+            <if test="applyTime1 != null  and applyTime1 != ''">and t.create_time >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
+            <if test="applyTime2 != null  and applyTime2 != ''">and t.create_time <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS') </if>
         </where>
         ) k where k.rid = 1;
     </select>

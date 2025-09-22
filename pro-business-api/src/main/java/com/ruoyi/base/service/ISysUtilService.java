@@ -42,8 +42,17 @@ public interface ISysUtilService {
      */
     Map<String, List<TrailBo>> changeData(Map<String, List<TrailBo>> mapCar);
 
-
+    /**
+     * 同步可疑车俩
+     * @param carParaVO
+     * @return
+     */
     Map<String, List<TrailBo>> syncSuspiciousCar(CarParaVO carParaVO);
 
+    /**
+     * 轨迹查询
+     * @param carParaVO
+     * @return
+     */
     Map<String, List<TrailBo>> carTrackQuery(CarParaVO carParaVO);
 }

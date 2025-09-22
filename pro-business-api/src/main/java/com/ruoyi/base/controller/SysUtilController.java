@@ -6,6 +6,7 @@ import com.ruoyi.base.domain.TrailBo;
 import com.ruoyi.base.service.ISysUtilService;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
+import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -51,7 +52,22 @@ public class SysUtilController extends BaseController {
      */
     @PostMapping(value = "/carTrackQuery")
     public Map<String, List<TrailBo>> carTrackQuery(@RequestBody CarParaVO carParaVO) {
-        return sysUtilService.carTrackQuery(carParaVO);
+
+        String flag ="no";
+        // 车俩号 : 根据车牌号 或者时间端查询
+        if(CommonUtil.isNotBlank(carParaVO.getCarNo())){
+            flag ="yes";
+        }else{
+            if (CommonUtil.isNotBlank(carParaVO.getApplyTime1()) && CommonUtil.isNotBlank(carParaVO.getApplyTime2())){
+                flag ="yes";
+            }
+        }
+
+        Map<String, List<TrailBo>> carMap = new HashMap<>();
+        if(flag.equals("yes")){
+            carMap =  sysUtilService.carTrackQuery(carParaVO);
+        }
+        return  carMap;
     }
 
 

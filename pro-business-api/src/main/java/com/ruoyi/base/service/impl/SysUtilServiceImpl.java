@@ -391,6 +391,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
         return mapCar;
     }
 
+    /**
+     * 同步可疑车俩
+     * @param carParaVO
+     * @return
+     */
     @Override
     public Map<String, List<TrailBo>> syncSuspiciousCar(CarParaVO carParaVO) {
         List<String> carNoList = new ArrayList<>();
@@ -403,7 +408,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
     }
 
 
-
+    /**
+     * 查询车俩历史记录
+     * @param carParaVO
+     * @return
+     */
     @Override
     public Map<String, List<TrailBo>> carTrackQuery(CarParaVO carParaVO) {
         List<ZdataTrailTracks> list = zdataTrailTracksService.getHistoryTrail(carParaVO);
