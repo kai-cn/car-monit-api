@@ -420,15 +420,14 @@ public class SysUtilServiceImpl implements ISysUtilService {
             if(StringUtils.isNotBlank(trailPoints)) {
                 List<TrailBo> trailPointList = JSON.parseObject(trailPoints, new TypeReference<List<TrailBo>>() {
                 });
-//                List<TrailBo> trailPointList = JSON.parseArray(trailPoints, TrailBo.class);
-                trailPointList.stream().filter(TrailBo::getDirectionIn).findFirst()
+                trailPointList.stream().filter((item -> item.getDirectionIn() != null && item.getDirectionIn())).findFirst()
                         .ifPresent(item -> {
                             if(StringUtils.isNotBlank(item.getLocationCode())) {
                                 String ip = item.getLocationCode().split(":")[1];
                                 map.put(plateKey, trailPointList);//筛选出吉安东进入的
-                                /*if (set.contains(ip)) {
+                                if (set.contains(ip)) {
                                     map.put(plateKey, trailPointList);//筛选出吉安东进入的
-                                }*/
+                                }
                             }
                         });
             }
