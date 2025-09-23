@@ -1,6 +1,7 @@
 package com.ruoyi.base.controller;
 
 import com.ruoyi.base.domain.CarParaVO;
+import com.ruoyi.base.domain.CarVO;
 import com.ruoyi.base.domain.SysUtil;
 import com.ruoyi.base.domain.TrailBo;
 import com.ruoyi.base.service.ISysUtilService;
@@ -31,7 +32,7 @@ public class SysUtilController extends BaseController {
 
 
     /**
-     * 同步轨迹
+     * 同步车俩实时轨迹
      */
     @PostMapping(value = "/syncTrack")
     public Map<String, List<TrailBo>> syncTrack(@RequestBody CarParaVO carParaVO) {
@@ -48,25 +49,32 @@ public class SysUtilController extends BaseController {
     }
 
     /**
-     * 轨迹查询
+     * 车俩历史轨迹：根据车牌号查询
      */
-    @PostMapping(value = "/carTrackQuery")
+    @PostMapping(value = "/carTrackQueryByCarNo")
+    public Map<String, List<TrailBo>> carTrackQueryByCarNo(@RequestBody CarParaVO carParaVO) {
+        Map<String, List<TrailBo>> carMap = new HashMap<>();
+        if(CommonUtil.isNotBlank(carParaVO.getCarNo())){
+            carMap =  sysUtilService.carTrackQuery(carParaVO);
+        }
+        return  carMap;
+    }
+
+    /**
+     * 车俩历史轨迹：根据时间端查询
+     */
+    @PostMapping(value = "/carTrackQueryByTime")
     public Map<String, List<TrailBo>> carTrackQuery(@RequestBody CarParaVO carParaVO) {
 
-        String flag ="no";
-        // 车俩号 : 根据车牌号 或者时间端查询
-        if(CommonUtil.isNotBlank(carParaVO.getCarNo())){
-            flag ="yes";
-        }else{
-            if (CommonUtil.isNotBlank(carParaVO.getApplyTime1()) && CommonUtil.isNotBlank(carParaVO.getApplyTime2())){
-                flag ="yes";
+        Map<String, List<TrailBo>> carMap = new HashMap<>();
+
+        if (CommonUtil.isNotBlank(carParaVO.getApplyTime1()) && CommonUtil.isNotBlank(carParaVO.getApplyTime2())) {
+            List<CarVO> carlist = carParaVO.getCarlist(); // 重点车俩库
+            if (null != carlist && carlist.size() > 0) {
+                carMap =  sysUtilService.carTrackQuery(carParaVO);
             }
         }
 
-        Map<String, List<TrailBo>> carMap = new HashMap<>();
-        if(flag.equals("yes")){
-            carMap =  sysUtilService.carTrackQuery(carParaVO);
-        }
         return  carMap;
     }
 

@@ -401,7 +401,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         if (null != carlist && carlist.size() > 0) {
             Set<String> set = odsSzdnGantryIpService.selectIPSet();
             for (ZdataTrailTracks tracks : carlist) {
-                String carNo = tracks.getPlateKey() + "&&" + tracks.getUuid(); // 车牌号 + 轨迹id
+                String carNo = tracks.getPlateKey() + "@@" + tracks.getUuid(); // 车牌号 + 轨迹id
                 String keyValue = tracks.getTrailPoints(); // 行驶轨迹
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
@@ -450,7 +450,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         Map<String, List<TrailBo>> mapCar = new HashMap<>();
         if (null != carlist && carlist.size() > 0) {
             for (ZdataTrailTracks tracks : carlist) {
-                String carNo = tracks.getPlateKey() + "&&" + tracks.getUuid(); // 车牌号 + 轨迹id
+                String carNo = tracks.getPlateKey() + "@@" + tracks.getUuid(); // 车牌号 + 轨迹id
                 String keyValue = tracks.getTrailPoints(); // 行驶轨迹
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
