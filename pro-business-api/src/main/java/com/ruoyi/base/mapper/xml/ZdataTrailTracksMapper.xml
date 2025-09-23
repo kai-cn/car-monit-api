@@ -46,20 +46,13 @@
          where t.uuid = #{uuid}
     </select>
 
-    <select id="getLatestTrail" resultType="com.ruoyi.base.domain.ZdataTrailTracks">
+    <select id="getLatestTrail" parameterType="com.ruoyi.base.domain.CarParaVO" resultType="com.ruoyi.base.domain.ZdataTrailTracks">
         select k.* from
         (select t.*, ROW_NUMBER() OVER (PARTITION BY t.uuid ORDER BY t.create_time desc )  rid
         from zdata_trail_tracks t
         where t.type = 0 and
-        <if test="carNoList != null and carNoList.size() > 0">
-            t.plate_key in
-            <foreach collection="carNoList" open="(" separator="," close=")" item="item">
-                #{item}
-            </foreach>
-            and
-        </if>
-        t.create_time >= now() - interval '14 days'  and  t.create_time &lt;= now() - interval '7 days'
-        ) k where k.rid = 1;
+         t.create_time >= now() - 14 and  t.create_time <![CDATA[<=]]> now() -7
+        ) k where k.rid = 1
     </select>
 
     <select id="getHistoryTrail" parameterType="com.ruoyi.base.domain.CarParaVO" resultType="com.ruoyi.base.domain.ZdataTrailTracks">
@@ -70,8 +63,15 @@
             <if test="carNo != null  and carNo != ''"> and t.plate_key = #{carNo} </if>
             <if test="applyTime1 != null  and applyTime1 != ''">and t.create_time >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
             <if test="applyTime2 != null  and applyTime2 != ''">and t.create_time <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS') </if>
+            <if test="carNoList != null and carNoList.size() > 0">
+               and  t.plate_key in
+                <foreach collection="carNoList" open="(" separator="," close=")" item="item">
+                    #{item}
+                </foreach>
+                and
+            </if>
         </where>
-        ) k where k.rid = 1;
+        ) k where k.rid = 1
     </select>
 
 

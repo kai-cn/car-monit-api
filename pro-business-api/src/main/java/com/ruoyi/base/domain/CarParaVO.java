@@ -20,4 +20,9 @@ public class CarParaVO {
 
     private String applyTime2;
 
+    /**
+     * 车俩编号数组
+     */
+    private List<String> carNoList;
+
 }

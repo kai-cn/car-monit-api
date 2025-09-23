@@ -4,23 +4,16 @@ package com.ruoyi.base.service.impl;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.TypeReference;
 import com.ruoyi.base.domain.*;
 import com.ruoyi.base.service.*;
 import com.ruoyi.common.constant.Constants;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.utils.CommonUtil;
-import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -111,16 +104,20 @@ public class SysUtilServiceImpl implements ISysUtilService {
     public Map<String, List<TrailBo>> syncTrack(CarParaVO carParaVO) {
         List<CarVO> carlist = carParaVO.getCarlist();
         Map<String, List<TrailBo>> mapCar = new HashMap<>();
-        for (CarVO carVO : carlist) {
-            String carNo = carVO.getCarNo();
-            String keyValue = redisCache.getCacheObject(getCacheKey(carNo));
-            List<TrailBo> josnList = new ArrayList<TrailBo>();
-            if (CommonUtil.isNotBlank(keyValue)){
-                josnList =JSON.parseArray(keyValue, TrailBo.class);
+        if (null != carlist && carlist.size() > 0) {
+            for (CarVO carVO : carlist) {
+                String carNo = carVO.getCarNo();
+                String keyValue = redisCache.getCacheObject(getCacheKey(carNo));
+                List<TrailBo> josnList = new ArrayList<TrailBo>();
+                if (CommonUtil.isNotBlank(keyValue)) {
+                    josnList = JSON.parseArray(keyValue, TrailBo.class);
+                }
+                mapCar.put(carNo, josnList); // 车牌号
             }
-            mapCar.put(carNo, josnList);
+            return this.changeData(mapCar);
+        } else {
+            return mapCar;
         }
-        return this.changeData(mapCar);
     }
 
 
@@ -132,20 +129,21 @@ public class SysUtilServiceImpl implements ISysUtilService {
      */
     public Map<String, List<TrailBo>> changeData(Map<String, List<TrailBo>> mapCar) {
 
+        if (null == mapCar) {
+            Map<String, List<TrailBo>> rtnHashMap = new HashMap<>();
+            return rtnHashMap;
+        }
+
         String borderWeighingCaptureUUids = ""; // 省界称重
         String gantryCaptureUUids = ""; // 门架抓拍
         String provCaptureUUids = ""; // 省界抓拍
         String serviceAreaCaptureUUids = ""; // 服务区抓拍
         String stationCaptureUUids = ""; // 收费站抓拍
 
-        if (null == mapCar) {
-            return mapCar;
-        }
 
         int countNum = 0;
 
         for (Map.Entry<String, List<TrailBo>> entry : mapCar.entrySet()) {
-            String carNo = entry.getKey();
             List<TrailBo> josnList = entry.getValue();
             for (TrailBo trailBo : josnList) {
                 trailBo.setPointFlag("0"); // 无数据
@@ -219,7 +217,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
 
         for (Map.Entry<String, List<TrailBo>> entry : mapCar.entrySet()) {
-            String carNo = entry.getKey();
             List<TrailBo> josnList = entry.getValue();
 
             int stationCount = 0;
@@ -393,18 +390,44 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
     /**
      * 同步可疑车俩
+     *
      * @param carParaVO
      * @return
      */
     @Override
     public Map<String, List<TrailBo>> syncSuspiciousCar(CarParaVO carParaVO) {
-        List<String> carNoList = new ArrayList<>();
-        if(!CollectionUtils.isEmpty(carParaVO.getCarlist())) {
-            carNoList = carParaVO.getCarlist().stream().map(CarVO::getCarNo).collect(Collectors.toList());
+        List<ZdataTrailTracks> carlist = zdataTrailTracksService.getLatestTrail(carParaVO);
+        Map<String, List<TrailBo>> mapCar = new HashMap<>();
+        if (null != carlist && carlist.size() > 0) {
+            Set<String> set = odsSzdnGantryIpService.selectIPSet();
+            for (ZdataTrailTracks tracks : carlist) {
+                String carNo = tracks.getPlateKey() + "&&" + tracks.getUuid(); // 车牌号 + 轨迹id
+                String keyValue = tracks.getTrailPoints(); // 行驶轨迹
+                List<TrailBo> josnList = new ArrayList<TrailBo>();
+                if (CommonUtil.isNotBlank(keyValue)) {
+                    josnList = JSON.parseArray(keyValue, TrailBo.class);
+                    // 筛选是吉安东的车----------
+                    for (TrailBo item  : josnList){
+                        // true=进入
+                        if (null != item.getDirectionIn() && item.getDirectionIn()) {
+                            String locationCode =  CommonUtil.isNull(item.getLocationCode());
+                            // ----------位置信息
+                            String[] locationCodeStr = locationCode.split(":");
+                            String ip ="";
+                            if (locationCodeStr.length > 1){
+                                ip = CommonUtil.isNull(locationCodeStr[1]);
+                                if (set.contains(ip)) {
+                                    mapCar.put(carNo, josnList);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return this.changeData(mapCar);
+        } else {
+            return mapCar;
         }
-        List<ZdataTrailTracks> list = zdataTrailTracksService.getLatestTrail(carNoList);
-        Map<String, List<TrailBo>> map = getCarMap(list);
-        return this.changeData(map);
     }
 
 
@@ -415,32 +438,32 @@ public class SysUtilServiceImpl implements ISysUtilService {
      */
     @Override
     public Map<String, List<TrailBo>> carTrackQuery(CarParaVO carParaVO) {
-        List<ZdataTrailTracks> list = zdataTrailTracksService.getHistoryTrail(carParaVO);
-        Map<String, List<TrailBo>> map = getCarMap(list);
-        return this.changeData(map);
+
+        List<CarVO> carlistPara = carParaVO.getCarlist();
+        if (null != carlistPara && carlistPara.size() > 0){
+            List<String> carNoList = carlistPara.stream().map(CarVO::getCarNo).collect(Collectors.toList());
+            carParaVO.setCarNoList(carNoList);
+        }
+
+        List<ZdataTrailTracks> carlist = zdataTrailTracksService.getHistoryTrail(carParaVO);
+
+        Map<String, List<TrailBo>> mapCar = new HashMap<>();
+        if (null != carlist && carlist.size() > 0) {
+            for (ZdataTrailTracks tracks : carlist) {
+                String carNo = tracks.getPlateKey() + "&&" + tracks.getUuid(); // 车牌号 + 轨迹id
+                String keyValue = tracks.getTrailPoints(); // 行驶轨迹
+                List<TrailBo> josnList = new ArrayList<TrailBo>();
+                if (CommonUtil.isNotBlank(keyValue)) {
+                    josnList = JSON.parseArray(keyValue, TrailBo.class);
+                    mapCar.put(carNo, josnList);
+                }
+            }
+            return this.changeData(mapCar);
+        } else {
+            return mapCar;
+        }
+
     }
 
-    private Map<String, List<TrailBo>> getCarMap(List<ZdataTrailTracks> list) {
-        Set<String> set = odsSzdnGantryIpService.selectIPSet();
-        Map<String, List<TrailBo>> map = new HashMap<>();
-        for (ZdataTrailTracks tracks : list) {
-            String plateKey = tracks.getPlateKey();
-            String trailPoints = tracks.getTrailPoints();
-            if(StringUtils.isNotBlank(trailPoints)) {
-                List<TrailBo> trailPointList = JSON.parseObject(trailPoints, new TypeReference<List<TrailBo>>() {
-                });
-                trailPointList.stream().filter((item -> item.getDirectionIn() != null && item.getDirectionIn())).findFirst()
-                        .ifPresent(item -> {
-                            if(StringUtils.isNotBlank(item.getLocationCode())) {
-                                String ip = item.getLocationCode().split(":")[1];
-                                map.put(plateKey, trailPointList);//筛选出吉安东进入的
-                                if (set.contains(ip)) {
-                                    map.put(plateKey, trailPointList);//筛选出吉安东进入的
-                                }
-                            }
-                        });
-            }
-        }
-        return map;
-    }
+
 }

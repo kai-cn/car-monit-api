@@ -2,8 +2,8 @@ package com.ruoyi.base.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.base.domain.CarParaVO;
-import com.ruoyi.base.mapper.ZdataTrailTracksMapper;
 import com.ruoyi.base.domain.ZdataTrailTracks;
+import com.ruoyi.base.mapper.ZdataTrailTracksMapper;
 import com.ruoyi.base.service.IZdataTrailTracksService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -44,11 +44,19 @@ public class ZdataTrailTracksServiceImpl extends ServiceImpl<ZdataTrailTracksMap
         return zdataTrailTracksMapper.selectZdataTrailTracksList(zdataTrailTracks);
     }
 
+    /**
+     * 同步可疑车俩
+     * @param carParaVO
+     * @return
+     */
     @Override
-    public List<ZdataTrailTracks> getLatestTrail(List<String> carNoList) {
-        return zdataTrailTracksMapper.getLatestTrail(carNoList);
+    public List<ZdataTrailTracks> getLatestTrail(CarParaVO carParaVO) {
+        return zdataTrailTracksMapper.getLatestTrail(carParaVO);
     }
 
+    /**
+     * 轨迹查询
+     */
     @Override
     public List<ZdataTrailTracks> getHistoryTrail(CarParaVO carParaVO) {
         return zdataTrailTracksMapper.getHistoryTrail(carParaVO);
