@@ -86,6 +86,11 @@ public class TrailBo {
     // 入栈口名称
     private String firtStationName;
 
+    // 入栈口时间
+    private String firtStationTime;
+
+
+
 
 
 }

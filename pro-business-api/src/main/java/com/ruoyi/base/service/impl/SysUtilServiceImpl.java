@@ -323,6 +323,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             if (stationCount == 0){
                                 trailBo.setFirtStationCode(stationCapture.getTollcode());
                                 trailBo.setFirtStationName(stationCapture.getTollname());
+                                trailBo.setFirtStationTime(trailBo.getCaptureTime());
                                 stationCount ++;
                             }
 
