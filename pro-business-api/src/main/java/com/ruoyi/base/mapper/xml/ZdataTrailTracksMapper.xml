@@ -68,7 +68,6 @@
                 <foreach collection="carNoList" open="(" separator="," close=")" item="item">
                     #{item}
                 </foreach>
-                and
             </if>
         </where>
         ) k where k.rid = 1
