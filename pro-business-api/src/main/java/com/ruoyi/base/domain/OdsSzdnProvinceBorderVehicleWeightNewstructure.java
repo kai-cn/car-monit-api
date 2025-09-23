@@ -2,7 +2,9 @@ package com.ruoyi.base.domain;
 
 import java.util.Date;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -197,6 +199,7 @@ public class OdsSzdnProvinceBorderVehicleWeightNewstructure implements Custom {
     /**
      * datauuid
      */
+    @TableId(value = "datauuid", type = IdType.ASSIGN_UUID)
     @Excel(name = "datauuid")
     private String datauuid;
 
