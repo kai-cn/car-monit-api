@@ -216,10 +216,32 @@ public class SysUtilServiceImpl implements ISysUtilService {
         Map<String, OdsSzdnGantryIp> szdnGantryMap = odsSzdnGantryIpService.selectOdsSzdnGantryIpMap();
 
 
+
+
         for (Map.Entry<String, List<TrailBo>> entry : mapCar.entrySet()) {
             List<TrailBo> josnList = entry.getValue();
 
             int stationCount = 0;
+            String firtStationCode = "";
+            // 入栈口名称
+            String firtStationName = "";
+            // 入栈口时间
+            String firtStationTime= "";
+
+            /** 车牌颜色（字典：1白色2黑色） */
+            String plateColor = "";
+
+            /** 车型 */
+            String carType = "";
+
+            /** 车牌号 */
+            String carNo = "";
+            /** 车种 */
+             String carVehicle= "";
+
+            /** 轴数 */
+            Long carNum = null;
+
 
             for (TrailBo trailBo : josnList) {
 
@@ -242,6 +264,23 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         // 省界称重
                         if (weightNewstructureMap.containsKey(pointUuid)){
                             OdsSzdnProvinceBorderVehicleWeightNewstructure  borderWeighingCaptureBO = weightNewstructureMap.get(pointUuid);
+                            if (CommonUtil.isNotBlank(borderWeighingCaptureBO.getPlateColor())){
+                                plateColor = borderWeighingCaptureBO.getPlateColor(); // 车牌颜色
+                            }
+
+
+                            if (CommonUtil.isNotBlank(borderWeighingCaptureBO.getVehicleType())){
+                                carType = borderWeighingCaptureBO.getVehicleType(); // 车型
+                            }
+
+                            if (null != borderWeighingCaptureBO.getAxleNum()){
+                                carNum = borderWeighingCaptureBO.getAxleNum(); // 轴数
+                            }
+
+
+
+
+
                             trailBo.setBorderWeighingCaptureBO(borderWeighingCaptureBO);
                             trailBo.setPointFlag("1"); // 有数据
 
@@ -268,6 +307,20 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         // 门架抓拍
                         if (snapshotFlowAddcodeMap.containsKey(pointUuid)){
                             OdsRtSzdnSnapshotFlowAddcode  gantryCaptureBO = snapshotFlowAddcodeMap.get(pointUuid);
+
+                            if (CommonUtil.isNotBlank(gantryCaptureBO.getPlatecolor())){
+                                plateColor = gantryCaptureBO.getPlatecolor(); // 车牌颜色
+                            }
+
+                            if (CommonUtil.isNotBlank(gantryCaptureBO.getCartype())){
+                                carType = gantryCaptureBO.getCartype(); // 车俩类型
+                            }
+
+                            if (CommonUtil.isNotBlank(gantryCaptureBO.getPlatetype())){
+                                carVehicle = gantryCaptureBO.getPlatetype(); // 车种
+                            }
+
+
                             trailBo.setGantryCaptureBO(gantryCaptureBO);
                             trailBo.setPointFlag("1"); // 有数据
 
@@ -277,6 +330,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             trailBo.setLon(gantryCaptureBO.getLon()); // 经度
                             trailBo.setLat(gantryCaptureBO.getLat()); // 维度
 
+
                         }
                         ipType = "gantryip";
                         break;
@@ -285,6 +339,17 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         if (provcaptureAddcodeMap.containsKey(pointUuid)){
                             String imagesSrc = "";
                             OdsRtSzdnSnapshotFlowProvcaptureAddcode  provCaptureBO = provcaptureAddcodeMap.get(pointUuid);
+
+                           /* if (CommonUtil.isNotBlank(provCaptureBO.getPlatecolor())){
+                                plateColor = provCaptureBO.getPlatecolor(); // 车牌颜色
+                            }
+*/
+
+
+                            if (null != provCaptureBO.getAxlecount()){
+                                carNum = Long.parseLong(provCaptureBO.getAxlecount()+""); // 轴数
+                            }
+
                             trailBo.setProvCaptureBO(provCaptureBO);
                             trailBo.setPointFlag("1"); // 有数据
 
@@ -313,6 +378,22 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         // 收费站抓拍
                         if (stationcaptureAddcodeMap.containsKey(pointUuid)){
                             OdsRtSzdnSnapshotFlowStationcaptureAddcode  stationCapture = stationcaptureAddcodeMap.get(pointUuid);
+
+                            if (CommonUtil.isNotBlank(stationCapture.getPlatecolor())){
+                                plateColor = stationCapture.getPlatecolor(); // 车牌颜色
+                            }
+
+                            if (CommonUtil.isNotBlank(stationCapture.getCartype())){
+                                carType = stationCapture.getCartype(); // 车型
+                            }
+
+                            if (CommonUtil.isNotBlank(stationCapture.getPlatetype())){
+                                carVehicle = stationCapture.getPlatetype(); // 车种
+                            }
+
+
+
+
                             trailBo.setStationCapture(stationCapture);
                             trailBo.setPointFlag("1"); // 有数据
 
@@ -321,9 +402,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             trailBo.setImagesArry(stationCapture.getSnappicturepath()); // 抓拍照片
 
                             if (stationCount == 0){
-                                trailBo.setFirtStationCode(stationCapture.getTollcode());
-                                trailBo.setFirtStationName(stationCapture.getTollname());
-                                trailBo.setFirtStationTime(trailBo.getCaptureTime());
+                                firtStationCode = stationCapture.getTollcode();
+                                firtStationName = stationCapture.getTollname();
+                                firtStationTime = trailBo.getCaptureTime();
                                 stationCount ++;
                             }
 
@@ -383,6 +464,16 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         }
                     }
                 }
+            }
+
+            for (TrailBo trailBo : josnList) {
+                trailBo.setFirtStationCode(firtStationCode);
+                trailBo.setFirtStationName(firtStationName);
+                trailBo.setFirtStationTime(firtStationTime);
+                trailBo.setPlateColor(plateColor);
+                trailBo.setCarType(carType);
+                trailBo.setCarVehicle(carVehicle);
+                trailBo.setCarNum(carNum);
             }
 
         }
