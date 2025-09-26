@@ -67,7 +67,19 @@ public class OdsSzdnGantryIpServiceImpl extends ServiceImpl<OdsSzdnGantryIpMappe
             if(osSzdnGantryMap.containsKey(key)){
                 rtn.setOdsSzdnGantry(osSzdnGantryMap.get(key));
             }
-            map.put(CommonUtil.isNull(rtn.getId()),rtn);
+            // 门架
+            map.put("gantryip:"+CommonUtil.isNull(""+rtn.getId()),rtn);
+            map.put("gantryip:"+CommonUtil.isNull(""+rtn.getGantryCode()),rtn);
+
+            // 省界门架称重事件
+            map.put("bwlocation:"+CommonUtil.isNull(""+rtn.getId()),rtn);
+            map.put("bwlocation:"+CommonUtil.isNull(""+rtn.getGantryCode()),rtn);
+
+            // 省界门架抓拍事件模型
+            map.put("gantryid:"+CommonUtil.isNull(""+rtn.getId()),rtn);
+            map.put("gantryid:"+CommonUtil.isNull(""+rtn.getGantryCode()),rtn);
+
+
         }
         return map;
 

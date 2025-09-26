@@ -3,6 +3,7 @@ package com.ruoyi.base.service;
 import com.ruoyi.base.domain.CarParaVO;
 import com.ruoyi.base.domain.SysUtil;
 import com.ruoyi.base.domain.TrailBo;
+import com.ruoyi.base.domain.ZdataTrailTracks;
 import com.ruoyi.common.core.domain.AjaxResult;
 
 import java.util.List;
@@ -31,7 +32,7 @@ public interface ISysUtilService {
      * @param carParaVO carParaVO 车俩列表
      * @return 结果
      */
-    Map<String, List<TrailBo>> syncTrack(CarParaVO carParaVO);
+    Map<ZdataTrailTracks, List<TrailBo>> syncTrack(CarParaVO carParaVO);
 
 
     /**
@@ -40,19 +41,19 @@ public interface ISysUtilService {
      * @param mapCar
      * @return 结果
      */
-    Map<String, List<TrailBo>> changeData(Map<String, List<TrailBo>> mapCar);
+    Map<ZdataTrailTracks, List<TrailBo>> changeData(Map<ZdataTrailTracks, List<TrailBo>> mapCar);
 
     /**
      * 同步可疑车俩
      * @param carParaVO
      * @return
      */
-    Map<String, List<TrailBo>> syncSuspiciousCar(CarParaVO carParaVO);
+    Map<ZdataTrailTracks, List<TrailBo>> syncSuspiciousCar(CarParaVO carParaVO);
 
     /**
      * 轨迹查询
      * @param carParaVO
      * @return
      */
-    Map<String, List<TrailBo>> carTrackQuery(CarParaVO carParaVO);
+    Map<ZdataTrailTracks, List<TrailBo>> carTrackQuery(CarParaVO carParaVO);
 }

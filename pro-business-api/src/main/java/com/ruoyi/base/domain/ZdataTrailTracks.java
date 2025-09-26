@@ -3,6 +3,7 @@ package com.ruoyi.base.domain;
 import java.util.Date;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -67,6 +68,40 @@ public class ZdataTrailTracks implements Custom {
      */
     @Excel(name = "轨迹点集合，推荐存 JSON 格式，包含坐标/时间/速度等信息")
     private String trailPoints;
+
+
+    // 入栈口
+    @TableField(exist = false)
+    private String firtStationCode;
+
+    // 入栈口名称
+    @TableField(exist = false)
+    private String firtStationName;
+
+    // 入栈口时间
+    @TableField(exist = false)
+    private String firtStationTime;
+
+
+    /** 车牌颜色（字典：1白色2黑色） */
+    @TableField(exist = false)
+    private String plateColor;
+
+    /** 车型 */
+    @TableField(exist = false)
+    private String carType;
+
+    /** 车牌号 */
+    @TableField(exist = false)
+    private String carNo;
+
+    /** 车种 */
+    @TableField(exist = false)
+    private String carVehicle;
+
+    /** 轴数 */
+    @TableField(exist = false)
+    private Long carNum;
 
 
 }
