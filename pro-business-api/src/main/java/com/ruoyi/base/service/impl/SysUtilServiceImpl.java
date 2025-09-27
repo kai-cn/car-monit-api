@@ -478,6 +478,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             Set<String> set = odsSzdnGantryIpService.selectIPSet();
             for (ZdataTrailTracks tracks : carlist) {
                 String keyValue = tracks.getTrailPoints(); // 行驶轨迹
+                tracks.setEscapedType(Constants.escapedType_20); // 屏蔽
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
                     josnList = JSON.parseArray(keyValue, TrailBo.class);

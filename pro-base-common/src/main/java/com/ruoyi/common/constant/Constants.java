@@ -274,6 +274,12 @@ public class Constants
     public static final String trail = "trail:";
 
 
+    /**
+     * 屏蔽
+     */
+    public static final String escapedType_20 = "20";
+
+
 
 
 }

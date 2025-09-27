@@ -103,5 +103,9 @@ public class ZdataTrailTracks implements Custom {
     @TableField(exist = false)
     private Long carNum;
 
+    /** 逃费类型 */
+    @TableField(exist = false)
+    private String escapedType;
+
 
 }
