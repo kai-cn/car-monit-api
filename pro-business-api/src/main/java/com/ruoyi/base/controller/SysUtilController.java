@@ -1,5 +1,6 @@
 package com.ruoyi.base.controller;
 
+import com.alibaba.fastjson2.JSON;
 import com.ruoyi.base.domain.*;
 import com.ruoyi.base.service.ISysUtilService;
 import com.ruoyi.common.core.controller.BaseController;
@@ -32,8 +33,16 @@ public class SysUtilController extends BaseController {
      * 同步车俩实时轨迹
      */
     @PostMapping(value = "/syncTrack")
-    public Map<ZdataTrailTracks, List<TrailBo>> syncTrack(@RequestBody CarParaVO carParaVO) {
-        return sysUtilService.syncTrack(carParaVO);
+    public Map<String, List<TrailBo>> syncTrack(@RequestBody CarParaVO carParaVO) {
+        Map<ZdataTrailTracks, List<TrailBo>> carMap = sysUtilService.syncTrack(carParaVO);
+
+        Map<String, List<TrailBo>> josnMap = new HashMap<>(); // 返回对象
+        if (null != carMap) {
+            for (Map.Entry<ZdataTrailTracks, List<TrailBo>> entry : carMap.entrySet()) {
+                josnMap.put(JSON.toJSONString(entry.getKey()), entry.getValue());
+            }
+        }
+        return josnMap;
     }
 
 
@@ -41,27 +50,43 @@ public class SysUtilController extends BaseController {
      * 同步可疑车俩
      */
     @PostMapping(value = "/syncSuspiciousCar")
-    public Map<ZdataTrailTracks, List<TrailBo>> syncSuspiciousCar(@RequestBody CarParaVO carParaVO) {
-        return sysUtilService.syncSuspiciousCar(carParaVO);
+    public Map<String, List<TrailBo>> syncSuspiciousCar(@RequestBody CarParaVO carParaVO) {
+        Map<ZdataTrailTracks, List<TrailBo>> carMap = sysUtilService.syncSuspiciousCar(carParaVO);
+
+        Map<String, List<TrailBo>> josnMap = new HashMap<>(); // 返回对象
+        if (null != carMap) {
+            for (Map.Entry<ZdataTrailTracks, List<TrailBo>> entry : carMap.entrySet()) {
+                josnMap.put(JSON.toJSONString(entry.getKey()), entry.getValue());
+            }
+        }
+        return josnMap;
     }
 
     /**
      * 车俩历史轨迹：根据车牌号查询
      */
     @PostMapping(value = "/carTrackQueryByCarNo")
-    public Map<ZdataTrailTracks, List<TrailBo>> carTrackQueryByCarNo(@RequestBody CarParaVO carParaVO) {
+    public Map<String, List<TrailBo>> carTrackQueryByCarNo(@RequestBody CarParaVO carParaVO) {
         Map<ZdataTrailTracks, List<TrailBo>> carMap = new HashMap<>();
         if(CommonUtil.isNotBlank(carParaVO.getCarNo())){
             carMap =  sysUtilService.carTrackQuery(carParaVO);
         }
-        return  carMap;
+
+        Map<String, List<TrailBo>> josnMap = new HashMap<>(); // 返回对象
+        if (null != carMap) {
+            for (Map.Entry<ZdataTrailTracks, List<TrailBo>> entry : carMap.entrySet()) {
+                josnMap.put(JSON.toJSONString(entry.getKey()), entry.getValue());
+            }
+        }
+        return josnMap;
+
     }
 
     /**
      * 车俩历史轨迹：根据时间端查询
      */
     @PostMapping(value = "/carTrackQueryByTime")
-    public Map<ZdataTrailTracks, List<TrailBo>> carTrackQuery(@RequestBody CarParaVO carParaVO) {
+    public Map<String, List<TrailBo>> carTrackQuery(@RequestBody CarParaVO carParaVO) {
         Map<ZdataTrailTracks, List<TrailBo>> carMap = new HashMap<>();
         if (CommonUtil.isNotBlank(carParaVO.getApplyTime1()) && CommonUtil.isNotBlank(carParaVO.getApplyTime2())) {
             List<CarVO> carlist = carParaVO.getCarlist(); // 重点车俩库
@@ -69,7 +94,15 @@ public class SysUtilController extends BaseController {
                 carMap =  sysUtilService.carTrackQuery(carParaVO);
             }
         }
-        return  carMap;
+
+        Map<String, List<TrailBo>> josnMap = new HashMap<>(); // 返回对象
+        if (null != carMap) {
+            for (Map.Entry<ZdataTrailTracks, List<TrailBo>> entry : carMap.entrySet()) {
+                josnMap.put(JSON.toJSONString(entry.getKey()), entry.getValue());
+            }
+        }
+        return josnMap;
+
     }
 
 
