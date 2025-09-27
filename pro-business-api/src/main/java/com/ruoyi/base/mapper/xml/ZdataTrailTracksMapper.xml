@@ -48,16 +48,18 @@
 
     <select id="getLatestTrail" parameterType="com.ruoyi.base.domain.CarParaVO" resultType="com.ruoyi.base.domain.ZdataTrailTracks">
         select k.* from
-        (select t.*, ROW_NUMBER() OVER (PARTITION BY t.uuid ORDER BY t.create_time desc )  rid
+        (select t.uuid,t.type,t.point_count, t.plate_key, t.enter_time, t.exit_time,t.trail_points,
+        ROW_NUMBER() OVER (PARTITION BY t.uuid ORDER BY t.create_time desc )  rid
         from zdata_trail_tracks t
         where t.type = 0 and
-         t.create_time >= now() - 14 and  t.create_time <![CDATA[<=]]> now() -7
+         t.enter_time >= now() - 14 and  t.enter_time <![CDATA[<=]]> now() -7
         ) k where k.rid = 1
     </select>
 
     <select id="getHistoryTrail" parameterType="com.ruoyi.base.domain.CarParaVO" resultType="com.ruoyi.base.domain.ZdataTrailTracks">
         select k.* from
-        (select t.*, ROW_NUMBER() OVER (PARTITION BY t.uuid ORDER BY t.create_time desc )  rid
+        (select t.uuid,t.type,t.point_count, t.plate_key, t.enter_time, t.exit_time,t.trail_points,
+        ROW_NUMBER() OVER (PARTITION BY t.uuid ORDER BY t.create_time desc )  rid
         from zdata_trail_tracks t
         <where>
             <if test="carNo != null  and carNo != ''"> and t.plate_key = #{carNo} </if>
