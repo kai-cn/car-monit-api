@@ -274,8 +274,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             }
 
 
-                            trailBo.setBorderWeighingCaptureBO(borderWeighingCaptureBO);
-                            trailBo.setPointFlag("1"); // 有数据
+                            /*trailBo.setBorderWeighingCaptureBO(borderWeighingCaptureBO);
+                            trailBo.setPointFlag("1"); // 有数据*/
 
                             // 抓拍照片
                             String imagesStr = CommonUtil.isNull(borderWeighingCaptureBO.getWeighingImagesArry());
@@ -314,8 +314,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             }*/
 
 
-                            trailBo.setGantryCaptureBO(gantryCaptureBO);
-                            trailBo.setPointFlag("1"); // 有数据
+                           /* trailBo.setGantryCaptureBO(gantryCaptureBO);
+                            trailBo.setPointFlag("1"); // 有数据*/
 
                             trailBo.setDevCode(gantryCaptureBO.getGantrycode()); // 设备编号
                             trailBo.setDevName(gantryCaptureBO.getGantryname());  // 设备名称
@@ -341,8 +341,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 carNum = Long.parseLong(provCaptureBO.getAxlecount()+""); // 轴数
                             }
 
-                            trailBo.setProvCaptureBO(provCaptureBO);
-                            trailBo.setPointFlag("1"); // 有数据
+                         /*   trailBo.setProvCaptureBO(provCaptureBO);
+                            trailBo.setPointFlag("1"); // 有数据*/
 
                             // 车牌图路径
                             if (CommonUtil.isNotBlank(provCaptureBO.getPlateimage())){
@@ -383,8 +383,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             }
 
 
-                            trailBo.setStationCapture(stationCapture);
-                            trailBo.setPointFlag("1"); // 有数据
+                           /* trailBo.setStationCapture(stationCapture);
+                            trailBo.setPointFlag("1"); // 有数据*/
 
                             trailBo.setDevCode(stationCapture.getTollcode()); // 设备编号
                             trailBo.setDevName(stationCapture.getTollname());  // 设备名称
@@ -409,8 +409,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         if (szdnTollMap.containsKey(locationCode)){
 
                             OdsSzdnTollStationIp  stationIpBO =  szdnTollMap.get(locationCode);
-                            trailBo.setStationIpBO(stationIpBO);
-                            trailBo.setLocationFlag("1"); // 有数据
+                           /* trailBo.setStationIpBO(stationIpBO);
+                            trailBo.setLocationFlag("1"); // 有数据*/
 
                             trailBo.setDevCode(stationIpBO.getTollCode()); // 设备编号
                             trailBo.setDevName(stationIpBO.getTollName());  // 设备名称
@@ -430,8 +430,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         // 门架ip
                         if (szdnGantryMap.containsKey(locationCode)){
                             OdsSzdnGantryIp  gantryIpBO = szdnGantryMap.get(locationCode);
-                            trailBo.setGantryIpBO(gantryIpBO);
-                            trailBo.setLocationFlag("1"); // 有数据
+                           /* trailBo.setGantryIpBO(gantryIpBO);
+                            trailBo.setLocationFlag("1"); // 有数据*/
 
                             trailBo.setDevCode(gantryIpBO.getGantryCode()); // 设备编号
                             trailBo.setDevName(gantryIpBO.getGantryName());  // 设备名称
