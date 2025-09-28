@@ -63,8 +63,8 @@
         from zdata_trail_tracks t
         <where>
             <if test="carNo != null  and carNo != ''"> and t.plate_key = #{carNo} </if>
-            <if test="applyTime1 != null  and applyTime1 != ''">and t.create_time >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
-            <if test="applyTime2 != null  and applyTime2 != ''">and t.create_time <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS') </if>
+            <if test="applyTime1 != null  and applyTime1 != ''">and t.enter_time >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
+            <if test="applyTime2 != null  and applyTime2 != ''">and t.enter_time <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS') </if>
             <if test="carNoList != null and carNoList.size() > 0">
                and  t.plate_key in
                 <foreach collection="carNoList" open="(" separator="," close=")" item="item">

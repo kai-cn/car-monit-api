@@ -25,4 +25,12 @@ public class CarParaVO {
      */
     private List<String> carNoList;
 
+    // 当前页面
+    private Integer pageNum;
+
+    // 分页大小
+    private Integer pageSize;
+
+    private String query1;
+
 }

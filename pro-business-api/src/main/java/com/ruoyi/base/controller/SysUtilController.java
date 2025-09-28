@@ -69,6 +69,7 @@ public class SysUtilController extends BaseController {
     public Map<String, List<TrailBo>> carTrackQueryByCarNo(@RequestBody CarParaVO carParaVO) {
         Map<ZdataTrailTracks, List<TrailBo>> carMap = new HashMap<>();
         if(CommonUtil.isNotBlank(carParaVO.getCarNo())){
+            startPage();
             carMap =  sysUtilService.carTrackQuery(carParaVO);
         }
 
@@ -88,11 +89,10 @@ public class SysUtilController extends BaseController {
     @PostMapping(value = "/carTrackQueryByTime")
     public Map<String, List<TrailBo>> carTrackQuery(@RequestBody CarParaVO carParaVO) {
         Map<ZdataTrailTracks, List<TrailBo>> carMap = new HashMap<>();
-        if (CommonUtil.isNotBlank(carParaVO.getApplyTime1()) && CommonUtil.isNotBlank(carParaVO.getApplyTime2())) {
-            List<CarVO> carlist = carParaVO.getCarlist(); // 重点车俩库
-            if (null != carlist && carlist.size() > 0) {
-                carMap =  sysUtilService.carTrackQuery(carParaVO);
-            }
+        List<CarVO> carlist = carParaVO.getCarlist(); // 重点车俩库
+        if (null != carlist && carlist.size() > 0) {
+            startPage();
+            carMap =  sysUtilService.carTrackQuery(carParaVO);
         }
 
         Map<String, List<TrailBo>> josnMap = new HashMap<>(); // 返回对象
