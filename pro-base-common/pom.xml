@@ -136,12 +136,7 @@
             <version>2.0.43</version>
         </dependency>
 
-        <!--swagger2接口文档-->
-        <dependency>
-            <groupId>com.github.xiaoymin</groupId>
-            <artifactId>knife4j-spring-ui</artifactId>
-            <version>3.0.3</version>
-        </dependency>
+
         <!--swagger2接口文档-->
         <dependency>
             <groupId>com.github.xiaoymin</groupId>
@@ -171,6 +166,12 @@
             <groupId>com.github.pagehelper</groupId>
             <artifactId>pagehelper-spring-boot-starter</artifactId>
             <version>1.4.7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>4.3.1</version>
         </dependency>
 
         <!--对象赋值-->
