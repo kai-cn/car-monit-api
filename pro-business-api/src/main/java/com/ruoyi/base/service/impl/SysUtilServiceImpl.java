@@ -246,7 +246,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
             /** 轴数 */
             Long carNum = null;
 
+            /**
+             * 查询类型
+             */
             String indexType ="";
+ 
 
             for (TrailBo trailBo : josnList) {
 
@@ -424,6 +428,14 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 if (CommonUtil.isNotBlank(odsSzdnToll.getLatitude())){
                                     trailBo.setLat(new BigDecimal(odsSzdnToll.getLatitude())); // 经度
                                 }
+
+                                // 路线编号
+                                trailBo.setRoadCode(CommonUtil.isNull(odsSzdnToll.getRoadCode()));
+
+                                // 路段编号
+                                trailBo.setSectionCode(CommonUtil.isNull(odsSzdnToll.getSectionCode()));
+
+
                             }
                         }
                     }else  if (indexType.equals("gantryType")){
@@ -445,6 +457,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 if (CommonUtil.isNotBlank(odsSzdnGantry.getLat())){
                                     trailBo.setLat(new BigDecimal(odsSzdnGantry.getLat())); // 经度
                                 }
+
+                                // 路线编号
+                                trailBo.setRoadCode(CommonUtil.isNull(odsSzdnGantry.getRoadCode()));
+
+                                // 路段编号
+                                trailBo.setSectionCode(CommonUtil.isNull(odsSzdnGantry.getSectionCode()));
                             }
 
                         }

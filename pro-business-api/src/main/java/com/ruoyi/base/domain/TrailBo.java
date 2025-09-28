@@ -78,10 +78,11 @@ public class TrailBo {
     /** 维度 */
     private BigDecimal lat;
 
+    /** 路线编号 */
+    private String roadCode;
 
-
-
-
+    /** 路段编号 */
+    private String sectionCode;
 
 
 }
