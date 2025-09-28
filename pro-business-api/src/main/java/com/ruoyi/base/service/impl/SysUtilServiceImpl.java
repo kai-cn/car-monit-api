@@ -250,7 +250,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
              * 查询类型
              */
             String indexType ="";
- 
+
 
             for (TrailBo trailBo : josnList) {
 
