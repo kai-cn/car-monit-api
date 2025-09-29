@@ -124,7 +124,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         while (it.hasNext()) {
             String key = it.next();
             String keyValue = redisCache.getCacheObject(key);
-            System.out.println("本地redis：" + key + "对应的轨迹点" + keyValue);
+            System.out.println("本地redis：" + key + "对应的轨迹点：" + keyValue);
         }
 
         return AjaxResult.success();
