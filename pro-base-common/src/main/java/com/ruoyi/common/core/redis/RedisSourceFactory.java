@@ -3,6 +3,8 @@ package com.ruoyi.common.core.redis;
 import java.io.Serializable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisCluster;
 
@@ -10,6 +12,7 @@ import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
+@Service
 public class RedisSourceFactory implements Serializable {
 
 
@@ -17,7 +20,7 @@ public class RedisSourceFactory implements Serializable {
 
     private static final Logger logger = LoggerFactory.getLogger(RedisSourceFactory.class);
 
-    public static JedisCluster createSource(RedisConfig redisConfig) {
+    public  JedisCluster createSource(RedisConfig redisConfig) {
         if (redisConfig == null || redisConfig.getClusterNodes() == null || redisConfig.getClusterNodes().isEmpty()) {
             logger.error("Redis cluster node address 'cluster.nodes' is not configured.");
             throw new IllegalStateException("Redis cluster node address 'cluster.nodes' is not configured.");

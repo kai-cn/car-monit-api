@@ -9,10 +9,14 @@ import com.ruoyi.base.service.*;
 import com.ruoyi.common.constant.Constants;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.redis.RedisCache;
+import com.ruoyi.common.core.redis.RedisConfig;
+import com.ruoyi.common.core.redis.RedisSourceFactory;
 import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import redis.clients.jedis.JedisCluster;
 
+import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,8 +36,15 @@ public class SysUtilServiceImpl implements ISysUtilService {
     public static final String PROV_CAPTURE = "ProvCapture";
     public static final String SERVICE_AREA_CAPTURE = "ServiceAreaCapture";
     public static final String STATION_CAPTURE = "StationCapture";
+
     @Autowired
     private RedisCache redisCache;
+
+    @Autowired
+    private RedisSourceFactory redisSourceFactory;
+
+    @Resource
+    private RedisConfig redisConfig;
 
     @Autowired
     private IZdataTrailTracksService zdataTrailTracksService;
@@ -78,13 +89,21 @@ public class SysUtilServiceImpl implements ISysUtilService {
      */
     public AjaxResult saveRedis(SysUtil sysUtil) {
 
+
        /* ZdataTrailTracks zdataTrailTracks = new ZdataTrailTracks();
         List<ZdataTrailTracks> trackList = zdataTrailTracksService.selectZdataTrailTracksList(zdataTrailTracks);
         for (ZdataTrailTracks trackBo : trackList) {
             redisCache.setCacheObject(getCacheKey(trackBo.getPlateKey()), trackBo.getTrailPoints());
         }*/
 
-      /*  Collection<String> keys = redisCache.keys(Constants.trail + "*");
+        System.out.println("获取的配置信息："+redisConfig.getClusterNodes());
+        JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
+
+        String keyValue = jedisCluster.get(getCacheKey("苏CMA262"));
+        System.out.println("获取的值："+keyValue);
+
+
+        /*  Collection<String> keys = redisCache.keys(Constants.trail + "*");
         Iterator<String> it = keys.iterator();
         while (it.hasNext()) {
             String key = it.next();
