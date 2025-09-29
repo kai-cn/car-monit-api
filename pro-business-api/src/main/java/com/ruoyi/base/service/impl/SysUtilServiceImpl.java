@@ -13,6 +13,7 @@ import com.ruoyi.common.core.redis.RedisConfig;
 import com.ruoyi.common.core.redis.RedisSourceFactory;
 import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import redis.clients.jedis.JedisCluster;
 
@@ -69,6 +70,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
     @Autowired
     private IOdsSzdnGantryIpService odsSzdnGantryIpService;
 
+    @Value("${isLocalhost}")
+    private String isLocalhost;
+
 
     /**
      * 设置cache key
@@ -109,7 +113,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
         for (String carNo : carList) {
             String keyValue = jedisCluster.get(getCacheKey(carNo));
-            System.out.println(keyValue + "对应的轨迹点：" + keyValue);
+            System.out.println("生成redis："+keyValue + "对应的轨迹点：" + keyValue);
             redisCache.setCacheObject(getCacheKey(carNo),keyValue);
         }
 
@@ -119,7 +123,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         while (it.hasNext()) {
             String key = it.next();
             String keyValue = redisCache.getCacheObject(getCacheKey(key));
-            System.out.println("本地redis" + key + "值---" + keyValue);
+            System.out.println("本地redis：" + key + "值---" + keyValue);
         }
 
         return AjaxResult.success();
@@ -135,9 +139,22 @@ public class SysUtilServiceImpl implements ISysUtilService {
         List<CarVO> carlist = carParaVO.getCarlist();
         Map<ZdataTrailTracks, List<TrailBo>> mapCar = new HashMap<>();
         if (null != carlist && carlist.size() > 0) {
+
+            System.out.println("获取的配置信息："+redisConfig.getClusterNodes()+"--本地配置："+isLocalhost);
+            JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
+
             for (CarVO carVO : carlist) {
                 String carNo = carVO.getCarNo();
-                String keyValue = redisCache.getCacheObject(getCacheKey(carNo));
+                String keyValue = "";
+
+                if (CommonUtil.isNull(isLocalhost).equals("local")){
+                    // 本地
+                    keyValue = redisCache.getCacheObject(getCacheKey(carNo));
+                }else {
+                    // 生成-------------
+                    keyValue = jedisCluster.get(getCacheKey(carNo));
+                }
+
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
                     josnList = JSON.parseArray(keyValue, TrailBo.class);
