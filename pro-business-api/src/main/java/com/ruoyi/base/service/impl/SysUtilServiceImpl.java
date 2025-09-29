@@ -100,7 +100,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             redisCache.setCacheObject(getCacheKey(trackBo.getPlateKey()), trackBo.getTrailPoints());
         }*/
 
-        System.out.println("获取的配置信息："+redisConfig.getClusterNodes());
+        System.out.println("获取的配置信息："+redisConfig.getClusterNodes()+"--本地配置："+isLocalhost);
 
         JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
 
@@ -112,9 +112,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
         carList.add("赣A0253J");
 
         for (String carNo : carList) {
-            String keyValue = jedisCluster.get(getCacheKey(carNo));
-            System.out.println("生成redis："+keyValue + "对应的轨迹点：" + keyValue);
-            redisCache.setCacheObject(getCacheKey(carNo),keyValue);
+            String key = getCacheKey(carNo);
+            String keyValue = jedisCluster.get(key);
+            System.out.println("生成redis：" + key + "对应的轨迹点：" + keyValue);
+            redisCache.setCacheObject(key, keyValue);
         }
 
 
@@ -122,8 +123,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
         Iterator<String> it = keys.iterator();
         while (it.hasNext()) {
             String key = it.next();
-            String keyValue = redisCache.getCacheObject(getCacheKey(key));
-            System.out.println("本地redis：" + key + "值---" + keyValue);
+            String keyValue = redisCache.getCacheObject(key);
+            System.out.println("本地redis：" + key + "对应的轨迹点" + keyValue);
         }
 
         return AjaxResult.success();
