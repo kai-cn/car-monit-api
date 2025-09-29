@@ -110,7 +110,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         for (String carNo : carList) {
             String keyValue = jedisCluster.get(getCacheKey(carNo));
             System.out.println(keyValue + "对应的轨迹点：" + keyValue);
-            redisCache.setCacheObject(carNo,keyValue);
+            redisCache.setCacheObject(getCacheKey(carNo),keyValue);
         }
 
 
@@ -118,7 +118,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         Iterator<String> it = keys.iterator();
         while (it.hasNext()) {
             String key = it.next();
-            String keyValue = redisCache.getCacheObject(key);
+            String keyValue = redisCache.getCacheObject(getCacheKey(key));
             System.out.println("本地redis" + key + "值---" + keyValue);
         }
 
