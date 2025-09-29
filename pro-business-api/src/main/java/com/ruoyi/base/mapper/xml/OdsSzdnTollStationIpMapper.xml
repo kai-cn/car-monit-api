@@ -25,7 +25,7 @@
     <select id="selectOdsSzdnTollStationIpList" parameterType="com.ruoyi.base.domain.OdsSzdnTollStationIp" resultMap="OdsSzdnTollStationIpResult">
         SELECT
         <include refid="selectOdsSzdnTollStationIpVo"/>
-        FROM ods_szdn_toll_station_ip t
+        FROM jl_data01.ods_szdn_toll_station_ip t
         WHERE 1 = 1
         <if test="tollCode != null  and tollCode != ''"> and t.toll_code = #{tollCode}</if>
         <if test="tollName != null  and tollName != ''"> and t.toll_name like concat('%', #{tollName}, '%')</if>
@@ -37,7 +37,7 @@
     <select id="selectOdsSzdnTollStationIpById" parameterType="Long" resultMap="OdsSzdnTollStationIpResult">
          select
          <include refid="selectOdsSzdnTollStationIpVo"/>
-         from ods_szdn_toll_station_ip t
+         from jl_data01.ods_szdn_toll_station_ip t
          where t.id = #{id}
     </select>
 

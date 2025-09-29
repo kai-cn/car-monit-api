@@ -47,7 +47,7 @@
     <select id="selectDwdLcztSfzjcxxList" parameterType="com.ruoyi.base.domain.DwdLcztSfzjcxx" resultMap="DwdLcztSfzjcxxResult">
         SELECT
         <include refid="selectDwdLcztSfzjcxxVo"/>
-        FROM dwd_lczt_sfzjcxx t
+        FROM jl_data01.dwd_lczt_sfzjcxx t
         WHERE 1=1
         <if test="agentPk != null  and agentPk != ''"> and t.agent_pk = #{agentPk}</if>
         <if test="yxtzj != null  and yxtzj != ''"> and t.yxtzj = #{yxtzj}</if>
@@ -71,7 +71,7 @@
     <select id="selectDwdLcztSfzjcxxById" parameterType="String" resultMap="DwdLcztSfzjcxxResult">
          select
          <include refid="selectDwdLcztSfzjcxxVo"/>
-         from dwd_lczt_sfzjcxx t
+         from jl_data01.dwd_lczt_sfzjcxx t
          where t.agent_pk = #{agentPk}
     </select>
 </mapper>

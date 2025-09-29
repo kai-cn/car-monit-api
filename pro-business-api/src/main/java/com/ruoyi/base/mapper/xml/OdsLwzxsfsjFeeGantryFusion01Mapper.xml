@@ -159,7 +159,7 @@
     <select id="selectOdsLwzxsfsjFeeGantryFusion01List" parameterType="com.ruoyi.base.domain.OdsLwzxsfsjFeeGantryFusion01" resultMap="OdsLwzxsfsjFeeGantryFusion01Result">
         SELECT
         <include refid="selectOdsLwzxsfsjFeeGantryFusion01Vo"/>
-        FROM ods_lwzxsfsj_fee_gantry_fusion_01 t
+        FROM jl_data01.ods_lwzxsfsj_fee_gantry_fusion_01 t
         WHERE 1 = 1
         <if test="bigId != null  and bigId != ''"> and t.big_id = #{bigId}</if>
         <if test="id != null  and id != ''"> and t.id = #{id}</if>
@@ -243,7 +243,7 @@
     <select id="selectOdsLwzxsfsjFeeGantryFusion01ById" parameterType="String" resultMap="OdsLwzxsfsjFeeGantryFusion01Result">
          select
          <include refid="selectOdsLwzxsfsjFeeGantryFusion01Vo"/>
-         from ods_lwzxsfsj_fee_gantry_fusion_01 t
+         from jl_data01.ods_lwzxsfsj_fee_gantry_fusion_01 t
          where t.big_id = #{bigId}
     </select>
 </mapper>

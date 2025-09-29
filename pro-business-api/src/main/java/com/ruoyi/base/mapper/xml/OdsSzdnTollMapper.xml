@@ -61,7 +61,7 @@
     <select id="selectOdsSzdnTollList" parameterType="com.ruoyi.base.domain.OdsSzdnToll" resultMap="OdsSzdnTollResult">
         SELECT
         <include refid="selectOdsSzdnTollVo"/>
-        FROM ods_szdn_toll t
+        FROM jl_data01.ods_szdn_toll t
         WHERE 1=1
         <if test="id != null  and id != ''"> and t.id = #{id}</if>
         <if test="roadCode != null  and roadCode != ''"> and t.road_code = #{roadCode}</if>
@@ -92,7 +92,7 @@
     <select id="selectOdsSzdnTollById" parameterType="String" resultMap="OdsSzdnTollResult">
          select
          <include refid="selectOdsSzdnTollVo"/>
-         from ods_szdn_toll t
+         from jl_data01.ods_szdn_toll t
          where t.id = #{id}
     </select>
 

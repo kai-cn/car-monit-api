@@ -277,7 +277,7 @@
     <select id="selectOdsLwzxsfsjFeeRecords01List" parameterType="com.ruoyi.base.domain.OdsLwzxsfsjFeeRecords01" resultMap="OdsLwzxsfsjFeeRecords01Result">
         SELECT
         <include refid="selectOdsLwzxsfsjFeeRecords01Vo"/>
-        FROM ods_lwzxsfsj_fee_records_01 t
+        FROM jl_data01.ods_lwzxsfsj_fee_records_01 t
         WHERE 1=1
         <if test="bigId != null  and bigId != ''"> and t.big_id = #{bigId}</if>
         <if test="algorithmidentifier != null  and algorithmidentifier != ''"> and t.algorithmidentifier = #{algorithmidentifier}</if>
@@ -416,7 +416,7 @@
     <select id="selectOdsLwzxsfsjFeeRecords01ById" parameterType="String" resultMap="OdsLwzxsfsjFeeRecords01Result">
          select
          <include refid="selectOdsLwzxsfsjFeeRecords01Vo"/>
-         from ods_lwzxsfsj_fee_records_01 t
+         from jl_data01.ods_lwzxsfsj_fee_records_01 t
          where t.big_id = #{bigId}
     </select>
 

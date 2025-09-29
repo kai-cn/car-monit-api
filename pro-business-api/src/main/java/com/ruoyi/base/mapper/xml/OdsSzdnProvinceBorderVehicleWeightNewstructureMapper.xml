@@ -77,7 +77,7 @@
     <select id="selectOdsSzdnProvinceBorderVehicleWeightNewstructureList" parameterType="com.ruoyi.base.domain.OdsSzdnProvinceBorderVehicleWeightNewstructure" resultMap="OdsSzdnProvinceBorderVehicleWeightNewstructureResult">
         SELECT
         <include refid="selectOdsSzdnProvinceBorderVehicleWeightNewstructureVo"/>
-        FROM ods_szdn_province_border_vehicle_weight_newstructure t
+        FROM jl_data01.ods_szdn_province_border_vehicle_weight_newstructure t
         WHERE 1 = 1
         <if test="dataSource != null  and dataSource != ''"> and t.dataSource = #{dataSource}</if>
         <if test="dataType != null  and dataType != ''"> and t.dataType = #{dataType}</if>
@@ -116,14 +116,14 @@
     <select id="selectOdsSzdnProvinceBorderVehicleWeightNewstructureById" parameterType="String" resultMap="OdsSzdnProvinceBorderVehicleWeightNewstructureResult">
          select
          <include refid="selectOdsSzdnProvinceBorderVehicleWeightNewstructureVo"/>
-         from ods_szdn_province_border_vehicle_weight_newstructure t
+         from jl_data01.ods_szdn_province_border_vehicle_weight_newstructure t
          where t.dataSource = #{dataSource}
     </select>
 
     <select id="selectOdsSzdnProvinceBorderVehicleWeightNewstructureByUuidList" resultMap="OdsSzdnProvinceBorderVehicleWeightNewstructureResult">
         select
         <include refid="selectOdsSzdnProvinceBorderVehicleWeightNewstructureVo"/>
-        from ods_szdn_province_border_vehicle_weight_newstructure t
+        from jl_data01.ods_szdn_province_border_vehicle_weight_newstructure t
         <where>
             datauuid in
             <foreach collection="uuidList" open="(" separator="," close=")" item="item">

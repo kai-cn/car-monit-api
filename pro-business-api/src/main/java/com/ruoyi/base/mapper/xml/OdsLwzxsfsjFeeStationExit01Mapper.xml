@@ -144,7 +144,7 @@
     <select id="selectOdsLwzxsfsjFeeStationExit01List" parameterType="com.ruoyi.base.domain.OdsLwzxsfsjFeeStationExit01" resultMap="OdsLwzxsfsjFeeStationExit01Result">
         SELECT
         <include refid="selectOdsLwzxsfsjFeeStationExit01Vo"/>
-        FROM ods_lwzxsfsj_fee_station_exit_01 t
+        FROM jl_data01.ods_lwzxsfsj_fee_station_exit_01 t
         WHERE 1=1
         <if test="bigId != null  and bigId != ''"> and t.big_id = #{bigId}</if>
         <if test="actualfeeclass != null  and actualfeeclass != ''"> and t.actualfeeclass = #{actualfeeclass}</if>
@@ -216,7 +216,7 @@
     <select id="selectOdsLwzxsfsjFeeStationExit01ById" parameterType="String" resultMap="OdsLwzxsfsjFeeStationExit01Result">
          select
          <include refid="selectOdsLwzxsfsjFeeStationExit01Vo"/>
-         from ods_lwzxsfsj_fee_station_exit_01 t
+         from jl_data01.ods_lwzxsfsj_fee_station_exit_01 t
          where t.big_id = #{bigId}
     </select>
 

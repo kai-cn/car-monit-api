@@ -28,7 +28,7 @@
     <select id="selectZdataTrailTracksList" parameterType="com.ruoyi.base.domain.ZdataTrailTracks" resultMap="ZdataTrailTracksResult">
         SELECT
         <include refid="selectZdataTrailTracksVo"/>
-        FROM zdata_trail_tracks t
+        FROM jl_data01.zdata_trail_tracks t
         WHERE 1 = 1
         <if test="uuid != null  and uuid != ''"> and t.uuid = #{uuid}</if>
         <if test="type != null "> and t.type = #{type}</if>
@@ -42,7 +42,7 @@
     <select id="selectZdataTrailTracksById" parameterType="String" resultMap="ZdataTrailTracksResult">
          select
          <include refid="selectZdataTrailTracksVo"/>
-         from zdata_trail_tracks t
+         from jl_data01.zdata_trail_tracks t
          where t.uuid = #{uuid}
     </select>
 
@@ -50,7 +50,7 @@
         select k.* from
         (select t.uuid,t.type,t.point_count, t.plate_key, t.enter_time, t.exit_time,t.trail_points,
         ROW_NUMBER() OVER (PARTITION BY t.uuid ORDER BY t.create_time desc )  rid
-        from zdata_trail_tracks t
+        from jl_data01.zdata_trail_tracks t
         where t.type = 0 and
          t.enter_time >= now() - 14 and  t.enter_time <![CDATA[<=]]> now() -7
         ) k where k.rid = 1
@@ -60,7 +60,7 @@
         select k.* from
         (select t.uuid,t.type,t.point_count, t.plate_key, t.enter_time, t.exit_time,t.trail_points,
         ROW_NUMBER() OVER (PARTITION BY t.uuid ORDER BY t.create_time desc )  rid
-        from zdata_trail_tracks t
+        from jl_data01.zdata_trail_tracks t
         <where>
             <if test="carNo != null  and carNo != ''"> and t.plate_key = #{carNo} </if>
             <if test="applyTime1 != null  and applyTime1 != ''">and t.enter_time >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>

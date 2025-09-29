@@ -81,7 +81,7 @@
     <select id="selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeList" parameterType="com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowStationcaptureAddcode" resultMap="OdsRtSzdnSnapshotFlowStationcaptureAddcodeResult">
         SELECT
         <include refid="selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeVo"/>
-        FROM ods_rt_szdn_snapshot_flow_stationcapture_addcode t
+        FROM jl_data01.ods_rt_szdn_snapshot_flow_stationcapture_addcode t
         WHERE 1 = 1
         <if test="bigId != null "> and t.big_id = #{bigId}</if>
         <if test="datasource != null  and datasource != ''"> and t.datasource = #{datasource}</if>
@@ -122,14 +122,14 @@
     <select id="selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeById" parameterType="Long" resultMap="OdsRtSzdnSnapshotFlowStationcaptureAddcodeResult">
          select
          <include refid="selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeVo"/>
-         from ods_rt_szdn_snapshot_flow_stationcapture_addcode t
+         from jl_data01.ods_rt_szdn_snapshot_flow_stationcapture_addcode t
          where t.big_id = #{bigId}
     </select>
 
     <select id="selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByUuidList" resultMap="OdsRtSzdnSnapshotFlowStationcaptureAddcodeResult">
         select
         <include refid="selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeVo"/>
-        from ods_rt_szdn_snapshot_flow_stationcapture_addcode t
+        from jl_data01.ods_rt_szdn_snapshot_flow_stationcapture_addcode t
         <where>
             datauuid in
             <foreach collection="uuidList" open="(" separator="," close=")" item="item">

@@ -27,7 +27,7 @@
     <select id="selectOdsSzdnGantryIpList" parameterType="com.ruoyi.base.domain.OdsSzdnGantryIp" resultMap="OdsSzdnGantryIpResult">
         SELECT
         <include refid="selectOdsSzdnGantryIpVo"/>
-        FROM ods_szdn_gantry_ip t
+        FROM jl_data01.jl_data01.ods_szdn_gantry_ip t
         WHERE 1 = 1
         <if test="id != null  and id != ''"> and t.id = #{id}</if>
         <if test="gantryCode != null  and gantryCode != ''"> and t.gantry_code = #{gantryCode}</if>
@@ -41,14 +41,14 @@
     <select id="selectOdsSzdnGantryIpById" parameterType="Long" resultMap="OdsSzdnGantryIpResult">
          select
          <include refid="selectOdsSzdnGantryIpVo"/>
-         from ods_szdn_gantry_ip t
+         from jl_data01.ods_szdn_gantry_ip t
          where t.id = #{id}
     </select>
 
     <select id="selectIPSet" resultType="java.lang.String">
-         select gip.ip from  ods_szdn_gantry_ip gip where gip.org_code = '030000011'
+         select gip.ip from  jl_data01.ods_szdn_gantry_ip gip where gip.org_code = '030000011'
          UNION ALL
-         select sip.ip from  ods_szdn_toll_station_ip sip where sip.org_code = '030000011'
+         select sip.ip from  jl_data01.ods_szdn_toll_station_ip sip where sip.org_code = '030000011'
     </select>
 
 

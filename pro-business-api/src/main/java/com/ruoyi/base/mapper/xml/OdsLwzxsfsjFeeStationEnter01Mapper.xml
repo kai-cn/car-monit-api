@@ -80,7 +80,7 @@
     <select id="selectOdsLwzxsfsjFeeStationEnter01List" parameterType="com.ruoyi.base.domain.OdsLwzxsfsjFeeStationEnter01" resultMap="OdsLwzxsfsjFeeStationEnter01Result">
         SELECT
         <include refid="selectOdsLwzxsfsjFeeStationEnter01Vo"/>
-        FROM ods_lwzxsfsj_fee_station_enter_01 t
+        FROM jl_data01.ods_lwzxsfsj_fee_station_enter_01 t
         WHERE 1 = 1
         <if test="bigId != null "> and t.big_id = #{bigId}</if>
         <if test="cardid != null  and cardid != ''"> and t.cardid = #{cardid}</if>
@@ -120,7 +120,7 @@
     <select id="selectOdsLwzxsfsjFeeStationEnter01ById" parameterType="Long" resultMap="OdsLwzxsfsjFeeStationEnter01Result">
          select
          <include refid="selectOdsLwzxsfsjFeeStationEnter01Vo"/>
-         from ods_lwzxsfsj_fee_station_enter_01 t
+         from jl_data01.ods_lwzxsfsj_fee_station_enter_01 t
          where t.big_id = #{bigId}
     </select>
 

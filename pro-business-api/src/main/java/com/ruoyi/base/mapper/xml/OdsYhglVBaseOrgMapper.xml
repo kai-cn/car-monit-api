@@ -47,7 +47,7 @@
     <select id="selectOdsYhglVBaseOrgList" parameterType="com.ruoyi.base.domain.OdsYhglVBaseOrg" resultMap="OdsYhglVBaseOrgResult">
         SELECT
         <include refid="selectOdsYhglVBaseOrgVo"/>
-        FROM ods_yhgl_v_base_org t
+        FROM jl_data01.ods_yhgl_v_base_org t
         WHERE 1=1
         <if test="bigId != null  and bigId != ''"> and t.big_id = #{bigId}</if>
         <if test="orgCode != null  and orgCode != ''"> and t.org_code = #{orgCode}</if>
@@ -71,7 +71,7 @@
     <select id="selectOdsYhglVBaseOrgById" parameterType="String" resultMap="OdsYhglVBaseOrgResult">
          select
          <include refid="selectOdsYhglVBaseOrgVo"/>
-         from ods_yhgl_v_base_org t
+         from jl_data01.ods_yhgl_v_base_org t
          where t.big_id = #{bigId}
     </select>
 

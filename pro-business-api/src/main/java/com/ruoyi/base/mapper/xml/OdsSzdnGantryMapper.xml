@@ -57,7 +57,7 @@
     <select id="selectOdsSzdnGantryList" parameterType="com.ruoyi.base.domain.OdsSzdnGantry" resultMap="OdsSzdnGantryResult">
         SELECT
         <include refid="selectOdsSzdnGantryVo"/>
-        FROM ods_szdn_gantry t
+        FROM jl_data01.ods_szdn_gantry t
         WHERE 1=1
         <if test="id != null  and id != ''"> and t.id = #{id}</if>
         <if test="gantryCode != null  and gantryCode != ''"> and t.gantry_code = #{gantryCode}</if>
@@ -85,7 +85,7 @@
     <select id="selectOdsSzdnGantryById" parameterType="String" resultMap="OdsSzdnGantryResult">
          select
          <include refid="selectOdsSzdnGantryVo"/>
-         from ods_szdn_gantry t
+         from jl_data01.ods_szdn_gantry t
          where t.id = #{id}
     </select>
 
