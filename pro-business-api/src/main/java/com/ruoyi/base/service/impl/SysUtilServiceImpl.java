@@ -102,21 +102,26 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
         List<String> carList = new ArrayList<String>();
         carList.add("苏CMA262");
+        carList.add("苏F5HK60");
+        carList.add("苏FD0A86");
+        carList.add("苏MF3652");
+        carList.add("赣A0253J");
+
+        for (String carNo : carList) {
+            String keyValue = jedisCluster.get(getCacheKey(carNo));
+            System.out.println(keyValue + "对应的轨迹点：" + keyValue);
+            redisCache.setCacheObject(carNo,keyValue);
+        }
 
 
-        String carNo1 = "苏CMA262";
-        String keyValue = jedisCluster.get(getCacheKey("苏CMA262"));
-        System.out.println("获取的值："+keyValue);
-
-
-        /*  Collection<String> keys = redisCache.keys(Constants.trail + "*");
+        Collection<String> keys = redisCache.keys(Constants.trail + "*");
         Iterator<String> it = keys.iterator();
         while (it.hasNext()) {
             String key = it.next();
             String keyValue = redisCache.getCacheObject(key);
-            List<TrailBo> josnList = JSON.parseArray(keyValue,TrailBo.class);
-            System.out.println(key + "值---"+josnList);
-        }*/
+            System.out.println("本地redis" + key + "值---" + keyValue);
+        }
+
         return AjaxResult.success();
     }
 
