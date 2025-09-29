@@ -97,8 +97,14 @@ public class SysUtilServiceImpl implements ISysUtilService {
         }*/
 
         System.out.println("获取的配置信息："+redisConfig.getClusterNodes());
+
         JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
 
+        List<String> carList = new ArrayList<String>();
+        carList.add("苏CMA262");
+
+
+        String carNo1 = "苏CMA262";
         String keyValue = jedisCluster.get(getCacheKey("苏CMA262"));
         System.out.println("获取的值："+keyValue);
 

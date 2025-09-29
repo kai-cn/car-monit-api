@@ -49,6 +49,6 @@ public class OdsSzdnTollController extends BaseController {
      */
     @GetMapping(value = "/listAll")
     public List<OdsSzdnToll> getListAll() {
-        return odsSzdnTollService.list();
+        return odsSzdnTollService.selectOdsSzdnTollList(new OdsSzdnToll());
     }
 }

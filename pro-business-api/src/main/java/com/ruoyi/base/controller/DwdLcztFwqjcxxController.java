@@ -47,6 +47,6 @@ public class DwdLcztFwqjcxxController extends BaseController {
      */
     @GetMapping(value = "/listAll")
     public List<DwdLcztFwqjcxx> getListAll() {
-        return dwdLcztFwqjcxxService.list();
+        return dwdLcztFwqjcxxService.selectDwdLcztFwqjcxxList(new DwdLcztFwqjcxx());
     }
 }

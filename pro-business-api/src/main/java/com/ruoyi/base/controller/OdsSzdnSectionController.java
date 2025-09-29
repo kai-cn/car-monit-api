@@ -47,6 +47,6 @@ public class OdsSzdnSectionController extends BaseController {
      */
     @GetMapping(value = "/listAll")
     public List<OdsSzdnSection> getListAll() {
-        return odsSzdnSectionService.list();
+        return odsSzdnSectionService.selectOdsSzdnSectionList(new OdsSzdnSection());
     }
 }

@@ -50,6 +50,6 @@ public class OdsYhglVBaseOrgController extends BaseController {
      */
     @GetMapping(value = "/listAll")
     public List<OdsYhglVBaseOrg> getListAll() {
-        return  odsYhglVBaseOrgService.list();
+        return  odsYhglVBaseOrgService.selectOdsYhglVBaseOrgList(new OdsYhglVBaseOrg());
     }
 }

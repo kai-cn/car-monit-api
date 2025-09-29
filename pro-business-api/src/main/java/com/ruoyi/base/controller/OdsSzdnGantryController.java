@@ -47,6 +47,6 @@ public class OdsSzdnGantryController extends BaseController {
      */
     @GetMapping(value = "/listAll")
     public List<OdsSzdnGantry> getListAll() {
-        return odsSzdnGantryService.list();
+        return odsSzdnGantryService.selectOdsSzdnGantryList(new OdsSzdnGantry());
     }
 }
