@@ -68,7 +68,7 @@
         <result property="vehiclesign"    column="vehiclesign"    />
         <result property="gradeLevel"    column="grade_level"    />
         <result property="vehiclesignid"    column="vehiclesignid"    />
-
+        <result property="cid"    column="cid"    />
     </resultMap>
 
     <sql id="selectOdsLwzxsfsjFeeStationExit01Vo">
@@ -137,7 +137,8 @@
         t.load_time,
         t.vehiclesign,
         t.grade_level,
-        t.vehiclesignid
+        t.vehiclesignid,
+        t.cid
     </sql>
 
 

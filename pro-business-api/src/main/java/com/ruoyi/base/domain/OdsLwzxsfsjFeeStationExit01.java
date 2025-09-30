@@ -289,5 +289,9 @@ public class OdsLwzxsfsjFeeStationExit01 implements Custom {
     @Excel(name = "车牌识别流水号")
     private String vehiclesignid;
 
+    /** cid */
+    @Excel(name = "cid")
+    private String cid;
+
 
 }

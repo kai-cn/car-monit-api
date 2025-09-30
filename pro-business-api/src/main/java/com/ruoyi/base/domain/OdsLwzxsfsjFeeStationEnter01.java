@@ -224,5 +224,7 @@ public class OdsLwzxsfsjFeeStationEnter01 implements Custom {
     @Excel(name = "分类分级")
     private String gradeLevel;
 
-
+    /** cid */
+    @Excel(name = "cid")
+    private String cid;
 }

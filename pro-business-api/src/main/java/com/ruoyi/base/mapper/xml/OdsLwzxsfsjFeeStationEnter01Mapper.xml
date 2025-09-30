@@ -36,6 +36,8 @@
         <result property="vehicletype"    column="vehicletype"    />
         <result property="loadTime"    column="load_time"    />
         <result property="gradeLevel"    column="grade_level"    />
+        <result property="cid"    column="cid"    />
+
 
     </resultMap>
 
@@ -73,7 +75,8 @@
         t.vehiclesignid,
         t.vehicletype,
         t.load_time,
-        t.grade_level
+        t.grade_level,
+        t.cid
     </sql>
 
 

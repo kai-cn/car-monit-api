@@ -541,17 +541,23 @@ public class SysUtilServiceImpl implements ISysUtilService {
         List<ZdataTrailTracks> carlist = zdataTrailTracksService.getLatestTrail(carParaVO);
         Map<ZdataTrailTracks, List<TrailBo>> mapCar = new HashMap<>();
         if (null != carlist && carlist.size() > 0) {
-            Set<String> set = odsSzdnGantryIpService.selectIPSet();
             for (ZdataTrailTracks tracks : carlist) {
                 String keyValue = tracks.getTrailPoints(); // 行驶轨迹
-                tracks.setEscapedType(Constants.escapedType_20); // 屏蔽
+                String escapedType = "";
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
                     josnList = JSON.parseArray(keyValue, TrailBo.class);
                     tracks.setTrailPoints("");  // 行驶轨迹
-                    // 筛选是吉安东的车----------
+
+                    // ---------------分析场景 然后 门架抓拍和流水抓拍 占比
+                    escapedType = Constants.escapedType_20;
                     mapCar.put(tracks, josnList);
+
+
                 }
+
+                tracks.setEscapedType(escapedType); // 屏蔽
+
             }
             return this.changeData(mapCar);
         } else {

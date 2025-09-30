@@ -9,6 +9,8 @@
         <result property="plateKey"    column="plate_key"    />
         <result property="enterTime"    column="enter_time"    />
         <result property="exitTime"    column="exit_time"    />
+        <result property="enterLocationcode"    column="enter_locationcode"    />
+        <result property="exitLocationcode"    column="exit_locationcode"    />
         <result property="trailPoints"    column="trail_points"    />
 
     </resultMap>
@@ -20,6 +22,8 @@
         t.plate_key,
         t.enter_time,
         t.exit_time,
+        t.enter_locationcode,
+        t.exit_locationcode,
         t.trail_points,
         t.create_time
     </sql>
@@ -47,17 +51,21 @@
     </select>
 
     <select id="getLatestTrail" parameterType="com.ruoyi.base.domain.CarParaVO" resultType="com.ruoyi.base.domain.ZdataTrailTracks">
-        select k.* from
+       select k.* from
         (select t.uuid,t.type,t.point_count, t.plate_key, t.enter_time, t.exit_time,t.trail_points,
         ROW_NUMBER() OVER (PARTITION BY t.uuid ORDER BY t.create_time desc )  rid
         from jl_data01.zdata_trail_tracks t
-        where t.type = 0 and
-         t.enter_time >= now() - 14 and  t.enter_time <![CDATA[<=]]> now() -7
+        where t.enter_time >= now() - 14 and  t.enter_time <![CDATA[<=]]> now() -7
+         and exists  (
+	       select 1 from jl_data01.ods_szdn_toll_station_ip sip where
+				 (t.enter_locationcode = concat('station:',sip.ip) or t.enter_locationcode = concat('station:',sip.toll_code))
+					and  sip.org_code = '030000011'
+	        )
         ) k where k.rid = 1
     </select>
 
     <select id="getHistoryTrail" parameterType="com.ruoyi.base.domain.CarParaVO" resultType="com.ruoyi.base.domain.ZdataTrailTracks">
-        select k.* from
+       select k.* from
         (select t.uuid,t.type,t.point_count, t.plate_key, t.enter_time, t.exit_time,t.trail_points,
         ROW_NUMBER() OVER (PARTITION BY t.uuid ORDER BY t.create_time desc )  rid
         from jl_data01.zdata_trail_tracks t
