@@ -4,13 +4,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.base.domain.OdsLwzxsfsjFeeStationExit01;
 import com.ruoyi.base.mapper.OdsLwzxsfsjFeeStationExit01Mapper;
 import com.ruoyi.base.service.IOdsLwzxsfsjFeeStationExit01Service;
-import com.ruoyi.common.core.domain.AjaxResult;
-import com.ruoyi.common.utils.CommonUtil;
+import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 收费站出口流水Service业务层处理
@@ -44,5 +43,21 @@ public class OdsLwzxsfsjFeeStationExit01ServiceImpl extends ServiceImpl<OdsLwzxs
     @Override
     public List<OdsLwzxsfsjFeeStationExit01> selectOdsLwzxsfsjFeeStationExit01List(OdsLwzxsfsjFeeStationExit01 odsLwzxsfsjFeeStationExit01) {
         return odsLwzxsfsjFeeStationExit01Mapper.selectOdsLwzxsfsjFeeStationExit01List(odsLwzxsfsjFeeStationExit01);
+    }
+
+    @Override
+    public Map<String, OdsLwzxsfsjFeeStationExit01> selectOdsLwzxsfsjFeeStationExit01ByQueryUuids(String queryUuids) {
+        Map<String, OdsLwzxsfsjFeeStationExit01> map = new HashMap<>();
+        if(StringUtils.isNotBlank(queryUuids)) {
+            String[] split = queryUuids.split(",");
+            List<String> uuidList = Arrays.stream(split).collect(Collectors.toList());
+            OdsLwzxsfsjFeeStationExit01 feeStationExit01 = new OdsLwzxsfsjFeeStationExit01();
+            feeStationExit01.setCidList(uuidList);
+            List<OdsLwzxsfsjFeeStationExit01> list = odsLwzxsfsjFeeStationExit01Mapper.selectOdsLwzxsfsjFeeStationExit01List(feeStationExit01);
+            for (OdsLwzxsfsjFeeStationExit01 rtn :list) {
+                map.put(rtn.getCid(), rtn);
+            }
+        }
+        return map;
     }
 }

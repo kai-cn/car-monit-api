@@ -5,6 +5,7 @@ import com.ruoyi.base.domain.OdsLwzxsfsjFeeRecords01;
 import com.ruoyi.common.core.domain.AjaxResult;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 基础-收费流水Service接口
@@ -28,4 +29,6 @@ public interface IOdsLwzxsfsjFeeRecords01Service extends IService<OdsLwzxsfsjFee
      * @return 基础-收费流水集合
      */
     List<OdsLwzxsfsjFeeRecords01> selectOdsLwzxsfsjFeeRecords01List(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01);
+
+    Map<String, OdsLwzxsfsjFeeRecords01> selectOdsLwzxsfsjFeeRecords01ByQueryUuids(String uuids);
 }

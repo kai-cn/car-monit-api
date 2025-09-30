@@ -1,6 +1,7 @@
 package com.ruoyi.base.domain;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -12,6 +13,7 @@ import lombok.experimental.Accessors;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 
 /**
  * 基础-收费流水对象 ods_lwzxsfsj_fee_records_01
@@ -566,6 +568,9 @@ public class OdsLwzxsfsjFeeRecords01 implements Custom {
     /** cid */
     @Excel(name = "cid")
     private String cid;
+
+    @TableField(exist = false)
+    private List<String> cidList;
 
 
 }

@@ -413,6 +413,12 @@
         <if test="verifycode != null  and verifycode != ''"> and t.verifycode = #{verifycode}</if>
         <if test="loadTime != null "> and t.load_time = #{loadTime}</if>
         <if test="gradeLevel != null "> and t.grade_level = #{gradeLevel}</if>
+        <if test="cidList != null and cidList.size() > 0">
+            and cid in
+            <foreach collection="cidList" open="(" separator="," close=")" item="item">
+                #{item}
+            </foreach>
+        </if>
     </select>
 
     <select id="selectOdsLwzxsfsjFeeRecords01ById" parameterType="String" resultMap="OdsLwzxsfsjFeeRecords01Result">

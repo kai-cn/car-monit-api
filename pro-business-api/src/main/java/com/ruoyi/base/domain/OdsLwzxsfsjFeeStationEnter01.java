@@ -2,8 +2,10 @@ package com.ruoyi.base.domain;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -227,4 +229,7 @@ public class OdsLwzxsfsjFeeStationEnter01 implements Custom {
     /** cid */
     @Excel(name = "cid")
     private String cid;
+
+    @TableField(exist = false)
+    private List<String> cidList;
 }

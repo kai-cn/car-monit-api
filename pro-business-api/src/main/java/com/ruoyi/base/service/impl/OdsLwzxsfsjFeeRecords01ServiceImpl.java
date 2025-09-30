@@ -4,13 +4,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.base.domain.OdsLwzxsfsjFeeRecords01;
 import com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper;
 import com.ruoyi.base.service.IOdsLwzxsfsjFeeRecords01Service;
-import com.ruoyi.common.core.domain.AjaxResult;
-import com.ruoyi.common.utils.CommonUtil;
+import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 基础-收费流水Service业务层处理
@@ -44,5 +43,21 @@ public class OdsLwzxsfsjFeeRecords01ServiceImpl extends ServiceImpl<OdsLwzxsfsjF
     @Override
     public List<OdsLwzxsfsjFeeRecords01> selectOdsLwzxsfsjFeeRecords01List(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01) {
         return odsLwzxsfsjFeeRecords01Mapper.selectOdsLwzxsfsjFeeRecords01List(odsLwzxsfsjFeeRecords01);
+    }
+
+    @Override
+    public Map<String, OdsLwzxsfsjFeeRecords01> selectOdsLwzxsfsjFeeRecords01ByQueryUuids(String queryUuids) {
+        Map<String, OdsLwzxsfsjFeeRecords01> map = new HashMap<>();
+        if(StringUtils.isNotBlank(queryUuids)) {
+            String[] split = queryUuids.split(",");
+            List<String> uuidList = Arrays.stream(split).collect(Collectors.toList());
+            OdsLwzxsfsjFeeRecords01 feeRecords01 = new OdsLwzxsfsjFeeRecords01();
+            feeRecords01.setCidList(uuidList);
+            List<OdsLwzxsfsjFeeRecords01> list = odsLwzxsfsjFeeRecords01Mapper.selectOdsLwzxsfsjFeeRecords01List(feeRecords01);
+            for (OdsLwzxsfsjFeeRecords01 rtn :list) {
+                map.put(rtn.getCid(), rtn);
+            }
+        }
+        return map;
     }
 }

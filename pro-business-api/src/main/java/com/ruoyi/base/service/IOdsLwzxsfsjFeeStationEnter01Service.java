@@ -3,6 +3,8 @@ package com.ruoyi.base.service;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.base.domain.OdsLwzxsfsjFeeStationEnter01;
 import java.util.List;
+import java.util.Map;
+
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
@@ -29,5 +31,5 @@ public interface IOdsLwzxsfsjFeeStationEnter01Service extends IService<OdsLwzxsf
     List<OdsLwzxsfsjFeeStationEnter01> selectOdsLwzxsfsjFeeStationEnter01List(OdsLwzxsfsjFeeStationEnter01 odsLwzxsfsjFeeStationEnter01);
 
 
-
+    Map<String, OdsLwzxsfsjFeeStationEnter01> selectOdsLwzxsfsjFeeStationEnter01ByQueryUuids(String feeStationEnterUUids);
 }

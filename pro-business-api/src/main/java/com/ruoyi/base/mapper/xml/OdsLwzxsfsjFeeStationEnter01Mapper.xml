@@ -118,6 +118,12 @@
         <if test="vehicletype != null  and vehicletype != ''"> and t.vehicletype = #{vehicletype}</if>
         <if test="loadTime != null "> and t.load_time = #{loadTime}</if>
         <if test="gradeLevel != null  and gradeLevel != ''"> and t.grade_level = #{gradeLevel}</if>
+        <if test="cidList != null and cidList.size() > 0">
+            and cid in
+            <foreach collection="cidList" open="(" separator="," close=")" item="item">
+                #{item}
+            </foreach>
+        </if>
     </select>
 
     <select id="selectOdsLwzxsfsjFeeStationEnter01ById" parameterType="Long" resultMap="OdsLwzxsfsjFeeStationEnter01Result">

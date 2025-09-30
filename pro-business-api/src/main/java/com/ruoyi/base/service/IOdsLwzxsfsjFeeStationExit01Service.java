@@ -5,6 +5,7 @@ import com.ruoyi.base.domain.OdsLwzxsfsjFeeStationExit01;
 import com.ruoyi.common.core.domain.AjaxResult;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 收费站出口流水Service接口
@@ -28,4 +29,6 @@ public interface IOdsLwzxsfsjFeeStationExit01Service extends IService<OdsLwzxsfs
      * @return 收费站出口流水集合
      */
     List<OdsLwzxsfsjFeeStationExit01> selectOdsLwzxsfsjFeeStationExit01List(OdsLwzxsfsjFeeStationExit01 odsLwzxsfsjFeeStationExit01);
+
+    Map<String, OdsLwzxsfsjFeeStationExit01> selectOdsLwzxsfsjFeeStationExit01ByQueryUuids(String feeStationExitUUids);
 }

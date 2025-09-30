@@ -70,6 +70,14 @@ public class SysUtilServiceImpl implements ISysUtilService {
     @Autowired
     private IOdsSzdnGantryIpService odsSzdnGantryIpService;
 
+    @Autowired
+    private IOdsLwzxsfsjFeeRecords01Service feeRecords01Service;
+    @Autowired
+    private IOdsLwzxsfsjFeeStationEnter01Service feeStationEnter01Service;
+    @Autowired
+    private IOdsLwzxsfsjFeeStationExit01Service feeStationExit01Service;
+
+
     @Value("${isLocalhost}")
     private String isLocalhost;
 
@@ -189,6 +197,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
         String provCaptureUUids = ""; // 省界抓拍
         String serviceAreaCaptureUUids = ""; // 服务区抓拍
         String stationCaptureUUids = ""; // 收费站抓拍
+        String feeRecordUUids = ""; // 卡口流水
+        String feeStationEnterUUids = ""; // 收费站入口流水
+        String feeStationExitUUids = ""; // 收费站出口流水
 
 
         int countNum = 0;
@@ -220,6 +231,18 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     case STATION_CAPTURE:
                         // 收费站抓拍
                         stationCaptureUUids += pointUuid + ",";
+                        break;
+                    case "FeeRecord":
+                        // 省界称重
+                        feeRecordUUids += pointUuid + ",";
+                        break;
+                    case "FeeStationEnter":
+                        // 门架抓拍
+                        feeStationEnterUUids += pointUuid + ",";
+                        break;
+                    case "FeeStationExit":
+                        // 省界抓拍
+                        feeStationExitUUids += pointUuid + ",";
                         break;
                 }
             }
@@ -257,6 +280,28 @@ public class SysUtilServiceImpl implements ISysUtilService {
         stationCaptureUUids = CommonUtil.deleteEnd(stationCaptureUUids);
         if (CommonUtil.isNotBlank(stationCaptureUUids)) {
             stationcaptureAddcodeMap = stationcaptureAddcodeService.selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByQueryUuids(stationCaptureUUids);
+        }
+
+        // 卡口流水
+        Map<String, OdsLwzxsfsjFeeRecords01> feeRecordMap = new HashMap<>();
+        feeRecordUUids = CommonUtil.deleteEnd(feeRecordUUids);
+        if (CommonUtil.isNotBlank(feeRecordUUids)) {
+            feeRecordMap = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ByQueryUuids(feeRecordUUids);
+        }
+
+
+        // 收费站入口流水
+        Map<String, OdsLwzxsfsjFeeStationEnter01> feeStationEnterMap = new HashMap<>();
+        feeStationEnterUUids = CommonUtil.deleteEnd(feeStationEnterUUids);
+        if (CommonUtil.isNotBlank(feeStationEnterUUids)) {
+            feeStationEnterMap = feeStationEnter01Service.selectOdsLwzxsfsjFeeStationEnter01ByQueryUuids(feeStationEnterUUids);
+        }
+
+        // 收费站入口流水
+        Map<String, OdsLwzxsfsjFeeStationExit01> feeStationExitMap = new HashMap<>();
+        feeStationExitUUids = CommonUtil.deleteEnd(feeStationExitUUids);
+        if (CommonUtil.isNotBlank(feeStationExitUUids)) {
+            feeStationExitMap = feeStationExit01Service.selectOdsLwzxsfsjFeeStationExit01ByQueryUuids(feeStationExitUUids);
         }
 
         // 收费站ip
