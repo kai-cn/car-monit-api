@@ -135,9 +135,6 @@
         <result property="verifycode"    column="verifycode"    />
         <result property="loadTime"    column="load_time"    />
         <result property="gradeLevel"    column="grade_level"    />
-        <result property="readcipherverify"    column="readcipherverify"    />
-        <result property="tradewritecipher"    column="tradewritecipher"    />
-        <result property="tradereadcipher"    column="tradereadcipher"    />
         <result property="cid"    column="cid"    />
 
     </resultMap>
@@ -275,9 +272,6 @@
         t.verifycode,
         t.load_time,
         t.grade_level,
-        t.readcipherverify,
-        t.tradewritecipher,
-        t.tradereadcipher,
         t.cid
     </sql>
 
