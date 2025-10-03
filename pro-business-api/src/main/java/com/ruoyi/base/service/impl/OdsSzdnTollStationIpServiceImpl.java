@@ -71,6 +71,15 @@ public class OdsSzdnTollStationIpServiceImpl extends ServiceImpl<OdsSzdnTollStat
             }
             map.put("stationip:"+CommonUtil.isNull(rtn.getIp()), rtn);
             map.put("stationip:"+CommonUtil.isNull(rtn.getTollCode()), rtn);
+
+
+            map.put("station:"+CommonUtil.isNull(rtn.getIp()), rtn);
+            map.put("station:"+CommonUtil.isNull(rtn.getTollCode()), rtn);
+
+            // 根据code查询
+            map.put(CommonUtil.isNull(rtn.getIp()), rtn);
+            map.put(CommonUtil.isNull(rtn.getTollCode()), rtn);
+
         }
         return map;
     }

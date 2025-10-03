@@ -48,13 +48,13 @@ public class OdsLwzxsfsjFeeStationExit01ServiceImpl extends ServiceImpl<OdsLwzxs
     @Override
     public Map<String, OdsLwzxsfsjFeeStationExit01> selectOdsLwzxsfsjFeeStationExit01ByQueryUuids(String queryUuids) {
         Map<String, OdsLwzxsfsjFeeStationExit01> map = new HashMap<>();
-        if(StringUtils.isNotBlank(queryUuids)) {
+        if (StringUtils.isNotBlank(queryUuids)) {
             String[] split = queryUuids.split(",");
             List<String> uuidList = Arrays.stream(split).collect(Collectors.toList());
             OdsLwzxsfsjFeeStationExit01 feeStationExit01 = new OdsLwzxsfsjFeeStationExit01();
             feeStationExit01.setCidList(uuidList);
             List<OdsLwzxsfsjFeeStationExit01> list = odsLwzxsfsjFeeStationExit01Mapper.selectOdsLwzxsfsjFeeStationExit01List(feeStationExit01);
-            for (OdsLwzxsfsjFeeStationExit01 rtn :list) {
+            for (OdsLwzxsfsjFeeStationExit01 rtn : list) {
                 map.put(rtn.getCid(), rtn);
             }
         }

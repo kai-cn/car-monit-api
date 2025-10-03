@@ -80,6 +80,16 @@ public class OdsSzdnGantryIpServiceImpl extends ServiceImpl<OdsSzdnGantryIpMappe
             map.put("gantryid:"+CommonUtil.isNull(""+rtn.getGantryCode()),rtn);
 
 
+            // 卡口流水
+            map.put("gantry:"+CommonUtil.isNull(""+rtn.getId()),rtn);
+            map.put("gantry:"+CommonUtil.isNull(""+rtn.getGantryCode()),rtn);
+
+
+            // 通过IP 或者code查询
+            map.put(CommonUtil.isNull(""+rtn.getId()),rtn);
+            map.put(CommonUtil.isNull(""+rtn.getGantryCode()),rtn);
+
+
         }
         return map;
 
