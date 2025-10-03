@@ -541,7 +541,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             trailBo.setFeeStationExit(feeStationExit);
                             trailBo.setPointFlag("1"); // 有数据
 
-                            trailBo.setDevCode(feeStationExit.getExtollstationid()); // 入口收费站编码
+                            trailBo.setDevCode(feeStationExit.getExtollstationid()); // 出口收费站编码
                             trailBo.setImagesArry(""); // 抓拍照片
 
                         }
@@ -553,10 +553,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 String devCodeId = CommonUtil.isNull(trailBo.getDevCode()); // 通过设备编码先查询
                 if (indexType.equals("stationType")){
                     // 收费站ip 或者CODE查询
-                    OdsSzdnTollStationIp  stationIpBO  = null;
+                    OdsSzdnTollStationIp stationIpBO = null;
                     if (CommonUtil.isNotBlank(devCodeId)) {
                         stationIpBO = szdnTollMap.get(devCodeId);
-                    }else{
+                    } else {
                         stationIpBO = szdnTollMap.get(locationCode);
                     }
                     if (null != stationIpBO) {
@@ -567,11 +567,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         trailBo.setDevName(stationIpBO.getTollName());  // 设备名称
 
                         OdsSzdnToll odsSzdnToll = stationIpBO.getOdsSzdnToll();
-                        if (null != odsSzdnToll){
-                            if (CommonUtil.isNotBlank(odsSzdnToll.getLongitude())){
+                        if (null != odsSzdnToll) {
+                            if (CommonUtil.isNotBlank(odsSzdnToll.getLongitude())) {
                                 trailBo.setLon(new BigDecimal(odsSzdnToll.getLongitude())); // 经度
                             }
-                            if (CommonUtil.isNotBlank(odsSzdnToll.getLatitude())){
+                            if (CommonUtil.isNotBlank(odsSzdnToll.getLatitude())) {
                                 trailBo.setLat(new BigDecimal(odsSzdnToll.getLatitude())); // 经度
                             }
                             // 路线编号
@@ -589,7 +589,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     }else{
                         gantryIpBO = szdnGantryMap.get(locationCode);
                     }
-                    if (null !=gantryIpBO){
+                    if (null != gantryIpBO) {
                         trailBo.setGantryIpBO(gantryIpBO);
                         trailBo.setLocationFlag("1"); // 有数据
 
@@ -598,10 +598,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
                         OdsSzdnGantry odsSzdnGantry = gantryIpBO.getOdsSzdnGantry();
                         if (null != odsSzdnGantry) {
-                            if (CommonUtil.isNotBlank(odsSzdnGantry.getLon())){
+                            if (CommonUtil.isNotBlank(odsSzdnGantry.getLon())) {
                                 trailBo.setLon(new BigDecimal(odsSzdnGantry.getLon())); // 经度
                             }
-                            if (CommonUtil.isNotBlank(odsSzdnGantry.getLat())){
+                            if (CommonUtil.isNotBlank(odsSzdnGantry.getLat())) {
                                 trailBo.setLat(new BigDecimal(odsSzdnGantry.getLat())); // 经度
                             }
                             // 路线编号
