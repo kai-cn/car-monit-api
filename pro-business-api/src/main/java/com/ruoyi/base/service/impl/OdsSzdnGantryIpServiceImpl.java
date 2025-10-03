@@ -2,18 +2,20 @@ package com.ruoyi.base.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.base.domain.OdsSzdnGantry;
-import com.ruoyi.base.domain.OdsSzdnTollStationIp;
-import com.ruoyi.base.service.IOdsSzdnGantryService;
-import com.ruoyi.common.core.domain.AjaxResult;
-import com.ruoyi.common.utils.CommonUtil;
-import com.ruoyi.base.mapper.OdsSzdnGantryIpMapper;
 import com.ruoyi.base.domain.OdsSzdnGantryIp;
+import com.ruoyi.base.mapper.OdsSzdnGantryIpMapper;
 import com.ruoyi.base.service.IOdsSzdnGantryIpService;
+import com.ruoyi.base.service.IOdsSzdnGantryService;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
+import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 省界设备ipService业务层处理
@@ -29,6 +31,9 @@ public class OdsSzdnGantryIpServiceImpl extends ServiceImpl<OdsSzdnGantryIpMappe
 
     @Autowired
     private IOdsSzdnGantryService odsSzdnGantryService;
+
+    @Autowired
+    private RedisCache redisCache;
 
     /**
      * 查询省界设备ip
@@ -61,13 +66,10 @@ public class OdsSzdnGantryIpServiceImpl extends ServiceImpl<OdsSzdnGantryIpMappe
     @Override
     public Map<String, OdsSzdnGantryIp> selectOdsSzdnGantryIpMap() {
         Map<String, OdsSzdnGantryIp> map = new HashMap<String, OdsSzdnGantryIp>();
-        List<OdsSzdnGantryIp> list = odsSzdnGantryIpMapper.selectOdsSzdnGantryIpList(new OdsSzdnGantryIp());
-        Map<String,OdsSzdnGantry> osSzdnGantryMap = odsSzdnGantryService.selectOdsSzdnGantryMap(new OdsSzdnGantry());
+        List<OdsSzdnGantryIp> list = this.getRedisList();
+
         for (OdsSzdnGantryIp rtn : list) {
-            String key = CommonUtil.isNull(rtn.getGantryCode()); // 门架编号
-            if(osSzdnGantryMap.containsKey(key)){
-                rtn.setOdsSzdnGantry(osSzdnGantryMap.get(key));
-            }
+
             // 门架
             map.put("gantryip:"+CommonUtil.isNull(""+rtn.getId()),rtn);
             map.put("gantryip:"+CommonUtil.isNull(""+rtn.getGantryCode()),rtn);
@@ -115,7 +117,7 @@ public class OdsSzdnGantryIpServiceImpl extends ServiceImpl<OdsSzdnGantryIpMappe
                 rtn.setOdsSzdnGantry(osSzdnGantryMap.get(key));
             }
         }
-
+        redisCache.setCacheObject(Constants.gantry_ip, list);
         return  list;
     }
 
@@ -124,7 +126,14 @@ public class OdsSzdnGantryIpServiceImpl extends ServiceImpl<OdsSzdnGantryIpMappe
      * 从缓存拿到carlist
      */
     public List<OdsSzdnGantryIp> getRedisList(){
-
+        List<OdsSzdnGantryIp> list = null;
+        Object obj = redisCache.getCacheObject(Constants.gantry_ip);
+        if (null != obj) {
+            list = (List) obj;
+        } else {
+            list = this.updateRedis();
+        }
+        return list;
     }
 
 

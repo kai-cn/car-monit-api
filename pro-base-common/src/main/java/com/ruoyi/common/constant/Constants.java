@@ -286,6 +286,12 @@ public class Constants
     public static final String station_ip = "station_ip";
 
 
+    /**g
+     * 门架ip redis
+     */
+    public static final String gantry_ip = "gantry_ip";
+
+
 
 
 
