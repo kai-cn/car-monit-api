@@ -1,13 +1,11 @@
 package com.ruoyi.base.service;
 
-import com.ruoyi.common.core.domain.AjaxResult;
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.ruoyi.base.domain.OdsSzdnGantryIp;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
  * 省界设备ipService接口
@@ -42,4 +40,15 @@ public interface IOdsSzdnGantryIpService extends IService<OdsSzdnGantryIp> {
 
 
     Set<String> selectIPSet();
+
+    /**
+     * 跟新redis
+     */
+    List<OdsSzdnGantryIp> updateRedis();
+
+
+    /**
+     * 从缓存拿到carlist
+     */
+    List<OdsSzdnGantryIp> getRedisList();
 }

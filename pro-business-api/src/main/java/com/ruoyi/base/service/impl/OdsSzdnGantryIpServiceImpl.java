@@ -2,6 +2,7 @@ package com.ruoyi.base.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.base.domain.OdsSzdnGantry;
+import com.ruoyi.base.domain.OdsSzdnTollStationIp;
 import com.ruoyi.base.service.IOdsSzdnGantryService;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.utils.CommonUtil;
@@ -99,4 +100,32 @@ public class OdsSzdnGantryIpServiceImpl extends ServiceImpl<OdsSzdnGantryIpMappe
     public Set<String> selectIPSet() {
         return odsSzdnGantryIpMapper.selectIPSet();
     }
+
+
+    /**
+     * 跟新redis
+     */
+    public  List<OdsSzdnGantryIp> updateRedis(){
+        Map<String, OdsSzdnGantryIp> map = new HashMap<String, OdsSzdnGantryIp>();
+        List<OdsSzdnGantryIp> list = odsSzdnGantryIpMapper.selectOdsSzdnGantryIpList(new OdsSzdnGantryIp());
+        Map<String,OdsSzdnGantry> osSzdnGantryMap = odsSzdnGantryService.selectOdsSzdnGantryMap(new OdsSzdnGantry());
+        for (OdsSzdnGantryIp rtn : list) {
+            String key = CommonUtil.isNull(rtn.getGantryCode()); // 门架编号
+            if(osSzdnGantryMap.containsKey(key)){
+                rtn.setOdsSzdnGantry(osSzdnGantryMap.get(key));
+            }
+        }
+
+        return  list;
+    }
+
+
+    /**
+     * 从缓存拿到carlist
+     */
+    public List<OdsSzdnGantryIp> getRedisList(){
+
+    }
+
+
 }

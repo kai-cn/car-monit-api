@@ -275,9 +275,17 @@ public class Constants
 
 
     /**
-     * 屏蔽
+     * 逃费类型：屏蔽
      */
     public static final String escapedType_20 = "20";
+
+
+    /**
+     * 收费站ip redis
+     */
+    public static final String station_ip = "station_ip";
+
+
 
 
 

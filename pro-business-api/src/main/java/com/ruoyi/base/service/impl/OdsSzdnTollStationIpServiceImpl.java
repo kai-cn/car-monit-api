@@ -6,6 +6,8 @@ import com.ruoyi.base.domain.OdsSzdnTollStationIp;
 import com.ruoyi.base.mapper.OdsSzdnTollStationIpMapper;
 import com.ruoyi.base.service.IOdsSzdnTollService;
 import com.ruoyi.base.service.IOdsSzdnTollStationIpService;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,9 @@ public class OdsSzdnTollStationIpServiceImpl extends ServiceImpl<OdsSzdnTollStat
 
     @Autowired
     private IOdsSzdnTollService odsSzdnTollService;
+
+    @Autowired
+    private RedisCache redisCache;
 
     /**
      * 查询收费站ip
@@ -61,17 +66,10 @@ public class OdsSzdnTollStationIpServiceImpl extends ServiceImpl<OdsSzdnTollStat
     public Map<String,OdsSzdnTollStationIp> selectStationIpMap(){
         Map<String,OdsSzdnTollStationIp> map = new HashMap<String,OdsSzdnTollStationIp>();
         // 收费站ip列表
-        List<OdsSzdnTollStationIp> list = odsSzdnTollStationIpMapper.selectOdsSzdnTollStationIpList(new OdsSzdnTollStationIp());
-        // 收费站map
-        Map<String,OdsSzdnToll> odsSzdnTollMap = odsSzdnTollService.selectOdsSzdnTollMap(new OdsSzdnToll());
+        List<OdsSzdnTollStationIp> list = this.getRedisList();
         for (OdsSzdnTollStationIp rtn : list) {
-            String key = CommonUtil.isNull(rtn.getTollCode()); // 收费站编号
-            if (odsSzdnTollMap.containsKey(key)){
-                rtn.setOdsSzdnToll(odsSzdnTollMap.get(key));
-            }
             map.put("stationip:"+CommonUtil.isNull(rtn.getIp()), rtn);
             map.put("stationip:"+CommonUtil.isNull(rtn.getTollCode()), rtn);
-
 
             map.put("station:"+CommonUtil.isNull(rtn.getIp()), rtn);
             map.put("station:"+CommonUtil.isNull(rtn.getTollCode()), rtn);
@@ -82,6 +80,40 @@ public class OdsSzdnTollStationIpServiceImpl extends ServiceImpl<OdsSzdnTollStat
 
         }
         return map;
+    }
+
+
+    /**
+     * 跟新redis
+     */
+    public List<OdsSzdnTollStationIp> updateRedis(){
+        // 收费站ip列表
+        List<OdsSzdnTollStationIp> list = odsSzdnTollStationIpMapper.selectOdsSzdnTollStationIpList(new OdsSzdnTollStationIp());
+        // 收费站map
+        Map<String,OdsSzdnToll> odsSzdnTollMap = odsSzdnTollService.selectOdsSzdnTollMap(new OdsSzdnToll());
+        for (OdsSzdnTollStationIp rtn : list) {
+            String key = CommonUtil.isNull(rtn.getTollCode()); // 收费站编号
+            if (odsSzdnTollMap.containsKey(key)){
+                rtn.setOdsSzdnToll(odsSzdnTollMap.get(key));
+            }
+        }
+        redisCache.setCacheObject(Constants.station_ip, list);
+        return  list;
+    }
+
+
+    /**
+     * 从缓存拿到redis
+     */
+    public List<OdsSzdnTollStationIp> getRedisList(){
+        List<OdsSzdnTollStationIp> list = null;
+        Object obj = redisCache.getCacheObject(Constants.station_ip);
+        if (null != obj) {
+            list = (List) obj;
+        } else {
+            list = this.updateRedis();
+        }
+        return list;
     }
 
 

@@ -1,11 +1,10 @@
 package com.ruoyi.base.service;
 
-import com.ruoyi.common.core.domain.AjaxResult;
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.ruoyi.base.domain.OdsSzdnTollStationIp;
+
 import java.util.List;
 import java.util.Map;
-
-import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
  * 收费站ipService接口
@@ -33,12 +32,27 @@ public interface IOdsSzdnTollStationIpService extends IService<OdsSzdnTollStatio
 
 
     /**
+     * 跟新redis
+     */
+    List<OdsSzdnTollStationIp> updateRedis();
+
+
+    /**
+     * 从缓存拿到carlist
+     */
+    List<OdsSzdnTollStationIp> getRedisList();
+
+
+    /**
      * 查询收费站ip列表
      *
      * @param
      * @return 收费站ip集合
      */
     Map<String,OdsSzdnTollStationIp> selectStationIpMap();
+
+
+
 
 
 }
