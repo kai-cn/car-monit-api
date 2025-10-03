@@ -27,7 +27,7 @@ public class ProTask {
     private IOdsSzdnTollStationIpService odsSzdnTollStationIpService;
 
     /**
-     * 同步可疑车俩:0/30000 * * * *
+     * 同步可疑车俩:"0/30000 * * * * ?"
      */
     @Scheduled(cron = "0 0 0 * * ?")
     private void syncSuspiciousCar() {
