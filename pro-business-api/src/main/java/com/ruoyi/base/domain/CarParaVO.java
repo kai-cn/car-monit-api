@@ -33,4 +33,20 @@ public class CarParaVO {
 
     private String query1;
 
+
+    // 起始界面
+    private Integer startNum;
+
+    // 最后的界面
+    private Integer endNum;
+
+
+    // 起始天数
+    private Integer starTime;
+
+    // 最后的天数
+    private Integer endTime;
+
+
+
 }

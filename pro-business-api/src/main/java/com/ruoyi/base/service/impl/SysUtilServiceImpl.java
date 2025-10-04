@@ -625,6 +625,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
         return mapCar;
     }
 
+
+
+
+
     /**
      * 同步可疑车俩
      *
@@ -633,6 +637,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
      */
     @Override
     public Map<ZdataTrailTracks, List<TrailBo>> syncSuspiciousCar(CarParaVO carParaVO) {
+        Integer starTime = 7;
+        Integer endTime = starTime * 2;
+        //----------7 到 14天
+        carParaVO.setStarTime(starTime);
+        carParaVO.setEndTime(endTime);
+
         List<ZdataTrailTracks> carlist = zdataTrailTracksService.getLatestTrail(carParaVO);
         Map<ZdataTrailTracks, List<TrailBo>> mapCar = new HashMap<>();
         if (null != carlist && carlist.size() > 0) {
@@ -662,13 +672,71 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
 
     /**
+     * 同步可疑车俩：定时
+     * startNum : 起始页面 1  最后页面 10
+     *
+     * @return
+     */
+    public void syncSuspiciousCarQutaz(int startNum, int endNum) {
+
+        Integer pageSize = 0;
+        Integer starTime = 7;
+        if (CommonUtil.isNull(isLocalhost).equals("local")) {
+            // 本地
+            starTime = 7;
+            pageSize = 10;
+        } else {
+            // 生成-------------
+            starTime = 7;
+            pageSize = 1000;
+        }
+        Integer endTime = starTime * 2;
+
+
+        CarParaVO carParaVO = new CarParaVO();
+        //----------7 到 14天
+        carParaVO.setStarTime(starTime);
+        carParaVO.setEndTime(endTime);
+
+        for (int i = startNum; i <= endNum; i++) {
+            // ----- 分页范围
+            carParaVO.setStartNum(pageSize);
+            if (i > 1){
+                Integer endRange = (startNum -1) * pageSize; // 当前页 -1
+                carParaVO.setEndNum(endRange);
+            }
+            List<ZdataTrailTracks> carlist = zdataTrailTracksService.getLatestTrail(carParaVO);
+
+            if (null != carlist && carlist.size() > 0) {
+                for (ZdataTrailTracks tracks : carlist) {
+                    String keyValue = tracks.getTrailPoints(); // 行驶轨迹
+                    String escapedType = "";
+                    List<TrailBo> josnList = new ArrayList<TrailBo>();
+                    if (CommonUtil.isNotBlank(keyValue)) {
+                        josnList = JSON.parseArray(keyValue, TrailBo.class);
+                        tracks.setTrailPoints("");  // 行驶轨迹
+
+                        // ---------------分析场景 然后 门架抓拍和流水抓拍 占比
+                        escapedType = Constants.escapedType_20;
+                    }
+                    tracks.setEscapedType(escapedType); // 屏蔽
+
+                    redisCache.setCacheObject(JSON.toJSONString(tracks), josnList);
+
+                }
+            }
+        }
+
+
+    }
+
+    /**
      * 查询车俩历史记录
      * @param carParaVO
      * @return
      */
     @Override
     public Map<ZdataTrailTracks, List<TrailBo>> carTrackQuery(CarParaVO carParaVO) {
-
         List<CarVO> carlistPara = carParaVO.getCarlist();
         if (null != carlistPara && carlistPara.size() > 0){
             List<String> carNoList = carlistPara.stream().map(CarVO::getCarNo).collect(Collectors.toList());

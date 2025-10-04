@@ -55,12 +55,14 @@
         (select t.uuid,t.point_count,t.plate_key,t.trail_points,
         ROW_NUMBER() OVER (PARTITION BY t.uuid ORDER BY t.point_count desc )  rid
         from jl_data01.zdata_trail_tracks t
-        where t.enter_time >= now() - 14 and  t.enter_time <![CDATA[<=]]> now() -7
+        where t.enter_time >= now() - #{endTime} and  t.enter_time <![CDATA[<=]]> now() - #{starTime}
          and exists  (
 	       select 1 from jl_data01.ods_szdn_toll_station_ip sip where
 				 t.enter_locationcode = concat('stationip:',sip.ip)
 					and  sip.org_code = '030000011'
 	        )
+        <if test="uuid != startNum ">  LIMIT #{startNum} </if>
+        <if test="uuid != endNum ">  OFFSET #{endNum} </if>
         ) k where k.rid = 1
     </select>
 

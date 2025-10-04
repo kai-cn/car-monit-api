@@ -1,7 +1,11 @@
 package com.ruoyi.base.task;
 
+import com.ruoyi.base.domain.CarParaVO;
+import com.ruoyi.base.domain.TrailBo;
+import com.ruoyi.base.domain.ZdataTrailTracks;
 import com.ruoyi.base.service.IOdsSzdnGantryIpService;
 import com.ruoyi.base.service.IOdsSzdnTollStationIpService;
+import com.ruoyi.base.service.ISysUtilService;
 import com.ruoyi.common.core.redis.RedisCache;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +15,8 @@ import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 @Component
 @EnableScheduling
@@ -26,6 +32,9 @@ public class ProTask {
     @Autowired
     private IOdsSzdnTollStationIpService odsSzdnTollStationIpService;
 
+    @Autowired
+    private ISysUtilService sysUtilService;
+
     /**
      * 同步可疑车俩:"0/30000 * * * * ?"
      */
@@ -33,6 +42,10 @@ public class ProTask {
     private void syncSuspiciousCar() {
         log.info("每一天凌晨1点执行（同步可疑车俩），间隔1天执行一次 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
 
+        CarParaVO carParaVO = new CarParaVO();
+        carParaVO.setPageNum(1); //
+        carParaVO.setPageSize(10); //
+        sysUtilService.syncSuspiciousCarQutaz(1, 10);
 
         log.info("每一天凌晨1点执行（同步可疑车俩），间隔1天执行一次 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }

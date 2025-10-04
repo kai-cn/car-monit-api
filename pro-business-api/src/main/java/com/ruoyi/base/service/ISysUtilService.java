@@ -50,10 +50,23 @@ public interface ISysUtilService {
      */
     Map<ZdataTrailTracks, List<TrailBo>> syncSuspiciousCar(CarParaVO carParaVO);
 
+
+    /**
+     * 同步可疑车俩：定时
+     * startNum : 起始页面 1  最后页面 10
+     *
+     * @return
+     */
+    void syncSuspiciousCarQutaz(int startNum, int endNum);
+
     /**
      * 轨迹查询
      * @param carParaVO
      * @return
      */
     Map<ZdataTrailTracks, List<TrailBo>> carTrackQuery(CarParaVO carParaVO);
+
+
+
+
 }
