@@ -42,6 +42,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
     public static final String FeeStationEnter = "FeeStationEnter";
     public static final String FeeStationExit = "FeeStationExit";
 
+    public static final String redisBiteKey = "sys_config:syncSuspiciousCar_bite"; // 比例默认为0.5
+    public static final String redisTimeKey = "sys_config:syncSuspiciousCar_time"; // 默认7天
+
 
     @Autowired
     private RedisCache redisCache;
@@ -637,8 +640,22 @@ public class SysUtilServiceImpl implements ISysUtilService {
      */
     @Override
     public Map<ZdataTrailTracks, List<TrailBo>> syncSuspiciousCar(CarParaVO carParaVO) {
+
         Integer starTime = 1;
         Integer endTime = 30;
+        BigDecimal bite = new BigDecimal("0.5");  // 门架抓拍和流水抓拍占比
+
+        // -------------- 从缓存取得对应的配置
+       /* String redisTimeValue = redisCache.getCacheObject(redisTimeKey); // 默认7天
+        if (CommonUtil.isNotBlank(redisTimeValue)){
+            starTime = Integer.parseInt(redisTimeValue);
+        }*/
+
+        String redisBiteValue = redisCache.getCacheObject(redisBiteKey); // 比例默认为0.5
+        if (CommonUtil.isNotBlank(redisBiteValue)){
+            bite = new BigDecimal(redisBiteValue);
+        }
+
         //----------1 到 30 天
         carParaVO.setStarTime(starTime);
         carParaVO.setEndTime(endTime);
@@ -657,15 +674,31 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     josnList = JSON.parseArray(keyValue, TrailBo.class);
                     tracks.setTrailPoints("");  // 行驶轨迹
 
-                    // ---------------分析场景 然后 门架抓拍和流水抓拍 占比
-                    escapedType = Constants.escapedType_20;
-                    mapCar.put(tracks, josnList);
+                    // ---------------------------分析场景: 门架抓拍和流水抓拍 占比
+                    int conutGantryCapture = 0;
+                    int conutFeeRecord = 0;
+                    for (TrailBo rtnTrailBo:josnList){
+                        String stateType = CommonUtil.isNull(rtnTrailBo.getStateType());
+                        if(stateType.equals(GANTRY_CAPTURE)){
+                            // 门架抓拍
+                            conutGantryCapture ++;
+                        }else if(stateType.equals(FeeRecord)){
+                            // 卡口流水
+                            conutFeeRecord ++;
+                        }
+                    }
 
-
+                    // ---------------屏蔽:
+                    if (conutGantryCapture > 0 && conutGantryCapture > conutFeeRecord){
+                        BigDecimal costBite = new BigDecimal(conutFeeRecord).divide(new BigDecimal(conutGantryCapture), 4, BigDecimal.ROUND_HALF_UP);
+                        if (bite.compareTo(costBite) >= 0){
+                            escapedType = Constants.escapedType_20;
+                            tracks.setEscapedType(escapedType); // 屏蔽
+                            tracks.setEscapedTypeRemark("门架抓拍数量:"+conutGantryCapture+"卡口流水抓拍数量:"+conutFeeRecord);
+                            mapCar.put(tracks, josnList);
+                        }
+                    }
                 }
-
-                tracks.setEscapedType(escapedType); // 屏蔽
-
             }
             return this.changeData(mapCar);
         } else {
@@ -685,6 +718,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         Integer pageSize = 10;
         Integer starTime = 0;
         Integer endTime = 0;
+        BigDecimal bite = new BigDecimal("0.5");  // 门架抓拍和流水抓拍占比
         if (CommonUtil.isNull(isLocalhost).equals("local")) {
             // 本地  分页1000条 30 到 1 天
             pageSize = 10;
