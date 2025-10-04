@@ -61,8 +61,8 @@
 				 t.enter_locationcode = concat('stationip:',sip.ip)
 					and  sip.org_code = '030000011'
 	        )
-        <if test="uuid != startNum ">  LIMIT #{startNum} </if>
-        <if test="uuid != endNum ">  OFFSET #{endNum} </if>
+        <if test="startNum != null ">  LIMIT #{startNum} </if>
+        <if test="endNum != null ">  OFFSET #{endNum} </if>
         ) k where k.rid = 1
     </select>
 
