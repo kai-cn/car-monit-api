@@ -35,8 +35,22 @@ public class ProTask {
     @Autowired
     private ISysUtilService sysUtilService;
 
+
     /**
-     * 同步可疑车俩: 0 0/3 * * * ?
+     * 每三分钟执行一次
+     * 车俩实时轨迹同步
+     */
+    @Scheduled(cron = "0 0/3 * * * ?")
+    private void syncCurrentTrack() {
+        log.info("每三分钟（同步当前轨迹轨迹）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+
+        log.info("每三分钟（同步当前轨迹轨迹）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
+
+
+    /**
+     * 每天凌晨1点
+     * 同步可疑车俩:
      */
     @Scheduled(cron = "0 0 1 * * ?")
     private void syncSuspiciousCar() {
@@ -48,18 +62,9 @@ public class ProTask {
     }
 
 
-    /**
-     * 同步当前轨迹轨迹
-     */
-    @Scheduled(cron = "0 0/3 * * * ?")
-    private void syncCurrentTrack() {
-        log.info("每三分钟（同步当前轨迹轨迹）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-
-        log.info("每三分钟（同步当前轨迹轨迹）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-    }
-
 
     /**
+     * 每天凌晨3点
      * 同步历史轨迹
      */
     @Scheduled(cron = "0 0 3 * * ?")
