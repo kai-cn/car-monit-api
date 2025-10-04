@@ -757,10 +757,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
             // ----- 分页范围
             carParaVO.setStartNum(pageSize);
             if (i > 1){
-                Integer endRange = (startNum -1) * pageSize; // 当前页 -1
+                Integer endRange = (i -1) * pageSize; // 当前页 -1
                 carParaVO.setEndNum(endRange);
             }
-            log.info("数据查询范围：" + carParaVO.getPageSize() + "到" + carParaVO.getEndNum());
+            log.info("数据查询范围：" + carParaVO.getStartNum() + "到" + carParaVO.getEndNum());
 
             List<ZdataTrailTracks> carlist = zdataTrailTracksService.getLatestTrail(carParaVO);
 
