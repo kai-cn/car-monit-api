@@ -40,25 +40,35 @@ public class ProTask {
      */
     @Scheduled(cron = "0 0 1 * * ?")
     private void syncSuspiciousCar() {
-        log.info("每一天凌晨1点执行（同步可疑车俩），间隔1天执行一次 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        log.info("每天凌晨1点执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
 
         sysUtilService.syncSuspiciousCarQutaz(1, 10);
 
-        log.info("每一天凌晨1点执行（同步可疑车俩），间隔1天执行一次 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        log.info("每天凌晨1点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
+
     /**
-     * 同步轨迹
+     * 同步当前轨迹轨迹
      */
-    @Scheduled(cron = "0 0 2 * * ?")
-    private void syncTrack() {
-        log.info("每一天凌晨2点执行（同步轨迹），间隔1天执行一次 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    @Scheduled(cron = "0 0/3 * * * ?")
+    private void syncCurrentTrack() {
+        log.info("每三分钟（同步当前轨迹轨迹）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+
+        log.info("每三分钟（同步当前轨迹轨迹）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
 
 
+    /**
+     * 同步历史轨迹
+     */
+    @Scheduled(cron = "0 0 3 * * ?")
+    private void syncHistroyTrack() {
+        log.info("每天凌晨3点执行（同步历史轨迹）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
 
         odsSzdnGantryIpService.updateRedis();  // 门架ip redis
         odsSzdnTollStationIpService.updateRedis(); // 站ip redis
-        log.info("每一天凌晨2点执行（同步轨迹），间隔1天执行一次 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        log.info("每天凌晨3点执行（同步历史轨迹）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
 }
