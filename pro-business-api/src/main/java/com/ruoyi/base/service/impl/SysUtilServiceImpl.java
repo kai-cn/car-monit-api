@@ -20,6 +20,7 @@ import redis.clients.jedis.JedisCluster;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -101,6 +102,18 @@ public class SysUtilServiceImpl implements ISysUtilService {
     private String getCacheKey(String configKey) {
         return Constants.trail + configKey;
     }
+
+
+    /**
+     * 可疑车辆
+     *
+     * @param configKey 参数键
+     * @return 缓存键key
+     */
+    private String getSuspiciousKey(String curData, String configKey) {
+        return Constants.car_uspicious + curData + ":" + configKey;
+    }
+
 
 
     /**
@@ -658,7 +671,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         carParaVO.setEndTime(endTime);
 
         // ----- 分页范围
-        carParaVO.setStartNum(200);
+        carParaVO.setStartNum(500);
 
         List<ZdataTrailTracks> carlist = zdataTrailTracksService.getLatestTrail(carParaVO);
         Map<ZdataTrailTracks, List<TrailBo>> mapCar = new HashMap<>();
@@ -735,7 +748,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         if (CommonUtil.isNull(isLocalhost).equals("local")) {
             log.info("本地配置------："+CommonUtil.isNull(isLocalhost));
             // 本地  分页1000条 30 到 1 天
-            pageSize = 10;
+            pageSize = 500;
             starTime = 1;
             endTime = 30;
         } else {
@@ -752,6 +765,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
         //----------7 到 14天
         carParaVO.setStarTime(starTime);
         carParaVO.setEndTime(endTime);
+
+        List<TrailInfo> trailList = new ArrayList<>();
 
         for (int i = startNum; i <= endNum; i++) {
             // ----- 分页范围
@@ -801,6 +816,28 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     }
                 }
                 Map<ZdataTrailTracks, List<TrailBo>> rtnCar = this.changeData(mapCar);
+
+                if (null != rtnCar) {
+                    Date now = new Date();
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+                    String formattedDate = sdf.format(now);
+
+                    for (Map.Entry<ZdataTrailTracks, List<TrailBo>> entry : rtnCar.entrySet()) {
+                        ZdataTrailTracks tracksBo = entry.getKey();
+                        List<TrailBo> josnList = entry.getValue();
+
+                        String carNo =CommonUtil.isNull(tracksBo.getPlateKey());
+                        TrailInfo trailInfo = new TrailInfo();
+                        trailInfo.setTrailUuid(carNo);
+                        trailInfo.setTracks(tracksBo);
+                        trailInfo.setTrailList(josnList);
+
+                        String key = getSuspiciousKey(formattedDate,tracksBo.getUuid());
+                        redisCache.setCacheObject(key, trailInfo);
+
+                    }
+                }
+
             }
         }
 
