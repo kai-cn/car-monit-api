@@ -36,7 +36,7 @@ public class ProTask {
     private ISysUtilService sysUtilService;
 
     /**
-     * 同步可疑车俩:"0/30000 * * * * ?"
+     * 同步可疑车俩: 0 0/3 * * * ?
      */
     @Scheduled(cron = "0 0 1 * * ?")
     private void syncSuspiciousCar() {

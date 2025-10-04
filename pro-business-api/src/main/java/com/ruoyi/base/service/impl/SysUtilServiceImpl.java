@@ -12,6 +12,7 @@ import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.core.redis.RedisConfig;
 import com.ruoyi.common.core.redis.RedisSourceFactory;
 import com.ruoyi.common.utils.CommonUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
  * @author ruoyi
  * @date 2025-08-29
  */
+@Slf4j
 @Service
 public class SysUtilServiceImpl implements ISysUtilService {
 
@@ -109,14 +111,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
      */
     public AjaxResult saveRedis(SysUtil sysUtil) {
 
+ 
 
-       /* ZdataTrailTracks zdataTrailTracks = new ZdataTrailTracks();
-        List<ZdataTrailTracks> trackList = zdataTrailTracksService.selectZdataTrailTracksList(zdataTrailTracks);
-        for (ZdataTrailTracks trackBo : trackList) {
-            redisCache.setCacheObject(getCacheKey(trackBo.getPlateKey()), trackBo.getTrailPoints());
-        }*/
-
-        System.out.println("获取的配置信息："+redisConfig.getClusterNodes()+"--本地配置："+isLocalhost);
+        log.info("获取的配置信息："+redisConfig.getClusterNodes()+"--本地配置："+isLocalhost);
 
         JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
 
@@ -130,7 +127,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         for (String carNo : carList) {
             String key = getCacheKey(carNo);
             String keyValue = jedisCluster.get(key);
-            System.out.println("生成redis：" + key + "对应的轨迹点：" + keyValue);
+            log.info("生产redis：" + key + "对应的轨迹点：" + keyValue);
             redisCache.setCacheObject(key, keyValue);
         }
 
@@ -140,7 +137,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         while (it.hasNext()) {
             String key = it.next();
             String keyValue = redisCache.getCacheObject(key);
-            System.out.println("本地redis：" + key + "对应的轨迹点：" + keyValue);
+            log.info("本地redis：" + key + "对应的轨迹点：" + keyValue);
         }
 
         return AjaxResult.success();
@@ -157,7 +154,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         Map<ZdataTrailTracks, List<TrailBo>> mapCar = new HashMap<>();
         if (null != carlist && carlist.size() > 0) {
 
-            System.out.println("获取的配置信息："+redisConfig.getClusterNodes()+"--本地配置："+isLocalhost);
+            log.info("获取的配置信息："+redisConfig.getClusterNodes()+"--本地配置："+isLocalhost);
             JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
 
             for (CarVO carVO : carlist) {
@@ -168,7 +165,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     // 本地
                     keyValue = redisCache.getCacheObject(getCacheKey(carNo));
                 }else {
-                    // 生成-------------
+                    // 生产-------------
                     keyValue = jedisCluster.get(getCacheKey(carNo));
                 }
 
@@ -716,21 +713,39 @@ public class SysUtilServiceImpl implements ISysUtilService {
     public void syncSuspiciousCarQutaz(int startNum, int endNum) {
 
         Integer pageSize = 10;
-        Integer starTime = 0;
-        Integer endTime = 0;
+        Integer starTime = 7;
+        Integer endTime = 14;
         BigDecimal bite = new BigDecimal("0.5");  // 门架抓拍和流水抓拍占比
+
+
+        // -------------- 从缓存取得对应的配置
+        String redisTimeValue = redisCache.getCacheObject(redisTimeKey); // 默认7天
+        if (CommonUtil.isNotBlank(redisTimeValue)){
+            starTime = Integer.parseInt(redisTimeValue);
+            log.info("从缓存取得时间配置--------："+redisTimeValue);
+        }
+
+        String redisBiteValue = redisCache.getCacheObject(redisBiteKey); // 比例默认为0.5
+        if (CommonUtil.isNotBlank(redisBiteValue)){
+            bite = new BigDecimal(redisBiteValue);
+            log.info("从缓存取得占比配置------："+bite);
+        }
+
+
         if (CommonUtil.isNull(isLocalhost).equals("local")) {
+            log.info("本地配置------："+CommonUtil.isNull(isLocalhost));
             // 本地  分页1000条 30 到 1 天
             pageSize = 10;
             starTime = 1;
             endTime = 30;
         } else {
-            // 生成------------- 分页1000条 14 到 7 天
+            log.info("生产配置------："+CommonUtil.isNull(isLocalhost));
+            // 生产------------- 分页1000条 14 到 7 天
             pageSize = 1000;
-            starTime = 7;
             endTime = starTime * 2;
         }
 
+        log.info("分页配置：" + pageSize + "--时间范围" + starTime + "到" + endTime);
 
 
         CarParaVO carParaVO = new CarParaVO();
@@ -745,8 +760,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 Integer endRange = (startNum -1) * pageSize; // 当前页 -1
                 carParaVO.setEndNum(endRange);
             }
+            log.info("数据查询范围：" + carParaVO.getPageSize() + "到" + carParaVO.getEndNum());
+
             List<ZdataTrailTracks> carlist = zdataTrailTracksService.getLatestTrail(carParaVO);
 
+            Map<ZdataTrailTracks, List<TrailBo>> mapCar = new HashMap<>();
             if (null != carlist && carlist.size() > 0) {
                 for (ZdataTrailTracks tracks : carlist) {
                     String keyValue = tracks.getTrailPoints(); // 行驶轨迹
@@ -756,17 +774,35 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         josnList = JSON.parseArray(keyValue, TrailBo.class);
                         tracks.setTrailPoints("");  // 行驶轨迹
 
-                        // ---------------分析场景 然后 门架抓拍和流水抓拍 占比
-                        escapedType = Constants.escapedType_20;
+                        // ---------------------------分析场景: 门架抓拍和流水抓拍 占比
+                        int conutGantryCapture = 0;
+                        int conutFeeRecord = 0;
+                        for (TrailBo rtnTrailBo:josnList){
+                            String stateType = CommonUtil.isNull(rtnTrailBo.getStateType());
+                            if(stateType.equals(GANTRY_CAPTURE)){
+                                // 门架抓拍
+                                conutGantryCapture ++;
+                            }else if(stateType.equals(FeeRecord)){
+                                // 卡口流水
+                                conutFeeRecord ++;
+                            }
+                        }
+
+                        // ---------------屏蔽:
+                        if (conutGantryCapture > 0 && conutGantryCapture > conutFeeRecord){
+                            BigDecimal costBite = new BigDecimal(conutFeeRecord).divide(new BigDecimal(conutGantryCapture), 4, BigDecimal.ROUND_HALF_UP);
+                            if (bite.compareTo(costBite) >= 0){
+                                escapedType = Constants.escapedType_20;
+                                tracks.setEscapedType(escapedType); // 屏蔽
+                                tracks.setEscapedTypeRemark("门架抓拍数量:"+conutGantryCapture+"卡口流水抓拍数量:"+conutFeeRecord);
+                                mapCar.put(tracks, josnList);
+                            }
+                        }
                     }
-                    tracks.setEscapedType(escapedType); // 屏蔽
-
-                    redisCache.setCacheObject(JSON.toJSONString(tracks), josnList);
-
                 }
+                Map<ZdataTrailTracks, List<TrailBo>> rtnCar = this.changeData(mapCar);
             }
         }
-
 
     }
 
