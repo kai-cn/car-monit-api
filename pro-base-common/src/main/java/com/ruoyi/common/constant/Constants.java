@@ -298,9 +298,15 @@ public class Constants
 
 
     /**
-     * 车辆轨迹
+     * 车辆历史轨迹
      */
-    public static final String car_trail = "car_trail:";
+    public static final String car_history_trail = "car_history_trail:";
+
+
+    /**
+     * 车辆当前轨迹
+     */
+    public static final String car_curent_trail = "car_curent_trail:";
 
 
 

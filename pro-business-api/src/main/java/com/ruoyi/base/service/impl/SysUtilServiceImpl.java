@@ -138,7 +138,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         carList.add("赣A0253J");
 
         for (String carNo : carList) {
-            String key = getCacheKey(carNo);
+            String key = this.getCacheKey(carNo);
             String keyValue = jedisCluster.get(key);
             log.info("生产redis：" + key + "对应的轨迹点：" + keyValue);
             redisCache.setCacheObject(key, keyValue);
@@ -176,10 +176,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
                 if (CommonUtil.isNull(isLocalhost).equals("local")){
                     // 本地
-                    keyValue = redisCache.getCacheObject(getCacheKey(carNo));
+                    keyValue = redisCache.getCacheObject(this.getCacheKey(carNo));
                 }else {
                     // 生产-------------
-                    keyValue = jedisCluster.get(getCacheKey(carNo));
+                    keyValue = jedisCluster.get(this.getCacheKey(carNo));
                 }
 
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
@@ -832,7 +832,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         trailInfo.setTracks(tracksBo);
                         trailInfo.setTrailList(josnList);
 
-                        String key = getSuspiciousKey(formattedDate,tracksBo.getUuid());
+                        String key = this.getSuspiciousKey(formattedDate,tracksBo.getUuid());
                         redisCache.setCacheObject(key, trailInfo);
 
                     }
