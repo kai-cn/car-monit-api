@@ -637,9 +637,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
      */
     @Override
     public Map<ZdataTrailTracks, List<TrailBo>> syncSuspiciousCar(CarParaVO carParaVO) {
-        Integer starTime = 7;
-        Integer endTime = starTime * 2;
-        //----------7 到 14天
+        Integer starTime = 1;
+        Integer endTime = 30;
+        //----------1 到 30 天
         carParaVO.setStarTime(starTime);
         carParaVO.setEndTime(endTime);
 
@@ -682,18 +682,21 @@ public class SysUtilServiceImpl implements ISysUtilService {
      */
     public void syncSuspiciousCarQutaz(int startNum, int endNum) {
 
-        Integer pageSize = 0;
-        Integer starTime = 7;
+        Integer pageSize = 10;
+        Integer starTime = 0;
+        Integer endTime = 0;
         if (CommonUtil.isNull(isLocalhost).equals("local")) {
-            // 本地
-            starTime = 7;
+            // 本地  分页1000条 30 到 1 天
             pageSize = 10;
+            starTime = 1;
+            endTime = 30;
         } else {
-            // 生成-------------
-            starTime = 7;
+            // 生成------------- 分页1000条 14 到 7 天
             pageSize = 1000;
+            starTime = 7;
+            endTime = starTime * 2;
         }
-        Integer endTime = starTime * 2;
+
 
 
         CarParaVO carParaVO = new CarParaVO();
