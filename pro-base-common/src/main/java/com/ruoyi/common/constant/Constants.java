@@ -291,6 +291,18 @@ public class Constants
      */
     public static final String gantry_ip = "gantry_ip";
 
+    /**
+     * 可疑车辆
+     */
+    public static final String car_uspicious = "car_uspicious";
+
+
+    /**
+     * 车辆轨迹
+     */
+    public static final String car_trail = "car_trail:";
+
+
 
 
 

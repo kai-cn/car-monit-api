@@ -31,7 +31,6 @@ public class CarParaVO {
     // 分页大小
     private Integer pageSize;
 
-    private String query1;
 
 
     // 起始界面

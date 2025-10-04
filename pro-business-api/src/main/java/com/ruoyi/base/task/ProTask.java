@@ -42,9 +42,6 @@ public class ProTask {
     private void syncSuspiciousCar() {
         log.info("每一天凌晨1点执行（同步可疑车俩），间隔1天执行一次 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
 
-        CarParaVO carParaVO = new CarParaVO();
-        carParaVO.setPageNum(1); //
-        carParaVO.setPageSize(10); //
         sysUtilService.syncSuspiciousCarQutaz(1, 10);
 
         log.info("每一天凌晨1点执行（同步可疑车俩），间隔1天执行一次 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));

@@ -643,6 +643,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
         carParaVO.setStarTime(starTime);
         carParaVO.setEndTime(endTime);
 
+        // ----- 分页范围
+        carParaVO.setStartNum(200);
+
         List<ZdataTrailTracks> carlist = zdataTrailTracksService.getLatestTrail(carParaVO);
         Map<ZdataTrailTracks, List<TrailBo>> mapCar = new HashMap<>();
         if (null != carlist && carlist.size() > 0) {
