@@ -71,9 +71,9 @@ public class SysUtilController extends BaseController {
         return josnMap;
     }*/
 
-    /**
+  /*  *//**
      * 车俩历史轨迹：根据车牌号查询
-     */
+     *//*
     @GetMapping(value = "/carTrackQueryByCarNo")
     public TableDataInfo carTrackQueryByCarNo(CarParaVO carParaVO) {
         startPage();
@@ -85,9 +85,9 @@ public class SysUtilController extends BaseController {
     }
 
 
-    /**
+    *//**
      * 车俩历史轨迹：根据时间端查询
-     */
+     *//*
     @GetMapping(value = "/carTrackQueryByTime")
     public TableDataInfo carTrackQueryByTime(CarParaVO carParaVO) {
         startPage();
@@ -106,7 +106,7 @@ public class SysUtilController extends BaseController {
         }
 
         return getDataTable(list);
-    }
+    }*/
 
 
 
