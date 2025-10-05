@@ -1,9 +1,6 @@
 package com.ruoyi.base.service;
 
-import com.ruoyi.base.domain.CarParaVO;
-import com.ruoyi.base.domain.SysUtil;
-import com.ruoyi.base.domain.TrailBo;
-import com.ruoyi.base.domain.ZdataTrailTracks;
+import com.ruoyi.base.domain.*;
 import com.ruoyi.common.core.domain.AjaxResult;
 
 import java.util.List;
@@ -64,7 +61,7 @@ public interface ISysUtilService {
      * @param carParaVO
      * @return
      */
-    Map<ZdataTrailTracks, List<TrailBo>> carTrackQuery(CarParaVO carParaVO);
+    List<TrailInfo> carTrackQuery(CarParaVO carParaVO);
 
 
 

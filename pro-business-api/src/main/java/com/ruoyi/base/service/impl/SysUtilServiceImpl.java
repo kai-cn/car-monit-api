@@ -854,14 +854,20 @@ public class SysUtilServiceImpl implements ISysUtilService {
      * @return
      */
     @Override
-    public Map<ZdataTrailTracks, List<TrailBo>> carTrackQuery(CarParaVO carParaVO) {
+    public List<TrailInfo> carTrackQuery(CarParaVO carParaVO) {
+
         List<CarVO> carlistPara = carParaVO.getCarlist();
         if (null != carlistPara && carlistPara.size() > 0){
             List<String> carNoList = carlistPara.stream().map(CarVO::getCarNo).collect(Collectors.toList());
             carParaVO.setCarNoList(carNoList);
         }
-
         List<ZdataTrailTracks> carlist = zdataTrailTracksService.getHistoryTrail(carParaVO);
+
+
+        List<TrailInfo> rtnList = new ArrayList<>();
+
+
+        Map<ZdataTrailTracks, List<TrailBo>> rtnCar = new HashMap<>();
 
         Map<ZdataTrailTracks, List<TrailBo>> mapCar = new HashMap<>();
         if (null != carlist && carlist.size() > 0) {
@@ -874,10 +880,27 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     mapCar.put(tracks, josnList);
                 }
             }
-            return this.changeData(mapCar);
+            rtnCar =  this.changeData(mapCar);
         } else {
-            return mapCar;
+            rtnCar = mapCar;
         }
+
+        if (null != rtnCar) {
+            for (Map.Entry<ZdataTrailTracks, List<TrailBo>> entry : rtnCar.entrySet()) {
+                ZdataTrailTracks tracksBo = entry.getKey();
+                List<TrailBo> josnList = entry.getValue();
+
+                String carNo =CommonUtil.isNull(tracksBo.getPlateKey());
+                TrailInfo trailInfo = new TrailInfo();
+                trailInfo.setTrailUuid(carNo);
+                trailInfo.setTracks(tracksBo);
+                trailInfo.setTrailList(josnList);
+
+                rtnList.add(trailInfo);
+            }
+        }
+
+        return rtnList;
 
     }
 
