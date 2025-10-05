@@ -163,7 +163,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
      * @return 结果
      */
     public Map<ZdataTrailTracks, List<TrailBo>> syncTrack(CarParaVO carParaVO) {
-        List<CarVO> carlist = carParaVO.getCarlist();
+        List<CarVO> carlist = new ArrayList<>();
+        Object obj = redisCache.getCacheObject(Constants.car_list_jc);
+        if (null != obj) {
+            carlist = (List) obj;
+        }
+
         Map<ZdataTrailTracks, List<TrailBo>> mapCar = new HashMap<>();
         if (null != carlist && carlist.size() > 0) {
 

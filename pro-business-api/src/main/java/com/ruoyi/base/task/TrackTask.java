@@ -1,8 +1,12 @@
 package com.ruoyi.base.task;
 
+import com.ruoyi.base.domain.CarParaVO;
+import com.ruoyi.base.domain.TrailBo;
+import com.ruoyi.base.domain.ZdataTrailTracks;
 import com.ruoyi.base.service.IOdsSzdnGantryIpService;
 import com.ruoyi.base.service.IOdsSzdnTollStationIpService;
 import com.ruoyi.base.service.ISysUtilService;
+import com.ruoyi.common.constant.Constants;
 import com.ruoyi.common.core.redis.RedisCache;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +16,8 @@ import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 @Component
 @EnableScheduling
@@ -37,9 +43,16 @@ public class TrackTask {
      */
     @Scheduled(cron = "0 0/3 * * * ?")
     private void syncCurrentTrack() {
-        log.info("每三分钟（同步当前轨迹轨迹）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-
-        log.info("每三分钟（同步当前轨迹轨迹）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        log.info("每三分钟（同步当前轨迹轨迹）开始 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        Map<ZdataTrailTracks, List<TrailBo>> carMap = sysUtilService.syncTrack(new CarParaVO());
+        if (null != carMap) {
+            for (Map.Entry<ZdataTrailTracks, List<TrailBo>> entry : carMap.entrySet()) {
+                ZdataTrailTracks tracksBo = entry.getKey();
+                List<TrailBo> josnList = entry.getValue();
+                redisCache.setCacheObject(Constants.car_curent_trail + tracksBo.getPlateKey(), josnList);
+            }
+        }
+        log.info("每三分钟（同步当前轨迹轨迹）结束 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
 
