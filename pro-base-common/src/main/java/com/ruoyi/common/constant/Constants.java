@@ -275,6 +275,17 @@ public class Constants
 
 
     /**
+     * 重点车俩列表
+     */
+    public static final String car_list = "car_list";
+
+    /**
+     * 重点车俩列表：简称
+     */
+    public static final String car_list_jc = "car_list_jc";
+
+
+    /**
      * 逃费类型：屏蔽
      */
     public static final String escapedType_20 = "20";
