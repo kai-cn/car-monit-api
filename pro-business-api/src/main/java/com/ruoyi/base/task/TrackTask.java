@@ -47,13 +47,13 @@ public class TrackTask {
      * 每天凌晨3点
      * 同步历史轨迹
      */
-    @Scheduled(cron = "0 15 3 * * ?")
+    @Scheduled(cron = "0 0 4 * * ?")
     private void syncHistroyTrack() {
-        log.info("每天凌晨3点15执行（同步历史轨迹）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        log.info("每天凌晨4点执行（同步历史轨迹）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
 
         odsSzdnGantryIpService.updateRedis();  // 门架ip redis
         odsSzdnTollStationIpService.updateRedis(); // 站ip redis
-        log.info("每天凌晨3点15执行（同步历史轨迹）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        log.info("每天凌晨4点执行（同步历史轨迹）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
 }
