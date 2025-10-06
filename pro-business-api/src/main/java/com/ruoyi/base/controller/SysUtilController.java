@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/base/sysutil")
@@ -99,7 +98,7 @@ public class SysUtilController extends BaseController {
                     mapCar.put(tracks, josnList);
                 }
             }
-            rtnCar =  sysUtilService.changeData(mapCar);
+            rtnCar = sysUtilService.changeData(mapCar);
 
 
             for (Map.Entry<ZdataTrailTracks, List<TrailBo>> entry : rtnCar.entrySet()) {
@@ -108,7 +107,9 @@ public class SysUtilController extends BaseController {
 
                 String carNo = CommonUtil.isNull(tracksBo.getPlateKey());
                 TrailInfo trailInfo = new TrailInfo();
+
                 trailInfo.setTrailUuid(carNo);
+                trailInfo.setEnterTime(tracksBo.getEnterTime());
                 trailInfo.setTracks(tracksBo);
                 trailInfo.setTrailList(josnList);
 
@@ -171,6 +172,7 @@ public class SysUtilController extends BaseController {
                 String carNo = CommonUtil.isNull(tracksBo.getPlateKey());
                 TrailInfo trailInfo = new TrailInfo();
                 trailInfo.setTrailUuid(carNo);
+                trailInfo.setEnterTime(tracksBo.getEnterTime());
                 trailInfo.setTracks(tracksBo);
                 trailInfo.setTrailList(josnList);
 
