@@ -64,6 +64,14 @@ public interface ISysUtilService {
     List<TrailInfo> carTrackQuery(CarParaVO carParaVO);
 
 
+    /**
+     * 轨迹查询
+     * @param carParaVO
+     * @return
+     */
+    List<ZdataTrailTracks> carTrackQueryNew(CarParaVO carParaVO);
+
+
 
 
 }

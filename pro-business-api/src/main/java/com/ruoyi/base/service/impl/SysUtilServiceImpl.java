@@ -904,6 +904,23 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
     }
 
+    /**
+     * 轨迹查询
+     *
+     * @param carParaVO
+     * @return
+     */
+    public List<ZdataTrailTracks> carTrackQueryNew(CarParaVO carParaVO) {
+        List<CarVO> carlistPara = carParaVO.getCarlist();
+        if (null != carlistPara && carlistPara.size() > 0) {
+            List<String> carNoList = carlistPara.stream().map(CarVO::getCarNo).collect(Collectors.toList());
+            carParaVO.setCarNoList(carNoList);
+        }
+        List<ZdataTrailTracks> carlist = zdataTrailTracksService.getHistoryTrail(carParaVO);
+        return carlist;
+    }
+
+
 
 
 }
