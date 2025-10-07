@@ -50,7 +50,7 @@ public class OdsLwzxsfsjFeeGantryFusion01 implements Custom {
     private Long enaxlecount;
 
     /** 入站时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @Excel(name = "入站时间", width = 30, dateFormat = "yyyy-MM-dd")
     private Date entime;
 

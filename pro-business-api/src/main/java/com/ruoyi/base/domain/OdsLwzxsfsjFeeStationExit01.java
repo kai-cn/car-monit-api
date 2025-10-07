@@ -52,7 +52,7 @@ public class OdsLwzxsfsjFeeStationExit01 implements Custom {
     private Integer enaxlecount;
 
     /** 进站时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @Excel(name = "进站时间", width = 30, dateFormat = "yyyy-MM-dd")
     private Date entime;
 
@@ -93,7 +93,7 @@ public class OdsLwzxsfsjFeeStationExit01 implements Custom {
     private String entryoperatorid;
 
     /** 出站时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @Excel(name = "出站时间", width = 30, dateFormat = "yyyy-MM-dd")
     private Date extime;
 
@@ -206,7 +206,6 @@ public class OdsLwzxsfsjFeeStationExit01 implements Custom {
     private String paytype;
 
     /** $column.columnComment */
-    @Excel(name = "${comment}", readConverterExp = "$column.readConverterExp()")
     private Long provfee;
 
     /** 本省交易成功次数 */
@@ -222,7 +221,7 @@ public class OdsLwzxsfsjFeeStationExit01 implements Custom {
     private String shift;
 
     /** 接收时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @Excel(name = "接收时间", width = 30, dateFormat = "yyyy-MM-dd HH:mm:ss")
     private Date receivetime;
 
@@ -275,7 +274,7 @@ public class OdsLwzxsfsjFeeStationExit01 implements Custom {
     private String transtype;
 
     /** 加载时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss" , timezone = "GMT+8")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @Excel(name = "加载时间", width = 30, dateFormat = "yyyy-MM-dd HH:mm:ss")
     private Date loadTime;
 
