@@ -4,6 +4,7 @@ import com.ruoyi.base.domain.OdsLwzxsfsjFeeRecords01;
 import com.ruoyi.base.service.IOdsLwzxsfsjFeeRecords01Service;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.page.TableDataInfo;
+import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,6 +33,17 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
     public TableDataInfo list(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01) {
         startPage();
         List<OdsLwzxsfsjFeeRecords01> list = odsLwzxsfsjFeeRecords01Service.selectOdsLwzxsfsjFeeRecords01List(odsLwzxsfsjFeeRecords01);
+
+        if (null !=list && list.size() > 0){
+            for (OdsLwzxsfsjFeeRecords01 feeRecords:list){
+                String vehicleplate = CommonUtil.isNull(feeRecords.getVehicleplate());
+                if (vehicleplate.indexOf("_") > -1){
+                    String[] vehicleplateStr = vehicleplate.split("_");
+                    feeRecords.setVehicleplate(vehicleplateStr[0]);
+                }
+            }
+        }
+
         return getDataTable(list);
     }
 
