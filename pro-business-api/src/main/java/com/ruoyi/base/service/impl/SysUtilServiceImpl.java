@@ -176,7 +176,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
 
             for (CarVO carVO : carlist) {
-                String carNo = carVO.getCarNo();
+                String carNo = CommonUtil.isNull(carVO.getCarNo());
                 String keyValue = "";
 
                 if (CommonUtil.isNull(isLocalhost).equals("local")){

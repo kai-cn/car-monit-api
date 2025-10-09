@@ -1,9 +1,6 @@
 package com.ruoyi.base.task;
 
-import com.ruoyi.base.domain.CarParaVO;
-import com.ruoyi.base.domain.TrailBo;
-import com.ruoyi.base.domain.TrailInfo;
-import com.ruoyi.base.domain.ZdataTrailTracks;
+import com.ruoyi.base.domain.*;
 import com.ruoyi.base.service.IOdsSzdnGantryIpService;
 import com.ruoyi.base.service.IOdsSzdnTollStationIpService;
 import com.ruoyi.base.service.ISysUtilService;
@@ -17,9 +14,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 @EnableScheduling
@@ -76,15 +71,47 @@ public class TrackTask {
     private void syncHistroyTrack() {
         log.info("每天凌晨4点执行（同步历史轨迹）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
 
-      /*  List<TrailInfo>  trailList = sysUtilService.carTrackQuery(new CarParaVO());
-        for (TrailInfo trailInfo : trailList) {
-            ZdataTrailTracks tracksBo = trailInfo.getTracks();
-            // List<TrailBo> josnList = trailInfo.getTrailList();
-            String carNo = CommonUtil.isNull(tracksBo.getPlateKey());
-            String key = Constants.car_history_trail + carNo;
-            redisCache.setCacheObject(key, trailInfo);
+        CarParaVO carParaVO = new CarParaVO();
+        // 重点车俩库
+        List<CarVO> carlist = new ArrayList<>();
+        Object obj = redisCache.getCacheObject(Constants.car_list_jc);
+        if (null != obj) {
+            carlist = (List) obj;
+        }
 
-        }*/
+        if (null != carlist && carlist.size() > 0) {
+            carParaVO.setCarlist(carlist);
+            List<TrailInfo>  trailList = sysUtilService.carTrackQuery(carParaVO);
+            // 车辆的轨迹
+            Map<String, List<TrailInfo>> carTrailInfoMap = new HashMap<>();
+            for (TrailInfo trailInfo : trailList) {
+                ZdataTrailTracks tracksBo = trailInfo.getTracks();
+                // List<TrailBo> josnList = trailInfo.getTrailList();
+                String carNo = CommonUtil.isNull(tracksBo.getPlateKey());
+                if (carTrailInfoMap.containsKey(carNo)){
+                    List<TrailInfo> oldList  = carTrailInfoMap.get(carNo);
+                    oldList.add(trailInfo);
+                    carTrailInfoMap.put(carNo,oldList);
+                }else{
+                    List<TrailInfo> newList = new ArrayList<>();
+                    newList.add(trailInfo);
+                    carTrailInfoMap.put(carNo,newList);
+                }
+            }
+
+            for (CarVO carVO : carlist) {
+                String carNo = CommonUtil.isNull(carVO.getCarNo());
+                String key = Constants.car_history_trail + carNo;
+                redisCache.setCacheObject(key, carTrailInfoMap.get(key));
+
+            }
+
+
+        }
+
+
+
+
 
         odsSzdnGantryIpService.updateRedis();  // 门架ip redis
         odsSzdnTollStationIpService.updateRedis(); // 站ip redis
