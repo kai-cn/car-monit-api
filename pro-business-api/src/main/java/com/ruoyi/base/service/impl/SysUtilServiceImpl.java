@@ -814,7 +814,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             if (bite.compareTo(costBite) >= 0){
                                 escapedType = Constants.escapedType_20;
                                 tracks.setEscapedType(escapedType); // 屏蔽
-                                tracks.setEscapedTypeRemark("门架抓拍数量:"+conutGantryCapture+"卡口流水抓拍数量:"+conutFeeRecord);
+                                tracks.setEscapedTypeRemark("异常原因：门架抓拍数量:"+conutGantryCapture+"卡口流水数量:"+conutFeeRecord);
                                 mapCar.put(tracks, josnList);
                             }
                         }
