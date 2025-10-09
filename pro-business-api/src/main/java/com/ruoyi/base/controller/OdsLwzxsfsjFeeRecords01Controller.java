@@ -40,6 +40,9 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
                 if (vehicleplate.indexOf("_") > -1){
                     String[] vehicleplateStr = vehicleplate.split("_");
                     feeRecords.setVehicleplate(vehicleplateStr[0]);
+                    if (vehicleplateStr.length >1){
+                        feeRecords.setPlateColor(vehicleplateStr[1]);
+                    }
                 }
             }
         }
