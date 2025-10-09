@@ -2,6 +2,7 @@ package com.ruoyi.base.task;
 
 import com.ruoyi.base.domain.*;
 import com.ruoyi.base.service.IOdsSzdnGantryIpService;
+import com.ruoyi.base.service.IOdsSzdnGantryService;
 import com.ruoyi.base.service.IOdsSzdnTollStationIpService;
 import com.ruoyi.base.service.ISysUtilService;
 import com.ruoyi.common.constant.Constants;
@@ -32,6 +33,9 @@ public class TrackTask {
 
     @Autowired
     private ISysUtilService sysUtilService;
+
+    @Autowired
+    private IOdsSzdnGantryService odsSzdnGantryService;
 
 
     /**
@@ -113,7 +117,7 @@ public class TrackTask {
 
 
 
-
+        odsSzdnGantryService.saveGantryRedis(); // 门架信息
         odsSzdnGantryIpService.updateRedis();  // 门架ip redis
         odsSzdnTollStationIpService.updateRedis(); // 站ip redis
         log.info("每天凌晨4点执行（同步历史轨迹）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));

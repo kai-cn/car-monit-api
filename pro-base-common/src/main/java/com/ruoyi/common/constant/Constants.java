@@ -320,6 +320,12 @@ public class Constants
     public static final String car_curent_trail = "car_curent_trail:";
 
 
+    /**g
+     * 门架对象redis
+     */
+    public static final String gantry_list = "gantry_list";
+
+
 
 
 

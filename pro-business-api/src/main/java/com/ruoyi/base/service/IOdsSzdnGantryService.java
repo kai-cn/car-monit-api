@@ -36,4 +36,21 @@ public interface IOdsSzdnGantryService extends IService<OdsSzdnGantry> {
      * @return 门架信息集合
      */
     Map<String,OdsSzdnGantry> selectOdsSzdnGantryMap(OdsSzdnGantry odsSzdnGantry);
+
+
+    /**
+     * 查询门架信息列表
+     *
+     * @param
+     * @return 门架信息集合
+     */
+    List<OdsSzdnGantry> saveGantryRedis();
+
+    /**
+     * 查询门架信息列表
+     *
+     * @param
+     * @return 门架信息集合
+     */
+    List<OdsSzdnGantry> getGantryRedis();
 }
