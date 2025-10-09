@@ -76,6 +76,16 @@ public class TrackTask {
     private void syncHistroyTrack() {
         log.info("每天凌晨4点执行（同步历史轨迹）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
 
+      /*  List<TrailInfo>  trailList = sysUtilService.carTrackQuery(new CarParaVO());
+        for (TrailInfo trailInfo : trailList) {
+            ZdataTrailTracks tracksBo = trailInfo.getTracks();
+            // List<TrailBo> josnList = trailInfo.getTrailList();
+            String carNo = CommonUtil.isNull(tracksBo.getPlateKey());
+            String key = Constants.car_history_trail + carNo;
+            redisCache.setCacheObject(key, trailInfo);
+
+        }*/
+
         odsSzdnGantryIpService.updateRedis();  // 门架ip redis
         odsSzdnTollStationIpService.updateRedis(); // 站ip redis
         log.info("每天凌晨4点执行（同步历史轨迹）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
