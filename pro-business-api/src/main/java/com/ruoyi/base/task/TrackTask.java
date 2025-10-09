@@ -102,11 +102,12 @@ public class TrackTask {
             for (CarVO carVO : carlist) {
                 String carNo = CommonUtil.isNull(carVO.getCarNo());
                 String key = Constants.car_history_trail + carNo;
-                redisCache.setCacheObject(key, carTrailInfoMap.get(key));
-
+                if (carTrailInfoMap.containsKey(carNo)){
+                    redisCache.setCacheObject(key, carTrailInfoMap.get(carNo));
+                }else{
+                    redisCache.setCacheObject(key, new ArrayList<TrailInfo>());
+                }
             }
-
-
         }
 
 
