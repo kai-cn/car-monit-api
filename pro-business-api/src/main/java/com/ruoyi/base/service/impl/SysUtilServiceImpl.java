@@ -631,10 +631,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 if (CommonUtil.isNotBlank(odsSzdnGantry.getLat())) {
                                     trailBo.setLat(new BigDecimal(odsSzdnGantry.getLat())); // 经度
                                 }
-                        /*    // 路线编号
-                            trailBo.setRoadCode(CommonUtil.isNull(odsSzdnGantry.getRoadCode()));
-                            // 路段编号
-                            trailBo.setSectionCode(CommonUtil.isNull(odsSzdnGantry.getSectionCode()));*/
+                               // 路线编号
+                               trailBo.setRoadCode(CommonUtil.isNull(odsSzdnGantry.getRoadCode()));
+                               // 路段编号
+                              trailBo.setSectionCode(CommonUtil.isNull(odsSzdnGantry.getSectionCode()));
                             }
                         }
                     }
