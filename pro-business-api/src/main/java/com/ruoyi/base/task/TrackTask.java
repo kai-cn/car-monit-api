@@ -173,7 +173,7 @@ public class TrackTask {
                     }
                 }
 
-                for (CarVO carVO : carlist) {
+                for (CarVO carVO : noCarlist) {
                     String carNo = CommonUtil.isNull(carVO.getCarNo());
                     String key = Constants.car_history_trail + carNo;
                     if (carTrailInfoMap.containsKey(carNo)){
