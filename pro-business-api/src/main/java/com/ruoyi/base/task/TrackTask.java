@@ -125,8 +125,8 @@ public class TrackTask {
 
 
     /**
-     * 每30分钟执行一次
-     * 车俩实时轨迹同步
+     * 每20分钟执行一次
+     * 同步历史轨迹没有记录的车辆
      */
     @Scheduled(cron = "0 0/20 * * * ?")
     private void syncCurrentTrackNo() {
@@ -143,7 +143,7 @@ public class TrackTask {
         if (null != carlist && carlist.size() > 0) {
 
             List<CarVO> noCarlist = new ArrayList<>();
-            for (CarVO carVO :noCarlist) {
+            for (CarVO carVO :carlist) {
                 String curCarNo = CommonUtil.isNull(carVO.getCarNo());
                 String curkey = Constants.car_history_trail + curCarNo;
                 List<TrailInfo> trailInfoList = redisCache.getCacheObject(curkey);
@@ -183,9 +183,6 @@ public class TrackTask {
                     }
                 }
             }
-
-
-
         }
         log.info("每20执行（同步历史轨迹没有记录的车辆）结束 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
