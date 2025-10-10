@@ -68,7 +68,7 @@ public class TrackTask {
 
 
     /**
-     * 每天凌晨3点
+     * 每天凌晨4点
      * 同步历史轨迹
      */
     @Scheduled(cron = "0 0 4 * * ?")
@@ -121,6 +121,73 @@ public class TrackTask {
         odsSzdnGantryIpService.updateRedis();  // 门架ip redis
         odsSzdnTollStationIpService.updateRedis(); // 站ip redis
         log.info("每天凌晨4点执行（同步历史轨迹）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
+
+
+    /**
+     * 每30分钟执行一次
+     * 车俩实时轨迹同步
+     */
+    @Scheduled(cron = "0 0/20 * * * ?")
+    private void syncCurrentTrackNo() {
+        log.info("每20执行（同步历史轨迹没有记录的车辆）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+
+        CarParaVO carParaVO = new CarParaVO();
+        // 重点车俩库
+        List<CarVO> carlist = new ArrayList<>();
+        Object obj = redisCache.getCacheObject(Constants.car_list_jc);
+        if (null != obj) {
+            carlist = (List) obj;
+        }
+
+        if (null != carlist && carlist.size() > 0) {
+
+            List<CarVO> noCarlist = new ArrayList<>();
+            for (CarVO carVO :noCarlist) {
+                String curCarNo = CommonUtil.isNull(carVO.getCarNo());
+                String curkey = Constants.car_history_trail + curCarNo;
+                List<TrailInfo> trailInfoList = redisCache.getCacheObject(curkey);
+                if (null == trailInfoList){
+                    noCarlist.add(carVO);
+                }
+
+            }
+
+            if (noCarlist.size() > 0){
+                carParaVO.setCarlist(noCarlist);
+                List<TrailInfo>  trailList = sysUtilService.carTrackQuery(carParaVO);
+                // 车辆的轨迹
+                Map<String, List<TrailInfo>> carTrailInfoMap = new HashMap<>();
+                for (TrailInfo trailInfo : trailList) {
+                    ZdataTrailTracks tracksBo = trailInfo.getTracks();
+                    // List<TrailBo> josnList = trailInfo.getTrailList();
+                    String carNo = CommonUtil.isNull(tracksBo.getPlateKey());
+                    if (carTrailInfoMap.containsKey(carNo)){
+                        List<TrailInfo> oldList  = carTrailInfoMap.get(carNo);
+                        oldList.add(trailInfo);
+                        carTrailInfoMap.put(carNo,oldList);
+                    }else{
+                        List<TrailInfo> newList = new ArrayList<>();
+                        newList.add(trailInfo);
+                        carTrailInfoMap.put(carNo,newList);
+                    }
+                }
+
+                for (CarVO carVO : carlist) {
+                    String carNo = CommonUtil.isNull(carVO.getCarNo());
+                    String key = Constants.car_history_trail + carNo;
+                    if (carTrailInfoMap.containsKey(carNo)){
+                        redisCache.setCacheObject(key, carTrailInfoMap.get(carNo));
+                    }else{
+                        redisCache.setCacheObject(key, new ArrayList<TrailInfo>());
+                    }
+                }
+            }
+
+
+
+        }
+        log.info("每20执行（同步历史轨迹没有记录的车辆）结束 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
 }
