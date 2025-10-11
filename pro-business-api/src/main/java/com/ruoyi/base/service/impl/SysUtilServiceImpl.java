@@ -448,7 +448,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             trailBo.setLat(gantryCaptureBO.getLat()); // 维度
 
                             trailBo.setRoadCode(CommonUtil.isNull(gantryCaptureBO.getRoadcode())); // 路线
-                            trailBo.setDirection(gantryCaptureBO.getDirection()); // 方向
+                            trailBo.setDirection(CommonUtil.isNull(gantryCaptureBO.getDirection())); // 方向
                             trailBo.setPileno(CommonUtil.isNull(gantryCaptureBO.getPileno())); // 桩号
 
 
@@ -606,9 +606,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                     trailBo.setLat(new BigDecimal(odsSzdnToll.getLatitude())); // 经度
                                 }
                                 // 路线编号
-                          /*  trailBo.setRoadCode(CommonUtil.isNull(odsSzdnToll.getRoadCode()));
-                            // 路段编号
-                            trailBo.setSectionCode(CommonUtil.isNull(odsSzdnToll.getSectionCode()));*/
+                                trailBo.setRoadCode(CommonUtil.isNull(odsSzdnToll.getRoadCode()));
+
+                                // trailBo.setDirection(odsSzdnToll.getDirection()); // 方向
+                                trailBo.setPileno(CommonUtil.isNull(odsSzdnToll.getPileNo())); // 桩号
                             }
                         }
 
@@ -638,7 +639,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                // 路线编号
                                trailBo.setRoadCode(CommonUtil.isNull(odsSzdnGantry.getRoadCode()));
                                // 路段编号
-                              trailBo.setSectionCode(CommonUtil.isNull(odsSzdnGantry.getSectionCode()));
+                               trailBo.setSectionCode(CommonUtil.isNull(odsSzdnGantry.getSectionCode()));
+
+                               trailBo.setDirection(odsSzdnGantry.getDirection()); // 方向
+                               trailBo.setPileno(CommonUtil.isNull(odsSzdnGantry.getPileNo())); // 桩号
                             }
                         }
                     }
