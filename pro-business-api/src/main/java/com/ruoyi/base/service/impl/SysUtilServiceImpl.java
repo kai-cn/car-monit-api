@@ -191,8 +191,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 if (CommonUtil.isNotBlank(keyValue)) {
                     josnList = JSON.parseArray(keyValue, TrailBo.class);
                 }
-                ZdataTrailTracks  tracks = new ZdataTrailTracks();
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+                String formattedDate = sdf.format(new Date());
+
+                ZdataTrailTracks tracks = new ZdataTrailTracks();
                 tracks.setPlateKey(carNo);
+                tracks.setUuid(carNo + formattedDate);
                 mapCar.put(tracks, josnList); // 车牌号
             }
             return this.changeData(mapCar);
@@ -827,7 +831,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             if (bite.compareTo(costBite) >= 0){
                                 escapedType = Constants.escapedType_20;
                                 tracks.setEscapedType(escapedType); // 屏蔽
-                                tracks.setEscapedTypeRemark("异常原因：门架抓拍数量:"+conutGantryCapture+"卡口流水数量:"+conutFeeRecord);
+                                tracks.setEscapedTypeRemark("异常原因：门架牌识数量:"+conutGantryCapture+"门架流水数量:"+conutFeeRecord);
                                 mapCar.put(tracks, josnList);
                             }
                         }
