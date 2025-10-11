@@ -196,7 +196,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
                 ZdataTrailTracks tracks = new ZdataTrailTracks();
                 tracks.setPlateKey(carNo);
-                tracks.setUuid(carNo + formattedDate);
+                tracks.setUuid(carNo +"@@"+ formattedDate);
                 mapCar.put(tracks, josnList); // 车牌号
             }
             return this.changeData(mapCar);
