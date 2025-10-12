@@ -603,6 +603,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             }
                             // 路线编号
                             trailBo.setRoadCode(CommonUtil.isNull(odsSzdnToll.getRoadCode()));
+                            // 路段
+                            trailBo.setSectionCode(CommonUtil.isNull(odsSzdnToll.getSectionCode()));
 
                             // trailBo.setDirection(odsSzdnToll.getDirection()); // 方向
                             trailBo.setPileno(CommonUtil.isNull(odsSzdnToll.getPileNo())); // 桩号
