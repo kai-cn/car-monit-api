@@ -577,79 +577,71 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 }
 
                 String devCodeId = CommonUtil.isNull(trailBo.getDevCode()); // 通过设备编码先查询
+                
+                if (indexType.equals("stationType")){
+                    // 收费站ip 或者CODE查询
+                    OdsSzdnTollStationIp stationIpBO = null;
+                    if (CommonUtil.isNotBlank(devCodeId)) {
+                        stationIpBO = szdnTollMap.get(devCodeId);
+                    } else {
+                        stationIpBO = szdnTollMap.get(locationCode);
+                    }
+                    if (null != stationIpBO) {
+                   /* trailBo.setStationIpBO(stationIpBO);
+                    trailBo.setLocationFlag("1"); // 有数据*/
 
-                if (null != trailBo.getLon() && null != trailBo.getLat() && null != trailBo.getDevName()){
-                     // 门架抓拍
+                        trailBo.setDevCode(stationIpBO.getTollCode()); // 设备编号
+                        trailBo.setDevName(stationIpBO.getTollName());  // 设备名称
 
-                }else{
-                    if (indexType.equals("stationType")){
-                        // 收费站ip 或者CODE查询
-                        OdsSzdnTollStationIp stationIpBO = null;
-                        if (CommonUtil.isNotBlank(devCodeId)) {
-                            stationIpBO = szdnTollMap.get(devCodeId);
-                        } else {
-                            stationIpBO = szdnTollMap.get(locationCode);
-                        }
-                        if (null != stationIpBO) {
-                       /* trailBo.setStationIpBO(stationIpBO);
-                        trailBo.setLocationFlag("1"); // 有数据*/
-
-                            trailBo.setDevCode(stationIpBO.getTollCode()); // 设备编号
-                            trailBo.setDevName(stationIpBO.getTollName());  // 设备名称
-
-                            OdsSzdnToll odsSzdnToll = stationIpBO.getOdsSzdnToll();
-                            if (null != odsSzdnToll) {
-                                if (CommonUtil.isNotBlank(odsSzdnToll.getLongitude())) {
-                                    trailBo.setLon(new BigDecimal(odsSzdnToll.getLongitude())); // 经度
-                                }
-                                if (CommonUtil.isNotBlank(odsSzdnToll.getLatitude())) {
-                                    trailBo.setLat(new BigDecimal(odsSzdnToll.getLatitude())); // 经度
-                                }
-                                // 路线编号
-                                trailBo.setRoadCode(CommonUtil.isNull(odsSzdnToll.getRoadCode()));
-
-                                // trailBo.setDirection(odsSzdnToll.getDirection()); // 方向
-                                trailBo.setPileno(CommonUtil.isNull(odsSzdnToll.getPileNo())); // 桩号
+                        OdsSzdnToll odsSzdnToll = stationIpBO.getOdsSzdnToll();
+                        if (null != odsSzdnToll) {
+                            if (CommonUtil.isNotBlank(odsSzdnToll.getLongitude())) {
+                                trailBo.setLon(new BigDecimal(odsSzdnToll.getLongitude())); // 经度
                             }
-                        }
-
-                    }else  if (indexType.equals("gantryType")){
-                        // 门架ip
-                        OdsSzdnGantryIp  gantryIpBO = null;
-                        if (CommonUtil.isNotBlank(devCodeId)) {
-                            gantryIpBO = szdnGantryMap.get(devCodeId);
-                        }else{
-                            gantryIpBO = szdnGantryMap.get(locationCode);
-                        }
-                        if (null != gantryIpBO) {
-                          /*  trailBo.setGantryIpBO(gantryIpBO);
-                            trailBo.setLocationFlag("1"); // 有数据*/
-
-                            trailBo.setDevCode(gantryIpBO.getGantryCode()); // 设备编号
-                            trailBo.setDevName(gantryIpBO.getGantryName());  // 设备名称
-
-                            OdsSzdnGantry odsSzdnGantry = gantryIpBO.getOdsSzdnGantry();
-                            if (null != odsSzdnGantry) {
-                                if (CommonUtil.isNotBlank(odsSzdnGantry.getLon())) {
-                                    trailBo.setLon(new BigDecimal(odsSzdnGantry.getLon())); // 经度
-                                }
-                                if (CommonUtil.isNotBlank(odsSzdnGantry.getLat())) {
-                                    trailBo.setLat(new BigDecimal(odsSzdnGantry.getLat())); // 经度
-                                }
-                               // 路线编号
-                               trailBo.setRoadCode(CommonUtil.isNull(odsSzdnGantry.getRoadCode()));
-                               // 路段编号
-                               trailBo.setSectionCode(CommonUtil.isNull(odsSzdnGantry.getSectionCode()));
-
-                               trailBo.setDirection(odsSzdnGantry.getDirection()); // 方向
-                               trailBo.setPileno(CommonUtil.isNull(odsSzdnGantry.getPileNo())); // 桩号
+                            if (CommonUtil.isNotBlank(odsSzdnToll.getLatitude())) {
+                                trailBo.setLat(new BigDecimal(odsSzdnToll.getLatitude())); // 经度
                             }
+                            // 路线编号
+                            trailBo.setRoadCode(CommonUtil.isNull(odsSzdnToll.getRoadCode()));
+
+                            // trailBo.setDirection(odsSzdnToll.getDirection()); // 方向
+                            trailBo.setPileno(CommonUtil.isNull(odsSzdnToll.getPileNo())); // 桩号
                         }
                     }
 
+                }else  if (indexType.equals("gantryType")){
+                    // 门架ip
+                    OdsSzdnGantryIp  gantryIpBO = null;
+                    if (CommonUtil.isNotBlank(devCodeId)) {
+                        gantryIpBO = szdnGantryMap.get(devCodeId);
+                    }else{
+                        gantryIpBO = szdnGantryMap.get(locationCode);
+                    }
+                    if (null != gantryIpBO) {
+                      /*  trailBo.setGantryIpBO(gantryIpBO);
+                        trailBo.setLocationFlag("1"); // 有数据*/
+
+                        trailBo.setDevCode(gantryIpBO.getGantryCode()); // 设备编号
+                        trailBo.setDevName(gantryIpBO.getGantryName());  // 设备名称
+
+                        OdsSzdnGantry odsSzdnGantry = gantryIpBO.getOdsSzdnGantry();
+                        if (null != odsSzdnGantry) {
+                            if (CommonUtil.isNotBlank(odsSzdnGantry.getLon())) {
+                                trailBo.setLon(new BigDecimal(odsSzdnGantry.getLon())); // 经度
+                            }
+                            if (CommonUtil.isNotBlank(odsSzdnGantry.getLat())) {
+                                trailBo.setLat(new BigDecimal(odsSzdnGantry.getLat())); // 经度
+                            }
+                           // 路线编号
+                           trailBo.setRoadCode(CommonUtil.isNull(odsSzdnGantry.getRoadCode()));
+                           // 路段编号
+                           trailBo.setSectionCode(CommonUtil.isNull(odsSzdnGantry.getSectionCode()));
+
+                           trailBo.setDirection(odsSzdnGantry.getDirection()); // 方向
+                           trailBo.setPileno(CommonUtil.isNull(odsSzdnGantry.getPileNo())); // 桩号
+                        }
+                    }
                 }
-
-
             }
 
             keybo.setFirtStationCode(firtStationCode);
