@@ -130,7 +130,7 @@ public class TrackTask {
      */
     @Scheduled(cron = "0 0/30 * * * ?")
     private void syncCurrentTrackNo() {
-        log.info("每20执行（同步历史轨迹没有记录的车辆）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        log.info("每30执行（同步历史轨迹没有记录的车辆）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
 
         CarParaVO carParaVO = new CarParaVO();
         // 重点车俩库
@@ -184,7 +184,7 @@ public class TrackTask {
                 }
             }
         }
-        log.info("每20执行（同步历史轨迹没有记录的车辆）结束 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        log.info("每30执行（同步历史轨迹没有记录的车辆）结束 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
 }
