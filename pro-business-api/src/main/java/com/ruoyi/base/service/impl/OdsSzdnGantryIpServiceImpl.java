@@ -89,8 +89,8 @@ public class OdsSzdnGantryIpServiceImpl extends ServiceImpl<OdsSzdnGantryIpMappe
 
 
             // 通过IP 或者code查询
-            map.put(CommonUtil.isNull(""+rtn.getId()),rtn);
-            map.put(CommonUtil.isNull(""+rtn.getGantryCode()),rtn);
+            map.put(CommonUtil.isNull(rtn.getId()),rtn);
+            map.put(CommonUtil.isNull(rtn.getGantryCode()),rtn);
 
 
         }

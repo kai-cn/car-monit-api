@@ -326,6 +326,12 @@ public class Constants
     public static final String gantry_list = "gantry_list";
 
 
+    /**g
+     * 门架ip redis
+     */
+    public static final String dev_post = "dev_post";
+
+
 
 
 

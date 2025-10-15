@@ -1,16 +1,18 @@
 package com.ruoyi.base.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.ruoyi.common.core.domain.AjaxResult;
-import com.ruoyi.common.utils.CommonUtil;
-import com.ruoyi.base.mapper.ZdataLocationDictMapper;
 import com.ruoyi.base.domain.ZdataLocationDict;
+import com.ruoyi.base.mapper.ZdataLocationDictMapper;
 import com.ruoyi.base.service.IZdataLocationDictService;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
+import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 车辆位置Service业务层处理
@@ -23,6 +25,9 @@ public class ZdataLocationDictServiceImpl extends ServiceImpl<ZdataLocationDictM
 
     @Autowired
     private ZdataLocationDictMapper zdataLocationDictMapper;
+
+    @Autowired
+    private RedisCache redisCache;
 
     /**
      * 查询车辆位置
@@ -47,6 +52,34 @@ public class ZdataLocationDictServiceImpl extends ServiceImpl<ZdataLocationDictM
     }
 
 
+    /**
+     * 跟新redis
+     */
+    public  List<ZdataLocationDict> updateRedis(){
+        List<ZdataLocationDict> list = zdataLocationDictMapper.selectZdataLocationDictList(new ZdataLocationDict());
+        redisCache.setCacheObject(Constants.dev_post, list);
+        return  list;
+    }
+
+
+    /**
+     * 从缓存拿到carlist
+     */
+    public Map<String,ZdataLocationDict> getRedisList(){
+        List<ZdataLocationDict> list = null;
+        Object obj = redisCache.getCacheObject(Constants.dev_post);
+        if (null != obj) {
+            list = (List) obj;
+        } else {
+            list = this.updateRedis();
+        }
+
+        Map<String,ZdataLocationDict> map = new HashMap<>();
+        for (ZdataLocationDict rtn : list) {
+            map.put(CommonUtil.isNull(rtn.getRawCode()),rtn);
+        }
+        return map;
+    }
 
 
 

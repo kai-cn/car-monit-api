@@ -88,6 +88,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
     @Autowired
     private IOdsLwzxsfsjFeeStationExit01Service feeStationExit01Service;
 
+    @Autowired
+    private IZdataLocationDictService zdataLocationDictService;
+
 
     @Value("${isLocalhost}")
     private String isLocalhost;
@@ -337,6 +340,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
         // 门架IP
         Map<String, OdsSzdnGantryIp> szdnGantryMap = odsSzdnGantryIpService.selectOdsSzdnGantryIpMap();
 
+        // 位置信息
+        Map<String,ZdataLocationDict> locationMap = zdataLocationDictService.getRedisList();
 
 
 
@@ -493,6 +498,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         break;
                     case SERVICE_AREA_CAPTURE:
                         // 服务区抓拍
+                        indexType ="service_area"; // 收费站
                         break;
                     case STATION_CAPTURE:
                         // 收费站抓拍
@@ -576,16 +582,41 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         break;
                 }
 
+
+                //---------------通过位置信息查询设备
+                String devLocatCode = "";
+                if (locationMap.containsKey(locationCode)){
+                    devLocatCode = CommonUtil.isNull(locationMap.get(locationCode).getStandardCode()); // 收费站/门架code
+                }
+
                 String devCodeId = CommonUtil.isNull(trailBo.getDevCode()); // 通过设备编码先查询
                 
                 if (indexType.equals("stationType")){
                     // 收费站ip 或者CODE查询
                     OdsSzdnTollStationIp stationIpBO = null;
-                    if (CommonUtil.isNotBlank(devCodeId)) {
-                        stationIpBO = szdnTollMap.get(devCodeId);
-                    } else {
-                        stationIpBO = szdnTollMap.get(locationCode);
+
+                    // 从位置信息
+                    if (CommonUtil.isNotBlank(devLocatCode)) {
+                        stationIpBO = szdnTollMap.get(devLocatCode);
                     }
+
+                    // 从设备id拿
+                    if (null == stationIpBO) {
+                        // 从设备id拿
+                        if (CommonUtil.isNotBlank(devCodeId)) {
+                            stationIpBO = szdnTollMap.get(devCodeId);
+                        }
+                    }
+
+                    // 从当前位置拿
+                    if (null == stationIpBO) {
+                        if (CommonUtil.isNotBlank(locationCode)) {
+                            stationIpBO = szdnTollMap.get(locationCode);
+                        }
+
+                    }
+
+
                     if (null != stationIpBO) {
                    /* trailBo.setStationIpBO(stationIpBO);
                     trailBo.setLocationFlag("1"); // 有数据*/
@@ -614,11 +645,29 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 }else  if (indexType.equals("gantryType")){
                     // 门架ip
                     OdsSzdnGantryIp  gantryIpBO = null;
-                    if (CommonUtil.isNotBlank(devCodeId)) {
-                        gantryIpBO = szdnGantryMap.get(devCodeId);
-                    }else{
-                        gantryIpBO = szdnGantryMap.get(locationCode);
+
+                    // 从位置信息
+                    if (CommonUtil.isNotBlank(devLocatCode)) {
+                        gantryIpBO = szdnGantryMap.get(devLocatCode);
                     }
+
+                    // 从设备id拿
+                    if (null == gantryIpBO) {
+                        // 从设备id拿
+                        if (CommonUtil.isNotBlank(devCodeId)) {
+                            gantryIpBO = szdnGantryMap.get(devCodeId);
+                        }
+                    }
+
+                    // 从当前位置拿
+                    if (null == gantryIpBO) {
+                        if (CommonUtil.isNotBlank(locationCode)) {
+                            gantryIpBO = szdnGantryMap.get(locationCode);
+                        }
+
+                    }
+
+
                     if (null != gantryIpBO) {
                       /*  trailBo.setGantryIpBO(gantryIpBO);
                         trailBo.setLocationFlag("1"); // 有数据*/
