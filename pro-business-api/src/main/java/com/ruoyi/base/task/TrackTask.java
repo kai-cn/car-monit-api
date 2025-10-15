@@ -42,9 +42,9 @@ public class TrackTask {
      * 每三分钟执行一次
      * 车俩实时轨迹同步
      */
-    @Scheduled(cron = "0 0/3 * * * ?")
+    @Scheduled(cron = "0 0/5 * * * ?")
     private void syncCurrentTrack() {
-        log.info("每三分钟（同步当前轨迹轨迹）开始 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        log.info("每5分钟（同步当前轨迹轨迹）开始 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
         Map<ZdataTrailTracks, List<TrailBo>> rtnCar = sysUtilService.syncTrack(new CarParaVO());
         if (null != rtnCar) {
             for (Map.Entry<ZdataTrailTracks, List<TrailBo>> entry : rtnCar.entrySet()) {
@@ -61,9 +61,23 @@ public class TrackTask {
                 redisCache.setCacheObject(key, trailInfo);
 
             }
-
         }
-        log.info("每三分钟（同步当前轨迹轨迹）结束 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        log.info("每5分钟（同步当前轨迹轨迹）结束 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
+
+
+    /**
+     * 每天凌晨0点
+     * 同步基础信息
+     */
+    @Scheduled(cron = "0 0 0 * * ?")
+    private void syncBaseInfo() {
+        log.info("每天凌晨0点执行（同步基础信息）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        odsSzdnGantryService.saveGantryRedis(); // 门架信息：用于门架转名称收费流水列表
+        odsSzdnGantryIpService.updateRedis();  // 门架ip redis
+        odsSzdnTollStationIpService.updateRedis(); // 站ip redis
+        zdataLocationDictService.updateRedis(); // 位置点信息
+        log.info("每天凌晨0点执行（同步基础信息）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
 
@@ -114,10 +128,6 @@ public class TrackTask {
             }
         }
 
-        odsSzdnGantryService.saveGantryRedis(); // 门架信息
-        odsSzdnGantryIpService.updateRedis();  // 门架ip redis
-        odsSzdnTollStationIpService.updateRedis(); // 站ip redis
-        zdataLocationDictService.updateRedis(); // 位置点信息
 
         log.info("每天凌晨4点执行（同步历史轨迹）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
