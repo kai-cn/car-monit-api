@@ -80,46 +80,84 @@ public class ZdataTrailTracks implements Custom {
     @Excel(name = "离开位置code")
     private String exitLocationcode;
 
+    /** 集合详情 */
+    @Excel(name = "集合详情")
+    @TableField(exist = false)
+    private String trackJosn;
 
+    /** 入口车轴数 */
+    @Excel(name = "入口车轴数")
+    @TableField(exist = false)
+    private Long enaxlecount;
+
+    /** 入口车道编号 */
+    @Excel(name = "入口车道编号")
+    @TableField(exist = false)
+    private String entolllaneid;
+
+    /** 入口收费站编号 */
+    @Excel(name = "入口收费站编号")
+    @TableField(exist = false)
+    private String entollstationid;
+
+    /** 入口收费站名称 */
+    @Excel(name = "入口收费站名称")
+    @TableField(exist = false)
+    private String entollstationname;
+
+    /** 入口车型分类（收费车型） */
+    @Excel(name = "入口车型分类", readConverterExp = "收=费车型")
+    @TableField(exist = false)
+    private String envehicleclass;
 
     /** 入口车辆编号 */
     @Excel(name = "入口车辆编号")
+    @TableField(exist = false)
     private String envehicleid;
 
     /** 入口车辆类型代码 */
     @Excel(name = "入口车辆类型代码")
+    @TableField(exist = false)
     private String envehicletype;
 
     /** 入口称重（kg） */
     @Excel(name = "入口称重", readConverterExp = "k=g")
+    @TableField(exist = false)
     private BigDecimal enweight;
 
     /** 出口车道编号 */
     @Excel(name = "出口车道编号")
+    @TableField(exist = false)
     private String extolllaneid;
 
     /** 出口收费站编号 */
     @Excel(name = "出口收费站编号")
+    @TableField(exist = false)
     private String extollstationid;
 
     /** 出口收费站名称 */
     @Excel(name = "出口收费站名称")
+    @TableField(exist = false)
     private String extollstationname;
 
     /** 出口车型分类 */
     @Excel(name = "出口车型分类")
+    @TableField(exist = false)
     private String exvehicleclass;
 
     /** 出口车辆编号 */
     @Excel(name = "出口车辆编号")
+    @TableField(exist = false)
     private String exvehicleid;
 
     /** 出口车辆类型代码 */
     @Excel(name = "出口车辆类型代码")
+    @TableField(exist = false)
     private String exvehicletype;
 
     /** 出口称重（kg） */
     @Excel(name = "出口称重", readConverterExp = "k=g")
+    @TableField(exist = false)
     private BigDecimal exweight;
 
     // 入栈口
