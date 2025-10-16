@@ -51,38 +51,70 @@
     </select>
 
     <select id="getLatestTrail" parameterType="com.ruoyi.base.domain.CarParaVO" resultType="com.ruoyi.base.domain.ZdataTrailTracks">
-       select k.* from
-        (select t.uuid,t.point_count,t.plate_key,t.trail_points,
-        ROW_NUMBER() OVER (PARTITION BY t.uuid ORDER BY t.point_count desc )  rid
-        from jl_data01.zdata_trail_tracks t
-        where t.enter_time >= now() - #{endTime} and  t.enter_time <![CDATA[<=]]> now() - #{starTime}
-         and exists  (
-	       select 1 from jl_data01.ods_szdn_toll_station_ip sip where
-				 t.enter_locationcode = concat('stationip:',sip.ip)
-					and  sip.org_code = '030000011'
-	        )
+        select
+            t.cid uuid,
+            t.envehicleid plateKey,
+            t.enaxlecount,
+            t.entime enterTime,
+            t.entolllaneid,
+            t.entollstationid,
+            t.entollstationname,
+            t.envehicleclass,
+            t.envehicleid,
+            t.envehicletype,
+            t.enweight,
+            t.extime exitTime,
+            t.extolllaneid,
+            t.extollstationid,
+            t.extollstationname,
+            t.exvehicleclass,
+            t.exvehicleid,
+            t.exvehicletype,
+            t.exweight,
+            t.trailpoints
+        from jl_data01.zdata_trail_fitting t
+        where t.entime >= now() - #{endTime} and  t.entime <![CDATA[<=]]> now() - #{starTime}
+        and exists  (
+            select 1 from jl_data01.ods_szdn_toll sip where sip.toll_code = t.entollstationid  and sip.org_code = '030000011'
+        )
         <if test="startNum != null ">  LIMIT #{startNum} </if>
         <if test="endNum != null ">  OFFSET #{endNum} </if>
-        ) k where k.rid = 1
     </select>
 
     <select id="getHistoryTrail" parameterType="com.ruoyi.base.domain.CarParaVO" resultType="com.ruoyi.base.domain.ZdataTrailTracks">
-       select k.* from
-        (select t.uuid,t.point_count,t.plate_key,t.trail_points,t.enter_time,t.exit_time,t.enter_locationcode,t.exit_locationcode,
-        ROW_NUMBER() OVER (PARTITION BY t.uuid ORDER BY t.point_count desc )  rid
-        from jl_data01.zdata_trail_tracks t
+        select
+            t.cid uuid,
+            t.envehicleid plateKey,
+            t.enaxlecount,
+            t.entime enterTime,
+            t.entolllaneid,
+            t.entollstationid,
+            t.entollstationname,
+            t.envehicleclass,
+            t.envehicleid,
+            t.envehicletype,
+            t.enweight,
+            t.extime exitTime,
+            t.extolllaneid,
+            t.extollstationid,
+            t.extollstationname,
+            t.exvehicleclass,
+            t.exvehicleid,
+            t.exvehicletype,
+            t.exweight,
+            t.trailpoints
+            from jl_data01.zdata_trail_fitting t
         <where>
-            <if test="carNo != null  and carNo != ''"> and t.plate_key = #{carNo} </if>
-            <if test="applyTime1 != null  and applyTime1 != ''">and t.enter_time >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
-            <if test="applyTime2 != null  and applyTime2 != ''">and t.enter_time <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS') </if>
+            <if test="carNo != null  and carNo != ''"> and t.envehicleid = #{carNo} </if>
+            <if test="applyTime1 != null  and applyTime1 != ''">and t.entime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
+            <if test="applyTime2 != null  and applyTime2 != ''">and t.entime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS') </if>
             <if test="carNoList != null and carNoList.size() > 0">
-               and  t.plate_key in
+               and  t.envehicleid in
                 <foreach collection="carNoList" open="(" separator="," close=")" item="item">
                     #{item}
                 </foreach>
             </if>
         </where>
-        ) k where k.rid = 1
     </select>
 
 

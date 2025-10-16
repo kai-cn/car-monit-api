@@ -88,7 +88,7 @@ public class ZdataTrailTracks implements Custom {
     /** 入口车轴数 */
     @Excel(name = "入口车轴数")
     @TableField(exist = false)
-    private Long enaxlecount;
+    private Integer enaxlecount;
 
     /** 入口车道编号 */
     @Excel(name = "入口车道编号")
