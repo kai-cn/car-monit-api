@@ -1,5 +1,6 @@
 package com.ruoyi.base.domain;
 
+import java.math.BigDecimal;
 import java.util.Date;
 
 import com.baomidou.mybatisplus.annotation.IdType;
@@ -79,6 +80,47 @@ public class ZdataTrailTracks implements Custom {
     @Excel(name = "离开位置code")
     private String exitLocationcode;
 
+
+
+    /** 入口车辆编号 */
+    @Excel(name = "入口车辆编号")
+    private String envehicleid;
+
+    /** 入口车辆类型代码 */
+    @Excel(name = "入口车辆类型代码")
+    private String envehicletype;
+
+    /** 入口称重（kg） */
+    @Excel(name = "入口称重", readConverterExp = "k=g")
+    private BigDecimal enweight;
+
+    /** 出口车道编号 */
+    @Excel(name = "出口车道编号")
+    private String extolllaneid;
+
+    /** 出口收费站编号 */
+    @Excel(name = "出口收费站编号")
+    private String extollstationid;
+
+    /** 出口收费站名称 */
+    @Excel(name = "出口收费站名称")
+    private String extollstationname;
+
+    /** 出口车型分类 */
+    @Excel(name = "出口车型分类")
+    private String exvehicleclass;
+
+    /** 出口车辆编号 */
+    @Excel(name = "出口车辆编号")
+    private String exvehicleid;
+
+    /** 出口车辆类型代码 */
+    @Excel(name = "出口车辆类型代码")
+    private String exvehicletype;
+
+    /** 出口称重（kg） */
+    @Excel(name = "出口称重", readConverterExp = "k=g")
+    private BigDecimal exweight;
 
     // 入栈口
     @TableField(exist = false)
