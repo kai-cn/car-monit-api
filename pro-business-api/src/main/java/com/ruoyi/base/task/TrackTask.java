@@ -98,6 +98,8 @@ public class TrackTask {
         }
 
         if (null != carlist && carlist.size() > 0) {
+            log.info("同步车辆数量 " +  carlist.size());
+
             carParaVO.setCarlist(carlist);
             List<TrailInfo>  trailList = sysUtilService.carTrackQuery(carParaVO);
             // 车辆的轨迹
@@ -163,6 +165,9 @@ public class TrackTask {
             }
 
             if (noCarlist.size() > 0){
+
+                log.info("同步车辆数量 " +  noCarlist.size());
+
                 carParaVO.setCarlist(noCarlist);
                 List<TrailInfo>  trailList = sysUtilService.carTrackQuery(carParaVO);
                 // 车辆的轨迹

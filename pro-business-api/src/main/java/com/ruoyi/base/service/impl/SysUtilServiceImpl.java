@@ -175,7 +175,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         Map<ZdataTrailTracks, List<TrailBo>> mapCar = new HashMap<>();
         if (null != carlist && carlist.size() > 0) {
 
-            log.info("获取的配置信息："+redisConfig.getClusterNodes()+"--本地配置："+isLocalhost);
+            log.info("获取的配置信息："+redisConfig.getClusterNodes()+"--本地配置："+isLocalhost +"--同步车辆数量："+carlist.size());
             JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
 
             for (CarVO carVO : carlist) {
@@ -398,9 +398,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 carType = borderWeighingCaptureBO.getVehicleType(); // 车型
                             }*/
 
-                            if (null != borderWeighingCaptureBO.getAxleNum()){
+                            /*if (null != borderWeighingCaptureBO.getAxleNum()){
                                 carNum = borderWeighingCaptureBO.getAxleNum(); // 轴数
-                            }
+                            }*/
 
 
                           /*  trailBo.setBorderWeighingCaptureBO(borderWeighingCaptureBO);
@@ -470,9 +470,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 plateColor = provCaptureBO.getPlatecolor(); // 车牌颜色
                             } */
 
-                            if (null != provCaptureBO.getAxlecount()){
+                            /*if (null != provCaptureBO.getAxlecount()){
                                 carNum = Long.parseLong(provCaptureBO.getAxlecount()+""); // 轴数
-                            }
+                            }*/
 
                            /* trailBo.setProvCaptureBO(provCaptureBO);
                             trailBo.setPointFlag("1"); // 有数据*/
@@ -498,7 +498,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         break;
                     case SERVICE_AREA_CAPTURE:
                         // 服务区抓拍
-                        indexType ="service_area"; // 收费站
+                        indexType ="service_area"; // 服务区
                         break;
                     case STATION_CAPTURE:
                         // 收费站抓拍
@@ -574,6 +574,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             trailBo.setPointFlag("1"); // 有数据*/
 
                             trailBo.setDevCode(feeStationExit.getExtollstationid()); // 出口收费站编码
+                            trailBo.setDevName(feeStationExit.getExtollstationname());  // 设备名称
                             trailBo.setImagesArry(""); // 抓拍照片
 
                         }
@@ -692,6 +693,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
                            trailBo.setPileno(CommonUtil.isNull(odsSzdnGantry.getPileNo())); // 桩号
                         }
                     }
+                }else  if (indexType.equals("service_area")){
+                    // 服务区
+
+
+
                 }
             }
 
@@ -901,7 +907,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         trailInfo.setTracks(tracksBo);
                         trailInfo.setTrailList(josnList);
 
-                        String key = this.getSuspiciousKey(formattedDate,tracksBo.getUuid());
+                        String key = this.getSuspiciousKey(formattedDate,carNo);
                         redisCache.setCacheObject(key, trailInfo);
 
                     }
@@ -926,11 +932,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             carParaVO.setCarNoList(carNoList);
         }
         List<ZdataTrailTracks> carlist = zdataTrailTracksService.getHistoryTrail(carParaVO);
-
-
         List<TrailInfo> rtnList = new ArrayList<>();
-
-
         Map<ZdataTrailTracks, List<TrailBo>> rtnCar = new HashMap<>();
 
         Map<ZdataTrailTracks, List<TrailBo>> mapCar = new HashMap<>();
@@ -954,7 +956,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 ZdataTrailTracks tracksBo = entry.getKey();
                 List<TrailBo> josnList = entry.getValue();
 
-                String carNo =CommonUtil.isNull(tracksBo.getPlateKey());
+                String carNo = CommonUtil.isNull(tracksBo.getPlateKey());
                 TrailInfo trailInfo = new TrailInfo();
                 trailInfo.setTrailUuid(carNo);
                 trailInfo.setTracks(tracksBo);
