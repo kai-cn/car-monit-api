@@ -189,9 +189,14 @@ public class ZdataTrailTracks implements Custom {
     @TableField(exist = false)
     private String carVehicle;
 
+
     /** 轴数 */
     @TableField(exist = false)
     private Long carNum;
+
+    /** 通行标识 */
+    @TableField(exist = false)
+    private String passType;
 
     /** 逃费类型 */
     @TableField(exist = false)
