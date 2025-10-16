@@ -377,6 +377,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
             String indexType ="";
 
 
+            // 1-OBU 2-CPC卡 3-纸券 9-无通行介质,4- M1卡
+            String passType= "";
+
+
             for (TrailBo trailBo : josnList) {
 
                 // --------------抓拍信息
@@ -398,9 +402,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 carType = borderWeighingCaptureBO.getVehicleType(); // 车型
                             }*/
 
-                            /*if (null != borderWeighingCaptureBO.getAxleNum()){
+                            if (null != borderWeighingCaptureBO.getAxleNum()){
                                 carNum = borderWeighingCaptureBO.getAxleNum(); // 轴数
-                            }*/
+                            }
 
 
                           /*  trailBo.setBorderWeighingCaptureBO(borderWeighingCaptureBO);
@@ -470,9 +474,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 plateColor = provCaptureBO.getPlatecolor(); // 车牌颜色
                             } */
 
-                            /*if (null != provCaptureBO.getAxlecount()){
+                            if (null != provCaptureBO.getAxlecount()){
                                 carNum = Long.parseLong(provCaptureBO.getAxlecount()+""); // 轴数
-                            }*/
+                            }
 
                            /* trailBo.setProvCaptureBO(provCaptureBO);
                             trailBo.setPointFlag("1"); // 有数据*/
@@ -554,6 +558,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         if (feeStationEnterMap.containsKey(pointUuid)) {
                             OdsLwzxsfsjFeeStationEnter01 feeStationEnter = feeStationEnterMap.get(pointUuid);
 
+                            // 通行介质类型
+                            if (CommonUtil.isNotBlank(feeStationEnter.getMediatype())){
+                                passType = feeStationEnter.getMediatype();
+                            }
+
                            /* trailBo.setFeeStationEnter(feeStationEnter);
                             trailBo.setPointFlag("1"); // 有数据*/
 
@@ -569,6 +578,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
                         if (feeStationExitMap.containsKey(pointUuid)) {
                             OdsLwzxsfsjFeeStationExit01 feeStationExit = feeStationExitMap.get(pointUuid);
+
+                            // 通行介质类型
+                            if (CommonUtil.isNotBlank(feeStationExit.getMediatype())){
+                                passType = feeStationExit.getMediatype();
+                            }
+
 
                            /* trailBo.setFeeStationExit(feeStationExit);
                             trailBo.setPointFlag("1"); // 有数据*/
@@ -708,6 +723,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             keybo.setCarType(carType);
             keybo.setCarVehicle(carVehicle);
             keybo.setCarNum(carNum);
+            keybo.setPassType(passType);
 
         }
         return mapCar;
