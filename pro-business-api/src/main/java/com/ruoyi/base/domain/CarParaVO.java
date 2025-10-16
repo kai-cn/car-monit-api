@@ -46,6 +46,9 @@ public class CarParaVO {
     // 最后的天数
     private Integer endTime;
 
+    // 标识位
+    private String flag;
+
 
 
 }

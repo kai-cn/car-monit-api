@@ -70,8 +70,9 @@
             t.exvehicleclass,
             t.exvehicleid,
             t.exvehicletype,
-            t.exweight,
-            t.trailpoints
+            <if test="flag != null and flag == 'local' ">t.trailpoints,</if>
+            <if test="flag != null and flag == 'prod' ">array_to_json(t.trailpoints) trailpoints,</if>
+            t.exweight
         from jl_data01.zdata_trail_fitting t
         where t.entime >= now() - #{endTime} and  t.entime <![CDATA[<=]]> now() - #{starTime}
         and exists  (
@@ -101,9 +102,10 @@
             t.exvehicleclass,
             t.exvehicleid,
             t.exvehicletype,
-            t.exweight,
-            t.trailpoints
-            from jl_data01.zdata_trail_fitting t
+            <if test="flag != null and flag == 'local' ">t.trailpoints,</if>
+            <if test="flag != null and flag == 'prod' ">array_to_json(t.trailpoints) trailpoints,</if>
+            t.exweight
+        from jl_data01.zdata_trail_fitting t
         <where>
             <if test="carNo != null  and carNo != ''"> and t.envehicleid = #{carNo} </if>
             <if test="applyTime1 != null  and applyTime1 != ''">and t.entime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
