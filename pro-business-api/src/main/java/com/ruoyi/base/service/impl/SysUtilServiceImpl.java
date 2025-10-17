@@ -145,13 +145,31 @@ public class SysUtilServiceImpl implements ISysUtilService {
             log.info("生产redis：" + key + "对应的轨迹点：" + keyValue);
             redisCache.setCacheObject(key, keyValue);
         }*/
-        
+
+        ZdataTrailTracks zdataTrailTracks = new ZdataTrailTracks();
+        zdataTrailTracks.setPlateKey("赣CEA826");
+        List<ZdataTrailTracks> trackList1 = zdataTrailTracksService.selectZdataTrailTracksList(zdataTrailTracks);
+        for (ZdataTrailTracks trackBo : trackList1) {
+            redisCache.setCacheObject(residDist+trackBo.getPlateKey(), trackBo.getTrailPoints());
+        }
+
+
+        CarParaVO carParaVO = new CarParaVO();
+        carParaVO.setCarNo("赣F5R191");
+        List<ZdataTrailTracks> trackList = zdataTrailTracksService.getHistoryTrail(carParaVO);
+        for (ZdataTrailTracks trackBo : trackList) {
+            redisCache.setCacheObject(residDist+trackBo.getPlateKey(), trackBo.getTrailPoints());
+        }
 
 
         Collection<String> keys = redisCache.keys(residDist + "*");
         if (null != keys && keys.size() > 0){
             for (String key : keys) {
                 String keyValue = redisCache.getCacheObject(key);
+                List<TrailBo> josnList = new ArrayList<TrailBo>();
+                if (CommonUtil.isNotBlank(keyValue)) {
+                    josnList = JSON.parseArray(keyValue, TrailBo.class);
+                }
                 log.info("本地redis：" + key + "对应的轨迹点：" + keyValue);
             }
         }
