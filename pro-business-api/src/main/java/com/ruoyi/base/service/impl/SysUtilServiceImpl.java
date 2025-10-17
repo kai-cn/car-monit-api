@@ -129,7 +129,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
         log.info("获取的配置信息："+redisConfig.getClusterNodes()+"--本地配置："+isLocalhost);
 
-        String residDist = Constants.trail +"-test";
+        String residDist = "trailtest:";
 
         // ----------测试JedisCluster
         /*JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
@@ -146,19 +146,20 @@ public class SysUtilServiceImpl implements ISysUtilService {
             redisCache.setCacheObject(key, keyValue);
         }*/
 
-        ZdataTrailTracks zdataTrailTracks = new ZdataTrailTracks();
+       /* ZdataTrailTracks zdataTrailTracks = new ZdataTrailTracks();
         zdataTrailTracks.setPlateKey("赣CEA826");
         List<ZdataTrailTracks> trackList1 = zdataTrailTracksService.selectZdataTrailTracksList(zdataTrailTracks);
         for (ZdataTrailTracks trackBo : trackList1) {
             redisCache.setCacheObject(residDist+trackBo.getPlateKey(), trackBo.getTrailPoints());
-        }
+        }*/
 
 
         CarParaVO carParaVO = new CarParaVO();
-        carParaVO.setCarNo("赣F5R191");
+        carParaVO.setCarNo("赣M97313");
         List<ZdataTrailTracks> trackList = zdataTrailTracksService.getHistoryTrail(carParaVO);
         for (ZdataTrailTracks trackBo : trackList) {
-            redisCache.setCacheObject(residDist+trackBo.getPlateKey(), trackBo.getTrailPoints());
+            JSONObject temp = JSONObject.parseObject(trackBo.getTrailPoints());
+            redisCache.setCacheObject(residDist+trackBo.getPlateKey(),temp);
         }
 
 
