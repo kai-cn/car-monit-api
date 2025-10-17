@@ -127,35 +127,34 @@ public class SysUtilServiceImpl implements ISysUtilService {
      */
     public AjaxResult saveRedis(SysUtil sysUtil) {
 
- 
-
         log.info("获取的配置信息："+redisConfig.getClusterNodes()+"--本地配置："+isLocalhost);
 
-        JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
+        String residDist = Constants.trail +"-test";
 
+        // ----------测试JedisCluster
+        /*JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
         List<String> carList = new ArrayList<String>();
         carList.add("苏CMA262");
         carList.add("苏F5HK60");
         carList.add("苏FD0A86");
         carList.add("苏MF3652");
         carList.add("赣A0253J");
-
         for (String carNo : carList) {
-            String key = this.getCacheKey(carNo);
+            String key = residDist+ carNo;
             String keyValue = jedisCluster.get(key);
             log.info("生产redis：" + key + "对应的轨迹点：" + keyValue);
             redisCache.setCacheObject(key, keyValue);
+        }*/
+        
+
+
+        Collection<String> keys = redisCache.keys(residDist + "*");
+        if (null != keys && keys.size() > 0){
+            for (String key : keys) {
+                String keyValue = redisCache.getCacheObject(key);
+                log.info("本地redis：" + key + "对应的轨迹点：" + keyValue);
+            }
         }
-
-
-        Collection<String> keys = redisCache.keys(Constants.trail + "*");
-        Iterator<String> it = keys.iterator();
-        while (it.hasNext()) {
-            String key = it.next();
-            String keyValue = redisCache.getCacheObject(key);
-            log.info("本地redis：" + key + "对应的轨迹点：" + keyValue);
-        }
-
         return AjaxResult.success();
     }
 
