@@ -146,19 +146,22 @@ public class SysUtilServiceImpl implements ISysUtilService {
             redisCache.setCacheObject(key, keyValue);
         }*/
 
-       /* ZdataTrailTracks zdataTrailTracks = new ZdataTrailTracks();
+        ZdataTrailTracks zdataTrailTracks = new ZdataTrailTracks();
         zdataTrailTracks.setPlateKey("赣CEA826");
         List<ZdataTrailTracks> trackList1 = zdataTrailTracksService.selectZdataTrailTracksList(zdataTrailTracks);
         for (ZdataTrailTracks trackBo : trackList1) {
-            redisCache.setCacheObject(residDist+trackBo.getPlateKey(), trackBo.getTrailPoints());
-        }*/
+            List<TrailBo> josnList = JSON.parseArray(trackBo.getTrailPoints(), TrailBo.class);
+            // redisCache.setCacheObject(residDist+trackBo.getPlateKey(), trackBo.getTrailPoints());
+        }
 
 
         CarParaVO carParaVO = new CarParaVO();
         carParaVO.setCarNo("赣M97313");
         List<ZdataTrailTracks> trackList = zdataTrailTracksService.getHistoryTrail(carParaVO);
         for (ZdataTrailTracks trackBo : trackList) {
-            JSONObject temp = JSONObject.parseObject(trackBo.getTrailPoints());
+            List<TrailBo> josnList = JSON.parseArray(trackBo.getTrailPoints(), TrailBo.class);
+
+           //  JSONObject temp = JSONObject.parseObject(trackBo.getTrailPoints());
             // redisCache.setCacheObject(residDist+trackBo.getPlateKey(),temp);
         }
 

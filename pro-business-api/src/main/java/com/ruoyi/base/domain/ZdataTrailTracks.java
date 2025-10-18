@@ -2,7 +2,9 @@ package com.ruoyi.base.domain;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -219,7 +221,7 @@ public class ZdataTrailTracks implements Custom {
 
     /** 申请时间2 */
     @TableField(exist = false)
-    private JSONObject trailpointsJosn;
+    private JSONArray trailpointsJosn;
 
 
 }
