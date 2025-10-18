@@ -3,6 +3,7 @@ package com.ruoyi.base.domain;
 import java.math.BigDecimal;
 import java.util.Date;
 
+import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -214,6 +215,11 @@ public class ZdataTrailTracks implements Custom {
     /** 申请时间2 */
     @TableField(exist = false)
     private String applyTime2;
+
+
+    /** 申请时间2 */
+    @TableField(exist = false)
+    private JSONObject trailpointsJosn;
 
 
 }

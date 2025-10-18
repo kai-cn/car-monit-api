@@ -5,9 +5,7 @@ import com.ruoyi.base.domain.CarParaVO;
 import com.ruoyi.base.domain.ZdataTrailTracks;
 import com.ruoyi.base.mapper.ZdataTrailTracksMapper;
 import com.ruoyi.base.service.IZdataTrailTracksService;
-import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,8 +22,6 @@ public class ZdataTrailTracksServiceImpl extends ServiceImpl<ZdataTrailTracksMap
     @Autowired
     private ZdataTrailTracksMapper zdataTrailTracksMapper;
 
-    @Value("${isLocalhost}")
-    private String isLocalhost;
 
     /**
      * 查询轨迹数据
@@ -56,7 +52,6 @@ public class ZdataTrailTracksServiceImpl extends ServiceImpl<ZdataTrailTracksMap
      */
     @Override
     public List<ZdataTrailTracks> getLatestTrail(CarParaVO carParaVO) {
-        carParaVO.setFlag(CommonUtil.isNull(isLocalhost));
         return zdataTrailTracksMapper.getLatestTrail(carParaVO);
     }
 
@@ -65,7 +60,6 @@ public class ZdataTrailTracksServiceImpl extends ServiceImpl<ZdataTrailTracksMap
      */
     @Override
     public List<ZdataTrailTracks> getHistoryTrail(CarParaVO carParaVO) {
-        carParaVO.setFlag(CommonUtil.isNull(isLocalhost));
         return zdataTrailTracksMapper.getHistoryTrail(carParaVO);
     }
 }

@@ -159,11 +159,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
         List<ZdataTrailTracks> trackList = zdataTrailTracksService.getHistoryTrail(carParaVO);
         for (ZdataTrailTracks trackBo : trackList) {
             JSONObject temp = JSONObject.parseObject(trackBo.getTrailPoints());
-            redisCache.setCacheObject(residDist+trackBo.getPlateKey(),temp);
+            // redisCache.setCacheObject(residDist+trackBo.getPlateKey(),temp);
         }
 
 
-        Collection<String> keys = redisCache.keys(residDist + "*");
+       /* Collection<String> keys = redisCache.keys(residDist + "*");
         if (null != keys && keys.size() > 0){
             for (String key : keys) {
                 String keyValue = redisCache.getCacheObject(key);
@@ -173,7 +173,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 }
                 log.info("本地redis：" + key + "对应的轨迹点：" + keyValue);
             }
-        }
+        }*/
         return AjaxResult.success();
     }
 
