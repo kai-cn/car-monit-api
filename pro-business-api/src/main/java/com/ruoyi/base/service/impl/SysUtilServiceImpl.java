@@ -159,8 +159,13 @@ public class SysUtilServiceImpl implements ISysUtilService {
         carParaVO.setCarNo("赣M97313");
         List<ZdataTrailTracks> trackList = zdataTrailTracksService.getHistoryTrail(carParaVO);
         for (ZdataTrailTracks trackBo : trackList) {
-            List<TrailBo> josnList = JSON.parseArray(trackBo.getTrailPoints(), TrailBo.class);
-
+            try {
+                List<TrailBo> trailBoList = extractJsonStringToTrailBo(trackBo.getTrailPoints());
+                System.out.println(trailBoList);
+            } catch (Exception e) {
+                e.printStackTrace();
+                log.error("解析错误！");
+            }
            //  JSONObject temp = JSONObject.parseObject(trackBo.getTrailPoints());
             // redisCache.setCacheObject(residDist+trackBo.getPlateKey(),temp);
         }
@@ -178,6 +183,33 @@ public class SysUtilServiceImpl implements ISysUtilService {
             }
         }*/
         return AjaxResult.success();
+    }
+
+
+    /**
+     * 提取jsonString
+     * @param input
+     * @return
+     */
+    public static List<TrailBo> extractJsonStringToTrailBo(String input) {
+        String substring = input.substring(1);
+        String processStr = substring.substring(0, substring.length() - 1);
+        String[] split = processStr.split("\",\"");
+        List<TrailBo> res = new ArrayList<>(split.length);
+        for (int i = 0; i < split.length; i++) {
+            String json, str;
+            if(i == 0) {
+                str = split[0].substring(1);
+            } else if(i == split.length - 1) {
+                str = split[split.length - 1].substring(0, split[split.length - 1].length() - 1);
+            } else {
+                str = split[i];
+            }
+            json = str.replace("\\", "");
+            TrailBo trailBo = JSON.parseObject(json, TrailBo.class);
+            res.add(trailBo);
+        }
+        return res;
     }
 
     /**
@@ -627,7 +659,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 }
 
                 String devCodeId = CommonUtil.isNull(trailBo.getDevCode()); // 通过设备编码先查询
-                
+
                 if (indexType.equals("stationType")){
                     // 收费站ip 或者CODE查询
                     OdsSzdnTollStationIp stationIpBO = null;

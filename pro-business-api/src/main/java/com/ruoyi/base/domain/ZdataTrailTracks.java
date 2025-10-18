@@ -221,7 +221,8 @@ public class ZdataTrailTracks implements Custom {
 
     /** 申请时间2 */
     @TableField(exist = false)
-    private JSONArray trailpointsJosn;
+    private String trailpointsJosn;
+
 
 
 }

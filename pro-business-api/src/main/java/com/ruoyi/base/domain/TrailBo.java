@@ -101,4 +101,10 @@ public class TrailBo {
     // 数量
     private Integer countNum;
 
+    private String platenumber;
+
+    private String locationId;
+
+
+
 }
