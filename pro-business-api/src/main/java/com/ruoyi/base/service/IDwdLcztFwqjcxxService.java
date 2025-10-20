@@ -2,9 +2,9 @@ package com.ruoyi.base.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ruoyi.base.domain.DwdLcztFwqjcxx;
-import com.ruoyi.common.core.domain.AjaxResult;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 服务区基础信息Service接口
@@ -28,4 +28,6 @@ public interface IDwdLcztFwqjcxxService extends IService<DwdLcztFwqjcxx> {
      * @return 服务区基础信息集合
      */
     List<DwdLcztFwqjcxx> selectDwdLcztFwqjcxxList(DwdLcztFwqjcxx dwdLcztFwqjcxx);
+
+    Map<String, DwdLcztFwqjcxx> getServiceNameMap();
 }

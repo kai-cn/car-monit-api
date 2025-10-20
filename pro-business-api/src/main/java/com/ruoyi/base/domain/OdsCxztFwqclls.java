@@ -1,5 +1,6 @@
 package com.ruoyi.base.domain;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.ruoyi.common.annotation.Excel;
 import com.ruoyi.common.core.domain.Custom;
@@ -8,6 +9,7 @@ import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * 服务区车辆流水对象 ods_cxzt_fwqclls
@@ -21,12 +23,8 @@ import java.util.Date;
 @EqualsAndHashCode(callSuper = false)
 public class OdsCxztFwqclls implements Custom {
 
-    /** $column.columnComment */
-    @Excel(name = "${comment}", readConverterExp = "$column.readConverterExp()")
     private Long bigId;
 
-    /** $column.columnComment */
-    @Excel(name = "${comment}", readConverterExp = "$column.readConverterExp()")
     private String datauuid;
 
     /** 抓拍照片url */
@@ -92,6 +90,9 @@ public class OdsCxztFwqclls implements Custom {
     /** 分类分级 */
     @Excel(name = "分类分级")
     private String gradeLevel;
+
+    @TableField(exist = false)
+    private List<String> uuidList;
 
 
 }

@@ -4,13 +4,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.base.domain.DwdLcztFwqjcxx;
 import com.ruoyi.base.mapper.DwdLcztFwqjcxxMapper;
 import com.ruoyi.base.service.IDwdLcztFwqjcxxService;
-import com.ruoyi.common.core.domain.AjaxResult;
-import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 服务区基础信息Service业务层处理
@@ -44,5 +43,15 @@ public class DwdLcztFwqjcxxServiceImpl extends ServiceImpl<DwdLcztFwqjcxxMapper,
     @Override
     public List<DwdLcztFwqjcxx> selectDwdLcztFwqjcxxList(DwdLcztFwqjcxx dwdLcztFwqjcxx) {
         return dwdLcztFwqjcxxMapper.selectDwdLcztFwqjcxxList(dwdLcztFwqjcxx);
+    }
+
+    @Override
+    public Map<String, DwdLcztFwqjcxx> getServiceNameMap() {
+        List<DwdLcztFwqjcxx> list = dwdLcztFwqjcxxMapper.selectDwdLcztFwqjcxxList(new DwdLcztFwqjcxx());
+        Map<String, DwdLcztFwqjcxx> map = new HashMap<>();
+        for (DwdLcztFwqjcxx fwqjcxx : list) {
+            map.put(fwqjcxx.getFwqmc(), fwqjcxx);
+        }
+        return map;
     }
 }

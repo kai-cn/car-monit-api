@@ -4,10 +4,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.base.domain.OdsCxztFwqclls;
 import com.ruoyi.base.mapper.OdsCxztFwqcllsMapper;
 import com.ruoyi.base.service.IOdsCxztFwqcllsService;
+import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 服务区车辆流水Service业务层处理
@@ -43,7 +45,18 @@ public class OdsCxztFwqcllsServiceImpl extends ServiceImpl<OdsCxztFwqcllsMapper,
         return odsCxztFwqcllsMapper.selectOdsCxztFwqcllsList(odsCxztFwqclls);
     }
 
-
-
-
+    @Override
+    public Map<String, OdsCxztFwqclls> selectOdsCxztFwqcllsByQueryUuids(String queryUuids) {
+        Map<String, OdsCxztFwqclls> map = new HashMap<>();
+        if (StringUtils.isNotBlank(queryUuids)) {
+            List<String> uuidList = Arrays.stream(queryUuids.split(",")).collect(Collectors.toList());
+            OdsCxztFwqclls fwqclls = new OdsCxztFwqclls();
+            fwqclls.setUuidList(uuidList);
+            List<OdsCxztFwqclls> list = odsCxztFwqcllsMapper.selectOdsCxztFwqcllsList(fwqclls);
+            for (OdsCxztFwqclls rtn : list) {
+                map.put(rtn.getDatauuid(),rtn);
+            }
+        }
+        return map;
+    }
 }

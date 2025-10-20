@@ -90,6 +90,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
     @Autowired
     private IZdataLocationDictService zdataLocationDictService;
+    @Autowired
+    private IOdsCxztFwqcllsService fwqcllsService;
+    @Autowired
+    private IDwdLcztFwqjcxxService fwqjcxxService;
 
 
     @Value("${isLocalhost}")
@@ -358,6 +362,13 @@ public class SysUtilServiceImpl implements ISysUtilService {
             provcaptureAddcodeMap = provcaptureAddcodeService.selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeByQueryUuids(provCaptureUUids);
         }
 
+        // 服务区抓拍
+        Map<String, OdsCxztFwqclls> fwqcllsMap = new HashMap<>();
+        serviceAreaCaptureUUids = CommonUtil.deleteEnd(serviceAreaCaptureUUids);
+        if (CommonUtil.isNotBlank(serviceAreaCaptureUUids)) {
+            fwqcllsMap = fwqcllsService.selectOdsCxztFwqcllsByQueryUuids(serviceAreaCaptureUUids);
+        }
+
         // 收费站抓拍
         Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> stationcaptureAddcodeMap = new HashMap<>();
         stationCaptureUUids = CommonUtil.deleteEnd(stationCaptureUUids);
@@ -395,7 +406,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
         // 位置信息
         Map<String,ZdataLocationDict> locationMap = zdataLocationDictService.getRedisList();
-
+        //服务区信息
+        Map<String, DwdLcztFwqjcxx> serviceNameMap = fwqjcxxService.getServiceNameMap();
 
 
         for (Map.Entry<ZdataTrailTracks, List<TrailBo>> entry : mapCar.entrySet()) {
@@ -556,6 +568,14 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     case SERVICE_AREA_CAPTURE:
                         // 服务区抓拍
                         indexType ="service_area"; // 服务区
+                        if(fwqcllsMap.containsKey(pointUuid)) {
+                            OdsCxztFwqclls fwqclls = fwqcllsMap.get(pointUuid);
+                            if(serviceNameMap.containsKey(fwqclls.getServicename())){
+                                DwdLcztFwqjcxx fwqjcxx = serviceNameMap.get(fwqclls.getServicename());
+                                String jd = fwqjcxx.getJd();
+                                String wd = fwqjcxx.getWd();
+                            }
+                        }
                         break;
                     case STATION_CAPTURE:
                         // 收费站抓拍

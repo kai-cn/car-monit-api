@@ -50,7 +50,7 @@
         SELECT
         <include refid="selectOdsCxztFwqcllsVo"/>
         FROM ods_cxzt_fwqclls t
-        WHERE t.del_flag = '0'
+        WHERE 1=1
         <if test="bigId != null "> and t.big_id = #{bigId}</if>
         <if test="datauuid != null  and datauuid != ''"> and t.datauuid = #{datauuid}</if>
         <if test="targetpicurl != null  and targetpicurl != ''"> and t.targetpicurl = #{targetpicurl}</if>
@@ -69,6 +69,12 @@
         <if test="vehicletype != null  and vehicletype != ''"> and t.vehicletype = #{vehicletype}</if>
         <if test="loadTime != null  and loadTime != ''"> and t.load_time = #{loadTime}</if>
         <if test="gradeLevel != null  and gradeLevel != ''"> and t.grade_level = #{gradeLevel}</if>
+        <if test="uuidList != null and uuidList.size() > 0">
+            datauuid in
+            <foreach collection="uuidList" open="(" separator="," close=")" item="item">
+                #{item}
+            </foreach>
+        </if>
     </select>
 
     <select id="selectOdsCxztFwqcllsById" parameterType="Long" resultMap="OdsCxztFwqcllsResult">

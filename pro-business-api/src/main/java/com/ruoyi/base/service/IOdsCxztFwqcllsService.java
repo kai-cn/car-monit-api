@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.ruoyi.base.domain.OdsCxztFwqclls;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 服务区车辆流水Service接口
@@ -29,5 +30,5 @@ public interface IOdsCxztFwqcllsService extends IService<OdsCxztFwqclls> {
     List<OdsCxztFwqclls> selectOdsCxztFwqcllsList(OdsCxztFwqclls odsCxztFwqclls);
 
 
-
+    Map<String, OdsCxztFwqclls> selectOdsCxztFwqcllsByQueryUuids(String provCaptureUUids);
 }
