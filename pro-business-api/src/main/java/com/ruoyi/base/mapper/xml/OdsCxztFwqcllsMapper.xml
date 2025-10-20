@@ -70,7 +70,7 @@
         <if test="loadTime != null  and loadTime != ''"> and t.load_time = #{loadTime}</if>
         <if test="gradeLevel != null  and gradeLevel != ''"> and t.grade_level = #{gradeLevel}</if>
         <if test="uuidList != null and uuidList.size() > 0">
-            datauuid in
+            and datauuid in
             <foreach collection="uuidList" open="(" separator="," close=")" item="item">
                 #{item}
             </foreach>
