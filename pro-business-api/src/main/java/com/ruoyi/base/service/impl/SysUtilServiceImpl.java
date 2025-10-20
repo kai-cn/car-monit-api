@@ -164,8 +164,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
         List<ZdataTrailTracks> trackList = zdataTrailTracksService.getHistoryTrail(carParaVO);
         for (ZdataTrailTracks trackBo : trackList) {
             try {
-                List<TrailBo> trailBoList = extractJsonStringToTrailBo(trackBo.getTrailPoints());
-                System.out.println(trailBoList);
+                List<TrailBo> trailBoList = getTrailBoList(trackBo);
+//                List<TrailBo> trailBoList = extractJsonStringToTrailBo(trackBo.getTrailPoints());
             } catch (Exception e) {
                 e.printStackTrace();
                 log.error("解析错误！");
@@ -187,6 +187,16 @@ public class SysUtilServiceImpl implements ISysUtilService {
             }
         }*/
         return AjaxResult.success();
+    }
+
+    private static List<TrailBo> getTrailBoList(ZdataTrailTracks trackBo) {
+        String trailPoints = trackBo.getTrailPoints();
+        trailPoints = trailPoints.replace("\\", "");
+        trailPoints = trailPoints.replace("{\"{", "[{");
+        trailPoints = trailPoints.replace("}\"}", "}]");
+        String replace = trailPoints.replace("\",\"{", ",{");
+        List<TrailBo> trailBoList = JSON.parseArray(replace, TrailBo.class);
+        return trailBoList;
     }
 
 
