@@ -71,8 +71,7 @@
             t.exvehicleid,
             t.exvehicletype,
             t.exweight,
-            t.trailpoints,
-            array_to_json(t.trailpoints) trailpointsJosn
+            t.trailpoints
         from jl_data01.zdata_trail_fitting t
         where t.entime >= now() - #{endTime} and  t.entime <![CDATA[<=]]> now() - #{starTime}
         and exists  (
@@ -103,8 +102,7 @@
             t.exvehicleid,
             t.exvehicletype,
             t.exweight,
-            t.trailpoints,
-            array_to_json(t.trailpoints) trailpointsJosn
+            t.trailpoints
         from jl_data01.zdata_trail_fitting t
         <where>
             <if test="carNo != null  and carNo != ''"> and t.envehicleid = #{carNo} </if>

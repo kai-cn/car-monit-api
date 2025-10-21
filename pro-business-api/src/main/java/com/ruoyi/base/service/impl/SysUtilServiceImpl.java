@@ -133,10 +133,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
         log.info("获取的配置信息："+redisConfig.getClusterNodes()+"--本地配置："+isLocalhost);
 
-        String residDist = "trailtest:";
+
 
         // ----------测试JedisCluster
-        /*JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
+       /* JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
         List<String> carList = new ArrayList<String>();
         carList.add("苏CMA262");
         carList.add("苏F5HK60");
@@ -144,34 +144,34 @@ public class SysUtilServiceImpl implements ISysUtilService {
         carList.add("苏MF3652");
         carList.add("赣A0253J");
         for (String carNo : carList) {
-            String key = residDist+ carNo;
+            String key = this.getCacheKey(carNo);
             String keyValue = jedisCluster.get(key);
             log.info("生产redis：" + key + "对应的轨迹点：" + keyValue);
             redisCache.setCacheObject(key, keyValue);
         }*/
 
-        ZdataTrailTracks zdataTrailTracks = new ZdataTrailTracks();
+        // ----------zdata_trail_tracks作废
+       /* ZdataTrailTracks zdataTrailTracks = new ZdataTrailTracks();
         zdataTrailTracks.setPlateKey("赣CEA826");
         List<ZdataTrailTracks> trackList1 = zdataTrailTracksService.selectZdataTrailTracksList(zdataTrailTracks);
         for (ZdataTrailTracks trackBo : trackList1) {
             List<TrailBo> josnList = JSON.parseArray(trackBo.getTrailPoints(), TrailBo.class);
-            // redisCache.setCacheObject(residDist+trackBo.getPlateKey(), trackBo.getTrailPoints());
-        }
+            // redisCache.setCacheObject(this.getCacheKey(trackBo.getPlateKey()), trackBo.getTrailPoints());
+        }*/
 
 
         CarParaVO carParaVO = new CarParaVO();
-        carParaVO.setCarNo("赣M97313");
+        // carParaVO.setCarNo("赣M97313");
         List<ZdataTrailTracks> trackList = zdataTrailTracksService.getHistoryTrail(carParaVO);
         for (ZdataTrailTracks trackBo : trackList) {
             try {
-                List<TrailBo> trailBoList = getTrailBoList(trackBo);
-//                List<TrailBo> trailBoList = extractJsonStringToTrailBo(trackBo.getTrailPoints());
+                List<TrailBo> trailBoList = JSON.parseArray(this.getTrailBoListString(trackBo.getTrailPoints()), TrailBo.class);
+                redisCache.setCacheObject(this.getCacheKey(trackBo.getPlateKey()),JSON.toJSONString(trailBoList));
             } catch (Exception e) {
                 e.printStackTrace();
                 log.error("解析错误！");
             }
-           //  JSONObject temp = JSONObject.parseObject(trackBo.getTrailPoints());
-            // redisCache.setCacheObject(residDist+trackBo.getPlateKey(),temp);
+
         }
 
 
@@ -189,42 +189,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         return AjaxResult.success();
     }
 
-    private static List<TrailBo> getTrailBoList(ZdataTrailTracks trackBo) {
-        String trailPoints = trackBo.getTrailPoints();
-        trailPoints = trailPoints.replace("\\", "");
-        trailPoints = trailPoints.replace("{\"{", "[{");
-        trailPoints = trailPoints.replace("}\"}", "}]");
-        String replace = trailPoints.replace("\",\"{", ",{");
-        List<TrailBo> trailBoList = JSON.parseArray(replace, TrailBo.class);
-        return trailBoList;
-    }
 
-
-    /**
-     * 提取jsonString
-     * @param input
-     * @return
-     */
-    public static List<TrailBo> extractJsonStringToTrailBo(String input) {
-        String substring = input.substring(1);
-        String processStr = substring.substring(0, substring.length() - 1);
-        String[] split = processStr.split("\",\"");
-        List<TrailBo> res = new ArrayList<>(split.length);
-        for (int i = 0; i < split.length; i++) {
-            String json, str;
-            if(i == 0) {
-                str = split[0].substring(1);
-            } else if(i == split.length - 1) {
-                str = split[split.length - 1].substring(0, split[split.length - 1].length() - 1);
-            } else {
-                str = split[i];
-            }
-            json = str.replace("\\", "");
-            TrailBo trailBo = JSON.parseObject(json, TrailBo.class);
-            res.add(trailBo);
-        }
-        return res;
-    }
 
     /**
      * 同步轨迹
@@ -855,7 +820,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 String escapedType = "";
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
-                    josnList = JSON.parseArray(keyValue, TrailBo.class);
+                    josnList = JSON.parseArray(this.getTrailBoListString(keyValue), TrailBo.class);
                     tracks.setTrailPoints("");  // 行驶轨迹
 
                     // ---------------------------分析场景: 门架抓拍和流水抓拍 占比
@@ -960,7 +925,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     String escapedType = "";
                     List<TrailBo> josnList = new ArrayList<TrailBo>();
                     if (CommonUtil.isNotBlank(keyValue)) {
-                        josnList = JSON.parseArray(keyValue, TrailBo.class);
+                        josnList = JSON.parseArray(this.getTrailBoListString(keyValue), TrailBo.class);
                         tracks.setTrailPoints("");  // 行驶轨迹
 
                         // ---------------------------分析场景: 门架抓拍和流水抓拍 占比
@@ -1040,7 +1005,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 String keyValue = tracks.getTrailPoints(); // 行驶轨迹
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
-                    josnList = JSON.parseArray(keyValue, TrailBo.class);
+                    josnList =  JSON.parseArray(this.getTrailBoListString(keyValue),TrailBo.class); ;
                     tracks.setTrailPoints("");  // 行驶轨迹
                     mapCar.put(tracks, josnList);
                 }
@@ -1082,8 +1047,52 @@ public class SysUtilServiceImpl implements ISysUtilService {
             carParaVO.setCarNoList(carNoList);
         }
         List<ZdataTrailTracks> carlist = zdataTrailTracksService.getHistoryTrail(carParaVO);
+
+        for (ZdataTrailTracks rtn:carlist){
+            rtn.setTrailPoints(this.getTrailBoListString(rtn.getTrailPoints()));
+        }
+
         return carlist;
     }
+
+
+    private String getTrailBoListString(String paraTrailPoints) {
+        String trailPoints = CommonUtil.isNull(paraTrailPoints);
+        if (CommonUtil.isNotBlank(trailPoints)) {
+            trailPoints = trailPoints.replace("\\", "");
+            trailPoints = trailPoints.replace("{\"{", "[{");
+            trailPoints = trailPoints.replace("}\"}", "}]");
+            trailPoints = trailPoints.replace("\",\"{", ",{");
+        }
+        return trailPoints;
+    }
+
+
+    /**
+     * 提取jsonString
+     * @param input
+     * @return
+     */
+   /* public static List<TrailBo> extractJsonStringToTrailBo(String input) {
+        String substring = input.substring(1);
+        String processStr = substring.substring(0, substring.length() - 1);
+        String[] split = processStr.split("\",\"");
+        List<TrailBo> res = new ArrayList<>(split.length);
+        for (int i = 0; i < split.length; i++) {
+            String json, str;
+            if(i == 0) {
+                str = split[0].substring(1);
+            } else if(i == split.length - 1) {
+                str = split[split.length - 1].substring(0, split[split.length - 1].length() - 1);
+            } else {
+                str = split[i];
+            }
+            json = str.replace("\\", "");
+            TrailBo trailBo = JSON.parseObject(json, TrailBo.class);
+            res.add(trailBo);
+        }
+        return res;
+    }*/
 
 
 

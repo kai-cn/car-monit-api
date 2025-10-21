@@ -218,11 +218,4 @@ public class ZdataTrailTracks implements Custom {
     @TableField(exist = false)
     private String applyTime2;
 
-
-    /** 申请时间2 */
-    @TableField(exist = false)
-    private String trailpointsJosn;
-
-
-
 }
