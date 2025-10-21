@@ -165,7 +165,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         List<ZdataTrailTracks> trackList = zdataTrailTracksService.getHistoryTrail(carParaVO);
         for (ZdataTrailTracks trackBo : trackList) {
             try {
-                List<TrailBo> trailBoList = JSON.parseArray(this.getTrailBoListString(trackBo.getTrailPoints()), TrailBo.class);
+                List<TrailBo> trailBoList = this.getTrailBoList(trackBo.getTrailPoints());
                 redisCache.setCacheObject(this.getCacheKey(trackBo.getPlateKey()),JSON.toJSONString(trailBoList));
             } catch (Exception e) {
                 e.printStackTrace();
@@ -579,7 +579,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 // 路段
                                 trailBo.setSectionCode(CommonUtil.isNull(fwqjcxx.getSsldbh()));
 
-                                // trailBo.setDirection(odsSzdnToll.getDirection()); // 方向
+                                // trailBo.setDirection(fwqjcxx.getFxmc()); // 方向
                                 trailBo.setPileno(CommonUtil.isNull(fwqjcxx.getSczhkgs())); // 桩号
 
                             }
@@ -853,7 +853,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 String escapedType = "";
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
-                    josnList = JSON.parseArray(this.getTrailBoListString(keyValue), TrailBo.class);
+                    josnList = this.getTrailBoList(keyValue);
                     tracks.setTrailPoints("");  // 行驶轨迹
 
                     // ---------------------------分析场景: 门架抓拍和流水抓拍 占比
@@ -958,7 +958,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     String escapedType = "";
                     List<TrailBo> josnList = new ArrayList<TrailBo>();
                     if (CommonUtil.isNotBlank(keyValue)) {
-                        josnList = JSON.parseArray(this.getTrailBoListString(keyValue), TrailBo.class);
+                        josnList = this.getTrailBoList(keyValue);
                         tracks.setTrailPoints("");  // 行驶轨迹
 
                         // ---------------------------分析场景: 门架抓拍和流水抓拍 占比
@@ -1038,7 +1038,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 String keyValue = tracks.getTrailPoints(); // 行驶轨迹
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
-                    josnList =  JSON.parseArray(this.getTrailBoListString(keyValue),TrailBo.class); ;
+                    josnList =  this.getTrailBoList(keyValue);
                     tracks.setTrailPoints("");  // 行驶轨迹
                     mapCar.put(tracks, josnList);
                 }
@@ -1080,14 +1080,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
             carParaVO.setCarNoList(carNoList);
         }
         List<ZdataTrailTracks> carlist = zdataTrailTracksService.getHistoryTrail(carParaVO);
-
         for (ZdataTrailTracks rtn:carlist){
             rtn.setTrailPoints(this.getTrailBoListString(rtn.getTrailPoints()));
         }
-
         return carlist;
     }
-
 
     private String getTrailBoListString(String paraTrailPoints) {
         String trailPoints = CommonUtil.isNull(paraTrailPoints);
@@ -1098,6 +1095,21 @@ public class SysUtilServiceImpl implements ISysUtilService {
             trailPoints = trailPoints.replace("\",\"{", ",{");
         }
         return trailPoints;
+    }
+
+
+    private List<TrailBo> getTrailBoList(String paraTrailPoints) {
+        List<TrailBo> trailBoList = new ArrayList<>();
+        String trailPoints = this.getTrailBoListString(paraTrailPoints);
+        if (CommonUtil.isNotBlank(trailPoints)) {
+            try {
+                trailBoList = JSON.parseArray(trailPoints, TrailBo.class);
+            } catch (Exception e) {
+                e.printStackTrace();
+                log.error("解析错误！");
+            }
+        }
+        return trailBoList;
     }
 
 
