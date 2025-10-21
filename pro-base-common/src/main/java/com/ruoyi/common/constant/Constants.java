@@ -320,19 +320,22 @@ public class Constants
     public static final String car_curent_trail = "car_curent_trail:";
 
 
-    /**g
+    /**
      * 门架对象redis
      */
     public static final String gantry_list = "gantry_list";
 
 
-    /**g
+    /**
      * 门架ip redis
      */
     public static final String dev_post = "dev_post";
 
 
-
+    /**
+     * 服务器名称
+     */
+    public static final String fwq_name = "fwq_name";
 
 
 

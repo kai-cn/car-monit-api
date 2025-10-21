@@ -29,5 +29,12 @@ public interface IDwdLcztFwqjcxxService extends IService<DwdLcztFwqjcxx> {
      */
     List<DwdLcztFwqjcxx> selectDwdLcztFwqjcxxList(DwdLcztFwqjcxx dwdLcztFwqjcxx);
 
+
+    /**
+     * 跟新redis
+     */
+    List<DwdLcztFwqjcxx> updateRedis();
+
+
     Map<String, DwdLcztFwqjcxx> getServiceNameMap();
 }

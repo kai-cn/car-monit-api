@@ -2,8 +2,12 @@ package com.ruoyi.base.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.base.domain.DwdLcztFwqjcxx;
+import com.ruoyi.base.domain.ZdataLocationDict;
 import com.ruoyi.base.mapper.DwdLcztFwqjcxxMapper;
 import com.ruoyi.base.service.IDwdLcztFwqjcxxService;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
+import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +26,9 @@ public class DwdLcztFwqjcxxServiceImpl extends ServiceImpl<DwdLcztFwqjcxxMapper,
 
     @Autowired
     private DwdLcztFwqjcxxMapper dwdLcztFwqjcxxMapper;
+
+    @Autowired
+    private RedisCache redisCache;
 
     /**
      * 查询服务区基础信息
@@ -45,12 +52,30 @@ public class DwdLcztFwqjcxxServiceImpl extends ServiceImpl<DwdLcztFwqjcxxMapper,
         return dwdLcztFwqjcxxMapper.selectDwdLcztFwqjcxxList(dwdLcztFwqjcxx);
     }
 
+    /**
+     * 跟新redis
+     */
+    public List<DwdLcztFwqjcxx> updateRedis(){
+        List<DwdLcztFwqjcxx> list = dwdLcztFwqjcxxMapper.selectDwdLcztFwqjcxxList(new DwdLcztFwqjcxx());
+        redisCache.setCacheObject(Constants.fwq_name, list);
+        return list;
+    }
+
+
     @Override
     public Map<String, DwdLcztFwqjcxx> getServiceNameMap() {
-        List<DwdLcztFwqjcxx> list = dwdLcztFwqjcxxMapper.selectDwdLcztFwqjcxxList(new DwdLcztFwqjcxx());
+
+        List<DwdLcztFwqjcxx> list = null;
+        Object obj = redisCache.getCacheObject(Constants.fwq_name);
+        if (null != obj) {
+            list = (List) obj;
+        } else {
+            list = this.updateRedis();
+        }
+
         Map<String, DwdLcztFwqjcxx> map = new HashMap<>();
         for (DwdLcztFwqjcxx fwqjcxx : list) {
-            map.put(fwqjcxx.getFwqmc(), fwqjcxx);
+            map.put(CommonUtil.isNull(fwqjcxx.getFwqmc()), fwqjcxx);
         }
         return map;
     }
