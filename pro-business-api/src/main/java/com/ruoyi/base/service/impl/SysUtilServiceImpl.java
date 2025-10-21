@@ -160,8 +160,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
         }*/
 
 
-        CarParaVO carParaVO = new CarParaVO();
-        // carParaVO.setCarNo("赣M97313");
+       /* CarParaVO carParaVO = new CarParaVO();
+        carParaVO.setCarNo("赣M97313");
         List<ZdataTrailTracks> trackList = zdataTrailTracksService.getHistoryTrail(carParaVO);
         for (ZdataTrailTracks trackBo : trackList) {
             try {
@@ -172,7 +172,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 log.error("解析错误！");
             }
 
-        }
+        }*/
 
 
        /* Collection<String> keys = redisCache.keys(residDist + "*");
@@ -1093,6 +1093,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
             trailPoints = trailPoints.replace("{\"{", "[{");
             trailPoints = trailPoints.replace("}\"}", "}]");
             trailPoints = trailPoints.replace("\",\"{", ",{");
+
+            trailPoints = trailPoints.replace("ZdTrails:", "");
         }
         return trailPoints;
     }
