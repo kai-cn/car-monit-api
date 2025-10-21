@@ -224,20 +224,20 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
                     josnList = JSON.parseArray(keyValue, TrailBo.class);
+
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+                    String formattedDate = sdf.format(new Date());
+
+                    ZdataTrailTracks tracks = new ZdataTrailTracks();
+                    tracks.setPlateKey(carNo);
+                    tracks.setUuid(carNo +"@@"+ formattedDate);
+
+                    TrailInfo trailInfo = this.changeData(tracks, josnList); // 车牌号
+                    trailInfo.setTrailUuid(carNo);
+
+                    String key = Constants.car_curent_trail + carNo;
+                    redisCache.setCacheObject(key, trailInfo);
                 }
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
-                String formattedDate = sdf.format(new Date());
-
-                ZdataTrailTracks tracks = new ZdataTrailTracks();
-                tracks.setPlateKey(carNo);
-                tracks.setUuid(carNo +"@@"+ formattedDate);
-
-                TrailInfo trailInfo = this.changeData(tracks, josnList); // 车牌号
-                trailInfo.setTrailUuid(carNo);
-
-                String key = Constants.car_curent_trail + carNo;
-                redisCache.setCacheObject(key, trailInfo);
-
             }
         }
     }
@@ -255,6 +255,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
         List<TrailBo> rtnList = new ArrayList<>();
         if (null == josnList) {
+            trailInfo.setTracks(tracks);
+            trailInfo.setTrailList(josnList);
             return trailInfo;
         }
 
@@ -267,7 +269,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         String feeStationEnterUUids = ""; // 收费站入口流水
         String feeStationExitUUids = ""; // 收费站出口流水
 
-        int countNum = 0;
+
         for (TrailBo trailBo : josnList) {
             trailBo.setPointFlag("0"); // 无数据
             trailBo.setLocationFlag("0");
@@ -309,10 +311,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
             }
         }
 
-        // 没有数据
-        if (countNum == 0) {
-            return trailInfo;
-        }
 
         // 省界称重
         Map<String, OdsSzdnProvinceBorderVehicleWeightNewstructure> weightNewstructureMap = new HashMap<>();
