@@ -93,7 +93,7 @@ public class SysUtilController extends BaseController {
                 String keyValue = tracks.getTrailPoints(); // 行驶轨迹
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
-                    josnList = JSON.parseArray(keyValue, TrailBo.class);
+                    josnList = sysUtilService.getTrailBoList(keyValue);
                     tracks.setTrailPoints("");  // 行驶轨迹
                     mapCar.put(tracks, josnList);
                 }
@@ -157,7 +157,7 @@ public class SysUtilController extends BaseController {
                 String keyValue = tracks.getTrailPoints(); // 行驶轨迹
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
-                    josnList = JSON.parseArray(keyValue, TrailBo.class);
+                    josnList = sysUtilService.getTrailBoList(keyValue);
                     tracks.setTrailPoints("");  // 行驶轨迹
                     mapCar.put(tracks, josnList);
                 }

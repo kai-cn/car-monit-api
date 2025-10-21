@@ -160,7 +160,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         }*/
 
 
-       /* CarParaVO carParaVO = new CarParaVO();
+        /*CarParaVO carParaVO = new CarParaVO();
         carParaVO.setCarNo("赣M97313");
         List<ZdataTrailTracks> trackList = zdataTrailTracksService.getHistoryTrail(carParaVO);
         for (ZdataTrailTracks trackBo : trackList) {
@@ -171,7 +171,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 e.printStackTrace();
                 log.error("解析错误！");
             }
-
         }*/
 
 
@@ -1080,9 +1079,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
             carParaVO.setCarNoList(carNoList);
         }
         List<ZdataTrailTracks> carlist = zdataTrailTracksService.getHistoryTrail(carParaVO);
-        for (ZdataTrailTracks rtn:carlist){
-            rtn.setTrailPoints(this.getTrailBoListString(rtn.getTrailPoints()));
-        }
         return carlist;
     }
 
@@ -1100,12 +1096,30 @@ public class SysUtilServiceImpl implements ISysUtilService {
     }
 
 
-    private List<TrailBo> getTrailBoList(String paraTrailPoints) {
+    /**
+     * 转josn
+     * @param paraTrailPoints
+     * @return
+     */
+    public List<TrailBo> getTrailBoList(String paraTrailPoints) {
         List<TrailBo> trailBoList = new ArrayList<>();
         String trailPoints = this.getTrailBoListString(paraTrailPoints);
         if (CommonUtil.isNotBlank(trailPoints)) {
             try {
                 trailBoList = JSON.parseArray(trailPoints, TrailBo.class);
+                SimpleDateFormat format1 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+                SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                if (null != trailBoList && trailBoList.size() > 0) {
+                    for (TrailBo trailBo : trailBoList) {
+                        String captureTime = CommonUtil.isNull(trailBo.getCaptureTime());
+                        if (captureTime.indexOf("T") > -1){
+                            Date dateTime = format1.parse(captureTime);
+                            // 步骤2：使用DateTimeFormatter转字符串
+                            String formattedDateStr = format2.format(dateTime);
+                            trailBo.setCaptureTime(formattedDateStr);
+                        }
+                    }
+                }
             } catch (Exception e) {
                 e.printStackTrace();
                 log.error("解析错误！");

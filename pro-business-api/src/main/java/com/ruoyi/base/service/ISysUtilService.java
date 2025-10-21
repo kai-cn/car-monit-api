@@ -72,6 +72,14 @@ public interface ISysUtilService {
     List<ZdataTrailTracks> carTrackQueryNew(CarParaVO carParaVO);
 
 
+    /**
+     * 转josn对象
+     * @param paraTrailPoints
+     * @return
+     */
+    public List<TrailBo> getTrailBoList(String paraTrailPoints);
+
+
 
 
 }
