@@ -254,9 +254,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
         TrailInfo trailInfo = new TrailInfo();
 
         List<TrailBo> rtnList = new ArrayList<>();
-        if (null == josnList) {
+        if (null != josnList && josnList.size() >0) {
+        }else{
             trailInfo.setTracks(tracks);
-            trailInfo.setTrailList(josnList);
+            List<TrailBo> tempList = new ArrayList<>();
+            trailInfo.setTrailList(tempList);
             return trailInfo;
         }
 
