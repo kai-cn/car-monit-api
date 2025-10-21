@@ -87,33 +87,19 @@ public class SysUtilController extends BaseController {
         }
         List<TrailInfo> rtnList = new ArrayList<>();
         if (null != list && list.size() > 0) {
-            Map<ZdataTrailTracks, List<TrailBo>> rtnCar = new HashMap<>();
-            Map<ZdataTrailTracks, List<TrailBo>> mapCar = new HashMap<>();
             for (ZdataTrailTracks tracks : list) {
+                String carNo = CommonUtil.isNull(tracks.getPlateKey());
                 String keyValue = tracks.getTrailPoints(); // 行驶轨迹
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
                     josnList = sysUtilService.getTrailBoList(keyValue);
                     tracks.setTrailPoints("");  // 行驶轨迹
-                    mapCar.put(tracks, josnList);
+
+                    TrailInfo trailInfo = sysUtilService.changeData(tracks, josnList); // 车牌号
+                    trailInfo.setTrailUuid(carNo);
+                    trailInfo.setEnterTime(tracks.getEnterTime());
+                    rtnList.add(trailInfo);
                 }
-            }
-            rtnCar = sysUtilService.changeData(mapCar);
-
-
-            for (Map.Entry<ZdataTrailTracks, List<TrailBo>> entry : rtnCar.entrySet()) {
-                ZdataTrailTracks tracksBo = entry.getKey();
-                List<TrailBo> josnList = entry.getValue();
-
-                String carNo = CommonUtil.isNull(tracksBo.getPlateKey());
-                TrailInfo trailInfo = new TrailInfo();
-
-                trailInfo.setTrailUuid(carNo);
-                trailInfo.setEnterTime(tracksBo.getEnterTime());
-                trailInfo.setTracks(tracksBo);
-                trailInfo.setTrailList(josnList);
-
-                rtnList.add(trailInfo);
             }
         }
 
@@ -151,32 +137,19 @@ public class SysUtilController extends BaseController {
 
         List<TrailInfo> rtnList = new ArrayList<>();
         if (null != list && list.size() > 0) {
-            Map<ZdataTrailTracks, List<TrailBo>> rtnCar = new HashMap<>();
-            Map<ZdataTrailTracks, List<TrailBo>> mapCar = new HashMap<>();
             for (ZdataTrailTracks tracks : list) {
+                String carNo = CommonUtil.isNull(tracks.getPlateKey());
                 String keyValue = tracks.getTrailPoints(); // 行驶轨迹
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
                     josnList = sysUtilService.getTrailBoList(keyValue);
                     tracks.setTrailPoints("");  // 行驶轨迹
-                    mapCar.put(tracks, josnList);
+
+                    TrailInfo trailInfo = sysUtilService.changeData(tracks, josnList); // 车牌号
+                    trailInfo.setTrailUuid(carNo);
+                    trailInfo.setEnterTime(tracks.getEnterTime());
+                    rtnList.add(trailInfo);
                 }
-            }
-            rtnCar =  sysUtilService.changeData(mapCar);
-
-
-            for (Map.Entry<ZdataTrailTracks, List<TrailBo>> entry : rtnCar.entrySet()) {
-                ZdataTrailTracks tracksBo = entry.getKey();
-                List<TrailBo> josnList = entry.getValue();
-
-                String carNo = CommonUtil.isNull(tracksBo.getPlateKey());
-                TrailInfo trailInfo = new TrailInfo();
-                trailInfo.setTrailUuid(carNo);
-                trailInfo.setEnterTime(tracksBo.getEnterTime());
-                trailInfo.setTracks(tracksBo);
-                trailInfo.setTrailList(josnList);
-
-                rtnList.add(trailInfo);
             }
         }
 
@@ -187,8 +160,6 @@ public class SysUtilController extends BaseController {
         rspData.setRows(rtnList);
         rspData.setTotal(new PageInfo(list).getTotal());
         return rspData;
-
-
     }
 
 

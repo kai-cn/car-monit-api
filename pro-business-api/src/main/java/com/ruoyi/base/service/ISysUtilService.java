@@ -29,16 +29,16 @@ public interface ISysUtilService {
      * @param carParaVO carParaVO 车俩列表
      * @return 结果
      */
-    Map<ZdataTrailTracks, List<TrailBo>> syncTrack(CarParaVO carParaVO);
+    void syncTrack(CarParaVO carParaVO);
 
 
     /**
      * 数据转换
      *
-     * @param mapCar
+     * @param tracks
      * @return 结果
      */
-    Map<ZdataTrailTracks, List<TrailBo>> changeData(Map<ZdataTrailTracks, List<TrailBo>> mapCar);
+    public TrailInfo changeData(ZdataTrailTracks tracks, List<TrailBo> josnList);
 
     /**
      * 同步可疑车俩
