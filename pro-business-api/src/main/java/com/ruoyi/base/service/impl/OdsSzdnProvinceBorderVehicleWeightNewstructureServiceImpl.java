@@ -75,7 +75,7 @@ public class OdsSzdnProvinceBorderVehicleWeightNewstructureServiceImpl extends S
                      List<OdsSzdnProvinceBorderVehicleWeightNewstructure> list = odsSzdnProvinceBorderVehicleWeightNewstructureMapper.selectOdsSzdnProvinceBorderVehicleWeightNewstructureList(querybo);
                      if (null!=list && list.size() > 0){
                          map.put(uuid, list.get(0));
-                         redisCache.setCacheObject(uuid, list.get(0));
+                         redisCache.setCacheObject(key, list.get(0));
                      }
                  }
              }

@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.base.mapper.OdsLwzxsfsjFeeStationEnter01Mapper;
 import com.ruoyi.base.domain.OdsLwzxsfsjFeeStationEnter01;
 import com.ruoyi.base.service.IOdsLwzxsfsjFeeStationEnter01Service;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,9 @@ public class OdsLwzxsfsjFeeStationEnter01ServiceImpl extends ServiceImpl<OdsLwzx
 
     @Autowired
     private OdsLwzxsfsjFeeStationEnter01Mapper odsLwzxsfsjFeeStationEnter01Mapper;
+
+    @Autowired
+    private RedisCache redisCache;
 
     /**
      * 查询收费站入口数据
@@ -51,11 +56,20 @@ public class OdsLwzxsfsjFeeStationEnter01ServiceImpl extends ServiceImpl<OdsLwzx
         if(StringUtils.isNotBlank(queryUuids)) {
             String[] split = queryUuids.split(",");
             List<String> uuidList = Arrays.stream(split).collect(Collectors.toList());
-            OdsLwzxsfsjFeeStationEnter01 feeStationEnter01 = new OdsLwzxsfsjFeeStationEnter01();
-            feeStationEnter01.setCidList(uuidList);
-            List<OdsLwzxsfsjFeeStationEnter01> list = odsLwzxsfsjFeeStationEnter01Mapper.selectOdsLwzxsfsjFeeStationEnter01List(feeStationEnter01);
-            for (OdsLwzxsfsjFeeStationEnter01 rtn :list) {
-                map.put(rtn.getCid(), rtn);
+            for (String uuid : uuidList) {
+                String key = Constants.FeeStationEnter + uuid;
+                Object obj = redisCache.getCacheObject(key);
+                if (null != obj) {
+                    map.put(uuid, (OdsLwzxsfsjFeeStationEnter01) obj);
+                } else {
+                    OdsLwzxsfsjFeeStationEnter01 querybo = new OdsLwzxsfsjFeeStationEnter01();
+                    querybo.setCid(uuid);
+                    List<OdsLwzxsfsjFeeStationEnter01> list = odsLwzxsfsjFeeStationEnter01Mapper.selectOdsLwzxsfsjFeeStationEnter01List(querybo);
+                    if (null!=list && list.size() > 0) {
+                        map.put(uuid, list.get(0));
+                        redisCache.setCacheObject(key, list.get(0));
+                    }
+                }
             }
         }
         return map;

@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.base.mapper.OdsRtSzdnSnapshotFlowStationcaptureAddcodeMapper;
 import com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowStationcaptureAddcode;
 import com.ruoyi.base.service.IOdsRtSzdnSnapshotFlowStationcaptureAddcodeService;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,9 @@ public class OdsRtSzdnSnapshotFlowStationcaptureAddcodeServiceImpl extends Servi
 
     @Autowired
     private OdsRtSzdnSnapshotFlowStationcaptureAddcodeMapper odsRtSzdnSnapshotFlowStationcaptureAddcodeMapper;
+
+    @Autowired
+    private RedisCache redisCache;
 
     /**
      * 查询收费站抓拍
@@ -56,9 +61,21 @@ public class OdsRtSzdnSnapshotFlowStationcaptureAddcodeServiceImpl extends Servi
         if(StringUtils.isNotBlank(queryUuids)) {
             String[] split = queryUuids.split(",");
             List<String> uuidList = Arrays.stream(split).collect(Collectors.toList());
-            List<OdsRtSzdnSnapshotFlowStationcaptureAddcode> list = odsRtSzdnSnapshotFlowStationcaptureAddcodeMapper.selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByUuidList(uuidList);
-            for (OdsRtSzdnSnapshotFlowStationcaptureAddcode rtn :list){
-                map.put(rtn.getDatauuid(),rtn);
+            for (String uuid : uuidList) {
+                // redis查找
+                String key = Constants.STATION_CAPTURE + uuid;
+                Object obj = redisCache.getCacheObject(key);
+                if (null != obj) {
+                    map.put(uuid, (OdsRtSzdnSnapshotFlowStationcaptureAddcode) obj);
+                } else {
+                    OdsRtSzdnSnapshotFlowStationcaptureAddcode querybo = new OdsRtSzdnSnapshotFlowStationcaptureAddcode();
+                    querybo.setDatauuid(uuid);
+                    List<OdsRtSzdnSnapshotFlowStationcaptureAddcode> list = odsRtSzdnSnapshotFlowStationcaptureAddcodeMapper.selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeList(querybo);
+                    if (null!=list && list.size() > 0) {
+                        map.put(uuid, list.get(0));
+                        redisCache.setCacheObject(key, list.get(0));
+                    }
+                }
             }
         }
         return map;

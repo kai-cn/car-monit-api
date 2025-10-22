@@ -124,6 +124,9 @@
                 #{item}
             </foreach>
         </if>
+        <if test="cid != null and cid != ''">
+            and t.cid = #{cid}
+        </if>
     </select>
 
     <select id="selectOdsLwzxsfsjFeeStationEnter01ById" parameterType="Long" resultMap="OdsLwzxsfsjFeeStationEnter01Result">

@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowAddcode;
 import com.ruoyi.base.mapper.OdsRtSzdnSnapshotFlowAddcodeMapper;
 import com.ruoyi.base.service.IOdsRtSzdnSnapshotFlowAddcodeService;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,9 @@ public class OdsRtSzdnSnapshotFlowAddcodeServiceImpl extends ServiceImpl<OdsRtSz
 
     @Autowired
     private OdsRtSzdnSnapshotFlowAddcodeMapper odsRtSzdnSnapshotFlowAddcodeMapper;
+
+    @Autowired
+    private RedisCache redisCache;
 
     /**
      * 查询门架抓拍流水
@@ -55,9 +60,21 @@ public class OdsRtSzdnSnapshotFlowAddcodeServiceImpl extends ServiceImpl<OdsRtSz
         Map<String, OdsRtSzdnSnapshotFlowAddcode> map = new HashMap<>();
         if(StringUtils.isNotBlank(queryUuids)) {
             List<String> uuidList = Arrays.stream(queryUuids.split(",")).collect(Collectors.toList());
-            List<OdsRtSzdnSnapshotFlowAddcode> list =  odsRtSzdnSnapshotFlowAddcodeMapper.selectOdsRtSzdnSnapshotFlowAddcodeByUuidList(uuidList);
-            for (OdsRtSzdnSnapshotFlowAddcode rtn : list) {
-                map.put(rtn.getDatauuid(),rtn);
+            for (String uuid : uuidList) {
+                // redis查找
+                String key = Constants.GANTRY_CAPTURE + uuid;
+                Object obj = redisCache.getCacheObject(key);
+                if (null != obj) {
+                    map.put(uuid, (OdsRtSzdnSnapshotFlowAddcode) obj);
+                } else {
+                    OdsRtSzdnSnapshotFlowAddcode querybo = new OdsRtSzdnSnapshotFlowAddcode();
+                    querybo.setDatauuid(uuid);
+                    List<OdsRtSzdnSnapshotFlowAddcode> list = odsRtSzdnSnapshotFlowAddcodeMapper.selectOdsRtSzdnSnapshotFlowAddcodeList(querybo);
+                    if (null!=list && list.size() > 0) {
+                        map.put(uuid, list.get(0));
+                        redisCache.setCacheObject(key, list.get(0));
+                    }
+                }
             }
         }
         return map;
