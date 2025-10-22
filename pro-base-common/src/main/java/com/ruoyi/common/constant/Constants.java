@@ -338,6 +338,20 @@ public class Constants
     public static final String fwq_name = "fwq_name";
 
 
+    public static final String BORDER_WEIGHING_CAPTURE = "BorderWeighingCapture:";
+    public static final String GANTRY_CAPTURE = "GantryCapture:";
+    public static final String PROV_CAPTURE = "ProvCapture:";
+    public static final String SERVICE_AREA_CAPTURE = "ServiceAreaCapture:";
+    public static final String STATION_CAPTURE = "StationCapture:";
+
+    public static final String FeeRecord = "FeeRecord:";
+    public static final String FeeStationEnter = "FeeStationEnter:";
+    public static final String FeeStationExit = "FeeStationExit:";
+
+    public static final String redisBiteKey = "sys_config:syncSuspiciousCar_bite:"; // 比例默认为0.5
+    public static final String redisTimeKey = "sys_config:syncSuspiciousCar_time:"; // 默认7天
+
+
 
 
 }
