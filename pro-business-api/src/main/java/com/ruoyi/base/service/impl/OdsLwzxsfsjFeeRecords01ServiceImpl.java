@@ -7,11 +7,13 @@ import com.ruoyi.base.service.IOdsLwzxsfsjFeeRecords01Service;
 import com.ruoyi.common.constant.Constants;
 import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.utils.CommonUtil;
-import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -71,6 +73,8 @@ public class OdsLwzxsfsjFeeRecords01ServiceImpl extends ServiceImpl<OdsLwzxsfsjF
                         if (null!=list && list.size() > 0) {
                             map.put(uuid, list.get(0));
                             redisCache.setCacheObject(key, list.get(0));
+                        }else{
+                            redisCache.setCacheObject(key, querybo);
                         }
                     }
                 }

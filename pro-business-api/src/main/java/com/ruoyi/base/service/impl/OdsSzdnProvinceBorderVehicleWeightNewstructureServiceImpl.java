@@ -77,6 +77,8 @@ public class OdsSzdnProvinceBorderVehicleWeightNewstructureServiceImpl extends S
                         if (null != list && list.size() > 0) {
                             map.put(uuid, list.get(0));
                             redisCache.setCacheObject(key, list.get(0));
+                        }else{
+                            redisCache.setCacheObject(key,querybo);
                         }
                     }
                 }
