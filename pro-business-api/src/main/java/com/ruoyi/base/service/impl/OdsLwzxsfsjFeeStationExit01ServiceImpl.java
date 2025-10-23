@@ -59,7 +59,7 @@ public class OdsLwzxsfsjFeeStationExit01ServiceImpl extends ServiceImpl<OdsLwzxs
             List<String> uuidList = Arrays.stream(split).collect(Collectors.toList());
             for (String uuid : uuidList) {
                 if (CommonUtil.isNotBlank(uuid)) {
-                    String key = Constants.FeeStationExit + uuid;
+                    String key = Constants.DATE_FeeStationExit + uuid;
                     Object obj = redisCache.getCacheObject(key);
                     if (null != obj) {
                         map.put(uuid, (OdsLwzxsfsjFeeStationExit01) obj);

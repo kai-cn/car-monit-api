@@ -66,7 +66,7 @@ public class OdsRtSzdnSnapshotFlowAddcodeServiceImpl extends ServiceImpl<OdsRtSz
             for (String uuid : uuidList) {
                 if (CommonUtil.isNotBlank(uuid)){
                     // redis查找
-                    String key = Constants.GANTRY_CAPTURE + uuid;
+                    String key = Constants.DATE_GANTRY_CAPTURE + uuid;
                     Object obj = redisCache.getCacheObject(key);
                     if (null != obj) {
                         map.put(uuid, (OdsRtSzdnSnapshotFlowAddcode) obj);

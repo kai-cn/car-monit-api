@@ -66,7 +66,7 @@ public class OdsSzdnProvinceBorderVehicleWeightNewstructureServiceImpl extends S
             for (String uuid : uuidList) {
                 if (CommonUtil.isNotBlank(uuid)){
                     // redis查找
-                    String key = Constants.BORDER_WEIGHING_CAPTURE + uuid;
+                    String key = Constants.DATE_BORDER_WEIGHING_CAPTURE + uuid;
                     Object obj = redisCache.getCacheObject(key);
                     if (null != obj) {
                         map.put(uuid, (OdsSzdnProvinceBorderVehicleWeightNewstructure) obj);

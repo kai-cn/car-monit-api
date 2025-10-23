@@ -60,7 +60,7 @@ public class OdsLwzxsfsjFeeRecords01ServiceImpl extends ServiceImpl<OdsLwzxsfsjF
             for (String uuid : uuidList) {
                 if(CommonUtil.isNotBlank(uuid)) {
                     // redis查找
-                    String key = Constants.FeeRecord + uuid;
+                    String key = Constants.DATE_FeeRecord + uuid;
                     Object obj = redisCache.getCacheObject(key);
                     if (null != obj) {
                         map.put(uuid, (OdsLwzxsfsjFeeRecords01) obj);

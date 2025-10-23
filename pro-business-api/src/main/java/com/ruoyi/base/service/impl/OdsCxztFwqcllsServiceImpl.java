@@ -61,7 +61,7 @@ public class OdsCxztFwqcllsServiceImpl extends ServiceImpl<OdsCxztFwqcllsMapper,
             for (String uuid : uuidList) {
                 if (CommonUtil.isNotBlank(uuid)) {
                     // redis查找
-                    String key = Constants.SERVICE_AREA_CAPTURE + uuid;
+                    String key = Constants.DATE_SERVICE_AREA_CAPTURE + uuid;
                     Object obj = redisCache.getCacheObject(key);
                     if (null != obj) {
                         map.put(uuid, (OdsCxztFwqclls) obj);
