@@ -782,6 +782,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 // 服务区
 
             }
+
+            if (CommonUtil.isBlank(trailBo.getDevName())){
+                trailBo.setDevName(locationCode);
+            }
         }
 
         tracks.setFirtStationCode(firtStationCode);
@@ -1021,8 +1025,21 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 log.error("解析错误！");
             }
         }
+
+        if (null != trailBoList && trailBoList.size() > 0){
+            // 按照时间排序----------
+            trailBoList =  trailBoList.stream().sorted(Comparator.comparing(TrailBo::getCaptureTime))
+                    .collect(Collectors.toList());
+        }
+
+        // 去掉重合的
+
         return trailBoList;
     }
+
+
+
+
 
 
     /**
