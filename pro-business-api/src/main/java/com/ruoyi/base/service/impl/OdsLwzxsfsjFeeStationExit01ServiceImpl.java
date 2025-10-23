@@ -6,6 +6,7 @@ import com.ruoyi.base.mapper.OdsLwzxsfsjFeeStationExit01Mapper;
 import com.ruoyi.base.service.IOdsLwzxsfsjFeeStationExit01Service;
 import com.ruoyi.common.constant.Constants;
 import com.ruoyi.common.core.redis.RedisCache;
+import com.ruoyi.common.utils.CommonUtil;
 import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -53,23 +54,26 @@ public class OdsLwzxsfsjFeeStationExit01ServiceImpl extends ServiceImpl<OdsLwzxs
     @Override
     public Map<String, OdsLwzxsfsjFeeStationExit01> selectOdsLwzxsfsjFeeStationExit01ByQueryUuids(String queryUuids) {
         Map<String, OdsLwzxsfsjFeeStationExit01> map = new HashMap<>();
-        if (StringUtils.isNotBlank(queryUuids)) {
+        if (CommonUtil.isNotBlank(queryUuids)) {
             String[] split = queryUuids.split(",");
             List<String> uuidList = Arrays.stream(split).collect(Collectors.toList());
             for (String uuid : uuidList) {
-                String key = Constants.FeeStationExit + uuid;
-                Object obj = redisCache.getCacheObject(key);
-                if (null != obj) {
-                    map.put(uuid, (OdsLwzxsfsjFeeStationExit01) obj);
-                } else {
-                    OdsLwzxsfsjFeeStationExit01 querybo = new OdsLwzxsfsjFeeStationExit01();
-                    querybo.setCid(uuid);
-                    List<OdsLwzxsfsjFeeStationExit01> list = odsLwzxsfsjFeeStationExit01Mapper.selectOdsLwzxsfsjFeeStationExit01List(querybo);
-                    if (null!=list && list.size() > 0) {
-                        map.put(uuid, list.get(0));
-                        redisCache.setCacheObject(key, list.get(0));
+                if (CommonUtil.isNotBlank(uuid)) {
+                    String key = Constants.FeeStationExit + uuid;
+                    Object obj = redisCache.getCacheObject(key);
+                    if (null != obj) {
+                        map.put(uuid, (OdsLwzxsfsjFeeStationExit01) obj);
+                    } else {
+                        OdsLwzxsfsjFeeStationExit01 querybo = new OdsLwzxsfsjFeeStationExit01();
+                        querybo.setCid(uuid);
+                        List<OdsLwzxsfsjFeeStationExit01> list = odsLwzxsfsjFeeStationExit01Mapper.selectOdsLwzxsfsjFeeStationExit01List(querybo);
+                        if (null!=list && list.size() > 0) {
+                            map.put(uuid, list.get(0));
+                            redisCache.setCacheObject(key, list.get(0));
+                        }
                     }
                 }
+
             }
         }
         return map;

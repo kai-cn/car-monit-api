@@ -146,7 +146,7 @@
         SELECT
         <include refid="selectOdsLwzxsfsjFeeStationExit01Vo"/>
         FROM jl_data01.ods_lwzxsfsj_fee_station_exit_01 t
-        WHERE 1=1
+        <where>
         <if test="bigId != null  and bigId != ''"> and t.big_id = #{bigId}</if>
         <if test="actualfeeclass != null  and actualfeeclass != ''"> and t.actualfeeclass = #{actualfeeclass}</if>
         <if test="axlecount != null "> and t.axlecount = #{axlecount}</if>
@@ -221,6 +221,7 @@
         <if test="cid != null and cid != ''">
             and t.cid = #{cid}
         </if>
+        </where>
     </select>
 
     <select id="selectOdsLwzxsfsjFeeStationExit01ById" parameterType="String" resultMap="OdsLwzxsfsjFeeStationExit01Result">

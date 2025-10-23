@@ -6,6 +6,7 @@ import com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowStationcaptureAddcode;
 import com.ruoyi.base.service.IOdsRtSzdnSnapshotFlowStationcaptureAddcodeService;
 import com.ruoyi.common.constant.Constants;
 import com.ruoyi.common.core.redis.RedisCache;
+import com.ruoyi.common.utils.CommonUtil;
 import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -58,24 +59,28 @@ public class OdsRtSzdnSnapshotFlowStationcaptureAddcodeServiceImpl extends Servi
     @Override
     public Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByQueryUuids(String queryUuids) {
         Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> map = new HashMap<>();
-        if(StringUtils.isNotBlank(queryUuids)) {
+        if(CommonUtil.isNotBlank(queryUuids)) {
             String[] split = queryUuids.split(",");
             List<String> uuidList = Arrays.stream(split).collect(Collectors.toList());
             for (String uuid : uuidList) {
-                // redis查找
-                String key = Constants.STATION_CAPTURE + uuid;
-                Object obj = redisCache.getCacheObject(key);
-                if (null != obj) {
-                    map.put(uuid, (OdsRtSzdnSnapshotFlowStationcaptureAddcode) obj);
-                } else {
-                    OdsRtSzdnSnapshotFlowStationcaptureAddcode querybo = new OdsRtSzdnSnapshotFlowStationcaptureAddcode();
-                    querybo.setDatauuid(uuid);
-                    List<OdsRtSzdnSnapshotFlowStationcaptureAddcode> list = odsRtSzdnSnapshotFlowStationcaptureAddcodeMapper.selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeList(querybo);
-                    if (null!=list && list.size() > 0) {
-                        map.put(uuid, list.get(0));
-                        redisCache.setCacheObject(key, list.get(0));
+                if(CommonUtil.isNotBlank(uuid)) {
+                    // redis查找
+                    String key = Constants.STATION_CAPTURE + uuid;
+                    Object obj = redisCache.getCacheObject(key);
+                    if (null != obj) {
+                        map.put(uuid, (OdsRtSzdnSnapshotFlowStationcaptureAddcode) obj);
+                    } else {
+                        OdsRtSzdnSnapshotFlowStationcaptureAddcode querybo = new OdsRtSzdnSnapshotFlowStationcaptureAddcode();
+                        querybo.setDatauuid(uuid);
+                        List<OdsRtSzdnSnapshotFlowStationcaptureAddcode> list = odsRtSzdnSnapshotFlowStationcaptureAddcodeMapper.selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeList(querybo);
+                        if (null!=list && list.size() > 0) {
+                            map.put(uuid, list.get(0));
+                            redisCache.setCacheObject(key, list.get(0));
+                        }
                     }
                 }
+
+
             }
         }
         return map;

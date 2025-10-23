@@ -178,7 +178,7 @@
         SELECT
         <include refid="selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeVo"/>
         FROM jl_data01.ods_rt_szdn_snapshot_flow_provcapture_addcode t
-        WHERE 1 = 1
+        <where>
         <if test="bigId != null "> and t.big_id = #{bigId}</if>
         <if test="deviceip != null  and deviceip != ''"> and t.deviceip = #{deviceip}</if>
         <if test="tailcapturetimeunix != null "> and t.tailcapturetimeunix = #{tailcapturetimeunix}</if>
@@ -261,6 +261,7 @@
         <if test="reserve1 != null  and reserve1 != ''"> and t.reserve1 = #{reserve1}</if>
         <if test="reserve2 != null  and reserve2 != ''"> and t.reserve2 = #{reserve2}</if>
         <if test="reserve3 != null  and reserve3 != ''"> and t.reserve3 = #{reserve3}</if>
+        </where>
     </select>
 
     <select id="selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeById" parameterType="Long" resultMap="OdsRtSzdnSnapshotFlowProvcaptureAddcodeResult">

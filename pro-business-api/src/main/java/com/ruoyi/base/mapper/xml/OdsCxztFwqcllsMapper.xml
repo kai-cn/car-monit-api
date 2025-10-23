@@ -50,7 +50,7 @@
         SELECT
         <include refid="selectOdsCxztFwqcllsVo"/>
         FROM jl_data01.ods_cxzt_fwqclls t
-        WHERE 1=1
+        <where>
         <if test="bigId != null "> and t.big_id = #{bigId}</if>
         <if test="datauuid != null  and datauuid != ''"> and t.datauuid = #{datauuid}</if>
         <if test="targetpicurl != null  and targetpicurl != ''"> and t.targetpicurl = #{targetpicurl}</if>
@@ -75,6 +75,7 @@
                 #{item}
             </foreach>
         </if>
+        </where>
     </select>
 
     <select id="selectOdsCxztFwqcllsById" parameterType="Long" resultMap="OdsCxztFwqcllsResult">

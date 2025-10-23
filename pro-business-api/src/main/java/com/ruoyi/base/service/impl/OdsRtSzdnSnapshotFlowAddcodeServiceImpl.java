@@ -6,11 +6,14 @@ import com.ruoyi.base.mapper.OdsRtSzdnSnapshotFlowAddcodeMapper;
 import com.ruoyi.base.service.IOdsRtSzdnSnapshotFlowAddcodeService;
 import com.ruoyi.common.constant.Constants;
 import com.ruoyi.common.core.redis.RedisCache;
-import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -58,23 +61,26 @@ public class OdsRtSzdnSnapshotFlowAddcodeServiceImpl extends ServiceImpl<OdsRtSz
     @Override
     public Map<String, OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeByQueryUuids(String queryUuids) {
         Map<String, OdsRtSzdnSnapshotFlowAddcode> map = new HashMap<>();
-        if(StringUtils.isNotBlank(queryUuids)) {
+        if(CommonUtil.isNotBlank(queryUuids)) {
             List<String> uuidList = Arrays.stream(queryUuids.split(",")).collect(Collectors.toList());
             for (String uuid : uuidList) {
-                // redis查找
-                String key = Constants.GANTRY_CAPTURE + uuid;
-                Object obj = redisCache.getCacheObject(key);
-                if (null != obj) {
-                    map.put(uuid, (OdsRtSzdnSnapshotFlowAddcode) obj);
-                } else {
-                    OdsRtSzdnSnapshotFlowAddcode querybo = new OdsRtSzdnSnapshotFlowAddcode();
-                    querybo.setDatauuid(uuid);
-                    List<OdsRtSzdnSnapshotFlowAddcode> list = odsRtSzdnSnapshotFlowAddcodeMapper.selectOdsRtSzdnSnapshotFlowAddcodeList(querybo);
-                    if (null!=list && list.size() > 0) {
-                        map.put(uuid, list.get(0));
-                        redisCache.setCacheObject(key, list.get(0));
+                if (CommonUtil.isNotBlank(uuid)){
+                    // redis查找
+                    String key = Constants.GANTRY_CAPTURE + uuid;
+                    Object obj = redisCache.getCacheObject(key);
+                    if (null != obj) {
+                        map.put(uuid, (OdsRtSzdnSnapshotFlowAddcode) obj);
+                    } else {
+                        OdsRtSzdnSnapshotFlowAddcode querybo = new OdsRtSzdnSnapshotFlowAddcode();
+                        querybo.setDatauuid(uuid);
+                        List<OdsRtSzdnSnapshotFlowAddcode> list = odsRtSzdnSnapshotFlowAddcodeMapper.selectOdsRtSzdnSnapshotFlowAddcodeList(querybo);
+                        if (null!=list && list.size() > 0) {
+                            map.put(uuid, list.get(0));
+                            redisCache.setCacheObject(key, list.get(0));
+                        }
                     }
                 }
+
             }
         }
         return map;

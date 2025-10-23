@@ -1,16 +1,19 @@
 package com.ruoyi.base.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.ruoyi.base.mapper.OdsLwzxsfsjFeeStationEnter01Mapper;
 import com.ruoyi.base.domain.OdsLwzxsfsjFeeStationEnter01;
+import com.ruoyi.base.mapper.OdsLwzxsfsjFeeStationEnter01Mapper;
 import com.ruoyi.base.service.IOdsLwzxsfsjFeeStationEnter01Service;
 import com.ruoyi.common.constant.Constants;
 import com.ruoyi.common.core.redis.RedisCache;
-import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -53,21 +56,23 @@ public class OdsLwzxsfsjFeeStationEnter01ServiceImpl extends ServiceImpl<OdsLwzx
     @Override
     public Map<String, OdsLwzxsfsjFeeStationEnter01> selectOdsLwzxsfsjFeeStationEnter01ByQueryUuids(String queryUuids) {
         Map<String, OdsLwzxsfsjFeeStationEnter01> map = new HashMap<>();
-        if(StringUtils.isNotBlank(queryUuids)) {
+        if(CommonUtil.isNotBlank(queryUuids)) {
             String[] split = queryUuids.split(",");
             List<String> uuidList = Arrays.stream(split).collect(Collectors.toList());
             for (String uuid : uuidList) {
-                String key = Constants.FeeStationEnter + uuid;
-                Object obj = redisCache.getCacheObject(key);
-                if (null != obj) {
-                    map.put(uuid, (OdsLwzxsfsjFeeStationEnter01) obj);
-                } else {
-                    OdsLwzxsfsjFeeStationEnter01 querybo = new OdsLwzxsfsjFeeStationEnter01();
-                    querybo.setCid(uuid);
-                    List<OdsLwzxsfsjFeeStationEnter01> list = odsLwzxsfsjFeeStationEnter01Mapper.selectOdsLwzxsfsjFeeStationEnter01List(querybo);
-                    if (null!=list && list.size() > 0) {
-                        map.put(uuid, list.get(0));
-                        redisCache.setCacheObject(key, list.get(0));
+                if(CommonUtil.isNotBlank(uuid)) {
+                    String key = Constants.FeeStationEnter + uuid;
+                    Object obj = redisCache.getCacheObject(key);
+                    if (null != obj) {
+                        map.put(uuid, (OdsLwzxsfsjFeeStationEnter01) obj);
+                    } else {
+                        OdsLwzxsfsjFeeStationEnter01 querybo = new OdsLwzxsfsjFeeStationEnter01();
+                        querybo.setCid(uuid);
+                        List<OdsLwzxsfsjFeeStationEnter01> list = odsLwzxsfsjFeeStationEnter01Mapper.selectOdsLwzxsfsjFeeStationEnter01List(querybo);
+                        if (null!=list && list.size() > 0) {
+                            map.put(uuid, list.get(0));
+                            redisCache.setCacheObject(key, list.get(0));
+                        }
                     }
                 }
             }

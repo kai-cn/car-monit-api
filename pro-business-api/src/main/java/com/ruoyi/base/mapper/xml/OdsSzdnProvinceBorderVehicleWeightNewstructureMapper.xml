@@ -78,7 +78,7 @@
         SELECT
         <include refid="selectOdsSzdnProvinceBorderVehicleWeightNewstructureVo"/>
         FROM jl_data01.ods_szdn_province_border_vehicle_weight_newstructure t
-        WHERE 1 = 1
+       <where>
         <if test="dataSource != null  and dataSource != ''"> and t.dataSource = #{dataSource}</if>
         <if test="dataType != null  and dataType != ''"> and t.dataType = #{dataType}</if>
         <if test="plateNo != null  and plateNo != ''"> and t.plateNo = #{plateNo}</if>
@@ -111,6 +111,7 @@
         <if test="reserve1 != null  and reserve1 != ''"> and t.reserve1 = #{reserve1}</if>
         <if test="reserve2 != null  and reserve2 != ''"> and t.reserve2 = #{reserve2}</if>
         <if test="reserve3 != null  and reserve3 != ''"> and t.reserve3 = #{reserve3}</if>
+      </where>
     </select>
 
     <select id="selectOdsSzdnProvinceBorderVehicleWeightNewstructureById" parameterType="String" resultMap="OdsSzdnProvinceBorderVehicleWeightNewstructureResult">

@@ -280,7 +280,7 @@
         SELECT
         <include refid="selectOdsLwzxsfsjFeeRecords01Vo"/>
         FROM jl_data01.ods_lwzxsfsj_fee_records_01 t
-        WHERE 1=1
+        <where>
         <if test="bigId != null  and bigId != ''"> and t.big_id = #{bigId}</if>
         <if test="algorithmidentifier != null  and algorithmidentifier != ''"> and t.algorithmidentifier = #{algorithmidentifier}</if>
         <if test="antennaid != null  and antennaid != ''"> and t.antennaid = #{antennaid}</if>
@@ -424,6 +424,7 @@
         <if test="cid != null and cid != ''">
             and t.cid = #{cid}
         </if>
+        </where>
     </select>
 
     <select id="selectOdsLwzxsfsjFeeRecords01ById" parameterType="String" resultMap="OdsLwzxsfsjFeeRecords01Result">
