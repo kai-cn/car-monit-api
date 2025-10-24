@@ -225,6 +225,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 if (CommonUtil.isNotBlank(keyValue)) {
                     josnList = JSON.parseArray(keyValue, TrailBo.class);
 
+                    List<TrailBo>  rtnList = this.mapTrailBoList(josnList);
+
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
                     String formattedDate = sdf.format(new Date());
 
@@ -232,7 +234,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     tracks.setPlateKey(carNo);
                     tracks.setUuid(carNo +"@@"+ formattedDate);
 
-                    TrailInfo trailInfo = this.changeData(tracks, josnList); // 车牌号
+                    TrailInfo trailInfo = this.changeData(tracks, rtnList); // 获取设备的经纬度
                     trailInfo.setTrailUuid(carNo);
 
                     String key = Constants.car_curent_trail + carNo;
@@ -253,7 +255,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
         TrailInfo trailInfo = new TrailInfo();
 
-        List<TrailBo> rtnList = new ArrayList<>();
+
         if (null != josnList && josnList.size() >0) {
         }else{
             trailInfo.setTracks(tracks);
@@ -783,6 +785,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
             }
 
+            // 设备名称没有默认位置信息--------------
             if (CommonUtil.isBlank(trailBo.getDevName())){
                 trailBo.setDevName(locationCode);
             }
@@ -892,7 +895,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     List<TrailBo> josnList = new ArrayList<TrailBo>();
                     if (CommonUtil.isNotBlank(keyValue)) {
                         josnList = this.getTrailBoList(keyValue);
-                        tracks.setTrailPoints("");  // 行驶轨迹
+                        // tracks.setTrailPoints("");  // 行驶轨迹
 
                         // ---------------------------分析场景: 门架抓拍和流水抓拍 占比
                         int conutGantryCapture = 0;
@@ -917,7 +920,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 tracks.setEscapedTypeRemark("异常原因：门架牌识数量:"+conutGantryCapture+"门架流水数量:"+conutFeeRecord);
 
 
-                                TrailInfo trailInfo = this.changeData(tracks, josnList); // 车牌号
+                                TrailInfo trailInfo = this.changeData(tracks, josnList); // 获取设备的经纬度
                                 trailInfo.setTrailUuid(carNo);
 
                                 String key = this.getSuspiciousKey(formattedDate,carNo);
@@ -955,9 +958,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
                     josnList = this.getTrailBoList(keyValue);
-                    tracks.setTrailPoints("");  // 行驶轨迹
+                    // tracks.setTrailPoints("");  // 行驶轨迹
 
-                    TrailInfo trailInfo = this.changeData(tracks, josnList); // 车牌号
+                    TrailInfo trailInfo = this.changeData(tracks, josnList); // 获取设备的经纬度
                     trailInfo.setTrailUuid(carNo);
                     rtnList.add(trailInfo);
                 }
@@ -967,7 +970,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
     }
 
     /**
-     * 轨迹查询
+     * 轨迹查询 : 界面上查询-------------
      *
      * @param carParaVO
      * @return
@@ -982,6 +985,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
         return carlist;
     }
 
+    /**
+     * dws josn2字符串转换
+     * @param paraTrailPoints
+     * @return
+     */
     private String getTrailBoListString(String paraTrailPoints) {
         String trailPoints = CommonUtil.isNull(paraTrailPoints);
         if (CommonUtil.isNotBlank(trailPoints)) {
@@ -1025,18 +1033,73 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 log.error("解析错误！");
             }
         }
+        List<TrailBo>  rtnList = this.mapTrailBoList(trailBoList);
 
+        return rtnList;
+    }
+
+    /**
+     * 处理
+     * @param trailBoList
+     * @return
+     */
+    private List<TrailBo> mapTrailBoList(List<TrailBo> trailBoList){
+        List<TrailBo> mapList = new ArrayList<>();
+
+        // 按照时间排序----------
         if (null != trailBoList && trailBoList.size() > 0){
-            // 按照时间排序----------
             trailBoList =  trailBoList.stream().sorted(Comparator.comparing(TrailBo::getCaptureTime))
                     .collect(Collectors.toList());
         }
 
         // 去掉重合的
+        SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        long threeMinutesInMillis = 4 * 60 * 1000; // 三分钟转换为毫秒
 
-        return trailBoList;
+        Map<String,TrailBo> map = new HashMap<String,TrailBo>();
+        if (null != trailBoList && trailBoList.size() > 0){
+            for (TrailBo trailBo : trailBoList) {
+                String stateType = CommonUtil.isNull(trailBo.getStateType()); // 类型
+                String locationCode = CommonUtil.isNull(trailBo.getLocationCode()); // 设备IP地址
+                String captureTime = CommonUtil.isNull(trailBo.getCaptureTime()); // 抓拍时间
+                String imagesArry = CommonUtil.deleteEnd(trailBo.getImagesArry()); // 抓拍图片
+                String mapKey = stateType + locationCode;
+                if (map.containsKey(mapKey)){
+                    TrailBo trailBoTemp = map.get(mapKey);
+                    String captureTimeTemp = CommonUtil.isNull(trailBoTemp.getCaptureTime());
+                    if (CommonUtil.isNotBlank(captureTime) && CommonUtil.isNotBlank(captureTimeTemp)){
+                        try {
+                            Date captureTimeDate1 = format2.parse(captureTime);
+                            Date captureTimeDate2 = format2.parse(captureTimeTemp);
+                            long diff = Math.abs(captureTimeDate2.getTime() - captureTimeDate1.getTime());
+                            if (diff > threeMinutesInMillis) {
+                                mapList.add(trailBo);
+                            }else{
+                                // 抓拍图片累加--------------
+                                String imagesArryTemp = CommonUtil.deleteEnd(trailBoTemp.getImagesArry());
+                                if (!imagesArry.equals("")){
+                                    if (imagesArryTemp.equals("")) {
+                                        trailBoTemp.setImagesArry(imagesArry);
+                                    } else {
+                                        trailBoTemp.setImagesArry(imagesArryTemp + "," + imagesArry);
+                                    }
+                                }
+                            }
+                        }catch (Exception e){
+                            mapList.add(trailBo);
+                            log.info("日期解析失败------------"+e.toString());
+                        }
+                    }else{
+                        mapList.add(trailBo);
+                    }
+                }else{
+                    mapList.add(trailBo);
+                }
+                map.put(mapKey,trailBo);
+            }
+        }
+        return mapList;
     }
-
 
 
 
