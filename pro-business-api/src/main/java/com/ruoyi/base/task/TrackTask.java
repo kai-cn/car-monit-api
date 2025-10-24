@@ -49,11 +49,11 @@ public class TrackTask {
      * 每三分钟执行一次
      * 车俩实时轨迹同步
      */
-    @Scheduled(cron = "0 0/10 * * * ?")
+    @Scheduled(cron = "0 0/6 * * * ?")
     private void syncCurrentTrack() {
-        log.info("每10分钟（同步当前轨迹轨迹）开始 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        log.info("每6分钟（同步当前轨迹轨迹）开始 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
         sysUtilService.syncTrack(new CarParaVO());
-        log.info("每10分钟（同步当前轨迹轨迹）结束 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        log.info("每6分钟（同步当前轨迹轨迹）结束 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
 
@@ -109,9 +109,9 @@ public class TrackTask {
      * 每30分钟执行一次
      * 同步历史轨迹没有记录的车辆
      */
-    @Scheduled(cron = "0 0/30 * * * ?")
+    @Scheduled(cron = "0 0/20 * * * ?")
     private void syncCurrentTrackNo() {
-        log.info("每30执行（同步历史轨迹没有记录的车辆）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        log.info("每20分钟（同步历史轨迹没有记录的车辆）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
 
         // 重点车俩库
         List<CarVO> carlist = new ArrayList<>();
@@ -146,7 +146,7 @@ public class TrackTask {
                 }
             }
         }
-        log.info("每30执行（同步历史轨迹没有记录的车辆）结束 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        log.info("每20分钟执行（同步历史轨迹没有记录的车辆）结束 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
 }
