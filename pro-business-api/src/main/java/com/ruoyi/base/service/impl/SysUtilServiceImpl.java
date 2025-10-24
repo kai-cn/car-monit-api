@@ -895,7 +895,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     List<TrailBo> josnList = new ArrayList<TrailBo>();
                     if (CommonUtil.isNotBlank(keyValue)) {
                         josnList = this.getTrailBoList(keyValue);
-                        // tracks.setTrailPoints("");  // 行驶轨迹
+                        tracks.setTrailPoints("");  // 行驶轨迹
 
                         // ---------------------------分析场景: 门架抓拍和流水抓拍 占比
                         int conutGantryCapture = 0;
