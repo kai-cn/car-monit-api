@@ -163,6 +163,28 @@ public class ZdataTrailTracks implements Custom {
     @TableField(exist = false)
     private BigDecimal exweight;
 
+
+    /** 入口收费站经度 */
+    @Excel(name = "入口收费站经度")
+    @TableField(exist = false)
+    private String startLon;
+
+    /** 入口收费站维度 */
+    @Excel(name = "入口收费站维度")
+    @TableField(exist = false)
+    private String stratLat;
+
+    /** 出口收费站经度 */
+    @Excel(name = "出口收费站经度")
+    @TableField(exist = false)
+    private String endLon;
+
+    /** 出口收费站维度 */
+    @Excel(name = "出口收费站维度")
+    @TableField(exist = false)
+    private String endLat;
+
+
     // 入栈口
     @TableField(exist = false)
     private String firtStationCode;
@@ -217,5 +239,9 @@ public class ZdataTrailTracks implements Custom {
     /** 申请时间2 */
     @TableField(exist = false)
     private String applyTime2;
+
+    /** 标识 */
+    @TableField(exist = false)
+    private String flag;
 
 }
