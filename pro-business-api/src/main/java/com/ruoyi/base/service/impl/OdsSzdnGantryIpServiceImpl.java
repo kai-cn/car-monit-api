@@ -110,7 +110,9 @@ public class OdsSzdnGantryIpServiceImpl extends ServiceImpl<OdsSzdnGantryIpMappe
     public  List<OdsSzdnGantryIp> updateRedis(){
         Map<String, OdsSzdnGantryIp> map = new HashMap<String, OdsSzdnGantryIp>();
         List<OdsSzdnGantryIp> list = odsSzdnGantryIpMapper.selectOdsSzdnGantryIpList(new OdsSzdnGantryIp());
-        Map<String,OdsSzdnGantry> osSzdnGantryMap = odsSzdnGantryService.selectOdsSzdnGantryMap(new OdsSzdnGantry());
+        OdsSzdnGantry odsSzdnGantry = new OdsSzdnGantry();
+        odsSzdnGantry.setDirection("0"); // 查询上行的门架
+        Map<String,OdsSzdnGantry> osSzdnGantryMap = odsSzdnGantryService.selectOdsSzdnGantryMap(odsSzdnGantry);
         for (OdsSzdnGantryIp rtn : list) {
             String key = CommonUtil.isNull(rtn.getGantryCode()); // 门架编号
             if(osSzdnGantryMap.containsKey(key)){
