@@ -39,7 +39,6 @@ public class CarTask {
                 sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
             });
         }
-        sysUtilService.syncSuspiciousCarQutaz(1, 10);
         log.info("每天凌晨1点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
