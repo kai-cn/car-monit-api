@@ -5,8 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.Resource;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -19,6 +21,9 @@ public class CarTask {
     @Autowired
     private ISysUtilService sysUtilService;
 
+    @Resource
+    private ThreadPoolTaskExecutor threadTaskExecutor;
+
 
 
     /**
@@ -28,6 +33,12 @@ public class CarTask {
     @Scheduled(cron = "0 0 1 * * ?")
     private void syncSuspiciousCar1() {
         log.info("每天凌晨1点执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        for (int i = 1; i < 11; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
         sysUtilService.syncSuspiciousCarQutaz(1, 10);
         log.info("每天凌晨1点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
