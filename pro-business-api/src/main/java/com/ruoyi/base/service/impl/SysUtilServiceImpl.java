@@ -891,12 +891,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
             if (CommonUtil.isNotBlank(endCode)){
                 TrailBo trailJosnBo = new TrailBo();
 
-                trailJosnBo.setPointUuid("enter"+tracks.getUuid());
-                trailJosnBo.setDevCode(tracks.getEntollstationid()); // 设备编号
-                trailJosnBo.setDevName(tracks.getEntollstationname());  // 设备名称
-                if (null !=tracks.getEnterTime()){
+                trailJosnBo.setPointUuid("exit"+tracks.getUuid());
+                trailJosnBo.setDevCode(tracks.getExtollstationid()); // 设备编号
+                trailJosnBo.setDevName(tracks.getExtollstationname());  // 设备名称
+                if (null !=tracks.getExitTime()){
                     SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                    trailJosnBo.setCaptureTime(format2.format(tracks.getEnterTime())); // 进入时间
+                    trailJosnBo.setCaptureTime(format2.format(tracks.getExitTime())); // 进入时间
 
                 }
 
