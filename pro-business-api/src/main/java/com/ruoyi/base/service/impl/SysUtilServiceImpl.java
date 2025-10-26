@@ -812,14 +812,15 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
                 tracks.setEntollstationid(CommonUtil.isNull(firstTrailBo.getDevCode()));
                 tracks.setEntollstationname(CommonUtil.isNull(firstTrailBo.getDevName()));
-                tracks.setStartLon(JSON.toJSONString(firstTrailBo)); // 起点信息
-
+                tracks.setStartLon(CommonUtil.isNull(firstTrailBo.getLon())); // 经度
+                tracks.setStratLat(CommonUtil.isNull(firstTrailBo.getLat())); // 经度
 
                 if (josnList.size() > 1) {
                     TrailBo endTrailBo = josnList.get(josnList.size() - 1);
                     tracks.setExtollstationid(CommonUtil.isNull(endTrailBo.getDevCode()));
                     tracks.setExtollstationname(CommonUtil.isNull(endTrailBo.getDevName()));
-                    tracks.setEndLon(JSON.toJSONString(endTrailBo)); // 终点信息
+                    tracks.setEndLon(CommonUtil.isNull(endTrailBo.getLon())); // 经度
+                    tracks.setEndLat(CommonUtil.isNull(endTrailBo.getLat())); // 经度
                 }
             }
 
@@ -830,36 +831,17 @@ public class SysUtilServiceImpl implements ISysUtilService {
             String endCode = CommonUtil.isNull(tracks.getExtollstationid()); // 出口收费站编号
 
             if (CommonUtil.isNotBlank(firstCode)){
-                TrailBo trailJosnBo = new TrailBo();
-
-                trailJosnBo.setPointUuid("enter"+tracks.getUuid());
-                trailJosnBo.setDevCode(tracks.getEntollstationid()); // 设备编号
-                trailJosnBo.setDevName(tracks.getEntollstationname());  // 设备名称
-                if (null !=tracks.getEnterTime()){
-                    SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                    trailJosnBo.setCaptureTime(format2.format(tracks.getEnterTime())); // 进入时间
-
-                }
-
                 // 收费站ip
                 if (szdnTollMap.containsKey(firstCode)){
                     OdsSzdnTollStationIp stationIpBO = szdnTollMap.get(firstCode);
                     OdsSzdnToll odsSzdnToll = stationIpBO.getOdsSzdnToll();
                     if (null != odsSzdnToll) {
-                        trailJosnBo.setStateType(STATION_CAPTURE);
                         if (CommonUtil.isNotBlank(odsSzdnToll.getLongitude())) {
-                            trailJosnBo.setLon(new BigDecimal(odsSzdnToll.getLongitude())); // 经度
+                            tracks.setStartLon(odsSzdnToll.getLongitude()); // 经度
                         }
                         if (CommonUtil.isNotBlank(odsSzdnToll.getLatitude())) {
-                            trailJosnBo.setLat(new BigDecimal(odsSzdnToll.getLatitude())); // 经度
+                            tracks.setStratLat(odsSzdnToll.getLatitude()); // 经度
                         }
-                        // 路线编号
-                        trailJosnBo.setRoadCode(CommonUtil.isNull(odsSzdnToll.getRoadCode()));
-                        // 路段
-                        trailJosnBo.setSectionCode(CommonUtil.isNull(odsSzdnToll.getSectionCode()));
-
-                        // trailBo.setDirection(odsSzdnToll.getDirection()); // 方向
-                        trailJosnBo.setPileno(CommonUtil.isNull(odsSzdnToll.getPileNo())); // 桩号
                     }
                 }else {
                     // 门架
@@ -867,58 +849,30 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         OdsSzdnGantryIp  gantryIpBO = szdnGantryMap.get(firstCode);
                         OdsSzdnGantry odsSzdnGantry = gantryIpBO.getOdsSzdnGantry();
                         if (null != odsSzdnGantry) {
-                            trailJosnBo.setStateType(PROV_CAPTURE);
                             if (CommonUtil.isNotBlank(odsSzdnGantry.getLon())) {
-                                trailJosnBo.setLon(new BigDecimal(odsSzdnGantry.getLon())); // 经度
+                                tracks.setStartLon(odsSzdnGantry.getLon()); // 经度
                             }
                             if (CommonUtil.isNotBlank(odsSzdnGantry.getLat())) {
-                                trailJosnBo.setLat(new BigDecimal(odsSzdnGantry.getLat())); // 经度
+                                tracks.setStratLat(odsSzdnGantry.getLat()); // 经度
                             }
-                            // 路线编号
-                            trailJosnBo.setRoadCode(CommonUtil.isNull(odsSzdnGantry.getRoadCode()));
-                            // 路段编号
-                            trailJosnBo.setSectionCode(CommonUtil.isNull(odsSzdnGantry.getSectionCode()));
-
-                            trailJosnBo.setDirection(odsSzdnGantry.getDirection()); // 方向
-                            trailJosnBo.setPileno(CommonUtil.isNull(odsSzdnGantry.getPileNo())); // 桩号
                         }
                     }
                 }
-                tracks.setStartLon(JSON.toJSONString(trailJosnBo)); // 起点信息
             }
 
 
             if (CommonUtil.isNotBlank(endCode)){
-                TrailBo trailJosnBo = new TrailBo();
-
-                trailJosnBo.setPointUuid("exit"+tracks.getUuid());
-                trailJosnBo.setDevCode(tracks.getExtollstationid()); // 设备编号
-                trailJosnBo.setDevName(tracks.getExtollstationname());  // 设备名称
-                if (null !=tracks.getExitTime()){
-                    SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                    trailJosnBo.setCaptureTime(format2.format(tracks.getExitTime())); // 进入时间
-
-                }
-
                 // 收费站ip
                 if (szdnTollMap.containsKey(endCode)){
                     OdsSzdnTollStationIp stationIpBO = szdnTollMap.get(endCode);
                     OdsSzdnToll odsSzdnToll = stationIpBO.getOdsSzdnToll();
                     if (null != odsSzdnToll) {
-                        trailJosnBo.setStateType(STATION_CAPTURE);
                         if (CommonUtil.isNotBlank(odsSzdnToll.getLongitude())) {
-                            trailJosnBo.setLon(new BigDecimal(odsSzdnToll.getLongitude())); // 经度
+                            tracks.setEndLon(odsSzdnToll.getLongitude()); // 经度
                         }
                         if (CommonUtil.isNotBlank(odsSzdnToll.getLatitude())) {
-                            trailJosnBo.setLat(new BigDecimal(odsSzdnToll.getLatitude())); // 经度
+                            tracks.setEndLat(odsSzdnToll.getLatitude()); // 经度
                         }
-                        // 路线编号
-                        trailJosnBo.setRoadCode(CommonUtil.isNull(odsSzdnToll.getRoadCode()));
-                        // 路段
-                        trailJosnBo.setSectionCode(CommonUtil.isNull(odsSzdnToll.getSectionCode()));
-
-                        // trailBo.setDirection(odsSzdnToll.getDirection()); // 方向
-                        trailJosnBo.setPileno(CommonUtil.isNull(odsSzdnToll.getPileNo())); // 桩号
                     }
                 }else {
                     // 门架
@@ -926,27 +880,16 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         OdsSzdnGantryIp  gantryIpBO = szdnGantryMap.get(endCode);
                         OdsSzdnGantry odsSzdnGantry = gantryIpBO.getOdsSzdnGantry();
                         if (null != odsSzdnGantry) {
-                            trailJosnBo.setStateType(PROV_CAPTURE);
                             if (CommonUtil.isNotBlank(odsSzdnGantry.getLon())) {
-                                trailJosnBo.setLon(new BigDecimal(odsSzdnGantry.getLon())); // 经度
+                                tracks.setEndLon(odsSzdnGantry.getLon()); // 经度
                             }
                             if (CommonUtil.isNotBlank(odsSzdnGantry.getLat())) {
-                                trailJosnBo.setLat(new BigDecimal(odsSzdnGantry.getLat())); // 经度
+                                tracks.setEndLat(odsSzdnGantry.getLat()); // 经度
                             }
-                            // 路线编号
-                            trailJosnBo.setRoadCode(CommonUtil.isNull(odsSzdnGantry.getRoadCode()));
-                            // 路段编号
-                            trailJosnBo.setSectionCode(CommonUtil.isNull(odsSzdnGantry.getSectionCode()));
-
-                            trailJosnBo.setDirection(odsSzdnGantry.getDirection()); // 方向
-                            trailJosnBo.setPileno(CommonUtil.isNull(odsSzdnGantry.getPileNo())); // 桩号
                         }
                     }
                 }
-                tracks.setEndLon(JSON.toJSONString(trailJosnBo)); // 终点信息
             }
-
-
         }
 
 
