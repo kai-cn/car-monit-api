@@ -51,7 +51,12 @@ public class CarTask {
     @Scheduled(cron = "0 15 1 * * ?")
     private void syncSuspiciousCar2() {
         log.info("每天凌晨1点15执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-        sysUtilService.syncSuspiciousCarQutaz(11, 20);
+        for (int i = 11; i < 21; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
         log.info("每天凌晨1点15点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
@@ -63,7 +68,12 @@ public class CarTask {
     @Scheduled(cron = "0 30 1 * * ?")
     private void syncSuspiciousCar3() {
         log.info("每天凌晨1点30执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-        sysUtilService.syncSuspiciousCarQutaz(21, 30);
+        for (int i = 21; i < 31; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
         log.info("每天凌晨1点30点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
@@ -74,7 +84,12 @@ public class CarTask {
     @Scheduled(cron = "0 45 1 * * ?")
     private void syncSuspiciousCar4() {
         log.info("每天凌晨1点45执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-        sysUtilService.syncSuspiciousCarQutaz(31, 40);
+        for (int i = 31; i < 41; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
         log.info("每天凌晨1点45点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
@@ -86,7 +101,12 @@ public class CarTask {
     @Scheduled(cron = "0 0 2 * * ?")
     private void syncSuspiciousCar5() {
         log.info("每天凌晨2点执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-        sysUtilService.syncSuspiciousCarQutaz(41, 50);
+        for (int i = 41; i < 51; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
         log.info("每天凌晨2点点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
@@ -97,7 +117,12 @@ public class CarTask {
     @Scheduled(cron = "0 15 2 * * ?")
     private void syncSuspiciousCar6() {
         log.info("每天凌晨2点15执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-        sysUtilService.syncSuspiciousCarQutaz(51, 60);
+        for (int i = 51; i < 61; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
         log.info("每天凌晨2点15点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
@@ -108,7 +133,12 @@ public class CarTask {
     @Scheduled(cron = "0 30 2 * * ?")
     private void syncSuspiciousCar7() {
         log.info("每天凌晨2点30执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-        sysUtilService.syncSuspiciousCarQutaz(61, 70);
+        for (int i = 61; i < 71; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
         log.info("每天凌晨2点30点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
@@ -119,7 +149,12 @@ public class CarTask {
     @Scheduled(cron = "0 45 2 * * ?")
     private void syncSuspiciousCar8() {
         log.info("每天凌晨2点45执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-        sysUtilService.syncSuspiciousCarQutaz(71, 80);
+        for (int i = 71; i < 81; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
         log.info("每天凌晨2点45点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
@@ -130,7 +165,12 @@ public class CarTask {
     @Scheduled(cron = "0 0 3 * * ?")
     private void syncSuspiciousCar9() {
         log.info("每天凌晨3点执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-        sysUtilService.syncSuspiciousCarQutaz(81, 90);
+        for (int i = 81; i < 91; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
         log.info("每天凌晨3点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
@@ -141,7 +181,12 @@ public class CarTask {
     @Scheduled(cron = "0 15 3 * * ?")
     private void syncSuspiciousCar10() {
         log.info("每天凌晨3点15执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-        sysUtilService.syncSuspiciousCarQutaz(91, 100);
+        for (int i = 91; i < 101; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
         log.info("每天凌晨3点15执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
