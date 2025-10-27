@@ -1,6 +1,5 @@
 package com.ruoyi.base.controller;
 
-import com.alibaba.fastjson2.JSON;
 import com.github.pagehelper.PageInfo;
 import com.ruoyi.base.domain.*;
 import com.ruoyi.base.service.ISysUtilService;
@@ -12,14 +11,10 @@ import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/base/sysutil")
@@ -95,9 +90,8 @@ public class SysUtilController extends BaseController {
                     josnList = sysUtilService.getTrailBoList(keyValue);
                     tracks.setTrailPoints("");  // 行驶轨迹
 
-                    TrailInfo trailInfo = sysUtilService.changeData(tracks, josnList); // 车牌号
+                    TrailInfo trailInfo = sysUtilService.changeData(tracks, josnList); // 获取设备的经纬度
                     trailInfo.setTrailUuid(carNo);
-                    trailInfo.setEnterTime(tracks.getEnterTime());
                     rtnList.add(trailInfo);
                 }
             }
@@ -145,9 +139,8 @@ public class SysUtilController extends BaseController {
                     josnList = sysUtilService.getTrailBoList(keyValue);
                     tracks.setTrailPoints("");  // 行驶轨迹
 
-                    TrailInfo trailInfo = sysUtilService.changeData(tracks, josnList); // 车牌号
+                    TrailInfo trailInfo = sysUtilService.changeData(tracks, josnList); // 获取设备的经纬度
                     trailInfo.setTrailUuid(carNo);
-                    trailInfo.setEnterTime(tracks.getEnterTime());
                     rtnList.add(trailInfo);
                 }
             }
@@ -163,7 +156,26 @@ public class SysUtilController extends BaseController {
     }
 
 
-
+    /**
+     * 对象转换
+     */
+    @PostMapping(value = "/changeTrailInfo")
+    public TrailInfo changeTrailInfo(@RequestBody TrailInfo trailInfo) {
+        if (null != trailInfo) {
+            ZdataTrailTracks tracks = trailInfo.getTracks();
+            List<TrailBo> trailList = trailInfo.getTrailList();
+            if (null != tracks && null != trailList && trailList.size() > 0) {
+                for (TrailBo trailBo : trailList) {
+                    trailBo.setIsQuery("1"); // 需要查询数据-----------
+                }
+                String carNo = CommonUtil.isNull(tracks.getPlateKey());
+                TrailInfo changeBo = sysUtilService.changeData(trailInfo.getTracks(), trailInfo.getTrailList()); // 获取设备的经纬度
+                changeBo.setTrailUuid(carNo);
+                return changeBo;
+            }
+        }
+        return trailInfo;
+    }
 
 
 }
