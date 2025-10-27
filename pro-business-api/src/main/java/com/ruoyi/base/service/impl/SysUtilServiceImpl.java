@@ -224,23 +224,30 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
                     josnList = JSON.parseArray(keyValue, TrailBo.class);
-
                     List<TrailBo> rtnList = this.mapTrailBoList(josnList);
+                    // 最后一个轨迹点需要查询
+                    if (null != rtnList && rtnList.size() > 0) {
 
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
-                    String formattedDate = sdf.format(new Date());
+                        TrailBo trailBo = rtnList.get(rtnList.size() - 1); // 最后一条记录要查询
+                        trailBo.setIsQuery("1");
 
-                    ZdataTrailTracks tracks = new ZdataTrailTracks();
-                    tracks.setPlateKey(carNo);
-                    tracks.setUuid(carNo +"@@"+ formattedDate);
-                    tracks.setFlag("currentTrack"); // 实时轨迹
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+                        String formattedDate = sdf.format(new Date());
 
-                    TrailInfo trailInfo = this.changeData(tracks, rtnList); // 获取设备的经纬度
+                        ZdataTrailTracks tracks = new ZdataTrailTracks();
+                        tracks.setPlateKey(carNo);
+                        tracks.setUuid(carNo +"@@"+ formattedDate);
+                        tracks.setFlag("currentTrack"); // 实时轨迹
 
-                    trailInfo.setTrailUuid(carNo);
+                        TrailInfo trailInfo = this.changeData(tracks, rtnList); // 获取设备的经纬度
 
-                    String key = Constants.car_curent_trail + carNo;
-                    redisCache.setCacheObject(key, trailInfo);
+                        trailInfo.setTrailUuid(carNo);
+
+                        String key = Constants.car_curent_trail + carNo;
+                        redisCache.setCacheObject(key, trailInfo);
+                    }
+
+
                 }
             }
         }
@@ -281,39 +288,43 @@ public class SysUtilServiceImpl implements ISysUtilService {
             trailBo.setLocationFlag("0");
             String stateType = CommonUtil.isNull(trailBo.getStateType());
             String pointUuid = trailBo.getPointUuid();
-            switch (stateType) {
-                case BORDER_WEIGHING_CAPTURE:
-                    // 省界称重
-                    borderWeighingCaptureUUids += pointUuid + ",";
-                    break;
-                case GANTRY_CAPTURE:
-                    // 门架抓拍
-                    gantryCaptureUUids += pointUuid + ",";
-                    break;
-                case PROV_CAPTURE:
-                    // 省界抓拍
-                    provCaptureUUids += pointUuid + ",";
-                    break;
-                case SERVICE_AREA_CAPTURE:
-                    // 服务区抓拍
-                    serviceAreaCaptureUUids += pointUuid + ",";
-                    break;
-                case STATION_CAPTURE:
-                    // 收费站抓拍
-                    stationCaptureUUids += pointUuid + ",";
-                    break;
-                case FeeRecord:
-                    // 卡口流水
-                    feeRecordUUids += pointUuid + ",";
-                    break;
-                case FeeStationEnter:
-                    // 收费站入口流水
-                    feeStationEnterUUids += pointUuid + ",";
-                    break;
-                case FeeStationExit:
-                    // 收费站出口流水
-                    feeStationExitUUids += pointUuid + ",";
-                    break;
+            // 是否查询
+            String isQuery = CommonUtil.isNull(trailBo.getIsQuery());
+            if (isQuery.equals("1")){
+                switch (stateType) {
+                    case BORDER_WEIGHING_CAPTURE:
+                        // 省界称重
+                        borderWeighingCaptureUUids += pointUuid + ",";
+                        break;
+                    case GANTRY_CAPTURE:
+                        // 门架抓拍
+                        gantryCaptureUUids += pointUuid + ",";
+                        break;
+                    case PROV_CAPTURE:
+                        // 省界抓拍
+                        provCaptureUUids += pointUuid + ",";
+                        break;
+                    case SERVICE_AREA_CAPTURE:
+                        // 服务区抓拍
+                        serviceAreaCaptureUUids += pointUuid + ",";
+                        break;
+                    case STATION_CAPTURE:
+                        // 收费站抓拍
+                        stationCaptureUUids += pointUuid + ",";
+                        break;
+                    case FeeRecord:
+                        // 卡口流水
+                        feeRecordUUids += pointUuid + ",";
+                        break;
+                    case FeeStationEnter:
+                        // 收费站入口流水
+                        feeStationEnterUUids += pointUuid + ",";
+                        break;
+                    case FeeStationExit:
+                        // 收费站出口流水
+                        feeStationExitUUids += pointUuid + ",";
+                        break;
+                }
             }
         }
 
@@ -891,10 +902,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 }
             }
         }
-
-
-
-
 
         trailInfo.setTracks(tracks);
         trailInfo.setTrailList(josnList);

@@ -106,5 +106,9 @@ public class TrailBo {
     private String locationId;
 
 
+    /** 是否查询：1查询 */
+    private String isQuery;
+
+
 
 }
