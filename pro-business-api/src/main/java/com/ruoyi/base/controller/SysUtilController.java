@@ -13,6 +13,7 @@ import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -165,6 +166,18 @@ public class SysUtilController extends BaseController {
             ZdataTrailTracks tracks = trailInfo.getTracks();
             List<TrailBo> trailList = trailInfo.getTrailList();
             if (null != tracks && null != trailList && trailList.size() > 0) {
+                if (CommonUtil.isNotBlank(tracks.getStartLon())){
+                    tracks.setStartLonDec(new BigDecimal(tracks.getStartLon()));
+                }
+                if (CommonUtil.isNotBlank(tracks.getStratLat())){
+                    tracks.setStratLatDec(new BigDecimal(tracks.getStratLat()));
+                }
+                if (CommonUtil.isNotBlank(tracks.getEndLon())){
+                    tracks.setEndLonDec(new BigDecimal(tracks.getEndLon()));
+                }
+                if (CommonUtil.isNotBlank(tracks.getEndLat())){
+                    tracks.setEndLatDec(new BigDecimal(tracks.getEndLat()));
+                }
                 for (TrailBo trailBo : trailList) {
                     trailBo.setIsQuery("1"); // 需要查询数据-----------
                 }
