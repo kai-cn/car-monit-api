@@ -80,6 +80,14 @@ public interface ISysUtilService {
     public List<TrailBo> getTrailBoList(String paraTrailPoints);
 
 
+    /**
+     * 获取抓拍对象
+     * @param trailBo
+     * @return
+     */
+    public TrailBo getByTrailBo(TrailBo trailBo);
+
+
 
 
 }

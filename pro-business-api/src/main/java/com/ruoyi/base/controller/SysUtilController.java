@@ -190,5 +190,16 @@ public class SysUtilController extends BaseController {
         return trailInfo;
     }
 
+    /**
+     * 获取抓拍对象
+     *
+     * @param trailBo
+     * @return
+     */
+    @GetMapping(value = "/getByTrailBo")
+    public TrailBo getByTrailBo(TrailBo trailBo) {
+        return sysUtilService.getByTrailBo(trailBo);
+    }
+
 
 }
