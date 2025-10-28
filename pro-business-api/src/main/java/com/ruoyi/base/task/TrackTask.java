@@ -88,6 +88,11 @@ public class TrackTask {
         }
 
         if (null != carlist && carlist.size() > 0) {
+
+            Date now = new Date();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String formattedDate = sdf.format(now);
+
             log.info("同步车辆数量 " +  carlist.size());
             for (CarVO carVO : carlist) {
                 String carNo = CommonUtil.isNull(carVO.getCarNo());
@@ -96,13 +101,24 @@ public class TrackTask {
                     carParaVO.setCarNo(carNo);
 
                     // --- 同步时间存入到缓存 没有就是默认
-
-                    carParaVO.setFlag("bannian");  // 默认查询半年的数据
+                    String timeKey = Constants.car_sync_time + carNo;
+                    String carSynctime = CommonUtil.isNull(redisCache.getCacheObject(timeKey));
+                    if (carSynctime.equals("")){
+                        carParaVO.setFlag("bannian");  // 默认查询半年的数据
+                    }else{
+                        // 同步时间查询
+                        carParaVO.setApplyTime1(carSynctime);
+                    }
 
                     List<TrailInfo> trailList = sysUtilService.carTrackQuery(carParaVO);
                     // 车辆的轨迹
                     String key = Constants.car_history_trail + carNo;
                     redisCache.setCacheObject(key, trailList);
+
+                    // --------同步时间
+                    redisCache.setCacheObject(timeKey, formattedDate);
+
+
                 }
             }
         }

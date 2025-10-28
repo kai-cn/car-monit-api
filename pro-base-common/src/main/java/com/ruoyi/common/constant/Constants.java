@@ -315,6 +315,12 @@ public class Constants
 
 
     /**
+     * 车辆历史轨迹：同步时间
+     */
+    public static final String car_sync_time = "car_sync_time:";
+
+
+    /**
      * 车辆当前轨迹
      */
     public static final String car_curent_trail = "car_curent_trail:";
