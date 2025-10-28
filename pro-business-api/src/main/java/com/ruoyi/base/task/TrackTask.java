@@ -114,7 +114,7 @@ public class TrackTask {
      * 每30分钟执行一次
      * 同步历史轨迹没有记录的车辆
      */
-    @Scheduled(cron = "0 0/20 * * * ?")
+   /* @Scheduled(cron = "0 0/20 * * * ?")
     private void syncCurrentTrackNo() {
         log.info("每20分钟（同步历史轨迹没有记录的车辆）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
 
@@ -152,7 +152,7 @@ public class TrackTask {
             }
         }
         log.info("每20分钟执行（同步历史轨迹没有记录的车辆）结束 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-    }
+    }*/
 
 }
 
