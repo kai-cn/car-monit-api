@@ -228,8 +228,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     // 最后一个轨迹点需要查询
                     if (null != rtnList && rtnList.size() > 0) {
 
-                        TrailBo trailBo = rtnList.get(rtnList.size() - 1); // 最后一条记录要查询
-                        trailBo.setIsQuery("1");
+                      /*  TrailBo trailBo = rtnList.get(rtnList.size() - 1); // 最后一条记录要查询
+                        trailBo.setIsQuery("1");*/
 
                         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
                         String formattedDate = sdf.format(new Date());
@@ -290,7 +290,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             String pointUuid = trailBo.getPointUuid();
             // 是否查询
             String isQuery = CommonUtil.isNull(trailBo.getIsQuery());
-            if (isQuery.equals("1")){
+            if (isQuery.equals("11111")){
                 switch (stateType) {
                     case BORDER_WEIGHING_CAPTURE:
                         // 省界称重
