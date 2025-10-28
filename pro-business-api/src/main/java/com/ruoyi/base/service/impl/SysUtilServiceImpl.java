@@ -655,6 +655,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
      */
     public TrailBo getByTrailBo(TrailBo trailBo) {
 
+        if (null == trailBo) {
+            return new TrailBo();
+        }
+
         String borderWeighingCaptureUUids = ""; // 省界称重
         String gantryCaptureUUids = ""; // 门架抓拍
         String provCaptureUUids = ""; // 省界抓拍
@@ -665,15 +669,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
         String feeStationExitUUids = ""; // 收费站出口流水
 
 
-        trailBo.setPointFlag("0"); // 无数据
-        trailBo.setLocationFlag("0");
         String stateType = CommonUtil.isNull(trailBo.getStateType());
         String pointUuid = trailBo.getPointUuid();
-
-        /**
-         * 查询类型
-         */
-        String indexType ="";
 
         switch (stateType) {
             case BORDER_WEIGHING_CAPTURE:
@@ -784,7 +781,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
         switch (stateType) {
             case BORDER_WEIGHING_CAPTURE:
                 // 省界称重
-                indexType ="gantryType"; // 门架
                 if (weightNewstructureMap.containsKey(pointUuid)){
                     OdsSzdnProvinceBorderVehicleWeightNewstructure  borderWeighingCaptureBO = weightNewstructureMap.get(pointUuid);
 
@@ -814,7 +810,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 break;
             case PROV_CAPTURE:
                 // 省界抓拍
-                indexType ="gantryType"; // 门架
                 if (provcaptureAddcodeMap.containsKey(pointUuid)){
                     String imagesSrc = "";
                     OdsRtSzdnSnapshotFlowProvcaptureAddcode  provCaptureBO = provcaptureAddcodeMap.get(pointUuid);
@@ -837,7 +832,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 break;
             case SERVICE_AREA_CAPTURE:
                 // 服务区抓拍
-                indexType ="service_area"; // 服务区
                 if(fwqcllsMap.containsKey(pointUuid)) {
                     OdsCxztFwqclls fwqclls = fwqcllsMap.get(pointUuid);
                     String imagesSrc = "";
@@ -850,6 +844,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     if (CommonUtil.isNotBlank(fwqclls.getPlatepicurl())){
                         imagesSrc += fwqclls.getPlatepicurl() +",";
                     }
+
                     // 抓拍照片
                     trailBo.setImagesArry(CommonUtil.deleteEnd(imagesSrc)); // 抓拍照片
 
@@ -857,7 +852,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 break;
             case STATION_CAPTURE:
                 // 收费站抓拍
-                indexType ="stationType"; // 收费站
                 if (stationcaptureAddcodeMap.containsKey(pointUuid)){
                     OdsRtSzdnSnapshotFlowStationcaptureAddcode  stationCapture = stationcaptureAddcodeMap.get(pointUuid);
                     trailBo.setImagesArry(stationCapture.getSnappicturepath()); // 抓拍照片
@@ -865,7 +859,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 break;
             case FeeRecord:
                 // 卡口流水
-                indexType = "gantryType"; // 门架
                 if (feeRecordMap.containsKey(pointUuid)) {
                     OdsLwzxsfsjFeeRecords01 feeRecords = feeRecordMap.get(pointUuid);
                     trailBo.setDevCode(feeRecords.getGantryid()); // 设备编号
@@ -874,7 +867,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 break;
             case FeeStationEnter:
                 // 收费站入口流水
-                indexType = "stationType"; // 收费站
                 if (feeStationEnterMap.containsKey(pointUuid)) {
                     OdsLwzxsfsjFeeStationEnter01 feeStationEnter = feeStationEnterMap.get(pointUuid);
                     trailBo.setImagesArry(""); // 抓拍照片
@@ -883,7 +875,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 break;
             case FeeStationExit:
                 // 收费站出口流水
-                indexType ="stationType"; // 收费站
                 if (feeStationExitMap.containsKey(pointUuid)) {
                     OdsLwzxsfsjFeeStationExit01 feeStationExit = feeStationExitMap.get(pointUuid);
                     trailBo.setImagesArry(""); // 抓拍照片
