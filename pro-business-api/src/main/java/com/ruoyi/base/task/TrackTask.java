@@ -1,8 +1,6 @@
 package com.ruoyi.base.task;
 
-import com.ruoyi.base.domain.CarParaVO;
-import com.ruoyi.base.domain.CarVO;
-import com.ruoyi.base.domain.TrailInfo;
+import com.ruoyi.base.domain.*;
 import com.ruoyi.base.service.*;
 import com.ruoyi.common.constant.Constants;
 import com.ruoyi.common.core.redis.RedisCache;
@@ -14,9 +12,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 @Component
 @EnableScheduling
@@ -77,7 +73,7 @@ public class TrackTask {
      * 每天凌晨4点
      * 同步历史轨迹
      */
-    @Scheduled(cron = "0 0 4 * * ?")
+    @Scheduled(cron = "0 0/1 * * * ?")
     private void syncHistroyTrack() {
         log.info("每天凌晨4点执行（同步历史轨迹）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
         // 重点车俩库
@@ -88,15 +84,32 @@ public class TrackTask {
         }
 
         if (null != carlist && carlist.size() > 0) {
-
-            Date now = new Date();
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            String formattedDate = sdf.format(now);
 
             log.info("同步车辆数量 " +  carlist.size());
             for (CarVO carVO : carlist) {
                 String carNo = CommonUtil.isNull(carVO.getCarNo());
                 if (CommonUtil.isNotBlank(carNo)){
+
+                    // 车辆的轨迹
+                    String historyKey = Constants.car_history_trail + carNo;
+                    List<TrailInfo> trailList = new ArrayList<>();
+
+                    Map<String,String> uuidMap = new HashMap<>();
+                    List<TrailInfo> oldList = redisCache.getCacheObject(historyKey);
+                    if (null != oldList && oldList.size() > 0) {
+                        for (TrailInfo trailInfoRtn : oldList) {
+                            ZdataTrailTracks tracks = trailInfoRtn.getTracks();
+                            List<TrailBo> tempTrailList = trailInfoRtn.getTrailList();
+                            if (null != tracks && null != tempTrailList && tempTrailList.size() > 0) {
+                                String uuid = CommonUtil.isNull(tracks.getUuid());
+                                uuidMap.put(uuid, CommonUtil.isNull(tracks.getUuid()));
+                                trailList.add(trailInfoRtn);
+                            }
+                        }
+                    }
+
+
                     CarParaVO carParaVO = new CarParaVO();
                     carParaVO.setCarNo(carNo);
 
@@ -110,12 +123,26 @@ public class TrackTask {
                         carParaVO.setApplyTime1(carSynctime);
                     }
 
-                    List<TrailInfo> trailList = sysUtilService.carTrackQuery(carParaVO);
-                    // 车辆的轨迹
-                    String key = Constants.car_history_trail + carNo;
-                    redisCache.setCacheObject(key, trailList);
+                    List<TrailInfo> newList = sysUtilService.carTrackQuery(carParaVO);
+                    if (null != newList && newList.size() > 0) {
+                        for (TrailInfo trailInfoRtn : newList) {
+                            ZdataTrailTracks tracks = trailInfoRtn.getTracks();
+                            List<TrailBo> tempTrailList = trailInfoRtn.getTrailList();
+                            if (null != tracks && null != tempTrailList && tempTrailList.size() > 0) {
+                                String uuid = CommonUtil.isNull(tracks.getUuid());
+                                if (!uuidMap.containsKey(uuid)){
+                                    trailList.add(trailInfoRtn);
+                                }
+                            }
+                        }
+                    }
+
+
+                    redisCache.setCacheObject(historyKey, trailList);
 
                     // --------同步时间
+                    Date now = new Date();
+                    String formattedDate = sdf.format(now);
                     redisCache.setCacheObject(timeKey, formattedDate);
 
 
