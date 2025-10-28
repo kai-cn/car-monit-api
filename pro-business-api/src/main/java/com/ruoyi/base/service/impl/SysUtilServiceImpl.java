@@ -804,6 +804,17 @@ public class SysUtilServiceImpl implements ISysUtilService {
             }
         }
 
+
+
+        for (TrailBo trailBo : josnList) {
+            // 图片替换----
+            String imagesArry = trailBo.getImagesArry();
+            if(CommonUtil.isNotBlank(imagesArry)){
+                imagesArry = imagesArry.replaceAll("http://jxjt.isilon.com","http://36.200.30.144/isilonimage");
+                trailBo.setImagesArry(imagesArry);
+            }
+        }
+
         tracks.setFirtStationCode(firtStationCode);
         tracks.setFirtStationName(firtStationName);
         tracks.setFirtStationTime(firtStationTime);
@@ -815,9 +826,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
 
 
-        // 实时轨迹
+        //  -------------------------获取起点 终点 的经纬度
         if(CommonUtil.isNull(tracks.getFlag()).equals("currentTrack")){
-            // 取到第一个
+            // 实时轨迹
             if (null != josnList && josnList.size() > 0) {
                 TrailBo firstTrailBo = josnList.get(0);
 
@@ -834,10 +845,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     tracks.setEndLat(CommonUtil.isNull(endTrailBo.getLat())); // 经度
                 }
             }
-
-
         }else{
-            // 历史轨迹：获取起点 终点经纬度
+            // 历史轨迹：
             String firstCode = CommonUtil.isNull(tracks.getEntollstationid()); // 入口收费站编号
             String endCode = CommonUtil.isNull(tracks.getExtollstationid()); // 出口收费站编号
 
