@@ -138,9 +138,9 @@ public class SysUtilController extends BaseController {
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
                     josnList = sysUtilService.getTrailBoList(keyValue);
-                    tracks.setTrailPoints("");  // 行驶轨迹
-                    TrailInfo trailInfo = sysUtilService.changeData(tracks, josnList); // 获取设备的经纬度
+                    // tracks.setTrailPoints("");  // 行驶轨迹
 
+                    TrailInfo trailInfo = sysUtilService.changeData(tracks, josnList); // 获取设备的经纬度
                     trailInfo.setTrailUuid(carNo);
                     rtnList.add(trailInfo);
                 }
