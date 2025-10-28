@@ -79,6 +79,7 @@ public class SysUtilController extends BaseController {
         startPage();
         List<ZdataTrailTracks> list = new ArrayList<>();
         if(CommonUtil.isNotBlank(carParaVO.getCarNo())){
+            carParaVO.setFlag("bannian");  // 默认查询半年的数据
             list = sysUtilService.carTrackQueryNew(carParaVO);
         }
         List<TrailInfo> rtnList = new ArrayList<>();
@@ -97,7 +98,6 @@ public class SysUtilController extends BaseController {
                 }
             }
         }
-
 
         TableDataInfo rspData = new TableDataInfo();
         rspData.setCode(HttpStatus.SUCCESS);

@@ -1084,8 +1084,29 @@ public class SysUtilServiceImpl implements ISysUtilService {
             List<String> carNoList = carlistPara.stream().map(CarVO::getCarNo).collect(Collectors.toList());
             carParaVO.setCarNoList(carNoList);
         }
-        List<ZdataTrailTracks> carlist = zdataTrailTracksService.getHistoryTrail(carParaVO);
-        return carlist;
+        List<ZdataTrailTracks> list = zdataTrailTracksService.getHistoryTrail(carParaVO);
+
+        for (ZdataTrailTracks rtn : list) {
+
+            if (CommonUtil.isNotBlank(rtn.getStartLon())){
+                rtn.setStartLonDec(new BigDecimal(rtn.getStartLon()));
+            }
+
+            if (CommonUtil.isNotBlank(rtn.getStratLat())){
+                rtn.setStratLatDec(new BigDecimal(rtn.getStratLat()));
+            }
+
+            if (CommonUtil.isNotBlank(rtn.getEndLon())){
+                rtn.setEndLonDec(new BigDecimal(rtn.getEndLon()));
+            }
+
+            if (CommonUtil.isNotBlank(rtn.getEndLat())){
+                rtn.setEndLatDec(new BigDecimal(rtn.getEndLat()));
+            }
+
+        }
+
+        return list;
     }
 
     /**

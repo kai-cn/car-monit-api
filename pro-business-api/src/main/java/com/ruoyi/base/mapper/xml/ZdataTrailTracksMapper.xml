@@ -108,6 +108,10 @@
             <if test="carNo != null  and carNo != ''"> and t.envehicleid = #{carNo} </if>
             <if test="applyTime1 != null  and applyTime1 != ''">and t.entime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
             <if test="applyTime2 != null  and applyTime2 != ''">and t.entime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS') </if>
+            <!-- 默认查询半年-->
+            <if test="flag != null and flag == 'bannian' ">
+                and t.entime >= now() - 180 and t.entime <![CDATA[<=]]> now()
+            </if>
             <if test="carNoList != null and carNoList.size() > 0">
                and  t.envehicleid in
                 <foreach collection="carNoList" open="(" separator="," close=")" item="item">
