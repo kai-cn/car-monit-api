@@ -112,6 +112,10 @@
             <if test="flag != null and flag == 'bannian' ">
                 and t.entime >= now() - 180 and t.entime <![CDATA[<=]]> now()
             </if>
+            <!-- 默认查询半年-->
+            <if test="flag != null and flag == 'yiyue' ">
+                and t.entime >= now() - 30 and t.entime <![CDATA[<=]]> now()
+            </if>
             <if test="carNoList != null and carNoList.size() > 0">
                and  t.envehicleid in
                 <foreach collection="carNoList" open="(" separator="," close=")" item="item">

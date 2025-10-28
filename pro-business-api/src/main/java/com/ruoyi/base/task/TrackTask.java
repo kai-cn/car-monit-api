@@ -73,7 +73,7 @@ public class TrackTask {
      * 每天凌晨4点
      * 同步历史轨迹
      */
-    @Scheduled(cron = "0 0/1 * * * ?")
+    @Scheduled(cron = "0 0 4 * * ?")
     private void syncHistroyTrack() {
         log.info("每天凌晨4点执行（同步历史轨迹）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
         // 重点车俩库
@@ -94,21 +94,7 @@ public class TrackTask {
                     // 车辆的轨迹
                     String historyKey = Constants.car_history_trail + carNo;
                     List<TrailInfo> trailList = new ArrayList<>();
-
                     Map<String,String> uuidMap = new HashMap<>();
-                    List<TrailInfo> oldList = redisCache.getCacheObject(historyKey);
-                    if (null != oldList && oldList.size() > 0) {
-                        for (TrailInfo trailInfoRtn : oldList) {
-                            ZdataTrailTracks tracks = trailInfoRtn.getTracks();
-                            List<TrailBo> tempTrailList = trailInfoRtn.getTrailList();
-                            if (null != tracks && null != tempTrailList && tempTrailList.size() > 0) {
-                                String uuid = CommonUtil.isNull(tracks.getUuid());
-                                uuidMap.put(uuid, CommonUtil.isNull(tracks.getUuid()));
-                                trailList.add(trailInfoRtn);
-                            }
-                        }
-                    }
-
 
                     CarParaVO carParaVO = new CarParaVO();
                     carParaVO.setCarNo(carNo);
@@ -120,12 +106,25 @@ public class TrackTask {
                         carParaVO.setFlag("bannian");  // 默认查询半年的数据
                     }else{
                         // 同步时间查询
-                        carParaVO.setApplyTime1(carSynctime);
+                        carParaVO.setFlag("yiyue");  // 默认查询1月
                     }
 
                     List<TrailInfo> newList = sysUtilService.carTrackQuery(carParaVO);
                     if (null != newList && newList.size() > 0) {
                         for (TrailInfo trailInfoRtn : newList) {
+                            ZdataTrailTracks tracks = trailInfoRtn.getTracks();
+                            List<TrailBo> tempTrailList = trailInfoRtn.getTrailList();
+                            if (null != tracks && null != tempTrailList && tempTrailList.size() > 0) {
+                                String uuid = CommonUtil.isNull(tracks.getUuid());
+                                trailList.add(trailInfoRtn);
+                                uuidMap.put(uuid,uuid);
+                            }
+                        }
+                    }
+
+                    List<TrailInfo> oldList = redisCache.getCacheObject(historyKey);
+                    if (null != oldList && oldList.size() > 0) {
+                        for (TrailInfo trailInfoRtn : oldList) {
                             ZdataTrailTracks tracks = trailInfoRtn.getTracks();
                             List<TrailBo> tempTrailList = trailInfoRtn.getTrailList();
                             if (null != tracks && null != tempTrailList && tempTrailList.size() > 0) {
