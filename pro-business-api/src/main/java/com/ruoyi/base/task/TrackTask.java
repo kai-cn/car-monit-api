@@ -94,6 +94,11 @@ public class TrackTask {
                 if (CommonUtil.isNotBlank(carNo)){
                     CarParaVO carParaVO = new CarParaVO();
                     carParaVO.setCarNo(carNo);
+
+                    // --- 同步时间存入到缓存 没有就是默认
+
+                    carParaVO.setFlag("bannian");  // 默认查询半年的数据
+
                     List<TrailInfo> trailList = sysUtilService.carTrackQuery(carParaVO);
                     // 车辆的轨迹
                     String key = Constants.car_history_trail + carNo;

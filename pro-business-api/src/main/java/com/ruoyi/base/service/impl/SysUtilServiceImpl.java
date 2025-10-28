@@ -903,6 +903,20 @@ public class SysUtilServiceImpl implements ISysUtilService {
             }
         }
 
+
+        if (CommonUtil.isNotBlank(tracks.getStartLon())){
+            tracks.setStartLonDec(new BigDecimal(tracks.getStartLon()));
+        }
+        if (CommonUtil.isNotBlank(tracks.getStratLat())){
+            tracks.setStratLatDec(new BigDecimal(tracks.getStratLat()));
+        }
+        if (CommonUtil.isNotBlank(tracks.getEndLon())){
+            tracks.setEndLonDec(new BigDecimal(tracks.getEndLon()));
+        }
+        if (CommonUtil.isNotBlank(tracks.getEndLat())){
+            tracks.setEndLatDec(new BigDecimal(tracks.getEndLat()));
+        }
+
         trailInfo.setTracks(tracks);
         trailInfo.setTrailList(josnList);
 
@@ -1085,26 +1099,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
             carParaVO.setCarNoList(carNoList);
         }
         List<ZdataTrailTracks> list = zdataTrailTracksService.getHistoryTrail(carParaVO);
-
-        for (ZdataTrailTracks rtn : list) {
-
-            if (CommonUtil.isNotBlank(rtn.getStartLon())){
-                rtn.setStartLonDec(new BigDecimal(rtn.getStartLon()));
-            }
-
-            if (CommonUtil.isNotBlank(rtn.getStratLat())){
-                rtn.setStratLatDec(new BigDecimal(rtn.getStratLat()));
-            }
-
-            if (CommonUtil.isNotBlank(rtn.getEndLon())){
-                rtn.setEndLonDec(new BigDecimal(rtn.getEndLon()));
-            }
-
-            if (CommonUtil.isNotBlank(rtn.getEndLat())){
-                rtn.setEndLatDec(new BigDecimal(rtn.getEndLat()));
-            }
-
-        }
 
         return list;
     }
