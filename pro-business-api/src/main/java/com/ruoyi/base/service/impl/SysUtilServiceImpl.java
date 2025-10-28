@@ -1135,10 +1135,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
         List<TrailBo> mapList = new ArrayList<>();
 
         // 按照时间排序----------
-        if (null != trailBoList && trailBoList.size() > 0){
+       /* if (null != trailBoList && trailBoList.size() > 0){
             trailBoList =  trailBoList.stream().sorted(Comparator.comparing(TrailBo::getCaptureTime))
                     .collect(Collectors.toList());
-        }
+        }*/
 
         // 去掉重合的
         SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
