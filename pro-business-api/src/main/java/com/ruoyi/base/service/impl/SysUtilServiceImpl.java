@@ -968,9 +968,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
         if (CommonUtil.isNull(isLocalhost).equals("local")) {
             log.info("本地配置------："+CommonUtil.isNull(isLocalhost));
             // 本地  分页1000条 30 到 1 天
-            pageSize = 1000;
-            starTime = 1;
-            endTime = 30;
+            pageSize = 2000;
+            endTime = starTime * 2;
+            /*starTime = 1;
+            endTime = 30;*/
         } else {
             log.info("生产配置------："+CommonUtil.isNull(isLocalhost));
             // 生产------------- 分页1000条 14 到 7 天
