@@ -161,12 +161,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
 
        /* CarParaVO carParaVO = new CarParaVO();
-        carParaVO.setCarNo("赣M97313");
+        carParaVO.setCarNo("赣FC0278");
         List<ZdataTrailTracks> trackList = zdataTrailTracksService.getHistoryTrail(carParaVO);
         for (ZdataTrailTracks trackBo : trackList) {
             try {
                 List<TrailBo> trailBoList = this.getTrailBoList(trackBo.getTrailPoints());
-                redisCache.setCacheObject(this.getCacheKey(trackBo.getPlateKey()),JSON.toJSONString(trailBoList));
+                // redisCache.setCacheObject(this.getCacheKey(trackBo.getPlateKey()),JSON.toJSONString(trailBoList));
             } catch (Exception e) {
                 e.printStackTrace();
                 log.error("解析错误！");
@@ -1100,7 +1100,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
     public List<TrailBo> getTrailBoList(String paraTrailPoints) {
         List<TrailBo> trailBoList = new ArrayList<>();
         String trailPoints = this.getTrailBoListString(paraTrailPoints);
-        if (CommonUtil.isNotBlank(trailPoints)) {
+        if (CommonUtil.isNotBlank(trailPoints) && !trailPoints.equals("{}")) {
             try {
                 trailBoList = JSON.parseArray(trailPoints, TrailBo.class);
                 SimpleDateFormat format1 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
