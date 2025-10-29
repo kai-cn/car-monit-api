@@ -626,7 +626,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 tracks.setStratLat(CommonUtil.isNull(firstTrailBo.getLat())); // 经度
 
                 if (jwdList.size() > 1) {
-                    TrailBo endTrailBo = jwdList.get(josnList.size() - 1);
+                    TrailBo endTrailBo = jwdList.get(jwdList.size() - 1);
                     tracks.setExtollstationid(CommonUtil.isNull(endTrailBo.getDevCode()));
                     tracks.setExtollstationname(CommonUtil.isNull(endTrailBo.getDevName()));
                     tracks.setEndLon(CommonUtil.isNull(endTrailBo.getLon())); // 经度
@@ -710,7 +710,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
             if (CommonUtil.isBlank(tracks.getEndLon())){
                 if (null != jwdList && jwdList.size() > 1) {
-                    TrailBo endTrailBo = jwdList.get(josnList.size() - 1);
+                    TrailBo endTrailBo = jwdList.get(jwdList.size() - 1);
                     tracks.setEndLon(CommonUtil.isNull(endTrailBo.getLon())); // 经度
                     tracks.setEndLat(CommonUtil.isNull(endTrailBo.getLat())); // 经度
                 }
