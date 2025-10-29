@@ -94,6 +94,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
     private IOdsCxztFwqcllsService fwqcllsService;
     @Autowired
     private IDwdLcztFwqjcxxService fwqjcxxService;
+    @Autowired
+    private IOdsSzdnSectionService sectionService;
 
 
     @Value("${isLocalhost}")
@@ -303,6 +305,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         Map<String, DwdLcztFwqjcxx> serviceNameMap = fwqjcxxService.getServiceNameMap();
 
         // 根据路段查询路线map
+        Map<String, OdsSzdnSection> sectionMap = sectionService.getSectionMap();
 
 
         String firtStationCode = "";
@@ -344,8 +347,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
             String roadCode = "";
 
             // 这个要查询数据库拿---
-            if (CommonUtil.isNotBlank(sectionCode)){
-                // roadCode =
+            if (CommonUtil.isNotBlank(sectionCode)) {
+                OdsSzdnSection section = sectionMap.get(sectionCode);
+                if(section != null) {
+                    roadCode = section.getRoadCode();
+                    trailBo.setRoadCode(roadCode);
+                }
             }
 
             switch (stateType) {

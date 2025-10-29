@@ -4,13 +4,15 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.base.domain.OdsSzdnSection;
 import com.ruoyi.base.mapper.OdsSzdnSectionMapper;
 import com.ruoyi.base.service.IOdsSzdnSectionService;
-import com.ruoyi.common.core.domain.AjaxResult;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 路段信息Service业务层处理
@@ -23,6 +25,9 @@ public class OdsSzdnSectionServiceImpl extends ServiceImpl<OdsSzdnSectionMapper,
 
     @Autowired
     private OdsSzdnSectionMapper odsSzdnSectionMapper;
+
+    @Autowired
+    private RedisCache redisCache;
 
     /**
      * 查询路段信息
@@ -44,5 +49,28 @@ public class OdsSzdnSectionServiceImpl extends ServiceImpl<OdsSzdnSectionMapper,
     @Override
     public List<OdsSzdnSection> selectOdsSzdnSectionList(OdsSzdnSection odsSzdnSection) {
         return odsSzdnSectionMapper.selectOdsSzdnSectionList(odsSzdnSection);
+    }
+
+    @Override
+    public Map<String, OdsSzdnSection> getSectionMap() {
+        List<OdsSzdnSection> list = null;
+        Object obj = redisCache.getCacheObject(Constants.SECTION_ROAD_MAP);
+        if (null != obj) {
+            list = (List) obj;
+        } else {
+            list = this.updateRedis();
+        }
+        Map<String, OdsSzdnSection> map = new HashMap<>();
+        for (OdsSzdnSection section : list) {
+            map.put(CommonUtil.isNull(section.getSectionCode()), section);
+        }
+        return map;
+    }
+
+    @Override
+    public List<OdsSzdnSection> updateRedis() {
+        List<OdsSzdnSection> sectionList = odsSzdnSectionMapper.selectOdsSzdnSectionList(new OdsSzdnSection());
+        redisCache.setCacheObject(Constants.SECTION_ROAD_MAP, sectionList);
+        return sectionList;
     }
 }

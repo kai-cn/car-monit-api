@@ -6,7 +6,7 @@ import java.util.Locale;
 
 /**
  * 通用常量信息
- * 
+ *
  * @author ruoyi
  */
 public class Constants
@@ -339,9 +339,11 @@ public class Constants
 
 
     /**
-     * 服务器名称
+     * 服务区名称
      */
     public static final String fwq_name = "fwq_name";
+
+    public static final String SECTION_ROAD_MAP = "section_road_map";
 
 
     public static final String DATE_BORDER_WEIGHING_CAPTURE = "DATE_BorderWeighingCapture:";

@@ -2,9 +2,9 @@ package com.ruoyi.base.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ruoyi.base.domain.OdsSzdnSection;
-import com.ruoyi.common.core.domain.AjaxResult;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 路段信息Service接口
@@ -29,4 +29,7 @@ public interface IOdsSzdnSectionService extends IService<OdsSzdnSection> {
      */
     List<OdsSzdnSection> selectOdsSzdnSectionList(OdsSzdnSection odsSzdnSection);
 
+    Map<String, OdsSzdnSection> getSectionMap();
+
+    List<OdsSzdnSection> updateRedis();
 }
