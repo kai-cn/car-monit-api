@@ -348,10 +348,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
             // 这个要查询数据库拿---
             if (CommonUtil.isNotBlank(sectionCode)) {
-                OdsSzdnSection section = sectionMap.get(sectionCode);
-                if(section != null) {
-                    roadCode = section.getRoadCode();
-                    trailBo.setRoadCode(roadCode);
+                if (sectionMap.containsKey(sectionCode)){
+                    OdsSzdnSection section = sectionMap.get(sectionCode);
+                    trailBo.setRoadCode(section.getRoadCode());
                 }
             }
 
