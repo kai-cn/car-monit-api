@@ -336,6 +336,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
             String locationCode = CommonUtil.isNull(trailBo.getLocationCode()); // 设备IP地址
             String stateType = CommonUtil.isNull(trailBo.getStateType());  // 流水来源类型标识:可作为维度字段，用于回溯数据来源、确定查找目标表
 
+            String sectionCode = CommonUtil.isNull(trailBo.getSectionCode());
+            String pileno = CommonUtil.isNull(trailBo.getPileno());
+            BigDecimal lon = trailBo.getLon();
+            BigDecimal lat = trailBo.getLon();
+            String roadCode = ""; // 这个要查询数据库拿---
+
             switch (stateType) {
                 case BORDER_WEIGHING_CAPTURE:
                     // 省界称重
@@ -454,19 +460,38 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
                     OdsSzdnToll odsSzdnToll = stationIpBO.getOdsSzdnToll();
                     if (null != odsSzdnToll) {
-                        if (CommonUtil.isNotBlank(odsSzdnToll.getLongitude())) {
-                            trailBo.setLon(new BigDecimal(odsSzdnToll.getLongitude())); // 经度
+
+                        if (null == lon) {
+                            // 经度
+                            if (CommonUtil.isNotBlank(odsSzdnToll.getLongitude())) {
+                                trailBo.setLon(new BigDecimal(odsSzdnToll.getLongitude()));
+                            }
                         }
-                        if (CommonUtil.isNotBlank(odsSzdnToll.getLatitude())) {
-                            trailBo.setLat(new BigDecimal(odsSzdnToll.getLatitude())); // 经度
+
+                        if (null == lat) {
+                            // 经度
+                            if (CommonUtil.isNotBlank(odsSzdnToll.getLatitude())) {
+                                trailBo.setLat(new BigDecimal(odsSzdnToll.getLatitude()));
+                            }
                         }
-                        // 路线编号
-                        trailBo.setRoadCode(CommonUtil.isNull(odsSzdnToll.getRoadCode()));
-                        // 路段
-                        trailBo.setSectionCode(CommonUtil.isNull(odsSzdnToll.getSectionCode()));
+
+                        if (CommonUtil.isBlank(roadCode)){
+                            // 路线编号
+                            trailBo.setRoadCode(CommonUtil.isNull(odsSzdnToll.getRoadCode()));
+                        }
+
+                        if (CommonUtil.isBlank(sectionCode)){
+                            // 路段
+                            trailBo.setSectionCode(CommonUtil.isNull(odsSzdnToll.getSectionCode()));
+                        }
+
+                        if (CommonUtil.isBlank(sectionCode)){
+                            // 桩号
+                            trailBo.setPileno(CommonUtil.isNull(odsSzdnToll.getPileNo()));
+                        }
 
                         // trailBo.setDirection(odsSzdnToll.getDirection()); // 方向
-                        trailBo.setPileno(CommonUtil.isNull(odsSzdnToll.getPileNo())); // 桩号
+
                     }
                 }
 
@@ -505,19 +530,40 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
                     OdsSzdnGantry odsSzdnGantry = gantryIpBO.getOdsSzdnGantry();
                     if (null != odsSzdnGantry) {
-                        if (CommonUtil.isNotBlank(odsSzdnGantry.getLon())) {
-                            trailBo.setLon(new BigDecimal(odsSzdnGantry.getLon())); // 经度
+
+
+                        if (null == lon) {
+                            // 经度
+                            if (CommonUtil.isNotBlank(odsSzdnGantry.getLon())) {
+                                trailBo.setLon(new BigDecimal(odsSzdnGantry.getLon())); // 经度
+                            }
                         }
-                        if (CommonUtil.isNotBlank(odsSzdnGantry.getLat())) {
-                            trailBo.setLat(new BigDecimal(odsSzdnGantry.getLat())); // 经度
+
+                        if (null == lat) {
+                            // 经度
+                            if (CommonUtil.isNotBlank(odsSzdnGantry.getLat())) {
+                                trailBo.setLat(new BigDecimal(odsSzdnGantry.getLat())); // 经度
+                            }
                         }
-                        // 路线编号
-                        trailBo.setRoadCode(CommonUtil.isNull(odsSzdnGantry.getRoadCode()));
-                        // 路段编号
-                        trailBo.setSectionCode(CommonUtil.isNull(odsSzdnGantry.getSectionCode()));
+
+                        if (CommonUtil.isBlank(roadCode)){
+                            // 路线编号
+                            trailBo.setRoadCode(CommonUtil.isNull(odsSzdnGantry.getRoadCode()));
+                        }
+
+                        if (CommonUtil.isBlank(sectionCode)){
+                            // 路段编号
+                            trailBo.setSectionCode(CommonUtil.isNull(odsSzdnGantry.getSectionCode()));
+                        }
+
+                        if (CommonUtil.isBlank(sectionCode)){
+                            // 桩号
+                            trailBo.setPileno(CommonUtil.isNull(odsSzdnGantry.getPileNo())); // 桩号
+                        }
+
 
                         trailBo.setDirection(odsSzdnGantry.getDirection()); // 方向
-                        trailBo.setPileno(CommonUtil.isNull(odsSzdnGantry.getPileNo())); // 桩号
+
                     }
                 }
             }else  if (indexType.equals("service_area")){
@@ -529,6 +575,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             if (CommonUtil.isBlank(trailBo.getDevName())){
                 trailBo.setDevName(locationCode);
             }
+            
         }
 
 
