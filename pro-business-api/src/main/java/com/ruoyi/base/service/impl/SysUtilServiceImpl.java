@@ -1199,7 +1199,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     trailBo.setPointUuid(pointUuid);
                     trailBo.setSectionCode(sectionCode);
                     trailBo.setOrgCode(orgCode);
-                    trailBo.setPointUuid(pileNo);
+                    trailBo.setPileno(pileNo);
                     if(CommonUtil.isNotBlank(lon)) {
                         trailBo.setLon(new BigDecimal(lon));
                     }
