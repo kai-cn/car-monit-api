@@ -47,6 +47,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
     public static final String redisBiteKey = "sys_config:syncSuspiciousCar_bite"; // 比例默认为0.5
     public static final String redisTimeKey = "sys_config:syncSuspiciousCar_time"; // 默认7天
+    public static final String supoer_mjnum = "sys_config:supoer_mjnum"; // 门架数量
 
 
     @Autowired
@@ -984,6 +985,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
         Integer endTime = 14;
         BigDecimal bite = new BigDecimal("0.5");  // 门架抓拍和流水抓拍占比
 
+        int supoerMjnum = 5; // 同步可疑车辆门架抓拍数量5个以上
+
 
         // -------------- 从缓存取得对应的配置
         String redisTimeValue = redisCache.getCacheObject(redisTimeKey); // 默认7天
@@ -997,6 +1000,14 @@ public class SysUtilServiceImpl implements ISysUtilService {
             bite = new BigDecimal(redisBiteValue);
             log.info("从缓存取得占比配置------："+bite);
         }
+
+        String supoerMjnumValue = redisCache.getCacheObject(supoer_mjnum); // 比例默认为0.5
+        if (CommonUtil.isNotBlank(supoerMjnumValue)){
+            supoerMjnum = Integer.parseInt(supoerMjnumValue);
+            log.info("从缓存取得门架抓拍数量------："+supoerMjnum);
+        }
+
+
 
 
         if (CommonUtil.isNull(isLocalhost).equals("local")) {
@@ -1064,7 +1075,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         }
 
                         // ---------------屏蔽:
-                        if (conutGantryCapture > 0 && conutGantryCapture > conutFeeRecord){
+                        if (conutGantryCapture > supoerMjnum && conutGantryCapture > conutFeeRecord){
                             BigDecimal costBite = new BigDecimal(conutFeeRecord).divide(new BigDecimal(conutGantryCapture), 4, BigDecimal.ROUND_HALF_UP);
                             if (bite.compareTo(costBite) >= 0){
                                 escapedType = Constants.escapedType_20;
