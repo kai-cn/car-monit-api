@@ -605,18 +605,28 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
 
         //  -------------------------获取起点 终点 的经纬度
+        List<TrailBo> jwdList = new ArrayList<TrailBo>();
+        if (null != josnList && josnList.size() > 0) {
+            for (TrailBo trailBo : josnList) {
+                if (null != trailBo.getLon() && null != trailBo.getLat()) {
+                    jwdList.add(trailBo);
+                }
+            }
+        }
+
+
         if(CommonUtil.isNull(tracks.getFlag()).equals("currentTrack")){
             // 实时轨迹
-            if (null != josnList && josnList.size() > 0) {
-                TrailBo firstTrailBo = josnList.get(0);
+            if (null != jwdList && jwdList.size() > 0) {
+                TrailBo firstTrailBo = jwdList.get(0);
 
                 tracks.setEntollstationid(CommonUtil.isNull(firstTrailBo.getDevCode()));
                 tracks.setEntollstationname(CommonUtil.isNull(firstTrailBo.getDevName()));
                 tracks.setStartLon(CommonUtil.isNull(firstTrailBo.getLon())); // 经度
                 tracks.setStratLat(CommonUtil.isNull(firstTrailBo.getLat())); // 经度
 
-                if (josnList.size() > 1) {
-                    TrailBo endTrailBo = josnList.get(josnList.size() - 1);
+                if (jwdList.size() > 1) {
+                    TrailBo endTrailBo = jwdList.get(josnList.size() - 1);
                     tracks.setExtollstationid(CommonUtil.isNull(endTrailBo.getDevCode()));
                     tracks.setExtollstationname(CommonUtil.isNull(endTrailBo.getDevName()));
                     tracks.setEndLon(CommonUtil.isNull(endTrailBo.getLon())); // 经度
@@ -688,6 +698,24 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     }
                 }
             }
+
+            // 如果获取的经纬度为空的话
+            if (CommonUtil.isBlank(tracks.getStartLon())){
+                if (null != jwdList && jwdList.size() > 0) {
+                    TrailBo firstTrailBo = jwdList.get(0);
+                    tracks.setStartLon(CommonUtil.isNull(firstTrailBo.getLon())); // 经度
+                    tracks.setStratLat(CommonUtil.isNull(firstTrailBo.getLat())); // 经度
+                }
+            }
+
+            if (CommonUtil.isBlank(tracks.getEndLon())){
+                if (null != jwdList && jwdList.size() > 1) {
+                    TrailBo endTrailBo = jwdList.get(josnList.size() - 1);
+                    tracks.setEndLon(CommonUtil.isNull(endTrailBo.getLon())); // 经度
+                    tracks.setEndLat(CommonUtil.isNull(endTrailBo.getLat())); // 经度
+                }
+            }
+
         }
 
 
