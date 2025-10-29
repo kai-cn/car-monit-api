@@ -39,6 +39,8 @@ public class TrackTask {
 
     @Autowired
     private IDwdLcztFwqjcxxService dwdLcztFwqjcxxService;
+    @Autowired
+    private IOdsSzdnSectionService sectionService;
 
 
     /**
@@ -65,7 +67,7 @@ public class TrackTask {
         odsSzdnTollStationIpService.updateRedis(); // 站ip redis
         zdataLocationDictService.updateRedis(); // 位置点信息
         dwdLcztFwqjcxxService.updateRedis(); // 服务区
-        //跟新路段混
+        sectionService.updateRedis();//更新路段
         log.info("每天凌晨0点执行（同步基础信息）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
