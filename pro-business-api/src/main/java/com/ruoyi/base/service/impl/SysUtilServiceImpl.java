@@ -161,19 +161,21 @@ public class SysUtilServiceImpl implements ISysUtilService {
             // redisCache.setCacheObject(this.getCacheKey(trackBo.getPlateKey()), trackBo.getTrailPoints());
         }*/
 
-
+/*
         CarParaVO carParaVO = new CarParaVO();
         carParaVO.setCarNo("赣FC0278");
         List<ZdataTrailTracks> trackList = zdataTrailTracksService.getHistoryTrail(carParaVO);
         for (ZdataTrailTracks trackBo : trackList) {
             try {
                 List<TrailBo> trailBoList = this.getTrailBoList(trackBo.getTrailPoints());
+                String test = "111";
+
                 // redisCache.setCacheObject(this.getCacheKey(trackBo.getPlateKey()),JSON.toJSONString(trailBoList));
             } catch (Exception e) {
                 e.printStackTrace();
                 log.error("解析错误！");
             }
-        }
+        }*/
 
 
        /* Collection<String> keys = redisCache.keys(residDist + "*");
