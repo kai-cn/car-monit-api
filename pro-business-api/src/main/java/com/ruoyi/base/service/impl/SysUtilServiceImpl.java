@@ -160,7 +160,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         }*/
 
 
-       /* CarParaVO carParaVO = new CarParaVO();
+        CarParaVO carParaVO = new CarParaVO();
         carParaVO.setCarNo("赣FC0278");
         List<ZdataTrailTracks> trackList = zdataTrailTracksService.getHistoryTrail(carParaVO);
         for (ZdataTrailTracks trackBo : trackList) {
@@ -171,7 +171,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 e.printStackTrace();
                 log.error("解析错误！");
             }
-        }*/
+        }
 
 
        /* Collection<String> keys = redisCache.keys(residDist + "*");
@@ -1102,6 +1102,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
         String trailPoints = this.getTrailBoListString(paraTrailPoints);
         if (CommonUtil.isNotBlank(trailPoints) && !trailPoints.equals("{}")) {
             try {
+                // 先转josn数组 然后循环 一个一个手动赋值
+
                 trailBoList = JSON.parseArray(trailPoints, TrailBo.class);
                 SimpleDateFormat format1 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
                 SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
