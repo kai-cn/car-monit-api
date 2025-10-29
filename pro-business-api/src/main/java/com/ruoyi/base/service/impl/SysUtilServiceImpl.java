@@ -13,7 +13,6 @@ import com.ruoyi.common.core.redis.RedisConfig;
 import com.ruoyi.common.core.redis.RedisSourceFactory;
 import com.ruoyi.common.utils.CommonUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -123,6 +122,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
     }
 
 
+
     /**
      * 新增或者修改车辆信息
      *
@@ -131,7 +131,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
      */
     public AjaxResult saveRedis(SysUtil sysUtil) {
 
-        log.info("获取的配置信息：" + redisConfig.getClusterNodes() + "--本地配置：" + isLocalhost);
+        log.info("获取的配置信息："+redisConfig.getClusterNodes()+"--本地配置："+isLocalhost);
+
 
 
         // ----------测试JedisCluster
@@ -188,6 +189,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
     }
 
 
+
     /**
      * 同步轨迹
      *
@@ -204,17 +206,17 @@ public class SysUtilServiceImpl implements ISysUtilService {
         Map<ZdataTrailTracks, List<TrailBo>> mapCar = new HashMap<>();
         if (null != carlist && carlist.size() > 0) {
 
-            log.info("获取的配置信息：" + redisConfig.getClusterNodes() + "--本地配置：" + isLocalhost + "--同步车辆数量：" + carlist.size());
-            JedisCluster jedisCluster = redisSourceFactory.createSource(redisConfig);
+            log.info("获取的配置信息："+redisConfig.getClusterNodes()+"--本地配置："+isLocalhost +"--同步车辆数量："+carlist.size());
+            JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
 
             for (CarVO carVO : carlist) {
                 String carNo = CommonUtil.isNull(carVO.getCarNo());
                 String keyValue = "";
 
-                if (CommonUtil.isNull(isLocalhost).equals("local")) {
+                if (CommonUtil.isNull(isLocalhost).equals("local")){
                     // 本地
                     keyValue = redisCache.getCacheObject(this.getCacheKey(carNo));
-                } else {
+                }else {
                     // 生产-------------
                     keyValue = jedisCluster.get(this.getCacheKey(carNo));
                 }
@@ -234,7 +236,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
                         ZdataTrailTracks tracks = new ZdataTrailTracks();
                         tracks.setPlateKey(carNo);
-                        tracks.setUuid(carNo + "@@" + formattedDate);
+                        tracks.setUuid(carNo +"@@"+ formattedDate);
                         tracks.setFlag("currentTrack"); // 实时轨迹
 
                         TrailInfo trailInfo = this.changeData(tracks, rtnList); // 获取设备的经纬度
@@ -263,8 +265,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
         TrailInfo trailInfo = new TrailInfo();
 
 
-        if (null != josnList && josnList.size() > 0) {
-        } else {
+        if (null != josnList && josnList.size() >0) {
+        }else{
             trailInfo.setTracks(tracks);
             List<TrailBo> tempList = new ArrayList<>();
             trailInfo.setTrailList(tempList);
@@ -276,7 +278,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         for (TrailBo trailBo : josnList) {
             String pointUuid = trailBo.getPointUuid();
             String stateType = CommonUtil.isNull(trailBo.getStateType());
-            if (stateType.equals(SERVICE_AREA_CAPTURE)) {
+            if (stateType.equals(SERVICE_AREA_CAPTURE)){
                 serviceAreaCaptureUUids += pointUuid + ",";
             }
         }
@@ -295,17 +297,18 @@ public class SysUtilServiceImpl implements ISysUtilService {
         Map<String, OdsSzdnGantryIp> szdnGantryMap = odsSzdnGantryIpService.selectOdsSzdnGantryIpMap();
 
         // 位置信息
-        Map<String, ZdataLocationDict> locationMap = zdataLocationDictService.getRedisList();
+        Map<String,ZdataLocationDict> locationMap = zdataLocationDictService.getRedisList();
 
         //服务区信息
         Map<String, DwdLcztFwqjcxx> serviceNameMap = fwqjcxxService.getServiceNameMap();
+
 
 
         String firtStationCode = "";
         // 入栈口名称
         String firtStationName = "";
         // 入栈口时间
-        String firtStationTime = "";
+        String firtStationTime= "";
 
         /** 车牌颜色（字典：1白色2黑色） */
         String plateColor = "";
@@ -314,18 +317,18 @@ public class SysUtilServiceImpl implements ISysUtilService {
         String carType = "";
 
         /** 车种 */
-        String carVehicle = "";
+        String carVehicle= "";
 
         /** 轴数 */
         Long carNum = null;
 
         // 1-OBU 2-CPC卡 3-纸券 9-无通行介质,4- M1卡
-        String passType = "";
+        String passType= "";
 
         /**
          * 查询类型
          */
-        String indexType = "";
+        String indexType ="";
 
         for (TrailBo trailBo : josnList) {
             // --------------抓拍信息
@@ -336,31 +339,31 @@ public class SysUtilServiceImpl implements ISysUtilService {
             switch (stateType) {
                 case BORDER_WEIGHING_CAPTURE:
                     // 省界称重
-                    indexType = "gantryType"; // 门架
+                    indexType ="gantryType"; // 门架
                     break;
                 case GANTRY_CAPTURE:
                     // 门架抓拍
-                    indexType = "gantryType"; // 门架
+                    indexType ="gantryType"; // 门架
                     break;
                 case PROV_CAPTURE:
                     // 省界抓拍
-                    indexType = "gantryType"; // 门架
+                    indexType ="gantryType"; // 门架
                     break;
                 case SERVICE_AREA_CAPTURE:
                     // 服务区抓拍
-                    indexType = "service_area"; // 服务区
-                    if (fwqcllsMap.containsKey(pointUuid)) {
+                    indexType ="service_area"; // 服务区
+                    if(fwqcllsMap.containsKey(pointUuid)) {
                         OdsCxztFwqclls fwqclls = fwqcllsMap.get(pointUuid);
 
                         String imagesSrc = "";
                         // 抓拍照片url
-                        if (CommonUtil.isNotBlank(fwqclls.getTargetpicurl())) {
-                            imagesSrc += fwqclls.getTargetpicurl() + ",";
+                        if (CommonUtil.isNotBlank(fwqclls.getTargetpicurl())){
+                            imagesSrc += fwqclls.getTargetpicurl() +",";
                         }
 
                         // 车牌照片
-                        if (CommonUtil.isNotBlank(fwqclls.getPlatepicurl())) {
-                            imagesSrc += fwqclls.getPlatepicurl() + ",";
+                        if (CommonUtil.isNotBlank(fwqclls.getPlatepicurl())){
+                            imagesSrc += fwqclls.getPlatepicurl() +",";
                         }
 
                         // 抓拍照片
@@ -368,7 +371,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         String servicename = CommonUtil.isNull(fwqclls.getServicename());
 
                         trailBo.setDevName(servicename);  // 设备名称
-                        if (serviceNameMap.containsKey(servicename)) {
+                        if(serviceNameMap.containsKey(servicename)){
 
                             DwdLcztFwqjcxx fwqjcxx = serviceNameMap.get(servicename);
                             trailBo.setDevCode(fwqjcxx.getFwqbm()); // 设备编号
@@ -392,7 +395,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     break;
                 case STATION_CAPTURE:
                     // 收费站抓拍
-                    indexType = "stationType"; // 收费站
+                    indexType ="stationType"; // 收费站
                     break;
                 case FeeRecord:
                     // 卡口流水
@@ -404,21 +407,19 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     break;
                 case FeeStationExit:
                     // 收费站出口流水
-                    indexType = "stationType"; // 收费站
+                    indexType ="stationType"; // 收费站
                     break;
             }
 
             //---------------通过位置信息查询设备
-
-
             String devLocatCode = "";
-            if (locationMap.containsKey(locationCode)) {
+            if (locationMap.containsKey(locationCode)){
                 devLocatCode = CommonUtil.isNull(locationMap.get(locationCode).getStandardCode()); // 收费站/门架code
             }
 
             String devCodeId = CommonUtil.isNull(trailBo.getDevCode()); // 通过设备编码先查询
 
-            if (indexType.equals("stationType")) {
+            if (indexType.equals("stationType")){
                 // 收费站ip 或者CODE查询
                 OdsSzdnTollStationIp stationIpBO = null;
 
@@ -469,9 +470,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     }
                 }
 
-            } else if (indexType.equals("gantryType")) {
+            }else  if (indexType.equals("gantryType")){
                 // 门架ip
-                OdsSzdnGantryIp gantryIpBO = null;
+                OdsSzdnGantryIp  gantryIpBO = null;
 
                 // 从位置信息
                 if (CommonUtil.isNotBlank(devLocatCode)) {
@@ -519,13 +520,13 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         trailBo.setPileno(CommonUtil.isNull(odsSzdnGantry.getPileNo())); // 桩号
                     }
                 }
-            } else if (indexType.equals("service_area")) {
+            }else  if (indexType.equals("service_area")){
                 // 服务区
 
             }
 
             // 设备名称没有默认位置信息--------------
-            if (CommonUtil.isBlank(trailBo.getDevName())) {
+            if (CommonUtil.isBlank(trailBo.getDevName())){
                 trailBo.setDevName(locationCode);
             }
         }
@@ -542,7 +543,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
 
         //  -------------------------获取起点 终点 的经纬度
-        if (CommonUtil.isNull(tracks.getFlag()).equals("currentTrack")) {
+        if(CommonUtil.isNull(tracks.getFlag()).equals("currentTrack")){
             // 实时轨迹
             if (null != josnList && josnList.size() > 0) {
                 TrailBo firstTrailBo = josnList.get(0);
@@ -560,14 +561,14 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     tracks.setEndLat(CommonUtil.isNull(endTrailBo.getLat())); // 经度
                 }
             }
-        } else {
+        }else{
             // 历史轨迹：
             String firstCode = CommonUtil.isNull(tracks.getEntollstationid()); // 入口收费站编号
             String endCode = CommonUtil.isNull(tracks.getExtollstationid()); // 出口收费站编号
 
-            if (CommonUtil.isNotBlank(firstCode)) {
+            if (CommonUtil.isNotBlank(firstCode)){
                 // 收费站ip
-                if (szdnTollMap.containsKey(firstCode)) {
+                if (szdnTollMap.containsKey(firstCode)){
                     OdsSzdnTollStationIp stationIpBO = szdnTollMap.get(firstCode);
                     OdsSzdnToll odsSzdnToll = stationIpBO.getOdsSzdnToll();
                     if (null != odsSzdnToll) {
@@ -578,10 +579,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             tracks.setStratLat(odsSzdnToll.getLatitude()); // 经度
                         }
                     }
-                } else {
+                }else {
                     // 门架
-                    if (szdnGantryMap.containsKey(firstCode)) {
-                        OdsSzdnGantryIp gantryIpBO = szdnGantryMap.get(firstCode);
+                    if (szdnGantryMap.containsKey(firstCode)){
+                        OdsSzdnGantryIp  gantryIpBO = szdnGantryMap.get(firstCode);
                         OdsSzdnGantry odsSzdnGantry = gantryIpBO.getOdsSzdnGantry();
                         if (null != odsSzdnGantry) {
                             if (CommonUtil.isNotBlank(odsSzdnGantry.getLon())) {
@@ -596,9 +597,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
             }
 
 
-            if (CommonUtil.isNotBlank(endCode)) {
+            if (CommonUtil.isNotBlank(endCode)){
                 // 收费站ip
-                if (szdnTollMap.containsKey(endCode)) {
+                if (szdnTollMap.containsKey(endCode)){
                     OdsSzdnTollStationIp stationIpBO = szdnTollMap.get(endCode);
                     OdsSzdnToll odsSzdnToll = stationIpBO.getOdsSzdnToll();
                     if (null != odsSzdnToll) {
@@ -609,10 +610,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             tracks.setEndLat(odsSzdnToll.getLatitude()); // 经度
                         }
                     }
-                } else {
+                }else {
                     // 门架
-                    if (szdnGantryMap.containsKey(endCode)) {
-                        OdsSzdnGantryIp gantryIpBO = szdnGantryMap.get(endCode);
+                    if (szdnGantryMap.containsKey(endCode)){
+                        OdsSzdnGantryIp  gantryIpBO = szdnGantryMap.get(endCode);
                         OdsSzdnGantry odsSzdnGantry = gantryIpBO.getOdsSzdnGantry();
                         if (null != odsSzdnGantry) {
                             if (CommonUtil.isNotBlank(odsSzdnGantry.getLon())) {
@@ -628,16 +629,16 @@ public class SysUtilServiceImpl implements ISysUtilService {
         }
 
 
-        if (CommonUtil.isNotBlank(tracks.getStartLon())) {
+        if (CommonUtil.isNotBlank(tracks.getStartLon())){
             tracks.setStartLonDec(new BigDecimal(tracks.getStartLon()));
         }
-        if (CommonUtil.isNotBlank(tracks.getStratLat())) {
+        if (CommonUtil.isNotBlank(tracks.getStratLat())){
             tracks.setStratLatDec(new BigDecimal(tracks.getStratLat()));
         }
-        if (CommonUtil.isNotBlank(tracks.getEndLon())) {
+        if (CommonUtil.isNotBlank(tracks.getEndLon())){
             tracks.setEndLonDec(new BigDecimal(tracks.getEndLon()));
         }
-        if (CommonUtil.isNotBlank(tracks.getEndLat())) {
+        if (CommonUtil.isNotBlank(tracks.getEndLat())){
             tracks.setEndLatDec(new BigDecimal(tracks.getEndLat()));
         }
 
@@ -649,7 +650,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
     /**
      * 获取抓拍对象
-     *
      * @param trailBo
      * @return
      */
@@ -781,20 +781,20 @@ public class SysUtilServiceImpl implements ISysUtilService {
         switch (stateType) {
             case BORDER_WEIGHING_CAPTURE:
                 // 省界称重
-                if (weightNewstructureMap.containsKey(pointUuid)) {
-                    OdsSzdnProvinceBorderVehicleWeightNewstructure borderWeighingCaptureBO = weightNewstructureMap.get(pointUuid);
+                if (weightNewstructureMap.containsKey(pointUuid)){
+                    OdsSzdnProvinceBorderVehicleWeightNewstructure  borderWeighingCaptureBO = weightNewstructureMap.get(pointUuid);
 
                     // 抓拍照片
                     String imagesStr = CommonUtil.isNull(borderWeighingCaptureBO.getWeighingImagesArry());
-                    if (CommonUtil.isNotBlank(imagesStr)) {
+                    if (CommonUtil.isNotBlank(imagesStr)){
                         String imagesSrc = "";
                         JSONArray imgesJsonArray = JSON.parseArray(imagesStr);
                         for (int zz = 0; zz < imgesJsonArray.size(); zz++) {
                             JSONObject imageTempJosn = imgesJsonArray.getJSONObject(zz);
-                            if (null != imageTempJosn) {
+                            if (null !=imageTempJosn){
                                 String tempImageSrc = CommonUtil.isNull(imageTempJosn.getString("snapPicturePath"));
-                                if (CommonUtil.isNotBlank(tempImageSrc)) {
-                                    imagesSrc += tempImageSrc + ",";
+                                if (CommonUtil.isNotBlank(tempImageSrc)){
+                                    imagesSrc += tempImageSrc +",";
                                 }
                             }
                         }
@@ -803,46 +803,46 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 }
                 break;
             case GANTRY_CAPTURE:
-                if (snapshotFlowAddcodeMap.containsKey(pointUuid)) {
-                    OdsRtSzdnSnapshotFlowAddcode gantryCaptureBO = snapshotFlowAddcodeMap.get(pointUuid);
+                if (snapshotFlowAddcodeMap.containsKey(pointUuid)){
+                    OdsRtSzdnSnapshotFlowAddcode  gantryCaptureBO = snapshotFlowAddcodeMap.get(pointUuid);
                     trailBo.setImagesArry(gantryCaptureBO.getSnappicturepath()); // 抓拍照片
                 }
                 break;
             case PROV_CAPTURE:
                 // 省界抓拍
-                if (provcaptureAddcodeMap.containsKey(pointUuid)) {
+                if (provcaptureAddcodeMap.containsKey(pointUuid)){
                     String imagesSrc = "";
-                    OdsRtSzdnSnapshotFlowProvcaptureAddcode provCaptureBO = provcaptureAddcodeMap.get(pointUuid);
+                    OdsRtSzdnSnapshotFlowProvcaptureAddcode  provCaptureBO = provcaptureAddcodeMap.get(pointUuid);
                     // 车牌图路径
-                    if (CommonUtil.isNotBlank(provCaptureBO.getPlateimage())) {
-                        imagesSrc += provCaptureBO.getPlateimage() + ",";
+                    if (CommonUtil.isNotBlank(provCaptureBO.getPlateimage())){
+                        imagesSrc += provCaptureBO.getPlateimage() +",";
                     }
 
                     // 车身图路径
-                    if (CommonUtil.isNotBlank(provCaptureBO.getSideimage())) {
-                        imagesSrc += provCaptureBO.getSideimage() + ",";
+                    if (CommonUtil.isNotBlank(provCaptureBO.getSideimage())){
+                        imagesSrc += provCaptureBO.getSideimage() +",";
                     }
 
                     // 车头图路径
-                    if (CommonUtil.isNotBlank(provCaptureBO.getHeadimage())) {
-                        imagesSrc += provCaptureBO.getHeadimage() + ",";
+                    if (CommonUtil.isNotBlank(provCaptureBO.getHeadimage())){
+                        imagesSrc += provCaptureBO.getHeadimage() +",";
                     }
                     trailBo.setImagesArry(CommonUtil.deleteEnd(imagesSrc)); // 抓拍照片
                 }
                 break;
             case SERVICE_AREA_CAPTURE:
                 // 服务区抓拍
-                if (fwqcllsMap.containsKey(pointUuid)) {
+                if(fwqcllsMap.containsKey(pointUuid)) {
                     OdsCxztFwqclls fwqclls = fwqcllsMap.get(pointUuid);
                     String imagesSrc = "";
                     // 抓拍照片url
-                    if (CommonUtil.isNotBlank(fwqclls.getTargetpicurl())) {
-                        imagesSrc += fwqclls.getTargetpicurl() + ",";
+                    if (CommonUtil.isNotBlank(fwqclls.getTargetpicurl())){
+                        imagesSrc += fwqclls.getTargetpicurl() +",";
                     }
 
                     // 车牌照片
-                    if (CommonUtil.isNotBlank(fwqclls.getPlatepicurl())) {
-                        imagesSrc += fwqclls.getPlatepicurl() + ",";
+                    if (CommonUtil.isNotBlank(fwqclls.getPlatepicurl())){
+                        imagesSrc += fwqclls.getPlatepicurl() +",";
                     }
 
                     // 抓拍照片
@@ -852,8 +852,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 break;
             case STATION_CAPTURE:
                 // 收费站抓拍
-                if (stationcaptureAddcodeMap.containsKey(pointUuid)) {
-                    OdsRtSzdnSnapshotFlowStationcaptureAddcode stationCapture = stationcaptureAddcodeMap.get(pointUuid);
+                if (stationcaptureAddcodeMap.containsKey(pointUuid)){
+                    OdsRtSzdnSnapshotFlowStationcaptureAddcode  stationCapture = stationcaptureAddcodeMap.get(pointUuid);
                     trailBo.setImagesArry(stationCapture.getSnappicturepath()); // 抓拍照片
                 }
                 break;
@@ -884,13 +884,14 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
         // 图片替换----
         String imagesArry = CommonUtil.deleteEnd(trailBo.getImagesArry());
-        if (CommonUtil.isNotBlank(imagesArry)) {
-            imagesArry = imagesArry.replaceAll("http://jxjt.isilon.com", "http://36.200.30.144/isilonimage");
+        if(CommonUtil.isNotBlank(imagesArry)){
+            imagesArry = imagesArry.replaceAll("http://jxjt.isilon.com","http://36.200.30.144/isilonimage");
             trailBo.setImagesArry(imagesArry);
         }
 
-        return trailBo;
+        return  trailBo;
     }
+
 
 
     /**
@@ -901,7 +902,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
      */
     @Override
     public Map<ZdataTrailTracks, List<TrailBo>> syncSuspiciousCar(CarParaVO carParaVO) {
-        return new HashMap<>();
+        return  new HashMap<>();
     }
 
 
@@ -921,27 +922,27 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
         // -------------- 从缓存取得对应的配置
         String redisTimeValue = redisCache.getCacheObject(redisTimeKey); // 默认7天
-        if (CommonUtil.isNotBlank(redisTimeValue)) {
+        if (CommonUtil.isNotBlank(redisTimeValue)){
             starTime = Integer.parseInt(redisTimeValue);
-            log.info("从缓存取得时间配置--------：" + redisTimeValue);
+            log.info("从缓存取得时间配置--------："+redisTimeValue);
         }
 
         String redisBiteValue = redisCache.getCacheObject(redisBiteKey); // 比例默认为0.5
-        if (CommonUtil.isNotBlank(redisBiteValue)) {
+        if (CommonUtil.isNotBlank(redisBiteValue)){
             bite = new BigDecimal(redisBiteValue);
-            log.info("从缓存取得占比配置------：" + bite);
+            log.info("从缓存取得占比配置------："+bite);
         }
 
 
         if (CommonUtil.isNull(isLocalhost).equals("local")) {
-            log.info("本地配置------：" + CommonUtil.isNull(isLocalhost));
+            log.info("本地配置------："+CommonUtil.isNull(isLocalhost));
             // 本地  分页1000条 30 到 1 天
             pageSize = 2000;
             endTime = starTime * 2;
             /*starTime = 1;
             endTime = 30;*/
         } else {
-            log.info("生产配置------：" + CommonUtil.isNull(isLocalhost));
+            log.info("生产配置------："+CommonUtil.isNull(isLocalhost));
             // 生产------------- 分页1000条 14 到 7 天
             pageSize = 2000;
             endTime = starTime * 2;
@@ -960,8 +961,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
         for (int i = startNum; i <= endNum; i++) {
             // ----- 分页范围
             carParaVO.setStartNum(pageSize);
-            if (i > 1) {
-                Integer endRange = (i - 1) * pageSize; // 当前页 -1
+            if (i > 1){
+                Integer endRange = (i -1) * pageSize; // 当前页 -1
                 carParaVO.setEndNum(endRange);
             }
             log.info("数据查询范围：" + carParaVO.getStartNum() + "到" + carParaVO.getEndNum());
@@ -986,30 +987,30 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         // ---------------------------分析场景: 门架抓拍和流水抓拍 占比
                         int conutGantryCapture = 0;
                         int conutFeeRecord = 0;
-                        for (TrailBo rtnTrailBo : josnList) {
+                        for (TrailBo rtnTrailBo:josnList){
                             String stateType = CommonUtil.isNull(rtnTrailBo.getStateType());
-                            if (stateType.equals(GANTRY_CAPTURE)) {
+                            if(stateType.equals(GANTRY_CAPTURE)){
                                 // 门架抓拍
-                                conutGantryCapture++;
-                            } else if (stateType.equals(FeeRecord)) {
+                                conutGantryCapture ++;
+                            }else if(stateType.equals(FeeRecord)){
                                 // 卡口流水
-                                conutFeeRecord++;
+                                conutFeeRecord ++;
                             }
                         }
 
                         // ---------------屏蔽:
-                        if (conutGantryCapture > 0 && conutGantryCapture > conutFeeRecord) {
+                        if (conutGantryCapture > 0 && conutGantryCapture > conutFeeRecord){
                             BigDecimal costBite = new BigDecimal(conutFeeRecord).divide(new BigDecimal(conutGantryCapture), 4, BigDecimal.ROUND_HALF_UP);
-                            if (bite.compareTo(costBite) >= 0) {
+                            if (bite.compareTo(costBite) >= 0){
                                 escapedType = Constants.escapedType_20;
                                 tracks.setEscapedType(escapedType); // 屏蔽
-                                tracks.setEscapedTypeRemark("异常原因：门架牌识数量:" + conutGantryCapture + "门架流水数量:" + conutFeeRecord);
+                                tracks.setEscapedTypeRemark("异常原因：门架牌识数量:"+conutGantryCapture+"门架流水数量:"+conutFeeRecord);
 
 
                                 TrailInfo trailInfo = this.changeData(tracks, josnList); // 获取设备的经纬度
                                 trailInfo.setTrailUuid(carNo);
 
-                                String key = this.getSuspiciousKey(formattedDate, carNo);
+                                String key = this.getSuspiciousKey(formattedDate,carNo);
                                 redisCache.setCacheObject(key, trailInfo);
 
 
@@ -1024,7 +1025,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
     /**
      * 查询车俩历史记录
-     *
      * @param carParaVO
      * @return
      */
@@ -1075,15 +1075,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
     /**
      * dws josn2字符串转换
-     *
      * @param paraTrailPoints
      * @return
      */
     private String getTrailBoListString(String paraTrailPoints) {
         String trailPoints = CommonUtil.isNull(paraTrailPoints);
-        if (trailPoints.equals("{}")) {
-            return "";
-        }
         if (CommonUtil.isNotBlank(trailPoints)) {
             trailPoints = trailPoints.replace("\\", "");
             trailPoints = trailPoints.replace("{\"{", "[{");
@@ -1098,14 +1094,13 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
     /**
      * 转josn
-     *
      * @param paraTrailPoints
      * @return
      */
     public List<TrailBo> getTrailBoList(String paraTrailPoints) {
         List<TrailBo> trailBoList = new ArrayList<>();
         String trailPoints = this.getTrailBoListString(paraTrailPoints);
-        if (CommonUtil.isNotBlank(trailPoints)) {
+        if (CommonUtil.isNotBlank(trailPoints) && !trailPoints.equals("{}")) {
             try {
                 // 先转josn数组 然后循环 一个一个手动赋值
                 JSONArray array = JSON.parseArray(trailPoints);
@@ -1140,20 +1135,22 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     trailBo.setSectionCode(sectionCode);
                     trailBo.setOrgCode(orgCode);
                     trailBo.setPointUuid(pileNo);
-                    if(StringUtils.isNotBlank(lon) && CommonUtil.isNum(lon)) {
+                    if(CommonUtil.isNotBlank(lon)) {
                         trailBo.setLon(new BigDecimal(lon));
                     }
-                    if(StringUtils.isNotBlank(lat) && CommonUtil.isNum(lat)) {
+                    if(CommonUtil.isNotBlank(lat)) {
                         trailBo.setLat(new BigDecimal(lat));
                     }
                     trailBoList.add(trailBo);
                 }
 
-//                trailBoList = JSON.parseArray(trailPoints, TrailBo.class);
-                /*if (null != trailBoList && trailBoList.size() > 0) {
+               /* trailBoList = JSON.parseArray(trailPoints, TrailBo.class);
+                SimpleDateFormat format1 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+                SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                if (null != trailBoList && trailBoList.size() > 0) {
                     for (TrailBo trailBo : trailBoList) {
                         String captureTime = CommonUtil.isNull(trailBo.getCaptureTime());
-                        if (captureTime.indexOf("T") > -1) {
+                        if (captureTime.indexOf("T") > -1){
                             Date dateTime = format1.parse(captureTime);
                             // 步骤2：使用DateTimeFormatter转字符串
                             String formattedDateStr = format2.format(dateTime);
@@ -1166,18 +1163,17 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 log.error("解析错误！");
             }
         }
-        List<TrailBo> rtnList = this.mapTrailBoList(trailBoList);
+        List<TrailBo>  rtnList = this.mapTrailBoList(trailBoList);
 
         return rtnList;
     }
 
     /**
      * 处理
-     *
      * @param trailBoList
      * @return
      */
-    private List<TrailBo> mapTrailBoList(List<TrailBo> trailBoList) {
+    private List<TrailBo> mapTrailBoList(List<TrailBo> trailBoList){
         List<TrailBo> mapList = new ArrayList<>();
 
         // 按照时间排序----------
@@ -1190,28 +1186,28 @@ public class SysUtilServiceImpl implements ISysUtilService {
         SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         long threeMinutesInMillis = 4 * 60 * 1000; // 三分钟转换为毫秒
 
-        Map<String, TrailBo> map = new HashMap<String, TrailBo>();
-        if (null != trailBoList && trailBoList.size() > 0) {
+        Map<String,TrailBo> map = new HashMap<String,TrailBo>();
+        if (null != trailBoList && trailBoList.size() > 0){
             for (TrailBo trailBo : trailBoList) {
                 String stateType = CommonUtil.isNull(trailBo.getStateType()); // 类型
                 String locationCode = CommonUtil.isNull(trailBo.getLocationCode()); // 设备IP地址
                 String captureTime = CommonUtil.isNull(trailBo.getCaptureTime()); // 抓拍时间
                 String imagesArry = CommonUtil.deleteEnd(trailBo.getImagesArry()); // 抓拍图片
                 String mapKey = stateType + locationCode;
-                if (map.containsKey(mapKey)) {
+                if (map.containsKey(mapKey)){
                     TrailBo trailBoTemp = map.get(mapKey);
                     String captureTimeTemp = CommonUtil.isNull(trailBoTemp.getCaptureTime());
-                    if (CommonUtil.isNotBlank(captureTime) && CommonUtil.isNotBlank(captureTimeTemp)) {
+                    if (CommonUtil.isNotBlank(captureTime) && CommonUtil.isNotBlank(captureTimeTemp)){
                         try {
                             Date captureTimeDate1 = format2.parse(captureTime);
                             Date captureTimeDate2 = format2.parse(captureTimeTemp);
                             long diff = Math.abs(captureTimeDate2.getTime() - captureTimeDate1.getTime());
                             if (diff > threeMinutesInMillis) {
                                 mapList.add(trailBo);
-                            } else {
+                            }else{
                                 // 抓拍图片累加--------------
                                 String imagesArryTemp = CommonUtil.deleteEnd(trailBoTemp.getImagesArry());
-                                if (!imagesArry.equals("")) {
+                                if (!imagesArry.equals("")){
                                     if (imagesArryTemp.equals("")) {
                                         trailBoTemp.setImagesArry(imagesArry);
                                     } else {
@@ -1219,21 +1215,24 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                     }
                                 }
                             }
-                        } catch (Exception e) {
+                        }catch (Exception e){
                             mapList.add(trailBo);
-                            log.info("日期解析失败------------" + e.toString());
+                            log.info("日期解析失败------------"+e.toString());
                         }
-                    } else {
+                    }else{
                         mapList.add(trailBo);
                     }
-                } else {
+                }else{
                     mapList.add(trailBo);
                 }
-                map.put(mapKey, trailBo);
+                map.put(mapKey,trailBo);
             }
         }
         return mapList;
     }
+
+
+
 
 
     /**
@@ -1261,6 +1260,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
         }
         return res;
     }*/
+
+
 
 
 }
