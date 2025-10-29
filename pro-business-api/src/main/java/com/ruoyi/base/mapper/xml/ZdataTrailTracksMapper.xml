@@ -114,7 +114,7 @@
             </if>
             <!-- 默认查询半年-->
             <if test="flag != null and flag == 'yiyue' ">
-                and t.entime >= now() - 30 and t.entime <![CDATA[<=]]> now()
+                and t.entime >= now() - 7 and t.entime <![CDATA[<=]]> now()
             </if>
             <if test="carNoList != null and carNoList.size() > 0">
                and  t.envehicleid in
