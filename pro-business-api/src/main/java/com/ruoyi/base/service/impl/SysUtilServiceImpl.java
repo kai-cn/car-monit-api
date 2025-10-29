@@ -350,7 +350,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
             if (CommonUtil.isNotBlank(sectionCode)) {
                 if (sectionMap.containsKey(sectionCode)){
                     OdsSzdnSection section = sectionMap.get(sectionCode);
-                    trailBo.setRoadCode(CommonUtil.isNull(section.getRoadCode()));
+                    roadCode = CommonUtil.isNull(section.getRoadCode());
+                    trailBo.setRoadCode(roadCode);
                 }
             }
 
