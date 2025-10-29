@@ -944,7 +944,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
         // 图片替换----
         String imagesArry = CommonUtil.deleteEnd(trailBo.getImagesArry());
         if(CommonUtil.isNotBlank(imagesArry)){
-            imagesArry = imagesArry.replaceAll("http://jxjt.isilon.com","http://36.200.30.144/isilonimage");
+            if(imagesArry.indexOf("http://jxjt.isilon.com/ifs") > -1){
+                imagesArry = imagesArry.replaceAll("http://jxjt.isilon.com/ifs","http://36.200.30.144:9080");
+            }else{
+                imagesArry = imagesArry.replaceAll("http://jxjt.isilon.com","http://36.200.30.144:9080");
+            }
             trailBo.setImagesArry(imagesArry);
         }
 
