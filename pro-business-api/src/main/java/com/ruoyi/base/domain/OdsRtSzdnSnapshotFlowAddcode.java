@@ -217,4 +217,7 @@ public class OdsRtSzdnSnapshotFlowAddcode implements Custom {
     @TableField(exist = false)
     private String queryUuids;
 
+    @TableField(exist = false)
+    private String flag;// 标识位
+
 }

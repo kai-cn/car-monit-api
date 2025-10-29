@@ -113,6 +113,9 @@
         <if test="tollcode != null  and tollcode != ''"> and t.tollcode = #{tollcode}</if>
         <if test="tollname != null  and tollname != ''"> and t.tollname like concat('%', #{tollname}, '%')</if>
         <if test="orgcode != null  and orgcode != ''"> and t.orgcode = #{orgcode}</if>
+        <if test="flag != null and flag == 'JiAnDong'">
+            and t.orgcode = '030000011'
+        </if>
         <if test="orgname != null  and orgname != ''"> and t.orgname like concat('%', #{orgname}, '%')</if>
         <if test="direction != null "> and t.direction = #{direction}</if>
         <if test="hexcode != null  and hexcode != ''"> and t.hexcode = #{hexcode}</if>

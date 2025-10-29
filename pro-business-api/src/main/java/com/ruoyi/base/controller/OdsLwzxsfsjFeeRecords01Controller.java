@@ -39,6 +39,7 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
     @GetMapping("/list")
     public TableDataInfo list(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01) {
         startPage();
+        odsLwzxsfsjFeeRecords01.setFlag("JiAnDong");
         List<OdsLwzxsfsjFeeRecords01> list = odsLwzxsfsjFeeRecords01Service.selectOdsLwzxsfsjFeeRecords01List(odsLwzxsfsjFeeRecords01);
 
         if (null !=list && list.size() > 0){

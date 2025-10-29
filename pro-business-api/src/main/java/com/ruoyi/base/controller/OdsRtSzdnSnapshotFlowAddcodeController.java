@@ -33,6 +33,7 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
     @GetMapping("/list")
     public TableDataInfo list(OdsRtSzdnSnapshotFlowAddcode odsRtSzdnSnapshotFlowAddcode) {
         startPage();
+        odsRtSzdnSnapshotFlowAddcode.setFlag("JiAnDong");
         List<OdsRtSzdnSnapshotFlowAddcode> list = odsRtSzdnSnapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeList(odsRtSzdnSnapshotFlowAddcode);
         if (null !=list && list.size() > 0){
             for (OdsRtSzdnSnapshotFlowAddcode rtn :list){

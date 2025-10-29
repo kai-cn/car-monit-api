@@ -424,6 +424,11 @@
         <if test="cid != null and cid != ''">
             and t.cid = #{cid}
         </if>
+        <if test="flag != null and flag == 'JiAnDong'">
+            and exists  (
+            select 1 from jl_data01.ods_szdn_gantry g where g.gantry_code = t.gantryid  and g.org_code = '030000011'
+            )
+        </if>
         </where>
     </select>
 

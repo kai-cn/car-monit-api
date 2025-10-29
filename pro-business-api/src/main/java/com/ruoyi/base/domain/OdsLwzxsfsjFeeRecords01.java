@@ -595,4 +595,7 @@ public class OdsLwzxsfsjFeeRecords01 implements Custom {
     @TableField(exist = false)
     private String gantryName;
 
+    @TableField(exist = false)
+    private String flag;// 标识位
+
 }
