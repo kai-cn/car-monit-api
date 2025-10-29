@@ -78,16 +78,18 @@ public class TrailBo {
     private String imagesArry;
 
     /** 经度 */
-    private BigDecimal lon;
+    private BigDecimal lon = BigDecimal.ZERO;
 
     /** 维度 */
-    private BigDecimal lat;
+    private BigDecimal lat = BigDecimal.ZERO;
 
     /** 路线编号 */
     private String roadCode;
 
     /** 路段编号 */
     private String sectionCode;
+
+    private String orgCode;
 
     /** 方向（0: 上行，1: 下行） */
     private String direction;
