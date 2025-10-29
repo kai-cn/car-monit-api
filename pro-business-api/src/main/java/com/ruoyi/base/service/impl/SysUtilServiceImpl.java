@@ -302,6 +302,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         //服务区信息
         Map<String, DwdLcztFwqjcxx> serviceNameMap = fwqjcxxService.getServiceNameMap();
 
+        // 根据路段查询路线map
 
 
         String firtStationCode = "";
@@ -340,7 +341,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
             String pileno = CommonUtil.isNull(trailBo.getPileno());
             BigDecimal lon = trailBo.getLon();
             BigDecimal lat = trailBo.getLon();
-            String roadCode = ""; // 这个要查询数据库拿---
+            String roadCode = "";
+
+            // 这个要查询数据库拿---
+            if (CommonUtil.isNotBlank(sectionCode)){
+                // roadCode =
+            }
 
             switch (stateType) {
                 case BORDER_WEIGHING_CAPTURE:
@@ -485,7 +491,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             trailBo.setSectionCode(CommonUtil.isNull(odsSzdnToll.getSectionCode()));
                         }
 
-                        if (CommonUtil.isBlank(sectionCode)){
+                        if (CommonUtil.isBlank(pileno)){
                             // 桩号
                             trailBo.setPileno(CommonUtil.isNull(odsSzdnToll.getPileNo()));
                         }
@@ -531,7 +537,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     OdsSzdnGantry odsSzdnGantry = gantryIpBO.getOdsSzdnGantry();
                     if (null != odsSzdnGantry) {
 
-
                         if (null == lon) {
                             // 经度
                             if (CommonUtil.isNotBlank(odsSzdnGantry.getLon())) {
@@ -556,7 +561,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             trailBo.setSectionCode(CommonUtil.isNull(odsSzdnGantry.getSectionCode()));
                         }
 
-                        if (CommonUtil.isBlank(sectionCode)){
+                        if (CommonUtil.isBlank(pileno)){
                             // 桩号
                             trailBo.setPileno(CommonUtil.isNull(odsSzdnGantry.getPileNo())); // 桩号
                         }
@@ -575,7 +580,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             if (CommonUtil.isBlank(trailBo.getDevName())){
                 trailBo.setDevName(locationCode);
             }
-            
+
         }
 
 
