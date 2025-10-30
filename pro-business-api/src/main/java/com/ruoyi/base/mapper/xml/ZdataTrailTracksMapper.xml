@@ -75,7 +75,9 @@
         from jl_data01.zdata_trail_fitting t
         where t.entime >= now() - #{endTime} and  t.entime <![CDATA[<=]]> now() - #{starTime}
         and exists  (
-            select 1 from jl_data01.ods_szdn_toll sip where sip.toll_code = t.entollstationid  and sip.org_code = '030000011'
+            select 1 from jl_data01.ods_szdn_toll sip where (sip.toll_code = t.entollstationid
+            or sip.toll_code = t.extollstationid)
+            and sip.org_code = '030000011'
         )
         <if test="startNum != null ">  LIMIT #{startNum} </if>
         <if test="endNum != null ">  OFFSET #{endNum} </if>
