@@ -700,7 +700,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             }
 
             // 如果获取的经纬度为空的话
-            if (CommonUtil.isBlank(tracks.getStartLon())){
+           /* if (CommonUtil.isBlank(tracks.getStartLon())){
                 if (null != jwdList && jwdList.size() > 0) {
                     TrailBo firstTrailBo = jwdList.get(0);
                     tracks.setStartLon(CommonUtil.isNull(firstTrailBo.getLon())); // 经度
@@ -714,7 +714,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     tracks.setEndLon(CommonUtil.isNull(endTrailBo.getLon())); // 经度
                     tracks.setEndLat(CommonUtil.isNull(endTrailBo.getLat())); // 经度
                 }
-            }
+            }*/
 
         }
 
