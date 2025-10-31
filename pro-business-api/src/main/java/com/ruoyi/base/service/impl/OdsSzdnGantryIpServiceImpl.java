@@ -111,7 +111,7 @@ public class OdsSzdnGantryIpServiceImpl extends ServiceImpl<OdsSzdnGantryIpMappe
         Map<String, OdsSzdnGantryIp> map = new HashMap<String, OdsSzdnGantryIp>();
         List<OdsSzdnGantryIp> list = odsSzdnGantryIpMapper.selectOdsSzdnGantryIpList(new OdsSzdnGantryIp());
         OdsSzdnGantry odsSzdnGantry = new OdsSzdnGantry();
-        odsSzdnGantry.setDirection("0"); // 查询上行的门架
+        // odsSzdnGantry.setDirection("0"); // 查询上行的门架
         Map<String,OdsSzdnGantry> osSzdnGantryMap = odsSzdnGantryService.selectOdsSzdnGantryMap(odsSzdnGantry);
         for (OdsSzdnGantryIp rtn : list) {
             String key = CommonUtil.isNull(rtn.getGantryCode()); // 门架编号
