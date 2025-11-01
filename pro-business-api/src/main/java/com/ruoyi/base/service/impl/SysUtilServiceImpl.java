@@ -588,7 +588,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
             // 设备名称没有默认位置信息--------------
             if (CommonUtil.isBlank(trailBo.getDevName())){
-                trailBo.setDevName(locationCode);
+                trailBo.setDevName(CommonUtil.isNull(locationCode).replaceAll("devip:",""));
             }
 
         }
