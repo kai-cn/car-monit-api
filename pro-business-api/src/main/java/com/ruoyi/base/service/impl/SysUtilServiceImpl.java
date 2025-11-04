@@ -1043,7 +1043,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             // 本地  分页1000条 30 到 1 天
             pageSize = 2000;
             endTime = starTime * 2;
-            /*starTime = 1;
+           /* starTime = 1;
             endTime = 30;*/
         } else {
             log.info("生产配置------："+CommonUtil.isNull(isLocalhost));
@@ -1063,7 +1063,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         List<TrailInfo> trailList = new ArrayList<>();
 
         // 位置信息
-        Map<String,ZdataLocationDict> locationMap = zdataLocationDictService.getRedisList();
+        //  Map<String,ZdataLocationDict> locationMap = zdataLocationDictService.getRedisList();
 
 
         for (int i = startNum; i <= endNum; i++) {
@@ -1099,32 +1099,27 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         Map<String, Integer> feeRecordMap = new HashMap();
 
                         for (TrailBo rtnTrailBo:josnList){
-                            String locationCode = CommonUtil.isNull(rtnTrailBo.getLocationCode()); // 设备IP地址
+                            String locationId = CommonUtil.isNull(rtnTrailBo.getLocationId()); // 设备IP地址
                             String stateType = CommonUtil.isNull(rtnTrailBo.getStateType());
 
-                            //---------------通过位置信息查询设备
-                            String devLocatCode = "";
-                            if (locationMap.containsKey(locationCode)){
-                                devLocatCode = CommonUtil.isNull(locationMap.get(locationCode).getStandardCode()); // 收费站/门架code
-                            }
                             if(stateType.equals(GANTRY_CAPTURE)){
                                 // 门架抓拍
                                 conutGantryCapture ++;
-                                if (CommonUtil.isNotBlank(devLocatCode)){
-                                    gantryCaptureMap.put(devLocatCode, 1);
+                                if (CommonUtil.isNotBlank(locationId)){
+                                    gantryCaptureMap.put(locationId, 1);
                                 }
                             }else if(stateType.equals(FeeRecord)){
                                 // 卡口流水
                                 conutFeeRecord ++;
-                                if (CommonUtil.isNotBlank(devLocatCode)){
-                                    feeRecordMap.put(devLocatCode, 1);
+                                if (CommonUtil.isNotBlank(locationId)){
+                                    feeRecordMap.put(locationId, 1);
                                 }
                             }
                         }
 
                         // ---------------屏蔽:
                         String escapedTypeRemark = "";
-                        if (conutGantryCapture > supoerMjnum ){
+                        if (conutGantryCapture > supoerMjnum && conutGantryCapture > conutFeeRecord ){
                             boolean addFlag = false;
                             if (conutFeeRecord == 0){
                                 escapedTypeRemark = "异常原因：门架牌识流水数量:"+conutGantryCapture+"门架交易流水数量:"+conutFeeRecord;
@@ -1140,8 +1135,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 }
 
                                 // 重合比例
-                                BigDecimal costBite = new BigDecimal(extitsNum).divide(new BigDecimal(conutFeeRecord), 4, BigDecimal.ROUND_HALF_UP);
-                                if (bite.compareTo(costBite) <= 0) {
+                                BigDecimal costBite = new BigDecimal(extitsNum).divide(new BigDecimal(conutFeeRecord), 2, BigDecimal.ROUND_HALF_UP);
+                                if (bite.compareTo(costBite) >= 0){
                                     String costBiteStr = costBite.multiply(new BigDecimal("100"))+"%";
                                     addFlag = true;
                                     escapedTypeRemark = "异常原因：门架牌识流水数量:" + conutGantryCapture + "门架交易流水数量:" + conutFeeRecord + ",门架牌识流水和门架交易流水重合率为" + costBiteStr;
