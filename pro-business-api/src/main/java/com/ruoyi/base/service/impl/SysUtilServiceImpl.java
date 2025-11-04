@@ -1075,7 +1075,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
             }
             log.info("数据查询范围：" + carParaVO.getStartNum() + "到" + carParaVO.getEndNum());
 
+
+            log.info("开始查询----------"+new Date());
             List<ZdataTrailTracks> carlist = zdataTrailTracksService.getLatestTrail(carParaVO);
+            log.info("结束查询----------"+new Date());
 
             Date now = new Date();
             SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
