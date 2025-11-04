@@ -8,10 +8,12 @@ import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.utils.CommonUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.annotation.Resource;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -40,6 +42,9 @@ public class SysTestController extends BaseController {
 
     @Autowired
     private IDwdLcztFwqjcxxService dwdLcztFwqjcxxService;
+
+    @Resource
+    private ThreadPoolTaskExecutor threadTaskExecutor;
 
     /**
      * 车俩实时轨迹同步
@@ -155,9 +160,151 @@ public class SysTestController extends BaseController {
     @GetMapping(value = "/syncSuspiciousCar1")
     public void syncSuspiciousCar1() {
         log.info("每天凌晨1点执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-        sysUtilService.syncSuspiciousCarQutaz(1, 1);
+        for (int i = 1; i < 11; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
         log.info("每天凌晨1点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
+
+    /**
+     * 车俩实时轨迹同步
+     */
+    @GetMapping(value = "/syncSuspiciousCar2")
+    public void syncSuspiciousCar2() {
+        log.info("每天凌晨1点15执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        for (int i = 11; i < 21; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
+        log.info("每天凌晨1点15点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
+
+    /**
+     * 车俩实时轨迹同步
+     */
+    @GetMapping(value = "/syncSuspiciousCar3")
+    public void syncSuspiciousCar3() {
+        log.info("每天凌晨1点30执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        for (int i = 21; i < 31; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
+        log.info("每天凌晨1点30点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
+
+    /**
+     * 车俩实时轨迹同步
+     */
+    @GetMapping(value = "/syncSuspiciousCar4")
+    public void syncSuspiciousCar4() {
+        log.info("每天凌晨1点45执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        for (int i = 31; i < 41; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
+        log.info("每天凌晨1点45点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
+
+    /**
+     * 车俩实时轨迹同步
+     */
+    @GetMapping(value = "/syncSuspiciousCar5")
+    public void syncSuspiciousCar5() {
+        log.info("每天凌晨2点执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        for (int i = 41; i < 51; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
+        log.info("每天凌晨2点点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
+
+    /**
+     * 车俩实时轨迹同步
+     */
+    @GetMapping(value = "/syncSuspiciousCar6")
+    public void syncSuspiciousCar6() {
+        log.info("每天凌晨2点15执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        for (int i = 51; i < 61; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
+        log.info("每天凌晨2点15点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
+
+    /**
+     * 车俩实时轨迹同步
+     */
+    @GetMapping(value = "/syncSuspiciousCar7")
+    public void syncSuspiciousCar7() {
+        log.info("每天凌晨2点30执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        for (int i = 61; i < 71; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
+        log.info("每天凌晨2点30点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
+
+    /**
+     * 车俩实时轨迹同步
+     */
+    @GetMapping(value = "/syncSuspiciousCar8")
+    public void syncSuspiciousCar8() {
+        log.info("每天凌晨2点45执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        for (int i = 71; i < 81; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
+        log.info("每天凌晨2点45点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
+
+
+    /**
+     * 车俩实时轨迹同步
+     */
+    @GetMapping(value = "/syncSuspiciousCar9")
+    public void syncSuspiciousCar9() {
+        log.info("每天凌晨3点执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        for (int i = 81; i < 91; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
+        log.info("每天凌晨3点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
+
+    /**
+     * 车俩实时轨迹同步
+     */
+    @GetMapping(value = "/syncSuspiciousCar10")
+    public void syncSuspiciousCar10() {
+        log.info("每天凌晨3点15执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        for (int i = 91; i < 101; i++) {
+            int finalI = i;
+            threadTaskExecutor.execute(() -> {
+                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+            });
+        }
+        log.info("每天凌晨3点15执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
+
 
 
 
