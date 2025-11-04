@@ -47,6 +47,22 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
         return getDataTable(list);
     }
 
+    @GetMapping("/listToExport")
+    public List<OdsRtSzdnSnapshotFlowAddcode> listToExport(OdsRtSzdnSnapshotFlowAddcode odsRtSzdnSnapshotFlowAddcode) {
+        odsRtSzdnSnapshotFlowAddcode.setFlag("JiAnDong");
+        List<OdsRtSzdnSnapshotFlowAddcode> list = odsRtSzdnSnapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeList(odsRtSzdnSnapshotFlowAddcode);
+        if (null !=list && list.size() > 0){
+            for (OdsRtSzdnSnapshotFlowAddcode rtn :list){
+                rtn.setId(StringUtils.getUUID());
+                // 抓拍时间格式化
+                if (null != rtn.getSnapshottime()) {
+                    rtn.setSnapshottimeStr( DateUtils.parseDateToStr(DateUtils.YYYY_MM_DD_HH_MM_SS, rtn.getSnapshottime()));
+                }
+            }
+        }
+        return list;
+    }
+
     /**
      * 获取门架抓拍流水详细信息
      */

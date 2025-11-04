@@ -7,6 +7,7 @@ import com.ruoyi.base.service.IOdsSzdnGantryService;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.utils.CommonUtil;
+import com.ruoyi.common.utils.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -69,6 +70,36 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
 
         return getDataTable(list);
     }
+
+
+    @GetMapping("/listToExport")
+    public List<OdsLwzxsfsjFeeRecords01> listToExport(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01) {
+        odsLwzxsfsjFeeRecords01.setFlag("JiAnDong");
+        List<OdsLwzxsfsjFeeRecords01> list = odsLwzxsfsjFeeRecords01Service.selectOdsLwzxsfsjFeeRecords01List(odsLwzxsfsjFeeRecords01);
+        if (null !=list && list.size() > 0){
+            List<OdsSzdnGantry>  gantryList = odsSzdnGantryService.getGantryRedis();
+            Map<String,String> gantryMao = new HashMap<>();
+            for (OdsSzdnGantry rtnOdsSzdnGantry:gantryList){
+                gantryMao.put(CommonUtil.isNull(rtnOdsSzdnGantry.getGantryCode()),rtnOdsSzdnGantry.getGantryName());
+            }
+            for (OdsLwzxsfsjFeeRecords01 feeRecords:list){
+                String vehicleplate = CommonUtil.isNull(feeRecords.getVehicleplate());
+                if (vehicleplate.indexOf("_") > -1){
+                    String[] vehicleplateStr = vehicleplate.split("_");
+                    feeRecords.setVehicleplate(vehicleplateStr[0]);
+                    /*if (vehicleplateStr.length >1){
+                        feeRecords.setPlateColor(vehicleplateStr[1]);
+                    }*/
+                    String gantryid = CommonUtil.isNull(feeRecords.getGantryid());
+                    if (gantryMao.containsKey(gantryid)){
+                        feeRecords.setGantryName(gantryMao.get(gantryid));
+                    }
+                }
+            }
+        }
+        return list;
+    }
+
 
     /**
      * 获取基础-收费流水详细信息
