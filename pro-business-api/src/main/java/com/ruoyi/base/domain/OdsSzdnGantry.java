@@ -1,6 +1,7 @@
 package com.ruoyi.base.domain;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.ruoyi.common.annotation.Excel;
@@ -107,5 +108,11 @@ public class OdsSzdnGantry implements Custom {
     /** 备注 */
     @Excel(name = "备注")
     private String remark;
+
+    /**
+     * 0没有1存在
+     */
+    @TableField(exist = false)
+    private String isData;
 
 }
