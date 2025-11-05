@@ -49,6 +49,7 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
 
     @GetMapping("/listToExport")
     public List<OdsRtSzdnSnapshotFlowAddcode> listToExport(OdsRtSzdnSnapshotFlowAddcode odsRtSzdnSnapshotFlowAddcode) {
+        startPage();
         odsRtSzdnSnapshotFlowAddcode.setFlag("JiAnDong");
         List<OdsRtSzdnSnapshotFlowAddcode> list = odsRtSzdnSnapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeList(odsRtSzdnSnapshotFlowAddcode);
         if (null !=list && list.size() > 0){

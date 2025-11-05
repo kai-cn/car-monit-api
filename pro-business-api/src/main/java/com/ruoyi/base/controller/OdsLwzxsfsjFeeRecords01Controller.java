@@ -74,14 +74,19 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
 
     @GetMapping("/listToExport")
     public List<OdsLwzxsfsjFeeRecords01> listToExport(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01) {
+        startPage();
         odsLwzxsfsjFeeRecords01.setFlag("JiAnDong");
         List<OdsLwzxsfsjFeeRecords01> list = odsLwzxsfsjFeeRecords01Service.selectOdsLwzxsfsjFeeRecords01List(odsLwzxsfsjFeeRecords01);
+
         if (null !=list && list.size() > 0){
+
             List<OdsSzdnGantry>  gantryList = odsSzdnGantryService.getGantryRedis();
             Map<String,String> gantryMao = new HashMap<>();
             for (OdsSzdnGantry rtnOdsSzdnGantry:gantryList){
                 gantryMao.put(CommonUtil.isNull(rtnOdsSzdnGantry.getGantryCode()),rtnOdsSzdnGantry.getGantryName());
             }
+
+
             for (OdsLwzxsfsjFeeRecords01 feeRecords:list){
                 String vehicleplate = CommonUtil.isNull(feeRecords.getVehicleplate());
                 if (vehicleplate.indexOf("_") > -1){
