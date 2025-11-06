@@ -216,5 +216,21 @@ public class CommonUtil {
 	}
 
 
+	/**
+	 * 图片替换
+	 *
+	 * @param
+	 * @return
+	 */
+	public static String repalaceSzdnTollName(String tollName) {
+		tollName = isNull(tollName);
+		if (isNotBlank(tollName)) {
+			tollName = tollName.replaceAll("江西", "");
+			tollName = tollName.replaceAll("站", "");
+		}
+		return tollName;
+	}
+
+
 
 }

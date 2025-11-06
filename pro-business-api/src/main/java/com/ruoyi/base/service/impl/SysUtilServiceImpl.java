@@ -636,7 +636,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
         }else{
             // 历史轨迹：
             String firstCode = CommonUtil.isNull(tracks.getEntollstationid()); // 入口收费站编号
+            String firstName = CommonUtil.isNull(tracks.getEntollstationname()); // 入口收费站名称
             String endCode = CommonUtil.isNull(tracks.getExtollstationid()); // 出口收费站编号
+            String endName = CommonUtil.isNull(tracks.getExtollstationname()); // 出口收费站名称
+
 
             if (CommonUtil.isNotBlank(firstCode)){
                 // 收费站ip
@@ -666,6 +669,41 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         }
                     }
                 }
+
+                // --------- 如果拿不到就根据名称来拿
+                if (CommonUtil.isBlank(tracks.getStartLon())){
+                    if (CommonUtil.isNotBlank(firstName)){
+                        // 收费站ip
+                        if (szdnTollMap.containsKey(firstName)){
+                            OdsSzdnTollStationIp stationIpBO = szdnTollMap.get(firstName);
+                            OdsSzdnToll odsSzdnToll = stationIpBO.getOdsSzdnToll();
+                            if (null != odsSzdnToll) {
+                                if (CommonUtil.isNotBlank(odsSzdnToll.getLongitude())) {
+                                    tracks.setStartLon(odsSzdnToll.getLongitude()); // 经度
+                                }
+                                if (CommonUtil.isNotBlank(odsSzdnToll.getLatitude())) {
+                                    tracks.setStratLat(odsSzdnToll.getLatitude()); // 经度
+                                }
+                            }
+                        }else {
+                            // 门架
+                            if (szdnGantryMap.containsKey(firstName)){
+                                OdsSzdnGantryIp  gantryIpBO = szdnGantryMap.get(firstName);
+                                OdsSzdnGantry odsSzdnGantry = gantryIpBO.getOdsSzdnGantry();
+                                if (null != odsSzdnGantry) {
+                                    if (CommonUtil.isNotBlank(odsSzdnGantry.getLon())) {
+                                        tracks.setStartLon(odsSzdnGantry.getLon()); // 经度
+                                    }
+                                    if (CommonUtil.isNotBlank(odsSzdnGantry.getLat())) {
+                                        tracks.setStratLat(odsSzdnGantry.getLat()); // 经度
+                                    }
+                                }
+                            }
+                        }
+
+                    }
+                }
+
             }
 
 
@@ -697,6 +735,41 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         }
                     }
                 }
+
+                // --------- 如果拿不到就根据名称来拿
+                if (CommonUtil.isBlank(tracks.getEndLon())){
+                    if (CommonUtil.isNotBlank(endName)){
+                        // 收费站ip
+                        if (szdnTollMap.containsKey(endName)){
+                            OdsSzdnTollStationIp stationIpBO = szdnTollMap.get(endName);
+                            OdsSzdnToll odsSzdnToll = stationIpBO.getOdsSzdnToll();
+                            if (null != odsSzdnToll) {
+                                if (CommonUtil.isNotBlank(odsSzdnToll.getLongitude())) {
+                                    tracks.setEndLon(odsSzdnToll.getLongitude()); // 经度
+                                }
+                                if (CommonUtil.isNotBlank(odsSzdnToll.getLatitude())) {
+                                    tracks.setEndLat(odsSzdnToll.getLatitude()); // 经度
+                                }
+                            }
+                        }else {
+                            // 门架
+                            if (szdnGantryMap.containsKey(endName)){
+                                OdsSzdnGantryIp  gantryIpBO = szdnGantryMap.get(endName);
+                                OdsSzdnGantry odsSzdnGantry = gantryIpBO.getOdsSzdnGantry();
+                                if (null != odsSzdnGantry) {
+                                    if (CommonUtil.isNotBlank(odsSzdnGantry.getLon())) {
+                                        tracks.setEndLon(odsSzdnGantry.getLon()); // 经度
+                                    }
+                                    if (CommonUtil.isNotBlank(odsSzdnGantry.getLat())) {
+                                        tracks.setEndLat(odsSzdnGantry.getLat()); // 经度
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+
             }
 
             // 如果获取的经纬度为空的话
