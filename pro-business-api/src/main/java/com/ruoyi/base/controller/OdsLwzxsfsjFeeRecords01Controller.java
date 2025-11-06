@@ -7,7 +7,6 @@ import com.ruoyi.base.service.IOdsSzdnGantryService;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.utils.CommonUtil;
-import com.ruoyi.common.utils.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,7 +39,12 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
     @GetMapping("/list")
     public TableDataInfo list(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01) {
         startPage();
-        odsLwzxsfsjFeeRecords01.setFlag("JiAnDong");
+
+        // 权限只能查询吉安东
+        String vehicleplateQuery = odsLwzxsfsjFeeRecords01.getVehicleplate();
+        if (CommonUtil.isBlank(vehicleplateQuery)) {
+            odsLwzxsfsjFeeRecords01.setFlag("JiAnDong");
+        }
         List<OdsLwzxsfsjFeeRecords01> list = odsLwzxsfsjFeeRecords01Service.selectOdsLwzxsfsjFeeRecords01List(odsLwzxsfsjFeeRecords01);
 
         if (null !=list && list.size() > 0){
@@ -75,7 +79,13 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
     @GetMapping("/listToExport")
     public List<OdsLwzxsfsjFeeRecords01> listToExport(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01) {
         startPage();
-        odsLwzxsfsjFeeRecords01.setFlag("JiAnDong");
+
+        // 权限只能查询吉安东
+        String vehicleplateQuery = odsLwzxsfsjFeeRecords01.getVehicleplate();
+        if (CommonUtil.isBlank(vehicleplateQuery)) {
+            odsLwzxsfsjFeeRecords01.setFlag("JiAnDong");
+        }
+
         List<OdsLwzxsfsjFeeRecords01> list = odsLwzxsfsjFeeRecords01Service.selectOdsLwzxsfsjFeeRecords01List(odsLwzxsfsjFeeRecords01);
 
         if (null !=list && list.size() > 0){

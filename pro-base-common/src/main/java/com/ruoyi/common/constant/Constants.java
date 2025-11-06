@@ -333,6 +333,12 @@ public class Constants
 
 
     /**
+     * 门架对象redis 数据
+     */
+    public static final String gantry_list_data = "gantry_list_data:";
+
+
+    /**
      * 门架ip redis
      */
     public static final String dev_post = "dev_post";

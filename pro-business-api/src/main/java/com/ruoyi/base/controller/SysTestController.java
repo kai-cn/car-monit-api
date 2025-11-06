@@ -319,8 +319,10 @@ public class SysTestController extends BaseController {
         List<OdsSzdnGantry> gantryList = odsSzdnGantryService.getGantryRedis();
         for (OdsSzdnGantry rtnOdsSzdnGantry : gantryList) {
             String gantryCode = CommonUtil.isNull(rtnOdsSzdnGantry.getGantryCode());
-            if (CommonUtil.isNotBlank(gantryCode)){
-
+            if (CommonUtil.isNotBlank(gantryCode)) {
+                // transtime
+                Long count = feeRecords01Service.lambdaQuery().eq(OdsLwzxsfsjFeeRecords01::getGantryid, gantryCode).count();
+                redisCache.setCacheObject(Constants.gantry_list_data + gantryCode, count);
             }
         }
         log.info("每天凌晨同步门架信息结束 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));

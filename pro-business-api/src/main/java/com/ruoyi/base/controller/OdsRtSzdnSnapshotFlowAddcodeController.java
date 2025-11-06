@@ -4,6 +4,7 @@ import com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowAddcode;
 import com.ruoyi.base.service.IOdsRtSzdnSnapshotFlowAddcodeService;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.page.TableDataInfo;
+import com.ruoyi.common.utils.CommonUtil;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +34,12 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
     @GetMapping("/list")
     public TableDataInfo list(OdsRtSzdnSnapshotFlowAddcode odsRtSzdnSnapshotFlowAddcode) {
         startPage();
-        odsRtSzdnSnapshotFlowAddcode.setFlag("JiAnDong");
+
+        String platenumber = odsRtSzdnSnapshotFlowAddcode.getPlatenumber();
+        if(CommonUtil.isBlank(platenumber)) {
+            odsRtSzdnSnapshotFlowAddcode.setFlag("JiAnDong");
+        }
+
         List<OdsRtSzdnSnapshotFlowAddcode> list = odsRtSzdnSnapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeList(odsRtSzdnSnapshotFlowAddcode);
         if (null !=list && list.size() > 0){
             for (OdsRtSzdnSnapshotFlowAddcode rtn :list){
@@ -50,7 +56,12 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
     @GetMapping("/listToExport")
     public List<OdsRtSzdnSnapshotFlowAddcode> listToExport(OdsRtSzdnSnapshotFlowAddcode odsRtSzdnSnapshotFlowAddcode) {
         startPage();
-        odsRtSzdnSnapshotFlowAddcode.setFlag("JiAnDong");
+
+        String platenumber = odsRtSzdnSnapshotFlowAddcode.getPlatenumber();
+        if(CommonUtil.isBlank(platenumber)) {
+            odsRtSzdnSnapshotFlowAddcode.setFlag("JiAnDong");
+        }
+
         List<OdsRtSzdnSnapshotFlowAddcode> list = odsRtSzdnSnapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeList(odsRtSzdnSnapshotFlowAddcode);
         if (null !=list && list.size() > 0){
             for (OdsRtSzdnSnapshotFlowAddcode rtn :list){
