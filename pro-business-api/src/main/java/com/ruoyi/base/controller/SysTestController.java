@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @RestController
@@ -317,11 +318,14 @@ public class SysTestController extends BaseController {
     public void syncOdsSzdnGantry() {
         log.info("每天同步门架信息开始 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
         List<OdsSzdnGantry> gantryList = odsSzdnGantryService.getGantryRedis();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime daysBefore = now.minusDays(7);//时间段为7天
         for (OdsSzdnGantry rtnOdsSzdnGantry : gantryList) {
             String gantryCode = CommonUtil.isNull(rtnOdsSzdnGantry.getGantryCode());
             if (CommonUtil.isNotBlank(gantryCode)) {
                 // transtime
-                Long count = feeRecords01Service.lambdaQuery().eq(OdsLwzxsfsjFeeRecords01::getGantryid, gantryCode).count();
+                Long count = feeRecords01Service.lambdaQuery().eq(OdsLwzxsfsjFeeRecords01::getGantryid, gantryCode)
+                        .between(OdsLwzxsfsjFeeRecords01::getTranstime, daysBefore, now).count();
                 redisCache.setCacheObject(Constants.gantry_list_data + gantryCode, count);
             }
         }
