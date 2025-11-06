@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 门架抓拍流水Controller
@@ -39,6 +41,21 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
         if(CommonUtil.isBlank(platenumber)) {
             odsRtSzdnSnapshotFlowAddcode.setFlag("JiAnDong");
         }
+
+        // 路段
+        if (CommonUtil.isNotBlank(odsRtSzdnSnapshotFlowAddcode.getSectionCodeStr())){
+            odsRtSzdnSnapshotFlowAddcode.setSectioncode(odsRtSzdnSnapshotFlowAddcode.getSectionCodeStr());
+        }
+
+        // 门架
+        String code = CommonUtil.deleteEnd(odsRtSzdnSnapshotFlowAddcode.getCode());
+        if (CommonUtil.isNotBlank(code)){
+            // 服务区 收费站
+            odsRtSzdnSnapshotFlowAddcode.setCodeList(Arrays.stream(code.split(",")).collect(Collectors.toList()));
+            odsRtSzdnSnapshotFlowAddcode.setCode(""); // 查询范围
+        }
+
+
 
         List<OdsRtSzdnSnapshotFlowAddcode> list = odsRtSzdnSnapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeList(odsRtSzdnSnapshotFlowAddcode);
         if (null !=list && list.size() > 0){
