@@ -974,14 +974,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
         // 图片替换----
         String imagesArry = CommonUtil.deleteEnd(trailBo.getImagesArry());
-        if(CommonUtil.isNotBlank(imagesArry)){
-            if(imagesArry.indexOf("http://jxjt.isilon.com/ifs") > -1){
-                imagesArry = imagesArry.replaceAll("http://jxjt.isilon.com/ifs","http://36.200.30.144:9080");
-            }else{
-                imagesArry = imagesArry.replaceAll("http://jxjt.isilon.com","http://36.200.30.144:9080");
-            }
-            trailBo.setImagesArry(imagesArry);
-        }
+        trailBo.setImagesArry(CommonUtil.repalacePicUrl(imagesArry));
 
         return  trailBo;
     }
@@ -1009,7 +1002,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
     public void syncSuspiciousCarQutaz(int startNum, int endNum) {
 
         Integer pageSize = 10;
-        Integer starTime = 7;
+        Integer starTime = 3;
         Integer endTime = 14;
         BigDecimal bite = new BigDecimal("0.5");  // 门架抓拍和流水抓拍占比
 
@@ -1036,8 +1029,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
         }
 
 
-
-
         if (CommonUtil.isNull(isLocalhost).equals("local")) {
             log.info("本地配置------："+CommonUtil.isNull(isLocalhost));
             // 本地  分页1000条 30 到 1 天
@@ -1059,12 +1050,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
         //----------7 到 14天
         carParaVO.setStarTime(starTime);
         carParaVO.setEndTime(endTime);
-
-        List<TrailInfo> trailList = new ArrayList<>();
-
-        // 位置信息
-        //  Map<String,ZdataLocationDict> locationMap = zdataLocationDictService.getRedisList();
-
 
         for (int i = startNum; i <= endNum; i++) {
             // ----- 分页范围
@@ -1287,21 +1272,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     }
                     trailBoList.add(trailBo);
                 }
-
-               /* trailBoList = JSON.parseArray(trailPoints, TrailBo.class);
-                SimpleDateFormat format1 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-                SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                if (null != trailBoList && trailBoList.size() > 0) {
-                    for (TrailBo trailBo : trailBoList) {
-                        String captureTime = CommonUtil.isNull(trailBo.getCaptureTime());
-                        if (captureTime.indexOf("T") > -1){
-                            Date dateTime = format1.parse(captureTime);
-                            // 步骤2：使用DateTimeFormatter转字符串
-                            String formattedDateStr = format2.format(dateTime);
-                            trailBo.setCaptureTime(formattedDateStr);
-                        }
-                    }
-                }*/
             } catch (Exception e) {
                 e.printStackTrace();
                 log.error("解析错误！");
@@ -1313,7 +1283,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
     }
 
     /**
-     * 处理
+     * 处理 : 合并门架抓拍和收费站抓拍流水------
+     *
      * @param trailBoList
      * @return
      */

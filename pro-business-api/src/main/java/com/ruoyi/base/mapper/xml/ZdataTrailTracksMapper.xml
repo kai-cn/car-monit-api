@@ -73,7 +73,7 @@
             t.exweight,
             t.trailpoints
         from jl_data01.zdata_trail_fitting t
-        where t.entime >= now() - #{endTime} and  t.entime <![CDATA[<=]]> now() - #{starTime}
+        where t.entime >= now() - #{starTime}  and t.entime <![CDATA[<=]]> now()
         and exists  (
             select 1 from jl_data01.ods_szdn_toll sip where (sip.toll_code = t.entollstationid
             or sip.toll_code = t.extollstationid)
@@ -114,9 +114,9 @@
             <if test="flag != null and flag == 'bannian' ">
                 and t.entime >= now() - 180 and t.entime <![CDATA[<=]]> now()
             </if>
-            <!-- 默认查询半年-->
+            <!-- 默认查询三天之前的-->
             <if test="flag != null and flag == 'yiyue' ">
-                and t.entime >= now() - 7 and t.entime <![CDATA[<=]]> now()
+                and t.entime >= now() - 3 and t.entime <![CDATA[<=]]> now()
             </if>
             <if test="carNoList != null and carNoList.size() > 0">
                and  t.envehicleid in

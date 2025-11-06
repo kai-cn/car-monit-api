@@ -65,6 +65,9 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
                 if (null != rtn.getSnapshottime()) {
                     rtn.setSnapshottimeStr( DateUtils.parseDateToStr(DateUtils.YYYY_MM_DD_HH_MM_SS, rtn.getSnapshottime()));
                 }
+                // 图片路径替换
+                String imagesArry = CommonUtil.deleteEnd(rtn.getSnappicturepath());
+                rtn.setSnappicturepath(CommonUtil.repalacePicUrl(imagesArry));
             }
         }
         return getDataTable(list);

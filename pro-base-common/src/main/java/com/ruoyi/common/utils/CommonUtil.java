@@ -196,4 +196,25 @@ public class CommonUtil {
 		}
 	}
 
+
+	/**
+	 * 图片替换
+	 *
+	 * @param
+	 * @return
+	 */
+	public static String  repalacePicUrl(String  imagesArry) {
+		imagesArry = isNull(imagesArry);
+		if (isNotBlank(imagesArry)){
+			if(imagesArry.indexOf("http://jxjt.isilon.com/ifs") > -1){
+				imagesArry = imagesArry.replaceAll("http://jxjt.isilon.com/ifs","http://36.200.30.144:9080");
+			}else{
+				imagesArry = imagesArry.replaceAll("http://jxjt.isilon.com","http://36.200.30.144:9080");
+			}
+		}
+		return imagesArry;
+	}
+
+
+
 }
