@@ -31,4 +31,14 @@ public interface IOdsLwzxsfsjFeeRecords01Service extends IService<OdsLwzxsfsjFee
     List<OdsLwzxsfsjFeeRecords01> selectOdsLwzxsfsjFeeRecords01List(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01);
 
     Map<String, OdsLwzxsfsjFeeRecords01> selectOdsLwzxsfsjFeeRecords01ByQueryUuids(String uuids);
+
+
+    /**
+     * 查询门架数量
+     *
+     * @param odsLwzxsfsjFeeRecords01 基础-收费流水
+     * @return 基础-收费流水集合
+     */
+    int selectGantryNum(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01);
+
 }

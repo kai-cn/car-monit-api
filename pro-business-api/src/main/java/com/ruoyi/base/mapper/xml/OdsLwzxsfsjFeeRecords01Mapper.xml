@@ -439,4 +439,14 @@
          where t.big_id = #{bigId}
     </select>
 
+
+    <select id="selectGantryNum" parameterType="com.ruoyi.base.domain.OdsLwzxsfsjFeeRecords01"  resultType="java.lang.Integer">
+        SELECT
+         count(1)
+        FROM jl_data01.ods_lwzxsfsj_fee_records_01 t
+        where  t.gantryid = #{gantryid}
+        <if test="inApplyTime1 != null  and inApplyTime1 != ''">and t.transtime >= to_timestamp(#{inApplyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
+        <if test="inApplyTime2 != null  and inApplyTime2 != ''">and t.transtime <![CDATA[<=]]> to_timestamp(#{inApplyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
+    </select>
+
 </mapper>

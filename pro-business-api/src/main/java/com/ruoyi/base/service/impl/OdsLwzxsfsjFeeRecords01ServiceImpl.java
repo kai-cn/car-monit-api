@@ -84,4 +84,14 @@ public class OdsLwzxsfsjFeeRecords01ServiceImpl extends ServiceImpl<OdsLwzxsfsjF
         }
         return map;
     }
+
+    /**
+     * 查询基础-收费流水列表
+     *
+     * @param odsLwzxsfsjFeeRecords01 基础-收费流水
+     * @return 基础-收费流水集合
+     */
+    public int selectGantryNum(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01){
+        return odsLwzxsfsjFeeRecords01Mapper.selectGantryNum(odsLwzxsfsjFeeRecords01);
+    }
 }

@@ -323,9 +323,11 @@ public class SysTestController extends BaseController {
         for (OdsSzdnGantry rtnOdsSzdnGantry : gantryList) {
             String gantryCode = CommonUtil.isNull(rtnOdsSzdnGantry.getGantryCode());
             if (CommonUtil.isNotBlank(gantryCode)) {
-                // transtime
-                Long count = feeRecords01Service.lambdaQuery().eq(OdsLwzxsfsjFeeRecords01::getGantryid, gantryCode)
-                        .between(OdsLwzxsfsjFeeRecords01::getTranstime, daysBefore, now).count();
+                OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01 = new OdsLwzxsfsjFeeRecords01();
+                odsLwzxsfsjFeeRecords01.setInApplyTime1("2025-10-01 00-00-00");
+                odsLwzxsfsjFeeRecords01.setInApplyTime2("2025-10-30 00-00-00");
+                odsLwzxsfsjFeeRecords01.setGantryid(gantryCode);
+                int count = feeRecords01Service.selectGantryNum(odsLwzxsfsjFeeRecords01);
                 redisCache.setCacheObject(Constants.gantry_list_data + gantryCode, count);
             }
         }

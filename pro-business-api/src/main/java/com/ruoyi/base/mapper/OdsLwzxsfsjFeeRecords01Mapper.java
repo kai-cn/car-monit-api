@@ -30,4 +30,11 @@ public interface OdsLwzxsfsjFeeRecords01Mapper extends BaseMapper<OdsLwzxsfsjFee
      */
     List<OdsLwzxsfsjFeeRecords01> selectOdsLwzxsfsjFeeRecords01List(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01);
 
+    /**
+     * 查询门架数量
+     * @param odsLwzxsfsjFeeRecords01
+     * @return
+     */
+    public int selectGantryNum(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01);
+
 }
