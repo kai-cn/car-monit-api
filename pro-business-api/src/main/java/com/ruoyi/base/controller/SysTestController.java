@@ -115,6 +115,7 @@ public class SysTestController extends BaseController {
                         // 同步时间查询
                         carParaVO.setFlag("yiyue");  // 默认查询1月
                     }
+                    carParaVO.setFlag("bannian");  // 默认查询半年的数据
 
                     List<TrailInfo> newList = sysUtilService.carTrackQuery(carParaVO);
                     if (null != newList && newList.size() > 0) {
@@ -324,8 +325,8 @@ public class SysTestController extends BaseController {
             String gantryCode = CommonUtil.isNull(rtnOdsSzdnGantry.getGantryCode());
             if (CommonUtil.isNotBlank(gantryCode)) {
                 OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01 = new OdsLwzxsfsjFeeRecords01();
-                odsLwzxsfsjFeeRecords01.setInApplyTime1("2025-10-01 00-00-00");
-                odsLwzxsfsjFeeRecords01.setInApplyTime2("2025-10-30 00-00-00");
+                odsLwzxsfsjFeeRecords01.setInApplyTime1("2025-11-01 00-00-00");
+                odsLwzxsfsjFeeRecords01.setInApplyTime2("2025-11-06 00-00-00");
                 odsLwzxsfsjFeeRecords01.setGantryid(gantryCode);
                 int count = feeRecords01Service.selectGantryNum(odsLwzxsfsjFeeRecords01);
                 redisCache.setCacheObject(Constants.gantry_list_data + gantryCode, count);
