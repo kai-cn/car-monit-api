@@ -46,6 +46,10 @@ public class SysTestController extends BaseController {
     @Resource
     private ThreadPoolTaskExecutor threadTaskExecutor;
 
+
+    @Autowired
+    private IOdsLwzxsfsjFeeRecords01Service feeRecords01Service;
+
     /**
      * 车俩实时轨迹同步
      */
@@ -303,6 +307,23 @@ public class SysTestController extends BaseController {
             });
         }
         log.info("每天凌晨3点15执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
+
+
+    /**
+     * 同步门架信息
+     */
+    @GetMapping(value = "/syncOdsSzdnGantry")
+    public void syncOdsSzdnGantry() {
+        log.info("每天同步门架信息开始 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        List<OdsSzdnGantry> gantryList = odsSzdnGantryService.getGantryRedis();
+        for (OdsSzdnGantry rtnOdsSzdnGantry : gantryList) {
+            String gantryCode = CommonUtil.isNull(rtnOdsSzdnGantry.getGantryCode());
+            if (CommonUtil.isNotBlank(gantryCode)){
+
+            }
+        }
+        log.info("每天凌晨同步门架信息结束 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
 
