@@ -66,9 +66,9 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
         if (null !=list && list.size() > 0){
 
             List<OdsSzdnGantry>  gantryList = odsSzdnGantryService.getGantryRedis();
-            Map<String,String> gantryMao = new HashMap<>();
+            Map<String,OdsSzdnGantry> gantryMao = new HashMap<>();
             for (OdsSzdnGantry rtnOdsSzdnGantry:gantryList){
-                gantryMao.put(CommonUtil.isNull(rtnOdsSzdnGantry.getGantryCode()),rtnOdsSzdnGantry.getGantryName());
+                gantryMao.put(CommonUtil.isNull(rtnOdsSzdnGantry.getGantryCode()),rtnOdsSzdnGantry);
             }
 
 
@@ -80,10 +80,13 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
                     /*if (vehicleplateStr.length >1){
                         feeRecords.setPlateColor(vehicleplateStr[1]);
                     }*/
-                    String gantryid = CommonUtil.isNull(feeRecords.getGantryid());
-                    if (gantryMao.containsKey(gantryid)){
-                        feeRecords.setGantryName(gantryMao.get(gantryid));
-                    }
+                }
+
+                String gantryid = CommonUtil.isNull(feeRecords.getGantryid());
+                if (gantryMao.containsKey(gantryid)){
+                    OdsSzdnGantry gantry = gantryMao.get(gantryid);
+                    feeRecords.setGantryName(gantry.getGantryName()); // 门架名称
+                    feeRecords.setSectionCodeStr(gantry.getSectionCode()); // 路线编号
                 }
             }
         }
@@ -121,9 +124,9 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
         if (null !=list && list.size() > 0){
 
             List<OdsSzdnGantry>  gantryList = odsSzdnGantryService.getGantryRedis();
-            Map<String,String> gantryMao = new HashMap<>();
+            Map<String,OdsSzdnGantry> gantryMao = new HashMap<>();
             for (OdsSzdnGantry rtnOdsSzdnGantry:gantryList){
-                gantryMao.put(CommonUtil.isNull(rtnOdsSzdnGantry.getGantryCode()),rtnOdsSzdnGantry.getGantryName());
+                gantryMao.put(CommonUtil.isNull(rtnOdsSzdnGantry.getGantryCode()),rtnOdsSzdnGantry);
             }
 
 
@@ -135,10 +138,13 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
                     /*if (vehicleplateStr.length >1){
                         feeRecords.setPlateColor(vehicleplateStr[1]);
                     }*/
-                    String gantryid = CommonUtil.isNull(feeRecords.getGantryid());
-                    if (gantryMao.containsKey(gantryid)){
-                        feeRecords.setGantryName(gantryMao.get(gantryid));
-                    }
+                }
+
+                String gantryid = CommonUtil.isNull(feeRecords.getGantryid());
+                if (gantryMao.containsKey(gantryid)){
+                    OdsSzdnGantry gantry = gantryMao.get(gantryid);
+                    feeRecords.setGantryName(gantry.getGantryName()); // 门架名称
+                    feeRecords.setSectionCodeStr(gantry.getSectionCode()); // 路线编号
                 }
             }
         }
