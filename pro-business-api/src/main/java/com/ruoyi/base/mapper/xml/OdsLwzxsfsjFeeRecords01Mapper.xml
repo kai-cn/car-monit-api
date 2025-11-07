@@ -280,6 +280,7 @@
         SELECT
         <include refid="selectOdsLwzxsfsjFeeRecords01Vo"/>
         FROM jl_data01.ods_lwzxsfsj_fee_records_01 t
+        inner join jl_data01.ods_szdn_gantry g ON t.gantryid = g.gantry_code
         <where>
         <if test="bigId != null  and bigId != ''"> and t.big_id = #{bigId}</if>
         <if test="algorithmidentifier != null  and algorithmidentifier != ''"> and t.algorithmidentifier = #{algorithmidentifier}</if>
@@ -429,6 +430,18 @@
             select 1 from jl_data01.ods_szdn_gantry g where g.gantry_code = t.gantryid  and g.org_code = '030000011'
             )
         </if>
+        <if test="codeList != null and codeList.size() > 0">
+            and
+            <foreach collection="codeList" open="(" separator="or" close=")" item="item">
+                g.gantry_code = #{item}
+            </foreach>
+        </if>
+            <if test="sectionList != null and sectionList.size() > 0">
+                and
+                <foreach collection="sectionList" open="(" separator="or" close=")" item="item">
+                    g.section_code = #{item}
+                </foreach>
+            </if>
         </where>
     </select>
 

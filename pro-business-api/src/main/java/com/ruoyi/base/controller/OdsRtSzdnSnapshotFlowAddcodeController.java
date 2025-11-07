@@ -84,6 +84,21 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
             odsRtSzdnSnapshotFlowAddcode.setFlag("JiAnDong");
         }
 
+        // 路段
+        String sectionCodeStr = odsRtSzdnSnapshotFlowAddcode.getSectionCodeStr();
+        if (CommonUtil.isNotBlank(sectionCodeStr)){
+            odsRtSzdnSnapshotFlowAddcode.setSectionList(Arrays.stream(sectionCodeStr.split(",")).collect(Collectors.toList()));
+            odsRtSzdnSnapshotFlowAddcode.setSectioncode("");
+        }
+
+        // 门架
+        String code = CommonUtil.deleteEnd(odsRtSzdnSnapshotFlowAddcode.getCode());
+        if (CommonUtil.isNotBlank(code)){
+            // 服务区 收费站
+            odsRtSzdnSnapshotFlowAddcode.setCodeList(Arrays.stream(code.split(",")).collect(Collectors.toList()));
+            odsRtSzdnSnapshotFlowAddcode.setCode(""); // 查询范围
+        }
+
         List<OdsRtSzdnSnapshotFlowAddcode> list = odsRtSzdnSnapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeList(odsRtSzdnSnapshotFlowAddcode);
         if (null !=list && list.size() > 0){
             for (OdsRtSzdnSnapshotFlowAddcode rtn :list){

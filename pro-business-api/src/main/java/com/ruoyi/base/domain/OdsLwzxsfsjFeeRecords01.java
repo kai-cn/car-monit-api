@@ -598,4 +598,32 @@ public class OdsLwzxsfsjFeeRecords01 implements Custom {
     @TableField(exist = false)
     private String flag;// 标识位
 
+    /** 所属路段编码 */
+    @TableField(exist = false)
+    private String sectionCodeStr;
+
+    /**
+     * 1收费站、2门架、3服务区
+     */
+    @TableField(exist = false)
+    private String type;
+
+    /**
+     * 编码
+     */
+    @TableField(exist = false)
+    private String code;
+
+    /**
+     * 对象集合
+     */
+    @TableField(exist = false)
+    List<String> codeList;
+
+    /**
+     * 对象集合
+     */
+    @TableField(exist = false)
+    List<String> sectionList;
+
 }
