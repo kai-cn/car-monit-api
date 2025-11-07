@@ -225,6 +225,7 @@ public class CommonUtil {
 	public static String repalaceSzdnTollName(String tollName) {
 		tollName = isNull(tollName);
 		if (isNotBlank(tollName)) {
+			tollName = tollName.replaceAll("收费站", "");
 			tollName = tollName.replaceAll("江西", "");
 			tollName = tollName.replaceAll("站", "");
 		}

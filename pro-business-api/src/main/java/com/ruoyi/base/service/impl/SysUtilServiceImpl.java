@@ -636,9 +636,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
         }else{
             // 历史轨迹：
             String firstCode = CommonUtil.isNull(tracks.getEntollstationid()); // 入口收费站编号
-            String firstName = CommonUtil.isNull(tracks.getEntollstationname()); // 入口收费站名称
+            String firstName = CommonUtil.repalaceSzdnTollName(tracks.getEntollstationname()); // 入口收费站名称
             String endCode = CommonUtil.isNull(tracks.getExtollstationid()); // 出口收费站编号
-            String endName = CommonUtil.isNull(tracks.getExtollstationname()); // 出口收费站名称
+            String endName = CommonUtil.repalaceSzdnTollName(tracks.getExtollstationname()); // 出口收费站名称
 
 
             if (CommonUtil.isNotBlank(firstCode)){
