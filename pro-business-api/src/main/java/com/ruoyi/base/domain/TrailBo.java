@@ -50,6 +50,19 @@ public class TrailBo {
     // 设备IP地址:可通过映射表解析IP→实体设施（门架、收费站、服务区等），实现设备到道路设施的转换
     private String locationCode;
 
+    // 设备名称
+    private String locationName;
+
+    // 标准代码
+    private String standardCode;
+
+    // 进度
+    private String longitude;
+
+    // 维度
+    private String latitude;
+
+
     // 位置是否有值
     private String locationFlag;
 

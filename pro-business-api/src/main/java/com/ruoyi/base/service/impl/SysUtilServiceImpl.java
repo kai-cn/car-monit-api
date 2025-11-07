@@ -228,7 +228,39 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
-                    josnList = JSON.parseArray(keyValue, TrailBo.class);
+
+                    // 先转josn数组 然后循环 一个一个手动赋值
+                    JSONArray array = JSON.parseArray(keyValue);
+                    for (Object o : array) {
+                        JSONObject jsonObj = (JSONObject) o;
+                        TrailBo trailBo = new TrailBo();
+                        trailBo.setPointUuid(jsonObj.getString("pointUuid"));
+                        trailBo.setStateType(jsonObj.getString("stateType"));
+                        trailBo.setCaptureTime(jsonObj.getString("captureTime"));
+                        trailBo.setLocationCode(jsonObj.getString("locationCode"));
+                        trailBo.setLocationName(jsonObj.getString("locationName"));
+                        trailBo.setStandardCode(jsonObj.getString("standardCode"));
+
+                        String lon = jsonObj.getString("longitude");
+                        String lat = jsonObj.getString("latitude");
+
+                        if(CommonUtil.isNotBlank(lon)) {
+                            trailBo.setLon(new BigDecimal(lon));
+                        }
+                        if(CommonUtil.isNotBlank(lat)) {
+                            trailBo.setLat(new BigDecimal(lat));
+                        }
+
+                        trailBo.setDevCode(trailBo.getStandardCode());
+                        trailBo.setDevName(trailBo.getLocationName());
+
+                        josnList.add(trailBo);
+
+
+                    }
+                   //  josnList = JSON.parseArray(keyValue, TrailBo.class);
+
+
                     List<TrailBo> rtnList = this.mapTrailBoList(josnList);
                     // 最后一个轨迹点需要查询
                     if (null != rtnList && rtnList.size() > 0) {

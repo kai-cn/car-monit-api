@@ -280,7 +280,7 @@
         SELECT
         <include refid="selectOdsLwzxsfsjFeeRecords01Vo"/>
         FROM jl_data01.ods_lwzxsfsj_fee_records_01 t
-        inner join jl_data01.ods_szdn_gantry g ON t.gantryid = g.gantry_code
+        left join jl_data01.ods_szdn_gantry g ON t.gantryid = g.gantry_code
         <where>
         <if test="bigId != null  and bigId != ''"> and t.big_id = #{bigId}</if>
         <if test="algorithmidentifier != null  and algorithmidentifier != ''"> and t.algorithmidentifier = #{algorithmidentifier}</if>
@@ -414,8 +414,7 @@
         <if test="verifycode != null  and verifycode != ''"> and t.verifycode = #{verifycode}</if>
         <if test="loadTime != null "> and t.load_time = #{loadTime}</if>
         <if test="gradeLevel != null "> and t.grade_level = #{gradeLevel}</if>
-        <if test="inApplyTime1 != null  and inApplyTime1 != ''">and t.transtime >= to_timestamp(#{inApplyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
-        <if test="inApplyTime2 != null  and inApplyTime2 != ''">and t.transtime <![CDATA[<=]]> to_timestamp(#{inApplyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
+
         <if test="cidList != null and cidList.size() > 0">
             and cid in
             <foreach collection="cidList" open="(" separator="," close=")" item="item">
@@ -436,12 +435,14 @@
                 g.gantry_code = #{item}
             </foreach>
         </if>
-            <if test="sectionList != null and sectionList.size() > 0">
-                and
-                <foreach collection="sectionList" open="(" separator="or" close=")" item="item">
-                    g.section_code = #{item}
-                </foreach>
-            </if>
+        <if test="sectionList != null and sectionList.size() > 0">
+            and
+            <foreach collection="sectionList" open="(" separator="or" close=")" item="item">
+                g.section_code = #{item}
+            </foreach>
+        </if>
+        <if test="inApplyTime1 != null  and inApplyTime1 != ''">and t.transtime >= to_timestamp(#{inApplyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
+        <if test="inApplyTime2 != null  and inApplyTime2 != ''">and t.transtime <![CDATA[<=]]> to_timestamp(#{inApplyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
         </where>
     </select>
 

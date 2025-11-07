@@ -60,6 +60,7 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
             odsLwzxsfsjFeeRecords01.setCodeList(Arrays.stream(code.split(",")).collect(Collectors.toList()));
             odsLwzxsfsjFeeRecords01.setCode(""); // 查询范围
         }
+
         List<OdsLwzxsfsjFeeRecords01> list = odsLwzxsfsjFeeRecords01Service.selectOdsLwzxsfsjFeeRecords01List(odsLwzxsfsjFeeRecords01);
 
         if (null !=list && list.size() > 0){
@@ -103,13 +104,13 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
 
         // 路段
         String sectionCodeStr = odsLwzxsfsjFeeRecords01.getSectionCodeStr();
-        if (CommonUtil.isNotBlank(sectionCodeStr)) {
+        if (CommonUtil.isNotBlank(sectionCodeStr)){
             odsLwzxsfsjFeeRecords01.setSectionList(Arrays.stream(sectionCodeStr.split(",")).collect(Collectors.toList()));
         }
 
         // 门架
         String code = CommonUtil.deleteEnd(odsLwzxsfsjFeeRecords01.getCode());
-        if (CommonUtil.isNotBlank(code)) {
+        if (CommonUtil.isNotBlank(code)){
             // 服务区 收费站
             odsLwzxsfsjFeeRecords01.setCodeList(Arrays.stream(code.split(",")).collect(Collectors.toList()));
             odsLwzxsfsjFeeRecords01.setCode(""); // 查询范围

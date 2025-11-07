@@ -120,8 +120,7 @@
         <if test="gradelevel != null "> and t.gradelevel = #{gradelevel}</if>
         <if test="datauuid != null  and datauuid != ''"> and t.datauuid = #{datauuid}</if>
         <if test="reserve3 != null  and reserve3 != ''"> and t.reserve3 = #{reserve3}</if>
-        <if test="applyTime1 != null  and applyTime1 != ''">and t.snapshottime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
-        <if test="applyTime2 != null  and applyTime2 != ''">and t.snapshottime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
+
 
         <if test="codeList != null and codeList.size() > 0">
             and
@@ -136,6 +135,9 @@
                 t.sectioncode = #{item}
             </foreach>
         </if>
+
+        <if test="applyTime1 != null  and applyTime1 != ''">and t.snapshottime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
+        <if test="applyTime2 != null  and applyTime2 != ''">and t.snapshottime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
 
         </where>
     </select>
