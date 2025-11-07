@@ -130,6 +130,13 @@
             </foreach>
         </if>
 
+        <if test="sectionList != null and sectionList.size() > 0">
+            and
+            <foreach collection="sectionList" open="(" separator="or" close=")" item="item">
+                t.sectioncode = #{item}
+            </foreach>
+        </if>
+
         </where>
     </select>
 

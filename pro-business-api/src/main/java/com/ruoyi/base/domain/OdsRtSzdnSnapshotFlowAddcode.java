@@ -244,4 +244,11 @@ public class OdsRtSzdnSnapshotFlowAddcode implements Custom {
     @TableField(exist = false)
     List<String> codeList;
 
+
+    /**
+     * 对象集合
+     */
+    @TableField(exist = false)
+    List<String> sectionList;
+
 }

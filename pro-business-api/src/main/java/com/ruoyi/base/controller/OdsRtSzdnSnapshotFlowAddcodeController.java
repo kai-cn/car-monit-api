@@ -43,8 +43,10 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
         }
 
         // 路段
-        if (CommonUtil.isNotBlank(odsRtSzdnSnapshotFlowAddcode.getSectionCodeStr())){
-            odsRtSzdnSnapshotFlowAddcode.setSectioncode(odsRtSzdnSnapshotFlowAddcode.getSectionCodeStr());
+        String sectionCodeStr = odsRtSzdnSnapshotFlowAddcode.getSectionCodeStr();
+        if (CommonUtil.isNotBlank(sectionCodeStr)){
+            odsRtSzdnSnapshotFlowAddcode.setSectionList(Arrays.stream(sectionCodeStr.split(",")).collect(Collectors.toList()));
+            odsRtSzdnSnapshotFlowAddcode.setSectioncode("");
         }
 
         // 门架
