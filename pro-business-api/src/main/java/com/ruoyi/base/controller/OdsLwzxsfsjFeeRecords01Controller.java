@@ -104,7 +104,6 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
         if (CommonUtil.isBlank(vehicleplateQuery)) {
             odsLwzxsfsjFeeRecords01.setFlag("JiAnDong");
         }
-
         // 路段
         String sectionCodeStr = odsLwzxsfsjFeeRecords01.getSectionCodeStr();
         if (CommonUtil.isNotBlank(sectionCodeStr)){
