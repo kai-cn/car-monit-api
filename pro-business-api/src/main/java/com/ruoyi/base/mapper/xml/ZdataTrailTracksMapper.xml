@@ -71,7 +71,8 @@
             t.exvehicleid,
             t.exvehicletype,
             t.exweight,
-            t.trailpoints
+            t.trailpoints,
+            t.trailtype
         from jl_data01.zdata_trail_fitting t
         where t.extime >= now() - #{starTime}  and t.extime <![CDATA[<=]]> now()
 

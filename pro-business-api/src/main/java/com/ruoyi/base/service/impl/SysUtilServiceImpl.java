@@ -1160,20 +1160,20 @@ public class SysUtilServiceImpl implements ISysUtilService {
         // 查询路段list
         List<OdsSzdnSection> sectionlist = sectionService.getSectionList();
 
-        // 帅选
+        // 筛选的路段信息-------------
+        String indexRoadCode = "G45";
+         Map<String,String> indexRoadCodeMap = new HashMap<>();
         List<String> sectionsQueryList = new ArrayList<>();
         for (OdsSzdnSection odsSzdnSection : sectionlist) {
             String roadCode = CommonUtil.isNull(odsSzdnSection.getRoadCode()); // 路线
             String sectionCode =  CommonUtil.isNull(odsSzdnSection.getSectionCode()); // 路段编码
             if (CommonUtil.isNotBlank(roadCode) && CommonUtil.isNotBlank(sectionCode)){
                 // 大广高速
-                if (roadCode.equals("G45")){
+                if (roadCode.equals(indexRoadCode)){
                     sectionsQueryList.add(sectionCode);
+                    indexRoadCodeMap.put(sectionCode,roadCode);
                 }
             }
-        }
-        if (sectionsQueryList.size() == 0){
-            sectionsQueryList.add("nosection");
         }
 
 
@@ -1190,14 +1190,39 @@ public class SysUtilServiceImpl implements ISysUtilService {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
             String formattedDate = sdf.format(now);
 
-            // ---------------------------------- 跨省全程屏蔽
-            log.info("开始查询----------"+new Date());
-            carParaVO.setFlag("ksqcpb");
-            List<ZdataTrailTracks> carlist1 = zdataTrailTracksService.getLatestTrail(carParaVO);
-            log.info("结束查询----------"+new Date());
+            log.info("SQL开始查询----------"+new Date());
+            List<ZdataTrailTracks> carlistAll = zdataTrailTracksService.getLatestTrail(carParaVO);
+            log.info("SQL结束查询----------"+new Date());
 
-            if (null != carlist1 && carlist1.size() > 0) {
-                for (ZdataTrailTracks tracks : carlist1) {
+            // ---------------------------------- 跨省全程屏蔽
+            List<ZdataTrailTracks> carlistQspb = new ArrayList<>();
+            // ---------------------------------- 关注路段屏蔽
+            List<ZdataTrailTracks> carlistLdpb = zdataTrailTracksService.getLatestTrail(carParaVO);
+
+            for (ZdataTrailTracks zdataTrailTracksVo : carlistAll) {
+                String trailtype = CommonUtil.isNull(zdataTrailTracksVo.getTrailtype());
+                if (trailtype.equals("0")) {
+                    carlistQspb.add(zdataTrailTracksVo);
+                }
+
+                // 判断是否包含大广路段
+                String keyValue = zdataTrailTracksVo.getTrailPoints(); // 行驶轨迹
+                if (CommonUtil.isNotBlank(keyValue)) {
+                    boolean exflag = false;
+                    for (String sectionCodeValue: sectionsQueryList){
+                        if (keyValue.indexOf(sectionCodeValue) > -1){
+                            exflag = true;
+                        }
+                    }
+                    if (exflag){
+                        carlistLdpb.add(zdataTrailTracksVo);
+                    }
+                }
+            }
+
+            // ---------------------------------- 跨省全程屏蔽
+            if (null != carlistQspb && carlistQspb.size() > 0) {
+                for (ZdataTrailTracks tracks : carlistQspb) {
                     String carNo = CommonUtil.isNull(tracks.getPlateKey());
                     String keyValue = tracks.getTrailPoints(); // 行驶轨迹
                     String escapedType = "";
@@ -1245,13 +1270,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
             }
 
             // ---------------------------------- 关注路段屏蔽
-            log.info("开始查询----------"+new Date());
-            carParaVO.setFlag("ldtf");
-            List<ZdataTrailTracks> carlist2 = zdataTrailTracksService.getLatestTrail(carParaVO);
-            log.info("结束查询----------"+new Date());
-
-            if (null != carlist2 && carlist2.size() > 0) {
-                for (ZdataTrailTracks tracks : carlist2) {
+            if (null != carlistLdpb && carlistLdpb.size() > 0) {
+                for (ZdataTrailTracks tracks : carlistLdpb) {
                     String carNo = CommonUtil.isNull(tracks.getPlateKey());
                     String keyValue = tracks.getTrailPoints(); // 行驶轨迹
                     String escapedType = "";
@@ -1260,77 +1280,50 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         josnList = this.getTrailBoList(keyValue);
                         tracks.setTrailPoints("");  // 行驶轨迹
 
-                        // ---------------------------分析场景: 门架抓拍和流水抓拍 占比
+                        // ---------------------------分析场景: 路段抓拍和流水抓拍 占比
                         int conutGantryCapture = 0;
                         int conutFeeRecord = 0;
-                        Map<String, Integer> gantryCaptureMap = new HashMap();
-                        Map<String, Integer> feeRecordMap = new HashMap();
 
-                        for (TrailBo rtnTrailBo:josnList){
+                        for (TrailBo rtnTrailBo : josnList) {
                             String sectionCode = CommonUtil.isNull(rtnTrailBo.getSectionCode()); // 路段信息
                             String stateType = CommonUtil.isNull(rtnTrailBo.getStateType());
-                            if (stateType.equals(GANTRY_CAPTURE)) {
-                                // 门架抓拍
-                                conutGantryCapture++;
-                                if (CommonUtil.isNotBlank(sectionCode)) {
-                                    gantryCaptureMap.put(sectionCode, 1);
-                                }
-                            } else if (stateType.equals(FeeRecord)) {
-                                // 卡口流水
-                                conutFeeRecord++;
-                                if (CommonUtil.isNotBlank(sectionCode)) {
-                                    feeRecordMap.put(sectionCode, 1);
+                            if (CommonUtil.isNotBlank(sectionCode)) {
+                                if (indexRoadCodeMap.containsKey(sectionCode)) {
+                                    if (stateType.equals(GANTRY_CAPTURE)) {
+                                        // 门架抓拍
+                                        conutGantryCapture++;
+                                    } else if (stateType.equals(FeeRecord)) {
+                                        // 卡口流水
+                                        conutFeeRecord++;
+                                    }
                                 }
                             }
                         }
+                        // 该路段有门架抓拍
+                        if (conutGantryCapture > 0 && conutFeeRecord == 0){
 
-                        // ---------------屏蔽:
-                        String escapedTypeRemark = "";
-                       /* if (conutGantryCapture > supoerMjnum && conutGantryCapture > conutFeeRecord ){
-                        }*/
-                        boolean addFlag = false;
-                        if (conutFeeRecord == 0) {
-                            escapedTypeRemark = "路段屏蔽：门架牌识流水数量:" + conutGantryCapture + "门架交易流水数量:" + conutFeeRecord;
-                            addFlag = true;
-                        } else {
-
-                            int extitsNum = 0;
-                            for (Map.Entry<String, Integer> entry : gantryCaptureMap.entrySet()) {
-                                String entryKey = entry.getKey();
-                                if (gantryCaptureMap.containsKey(entryKey)) {
-                                    extitsNum++;
-                                }
-                            }
-
-                            // 重合比例
-                            BigDecimal costBite = new BigDecimal(extitsNum).divide(new BigDecimal(conutFeeRecord), 2, BigDecimal.ROUND_HALF_UP);
-                            if (bite.compareTo(costBite) >= 0) {
-                                String costBiteStr = costBite.multiply(new BigDecimal("100")) + "%";
+                            String escapedTypeRemark = "";
+                            boolean addFlag = false;
+                            if (conutFeeRecord == 0) {
+                                escapedTypeRemark = "路线"+indexRoadCode+"全程屏蔽：门架牌识流水数量:" + conutGantryCapture + "门架交易流水数量:" + conutFeeRecord;
                                 addFlag = true;
-                                escapedTypeRemark = "异常原因：门架牌识流水数量:" + conutGantryCapture + "门架交易流水数量:" + conutFeeRecord + ",门架牌识流水和门架交易流水重合率为" + costBiteStr;
+                            }
+                            if (addFlag) {
+                                escapedType = Constants.escapedType_20;
+                                tracks.setEscapedType(escapedType); // 屏蔽
+                                tracks.setEscapedTypeRemark(escapedTypeRemark);
+                                tracks.setEscapedTfcj("2");  // 路段屏蔽
+
+                                TrailInfo trailInfo = this.changeData(tracks, josnList); // 获取设备的经纬度
+                                trailInfo.setTrailUuid(carNo);
+
+                                String key = this.getSuspiciousKey(formattedDate, carNo);
+                                redisCache.setCacheObject(key, trailInfo);
                             }
                         }
-
-                        if (addFlag) {
-                            escapedType = Constants.escapedType_20;
-                            tracks.setEscapedType(escapedType); // 屏蔽
-                            tracks.setEscapedTypeRemark(escapedTypeRemark);
-
-
-                            TrailInfo trailInfo = this.changeData(tracks, josnList); // 获取设备的经纬度
-                            trailInfo.setTrailUuid(carNo);
-
-                            String key = this.getSuspiciousKey(formattedDate, carNo);
-                            redisCache.setCacheObject(key, trailInfo);
-                        }
-
-
-
-
                     }
                 }
             }
-
 
         }
 

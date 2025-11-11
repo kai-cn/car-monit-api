@@ -271,4 +271,9 @@ public class ZdataTrailTracks implements Custom {
     private String escapedTfcj;
 
 
+    /** 业务类型 0 省外收费 1省内收费 */
+    @TableField(exist = false)
+    private String trailtype;
+
+
 }
