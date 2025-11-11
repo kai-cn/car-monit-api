@@ -73,7 +73,7 @@
             t.exweight,
             t.trailpoints
         from jl_data01.zdata_trail_fitting t
-        where t.entime >= now() - #{starTime}  and t.entime <![CDATA[<=]]> now()
+        where t.extime >= now() - #{starTime}  and t.extime <![CDATA[<=]]> now()
         and exists  (
             select 1 from jl_data01.ods_szdn_toll sip where (sip.toll_code = t.entollstationid
             or sip.toll_code = t.extollstationid)
@@ -108,15 +108,15 @@
         from jl_data01.zdata_trail_fitting t
         <where>
             <if test="carNo != null  and carNo != ''"> and t.envehicleid = #{carNo} </if>
-            <if test="applyTime1 != null  and applyTime1 != ''">and t.entime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
-            <if test="applyTime2 != null  and applyTime2 != ''">and t.entime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS') </if>
+            <if test="applyTime1 != null  and applyTime1 != ''">and t.extime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
+            <if test="applyTime2 != null  and applyTime2 != ''">and t.extime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS') </if>
             <!-- 默认查询半年-->
             <if test="flag != null and flag == 'bannian' ">
-                and t.entime >= now() - 180 and t.entime <![CDATA[<=]]> now()
+                and t.extime >= now() - 180 and t.extime <![CDATA[<=]]> now()
             </if>
             <!-- 默认查询三天之前的-->
             <if test="flag != null and flag == 'yiyue' ">
-                and t.entime >= now() - 3 and t.entime <![CDATA[<=]]> now()
+                and t.extime >= now() - 3 and t.extime <![CDATA[<=]]> now()
             </if>
             <if test="carNoList != null and carNoList.size() > 0">
                and  t.envehicleid in
