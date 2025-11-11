@@ -1153,6 +1153,27 @@ public class SysUtilServiceImpl implements ISysUtilService {
         carParaVO.setStarTime(starTime);
         carParaVO.setEndTime(endTime);
 
+
+        // 根据路段查询路线map
+        List<OdsSzdnSection> sectionlist = sectionService.getSectionList();
+
+        // 帅选
+        List<String> sectionsQueryList = new ArrayList<>();
+        for (OdsSzdnSection odsSzdnSection : sectionlist) {
+            String roadCode = CommonUtil.isNull(odsSzdnSection.getRoadCode()); // 路线
+            String sectionCode =  CommonUtil.isNull(odsSzdnSection.getSectionCode()); // 路段编码
+            if (CommonUtil.isNotBlank(roadCode) && CommonUtil.isNotBlank(sectionCode)){
+                // 大广高速
+                if (roadCode.equals("G45")){
+                    sectionsQueryList.add(sectionCode);
+                }
+            }
+        }
+        if (sectionsQueryList.size() == 0){
+            sectionsQueryList.add("nosection");
+        }
+
+
         for (int i = startNum; i <= endNum; i++) {
             // ----- 分页范围
             carParaVO.setStartNum(pageSize);
@@ -1162,18 +1183,18 @@ public class SysUtilServiceImpl implements ISysUtilService {
             }
             log.info("数据查询范围：" + carParaVO.getStartNum() + "到" + carParaVO.getEndNum());
 
-
-            log.info("开始查询----------"+new Date());
-            List<ZdataTrailTracks> carlist = zdataTrailTracksService.getLatestTrail(carParaVO);
-            log.info("结束查询----------"+new Date());
-
             Date now = new Date();
             SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
             String formattedDate = sdf.format(now);
 
+            // ---------------------------------- 跨省全程屏蔽
+            log.info("开始查询----------"+new Date());
+            carParaVO.setFlag("ksqcpb");
+            List<ZdataTrailTracks> carlist1 = zdataTrailTracksService.getLatestTrail(carParaVO);
+            log.info("结束查询----------"+new Date());
 
-            if (null != carlist && carlist.size() > 0) {
-                for (ZdataTrailTracks tracks : carlist) {
+            if (null != carlist1 && carlist1.size() > 0) {
+                for (ZdataTrailTracks tracks : carlist1) {
                     String carNo = CommonUtil.isNull(tracks.getPlateKey());
                     String keyValue = tracks.getTrailPoints(); // 行驶轨迹
                     String escapedType = "";
@@ -1181,13 +1202,64 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     if (CommonUtil.isNotBlank(keyValue)) {
                         josnList = this.getTrailBoList(keyValue);
                         tracks.setTrailPoints("");  // 行驶轨迹
-
                         // ---------------------------分析场景: 门架抓拍和流水抓拍 占比
                         int conutGantryCapture = 0;
                         int conutFeeRecord = 0;
-                        Map<String, Integer> gantryCaptureMap = new HashMap();
-                        Map<String, Integer> feeRecordMap = new HashMap();
+                        for (TrailBo rtnTrailBo:josnList){
+                            String locationId = CommonUtil.isNull(rtnTrailBo.getLocationId()); // 设备IP地址
+                            String stateType = CommonUtil.isNull(rtnTrailBo.getStateType());
+                            if(stateType.equals(GANTRY_CAPTURE)){
+                                // 门架抓拍
+                                conutGantryCapture ++;
+                            }else if(stateType.equals(FeeRecord)){
+                                // 卡口流水
+                                conutFeeRecord ++;
+                            }
+                        }
 
+                        // ---------------屏蔽:
+                         /*if (conutGantryCapture > supoerMjnum && conutGantryCapture > conutFeeRecord ){
+                        }*/
+                        String escapedTypeRemark = "";
+                        boolean addFlag = false;
+                        if (conutFeeRecord == 0){
+                            escapedTypeRemark = "跨省全程屏蔽：门架牌识流水数量:"+conutGantryCapture+"门架交易流水数量:"+conutFeeRecord;
+                            addFlag = true;
+                        }
+                        if(addFlag){
+                            escapedType = Constants.escapedType_20;
+                            tracks.setEscapedType(escapedType); // 屏蔽
+                            tracks.setEscapedTypeRemark(escapedTypeRemark);
+                            tracks.setEscapedTfcj("1");  // 逃费场景
+
+                            TrailInfo trailInfo = this.changeData(tracks, josnList); // 获取设备的经纬度
+                            trailInfo.setTrailUuid(carNo);
+
+                            String key = this.getSuspiciousKey(formattedDate,carNo);
+                            redisCache.setCacheObject(key, trailInfo);
+                        }
+                    }
+                }
+            }
+
+            // ---------------------------------- 关注路段屏蔽
+            log.info("开始查询----------"+new Date());
+            carParaVO.setFlag("ldtf");
+            List<ZdataTrailTracks> carlist2 = zdataTrailTracksService.getLatestTrail(carParaVO);
+            log.info("结束查询----------"+new Date());
+
+            if (null != carlist2 && carlist2.size() > 0) {
+                for (ZdataTrailTracks tracks : carlist2) {
+                    String carNo = CommonUtil.isNull(tracks.getPlateKey());
+                    String keyValue = tracks.getTrailPoints(); // 行驶轨迹
+                    String escapedType = "";
+                    List<TrailBo> josnList = new ArrayList<TrailBo>();
+                    if (CommonUtil.isNotBlank(keyValue)) {
+                        josnList = this.getTrailBoList(keyValue);
+                        tracks.setTrailPoints("");  // 行驶轨迹
+                        // ---------------------------分析场景: 门架抓拍和流水抓拍 占比
+                        int conutGantryCapture = 0;
+                        int conutFeeRecord = 0;
                         for (TrailBo rtnTrailBo:josnList){
                             String locationId = CommonUtil.isNull(rtnTrailBo.getLocationId()); // 设备IP地址
                             String stateType = CommonUtil.isNull(rtnTrailBo.getStateType());
@@ -1195,61 +1267,38 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             if(stateType.equals(GANTRY_CAPTURE)){
                                 // 门架抓拍
                                 conutGantryCapture ++;
-                                if (CommonUtil.isNotBlank(locationId)){
-                                    gantryCaptureMap.put(locationId, 1);
-                                }
                             }else if(stateType.equals(FeeRecord)){
                                 // 卡口流水
                                 conutFeeRecord ++;
-                                if (CommonUtil.isNotBlank(locationId)){
-                                    feeRecordMap.put(locationId, 1);
-                                }
                             }
                         }
 
                         // ---------------屏蔽:
+                         /*if (conutGantryCapture > supoerMjnum && conutGantryCapture > conutFeeRecord ){
+                        }*/
                         String escapedTypeRemark = "";
-                        if (conutGantryCapture > supoerMjnum && conutGantryCapture > conutFeeRecord ){
-                            boolean addFlag = false;
-                            if (conutFeeRecord == 0){
-                                escapedTypeRemark = "异常原因：门架牌识流水数量:"+conutGantryCapture+"门架交易流水数量:"+conutFeeRecord;
-                                addFlag = true;
-                            }else{
+                        boolean addFlag = false;
+                        if (conutFeeRecord == 0){
+                            escapedTypeRemark = "路段屏蔽：门架牌识流水数量:"+conutGantryCapture+"门架交易流水数量:"+conutFeeRecord;
+                            addFlag = true;
+                        }
+                        if(addFlag){
+                            escapedType = Constants.escapedType_20;
+                            tracks.setEscapedType(escapedType); // 屏蔽
+                            tracks.setEscapedTypeRemark(escapedTypeRemark);
+                            tracks.setEscapedTfcj("1");  // 逃费场景
 
-                                int extitsNum = 0;
-                                for (Map.Entry<String, Integer> entry : feeRecordMap.entrySet()) {
-                                    String entryKey = entry.getKey();
-                                    if (gantryCaptureMap.containsKey(entryKey)){
-                                        extitsNum ++;
-                                    }
-                                }
+                            TrailInfo trailInfo = this.changeData(tracks, josnList); // 获取设备的经纬度
+                            trailInfo.setTrailUuid(carNo);
 
-                                // 重合比例
-                                BigDecimal costBite = new BigDecimal(extitsNum).divide(new BigDecimal(conutFeeRecord), 2, BigDecimal.ROUND_HALF_UP);
-                                if (bite.compareTo(costBite) >= 0){
-                                    String costBiteStr = costBite.multiply(new BigDecimal("100"))+"%";
-                                    addFlag = true;
-                                    escapedTypeRemark = "异常原因：门架牌识流水数量:" + conutGantryCapture + "门架交易流水数量:" + conutFeeRecord + ",门架牌识流水和门架交易流水重合率为" + costBiteStr;
-                                }
-                            }
-
-                            if(addFlag){
-                                escapedType = Constants.escapedType_20;
-                                tracks.setEscapedType(escapedType); // 屏蔽
-                                tracks.setEscapedTypeRemark(escapedTypeRemark);
-
-
-                                TrailInfo trailInfo = this.changeData(tracks, josnList); // 获取设备的经纬度
-                                trailInfo.setTrailUuid(carNo);
-
-                                String key = this.getSuspiciousKey(formattedDate,carNo);
-                                redisCache.setCacheObject(key, trailInfo);
-                            }
-
+                            String key = this.getSuspiciousKey(formattedDate,carNo);
+                            redisCache.setCacheObject(key, trailInfo);
                         }
                     }
                 }
             }
+
+
         }
 
     }

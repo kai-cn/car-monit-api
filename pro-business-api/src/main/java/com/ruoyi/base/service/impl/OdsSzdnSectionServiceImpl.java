@@ -67,6 +67,24 @@ public class OdsSzdnSectionServiceImpl extends ServiceImpl<OdsSzdnSectionMapper,
         return map;
     }
 
+
+    /**
+     * 获取路段map
+     * @return
+     */
+    public List<OdsSzdnSection> getSectionList(){
+        List<OdsSzdnSection> list = null;
+        Object obj = redisCache.getCacheObject(Constants.SECTION_ROAD_MAP);
+        if (null != obj) {
+            list = (List) obj;
+        } else {
+            list = this.updateRedis();
+        }
+        return list;
+    }
+
+
+
     @Override
     public List<OdsSzdnSection> updateRedis() {
         List<OdsSzdnSection> sectionList = odsSzdnSectionMapper.selectOdsSzdnSectionList(new OdsSzdnSection());

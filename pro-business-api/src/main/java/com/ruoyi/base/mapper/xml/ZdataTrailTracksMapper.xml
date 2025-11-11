@@ -74,11 +74,26 @@
             t.trailpoints
         from jl_data01.zdata_trail_fitting t
         where t.extime >= now() - #{starTime}  and t.extime <![CDATA[<=]]> now()
-        and exists  (
-            select 1 from jl_data01.ods_szdn_toll sip where (sip.toll_code = t.entollstationid
-            or sip.toll_code = t.extollstationid)
-            and sip.org_code = '030000011'
-        )
+
+        <!-- 吉安东权限 !-->
+        <if test="flag != null and flag == 'jiandong' ">
+            and exists  (
+                select 1 from jl_data01.ods_szdn_toll sip where (sip.toll_code = t.entollstationid
+                or sip.toll_code = t.extollstationid)
+                and sip.org_code = '030000011'
+            )
+        </if>
+
+        <!-- 跨省全程屏蔽 !-->
+        <if test="flag != null and flag == 'ksqcpb' ">
+            and t.trailtype = 0
+        </if>
+
+        <!-- 路段逃费 !-->
+        <if test="flag != null and flag == 'ldtf' ">
+            and t.trailtype = 0
+        </if>
+
         <if test="startNum != null ">  LIMIT #{startNum} </if>
         <if test="endNum != null ">  OFFSET #{endNum} </if>
     </select>

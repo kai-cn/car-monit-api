@@ -29,7 +29,28 @@ public interface IOdsSzdnSectionService extends IService<OdsSzdnSection> {
      */
     List<OdsSzdnSection> selectOdsSzdnSectionList(OdsSzdnSection odsSzdnSection);
 
+    /**
+     * 获取路段map
+     * @return
+     */
     Map<String, OdsSzdnSection> getSectionMap();
 
+
+    /**
+     * 获取路段map
+     * @return
+     */
+    List<OdsSzdnSection> getSectionList();
+
+    /**
+     * 跟新路段信息
+     * @return
+     */
     List<OdsSzdnSection> updateRedis();
+
+
+
+
+
+
 }

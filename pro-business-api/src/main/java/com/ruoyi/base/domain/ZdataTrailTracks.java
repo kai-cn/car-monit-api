@@ -266,4 +266,9 @@ public class ZdataTrailTracks implements Custom {
     private BigDecimal endLatDec;
 
 
+    /** 逃费场景 */
+    @TableField(exist = false)
+    private String escapedTfcj;
+
+
 }
