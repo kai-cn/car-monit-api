@@ -115,7 +115,7 @@ public class SysTestController extends BaseController {
                         // 同步时间查询
                         carParaVO.setFlag("yiyue");  // 默认查询1月
                     }
-                    carParaVO.setFlag("bannian");  // 默认查询半年的数据
+                    // carParaVO.setFlag("bannian");  // 默认查询半年的数据
 
                     List<TrailInfo> newList = sysUtilService.carTrackQuery(carParaVO);
                     if (null != newList && newList.size() > 0) {
