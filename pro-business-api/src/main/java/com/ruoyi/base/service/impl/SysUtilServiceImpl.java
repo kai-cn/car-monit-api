@@ -1197,7 +1197,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             // ---------------------------------- 跨省全程屏蔽
             List<ZdataTrailTracks> carlistQspb = new ArrayList<>();
             // ---------------------------------- 关注路段屏蔽
-            List<ZdataTrailTracks> carlistLdpb = zdataTrailTracksService.getLatestTrail(carParaVO);
+            List<ZdataTrailTracks> carlistLdpb = new ArrayList<>();
 
             for (ZdataTrailTracks zdataTrailTracksVo : carlistAll) {
                 String trailtype = CommonUtil.isNull(zdataTrailTracksVo.getTrailtype());
