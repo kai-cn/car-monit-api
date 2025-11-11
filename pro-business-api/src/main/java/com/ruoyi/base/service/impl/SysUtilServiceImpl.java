@@ -255,18 +255,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         trailBo.setDevName(trailBo.getLocationName());
 
                         josnList.add(trailBo);
-
-
                     }
-                   //  josnList = JSON.parseArray(keyValue, TrailBo.class);
-
 
                     List<TrailBo> rtnList = this.mapTrailBoList(josnList);
                     // 最后一个轨迹点需要查询
                     if (null != rtnList && rtnList.size() > 0) {
-
-                      /*  TrailBo trailBo = rtnList.get(rtnList.size() - 1); // 最后一条记录要查询
-                        trailBo.setIsQuery("1");*/
 
                         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
                         String formattedDate = sdf.format(new Date());
