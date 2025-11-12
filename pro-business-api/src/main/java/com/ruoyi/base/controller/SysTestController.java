@@ -323,18 +323,23 @@ public class SysTestController extends BaseController {
         LocalDateTime daysBefore = now.minusDays(7);//时间段为7天
         for (OdsSzdnGantry rtnOdsSzdnGantry : gantryList) {
             String gantryCode = CommonUtil.isNull(rtnOdsSzdnGantry.getGantryCode());
-            if (CommonUtil.isNotBlank(gantryCode)) {
-                Object objNum = redisCache.getCacheObject(Constants.gantry_list_data + CommonUtil.isNull(gantryCode));
-                if (null != objNum){
-                }else{
+            String sectionCode = CommonUtil.isNull(rtnOdsSzdnGantry.getSectionCode());
+            if (sectionCode.equals("200R500450649000")){
+                if (CommonUtil.isNotBlank(gantryCode)) {
+                   /* Object objNum = redisCache.getCacheObject(Constants.gantry_list_data + CommonUtil.isNull(gantryCode));
+                    if (null != objNum){
+                    }else{
+
+                    }*/
                     OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01 = new OdsLwzxsfsjFeeRecords01();
                     odsLwzxsfsjFeeRecords01.setInApplyTime1("2025-11-01 00-00-00");
-                    odsLwzxsfsjFeeRecords01.setInApplyTime2("2025-11-06 00-00-00");
+                    odsLwzxsfsjFeeRecords01.setInApplyTime2("2025-11-12 00-00-00");
                     odsLwzxsfsjFeeRecords01.setGantryid(gantryCode);
                     int count = feeRecords01Service.selectGantryNum(odsLwzxsfsjFeeRecords01);
                     redisCache.setCacheObject(Constants.gantry_list_data + gantryCode, count);
                 }
             }
+
         }
         log.info("每天凌晨同步门架信息结束 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
