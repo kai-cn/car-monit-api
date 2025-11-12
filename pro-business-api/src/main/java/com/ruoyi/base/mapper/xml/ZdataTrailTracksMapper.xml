@@ -74,7 +74,7 @@
             t.trailpoints,
             t.trailtype
         from jl_data01.zdata_trail_fitting t
-        where t.extime >= now() - #{starTime}  and t.extime <![CDATA[<=]]> now()
+        <where>
 
         <!-- 吉安东权限 !-->
         <if test="flag != null and flag == 'jiandong' ">
@@ -94,6 +94,11 @@
         <if test="flag != null and flag == 'ldtf' ">
             and t.trailtype = 0
         </if>
+
+        <!-- 时间查询范围 !-->
+         and  t.extime >= now() - #{starTime}  and t.extime <![CDATA[<=]]> now()
+
+        </where>
 
         <if test="startNum != null ">  LIMIT #{startNum} </if>
         <if test="endNum != null ">  OFFSET #{endNum} </if>

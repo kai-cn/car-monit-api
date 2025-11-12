@@ -1099,25 +1099,25 @@ public class SysUtilServiceImpl implements ISysUtilService {
         Integer pageSize = 10;
         Integer starTime = 3;
         Integer endTime = 14;
-        BigDecimal bite = new BigDecimal("0.5");  // 门架抓拍和流水抓拍占比
+        BigDecimal bite = new BigDecimal("0.3");  // 门架抓拍和流水抓拍占比
 
         int supoerMjnum = 5; // 同步可疑车辆门架抓拍数量5个以上
 
 
         // -------------- 从缓存取得对应的配置
-        String redisTimeValue = redisCache.getCacheObject(redisTimeKey); // 默认7天
+        String redisTimeValue = redisCache.getCacheObject(redisTimeKey); // 默认3天
         if (CommonUtil.isNotBlank(redisTimeValue)){
             starTime = Integer.parseInt(redisTimeValue);
             log.info("从缓存取得时间配置--------："+redisTimeValue);
         }
 
-        String redisBiteValue = redisCache.getCacheObject(redisBiteKey); // 比例默认为0.5
+        String redisBiteValue = redisCache.getCacheObject(redisBiteKey); // 比例默认为0.3
         if (CommonUtil.isNotBlank(redisBiteValue)){
             bite = new BigDecimal(redisBiteValue);
             log.info("从缓存取得占比配置------："+bite);
         }
 
-        String supoerMjnumValue = redisCache.getCacheObject(supoer_mjnum); // 比例默认为0.5
+        String supoerMjnumValue = redisCache.getCacheObject(supoer_mjnum); // 比例默认为5
         if (CommonUtil.isNotBlank(supoerMjnumValue)){
             supoerMjnum = Integer.parseInt(supoerMjnumValue);
             log.info("从缓存取得门架抓拍数量------："+supoerMjnum);
@@ -1154,7 +1154,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
         List<OdsSzdnSection> sectionlist = sectionService.getSectionList();
 
         // 筛选的路段信息-------------
-        String indexRoadCode = "G45";
+        String indexRoadCode = "G45"; // 大广高速
+        String indexSectionCode = "200R500450649000"; // 泰赣路段
          Map<String,String> indexRoadCodeMap = new HashMap<>();
         List<String> sectionsQueryList = new ArrayList<>();
         for (OdsSzdnSection odsSzdnSection : sectionlist) {
@@ -1162,7 +1163,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             String sectionCode =  CommonUtil.isNull(odsSzdnSection.getSectionCode()); // 路段编码
             if (CommonUtil.isNotBlank(roadCode) && CommonUtil.isNotBlank(sectionCode)){
                 // 大广高速
-                if (roadCode.equals(indexRoadCode)){
+                if (sectionCode.equals(indexSectionCode)){
                     sectionsQueryList.add(sectionCode);
                     indexRoadCodeMap.put(sectionCode,roadCode);
                 }
@@ -1194,7 +1195,14 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
             for (ZdataTrailTracks zdataTrailTracksVo : carlistAll) {
                 String trailtype = CommonUtil.isNull(zdataTrailTracksVo.getTrailtype());
-                if (trailtype.equals("0")) {
+
+                String firstCode = CommonUtil.isNull(zdataTrailTracksVo.getEntollstationid()); // 入口收费站编号
+                String firstName = CommonUtil.repalaceSzdnTollName(zdataTrailTracksVo.getEntollstationname()); // 入口收费站名称
+                String endCode = CommonUtil.isNull(zdataTrailTracksVo.getExtollstationid()); // 出口收费站编号
+                String endName = CommonUtil.repalaceSzdnTollName(zdataTrailTracksVo.getExtollstationname()); // 出口收费站名称
+
+                // 外省进 外省出的车
+                if (trailtype.equals("0") && firstName.indexOf("门架") > -1 && endName.indexOf("门架") > -1) {
                     carlistQspb.add(zdataTrailTracksVo);
                 }
 
@@ -1238,25 +1246,25 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         }
 
                         // ---------------屏蔽:
-                         /*if (conutGantryCapture > supoerMjnum && conutGantryCapture > conutFeeRecord ){
-                        }*/
-                        String escapedTypeRemark = "";
-                        boolean addFlag = false;
-                        if (conutFeeRecord == 0) {
-                            escapedTypeRemark = "跨省全程屏蔽：门架牌识流水数量:" + conutGantryCapture + "门架交易流水数量:" + conutFeeRecord;
-                            addFlag = true;
-                        }
-                        if (addFlag) {
-                            escapedType = Constants.escapedType_20;
-                            tracks.setEscapedType(escapedType); // 屏蔽
-                            tracks.setEscapedTypeRemark(escapedTypeRemark);
-                            tracks.setEscapedTfcj("1");  // 逃费场景
+                        if (conutGantryCapture > supoerMjnum) {
+                            String escapedTypeRemark = "";
+                            boolean addFlag = false;
+                            if (conutFeeRecord == 0) {
+                                escapedTypeRemark = "跨省全程屏蔽：门架牌识流水数量:" + conutGantryCapture + "，门架交易流水数量:" + conutFeeRecord+"。";
+                                addFlag = true;
+                            }
+                            if (addFlag) {
+                                escapedType = Constants.escapedType_20;
+                                tracks.setEscapedType(escapedType); // 屏蔽
+                                tracks.setEscapedTypeRemark(escapedTypeRemark);
+                                tracks.setEscapedTfcj("1");  // 逃费场景
 
-                            TrailInfo trailInfo = this.changeData(tracks, josnList); // 获取设备的经纬度
-                            trailInfo.setTrailUuid(carNo);
+                                TrailInfo trailInfo = this.changeData(tracks, josnList); // 获取设备的经纬度
+                                trailInfo.setTrailUuid(carNo);
 
-                            String key = this.getSuspiciousKey(formattedDate, carNo);
-                            redisCache.setCacheObject(key, trailInfo);
+                                String key = this.getSuspiciousKey(formattedDate, carNo);
+                                redisCache.setCacheObject(key, trailInfo);
+                            }
                         }
                     }
                 }
@@ -1292,15 +1300,21 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 }
                             }
                         }
-                        // 该路段有门架抓拍
-                        if (conutGantryCapture > 0 && conutFeeRecord == 0){
-
+                        // 该路段门架比例一定的数值---------
+                        if (conutGantryCapture > 0 && conutGantryCapture > conutFeeRecord){
+                            BigDecimal costBite = new BigDecimal(conutFeeRecord).divide(new BigDecimal(conutGantryCapture), 4, BigDecimal.ROUND_HALF_UP);
                             String escapedTypeRemark = "";
                             boolean addFlag = false;
-                            if (conutFeeRecord == 0) {
-                                escapedTypeRemark = "路线"+indexRoadCode+"全程屏蔽：门架牌识流水数量:" + conutGantryCapture + "门架交易流水数量:" + conutFeeRecord;
+                           /* if (conutFeeRecord == 0) {
+                                escapedTypeRemark = "泰赣路段屏蔽：泰赣路段门架牌识流水数量:" + conutGantryCapture + "，门架交易流水数量:" + conutFeeRecord+"。";
+                                addFlag = true;
+                            }*/
+
+                            if (bite.compareTo(costBite) >= 0){
+                                escapedTypeRemark = "泰赣路段屏蔽：泰赣路段门架牌识流水数量:" + conutGantryCapture + "，门架交易流水数量:" + conutFeeRecord+"。";
                                 addFlag = true;
                             }
+
                             if (addFlag) {
                                 escapedType = Constants.escapedType_20;
                                 tracks.setEscapedType(escapedType); // 屏蔽
