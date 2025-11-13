@@ -942,7 +942,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> stationcaptureAddcodeMap = new HashMap<>();
         stationCaptureUUids = CommonUtil.deleteEnd(stationCaptureUUids);
         if (CommonUtil.isNotBlank(stationCaptureUUids)) {
-            stationcaptureAddcodeMap = stationcaptureAddcodeService.selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByQueryUuids(stationCaptureUUids);
+            stationcaptureAddcodeMap = stationcaptureAddcodeService.selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByQueryUuids(stationCaptureUUids,applyTime1,applyTime2);
         }
 
         // 卡口流水

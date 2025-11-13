@@ -35,5 +35,5 @@ public interface IOdsRtSzdnSnapshotFlowStationcaptureAddcodeService extends ISer
      * @param queryUuids
      * @return
      */
-    Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByQueryUuids(String queryUuids);
+    Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByQueryUuids(String queryUuids,String applyTime1,String applyTime2);
 }

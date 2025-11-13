@@ -59,7 +59,7 @@ public class OdsRtSzdnSnapshotFlowStationcaptureAddcodeServiceImpl extends Servi
      * @return
      */
     @Override
-    public Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByQueryUuids(String queryUuids) {
+    public Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByQueryUuids(String queryUuids,String applyTime1,String applyTime2) {
         Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> map = new HashMap<>();
         if(CommonUtil.isNotBlank(queryUuids)) {
             String[] split = queryUuids.split(",");
@@ -74,6 +74,8 @@ public class OdsRtSzdnSnapshotFlowStationcaptureAddcodeServiceImpl extends Servi
                     } else {
                         OdsRtSzdnSnapshotFlowStationcaptureAddcode querybo = new OdsRtSzdnSnapshotFlowStationcaptureAddcode();
                         querybo.setDatauuid(uuid);
+                        querybo.setApplyTime1(applyTime1);
+                        querybo.setApplyTime2(applyTime2);
                         List<OdsRtSzdnSnapshotFlowStationcaptureAddcode> list = odsRtSzdnSnapshotFlowStationcaptureAddcodeMapper.selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeList(querybo);
                         if (null!=list && list.size() > 0) {
                             map.put(uuid, list.get(0));

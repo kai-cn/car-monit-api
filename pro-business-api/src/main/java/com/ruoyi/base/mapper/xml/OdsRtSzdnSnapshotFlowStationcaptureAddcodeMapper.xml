@@ -117,6 +117,8 @@
         <if test="maindirection != null  and maindirection != ''"> and t.maindirection = #{maindirection}</if>
         <if test="maindirectionname != null  and maindirectionname != ''"> and t.maindirectionname like concat('%', #{maindirectionname}, '%')</if>
         <if test="reserve3 != null  and reserve3 != ''"> and t.reserve3 = #{reserve3}</if>
+        <if test="applyTime1 != null  and applyTime1 != ''">and t.snapshottime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
+        <if test="applyTime2 != null  and applyTime2 != ''">and t.snapshottime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
         </where>
     </select>
 

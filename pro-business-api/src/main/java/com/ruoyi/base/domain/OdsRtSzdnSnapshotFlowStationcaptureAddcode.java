@@ -217,5 +217,12 @@ public class OdsRtSzdnSnapshotFlowStationcaptureAddcode implements Custom {
     @TableField(exist = false)
     private String queryUuids;
 
+    // 时间查询
+    @TableField(exist = false)
+    private String applyTime1;
+
+    @TableField(exist = false)
+    private String applyTime2;
+
 
 }
