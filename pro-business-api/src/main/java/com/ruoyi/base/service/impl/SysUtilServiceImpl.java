@@ -1097,8 +1097,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
     public void syncSuspiciousCarQutaz(int startNum, int endNum) {
 
         Integer pageSize = 10;
-        Integer starTime = 3;
-        Integer endTime = 14;
+        Integer starTime = 2;
+        Integer endTime = 4;
         BigDecimal bite = new BigDecimal("0.3");  // 门架抓拍和流水抓拍占比
 
         int supoerMjnum = 5; // 同步可疑车辆门架抓拍数量5个以上
