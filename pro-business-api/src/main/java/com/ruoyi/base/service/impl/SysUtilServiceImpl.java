@@ -1150,7 +1150,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             pageSize = 2000;
             endTime = starTime * 2;
            /* starTime = 1;
-            endTime = 30;*/
+            endTime = 60;*/
         } else {
             log.info("生产配置------："+CommonUtil.isNull(isLocalhost));
             // 生产------------- 分页1000条 14 到 7 天
