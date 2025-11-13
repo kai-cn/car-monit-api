@@ -96,7 +96,7 @@
         </if>
 
         <!-- 时间查询范围 !-->
-         and  t.extime >= now() - #{endNum}  and t.extime <![CDATA[<=]]> now() - #{starTime}
+         and  t.extime >= now() - #{endTime}  and t.extime <![CDATA[<=]]> now() - #{starTime}
 
         </where>
 
