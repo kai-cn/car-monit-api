@@ -54,7 +54,7 @@ public class OdsLwzxsfsjFeeRecords01ServiceImpl extends ServiceImpl<OdsLwzxsfsjF
     }
 
     @Override
-    public Map<String, OdsLwzxsfsjFeeRecords01> selectOdsLwzxsfsjFeeRecords01ByQueryUuids(String queryUuids) {
+    public Map<String, OdsLwzxsfsjFeeRecords01> selectOdsLwzxsfsjFeeRecords01ByQueryUuids(String queryUuids,String applyTime1, String applyTime2) {
         Map<String, OdsLwzxsfsjFeeRecords01> map = new HashMap<>();
         if(CommonUtil.isNotBlank(queryUuids)) {
             String[] split = queryUuids.split(",");
@@ -69,6 +69,8 @@ public class OdsLwzxsfsjFeeRecords01ServiceImpl extends ServiceImpl<OdsLwzxsfsjF
                     } else {
                         OdsLwzxsfsjFeeRecords01 querybo = new OdsLwzxsfsjFeeRecords01();
                         querybo.setCid(uuid);
+                        querybo.setInApplyTime1(applyTime1);
+                        querybo.setInApplyTime2(applyTime2);
                         List<OdsLwzxsfsjFeeRecords01> list = odsLwzxsfsjFeeRecords01Mapper.selectOdsLwzxsfsjFeeRecords01List(querybo);
                         if (null!=list && list.size() > 0) {
                             map.put(uuid, list.get(0));

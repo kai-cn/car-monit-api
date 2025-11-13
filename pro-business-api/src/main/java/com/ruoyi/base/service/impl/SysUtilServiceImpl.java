@@ -949,7 +949,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         Map<String, OdsLwzxsfsjFeeRecords01> feeRecordMap = new HashMap<>();
         feeRecordUUids = CommonUtil.deleteEnd(feeRecordUUids);
         if (CommonUtil.isNotBlank(feeRecordUUids)) {
-            feeRecordMap = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ByQueryUuids(feeRecordUUids);
+            feeRecordMap = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ByQueryUuids(feeRecordUUids,applyTime1,applyTime2);
         }
 
 

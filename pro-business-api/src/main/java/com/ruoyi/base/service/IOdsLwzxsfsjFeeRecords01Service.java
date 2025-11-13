@@ -30,7 +30,7 @@ public interface IOdsLwzxsfsjFeeRecords01Service extends IService<OdsLwzxsfsjFee
      */
     List<OdsLwzxsfsjFeeRecords01> selectOdsLwzxsfsjFeeRecords01List(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01);
 
-    Map<String, OdsLwzxsfsjFeeRecords01> selectOdsLwzxsfsjFeeRecords01ByQueryUuids(String uuids);
+    Map<String, OdsLwzxsfsjFeeRecords01> selectOdsLwzxsfsjFeeRecords01ByQueryUuids(String uuids,String applyTime1, String applyTime2);
 
 
     /**
