@@ -399,7 +399,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 case SERVICE_AREA_CAPTURE:
                     // 服务区抓拍
                     indexType ="service_area"; // 服务区
-                    if(fwqcllsMap.containsKey(pointUuid)) {
+                   /* if(fwqcllsMap.containsKey(pointUuid)) {
                         OdsCxztFwqclls fwqclls = fwqcllsMap.get(pointUuid);
 
                         String imagesSrc = "";
@@ -438,7 +438,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             trailBo.setPileno(CommonUtil.isNull(fwqjcxx.getSczhkgs())); // 桩号
 
                         }
-                    }
+                    }*/
                     break;
                 case STATION_CAPTURE:
                     // 收费站抓拍

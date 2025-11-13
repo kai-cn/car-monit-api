@@ -4,6 +4,7 @@ import com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowAddcode;
 import com.ruoyi.base.service.IOdsRtSzdnSnapshotFlowAddcodeService;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.page.TableDataInfo;
+import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.utils.CommonUtil;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
@@ -30,6 +31,9 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
     @Autowired
     private IOdsRtSzdnSnapshotFlowAddcodeService odsRtSzdnSnapshotFlowAddcodeService;
 
+    @Autowired
+    private RedisCache redisCache;
+
     /**
      * 查询门架抓拍流水列表
      */
@@ -37,10 +41,19 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
     public TableDataInfo list(OdsRtSzdnSnapshotFlowAddcode odsRtSzdnSnapshotFlowAddcode) {
         startPage();
 
-        String platenumber = odsRtSzdnSnapshotFlowAddcode.getPlatenumber();
-        if(CommonUtil.isBlank(platenumber)) {
-            odsRtSzdnSnapshotFlowAddcode.setFlag("JiAnDong");
+        String queryQx = "noall";
+        String dataQuery = CommonUtil.isNull(redisCache.getCacheObject("data_query")); // 查询范围
+        if (CommonUtil.isNotBlank(dataQuery)){
+            queryQx = dataQuery;
         }
+
+        if (!queryQx.equals("queryall")) {
+            String platenumber = odsRtSzdnSnapshotFlowAddcode.getPlatenumber();
+            if (CommonUtil.isBlank(platenumber)) {
+                odsRtSzdnSnapshotFlowAddcode.setFlag("JiAnDong");
+            }
+        }
+
 
         // 路段
         String sectionCodeStr = odsRtSzdnSnapshotFlowAddcode.getSectionCodeStr();
@@ -65,7 +78,7 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
                 rtn.setId(StringUtils.getUUID());
                 // 抓拍时间格式化
                 if (null != rtn.getSnapshottime()) {
-                    rtn.setSnapshottimeStr( DateUtils.parseDateToStr(DateUtils.YYYY_MM_DD_HH_MM_SS, rtn.getSnapshottime()));
+                    rtn.setSnapshottimeStr(DateUtils.parseDateToStr(DateUtils.YYYY_MM_DD_HH_MM_SS, rtn.getSnapshottime()));
                 }
                 // 图片路径替换
                 String imagesArry = CommonUtil.deleteEnd(rtn.getSnappicturepath());
@@ -79,9 +92,17 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
     public List<OdsRtSzdnSnapshotFlowAddcode> listToExport(OdsRtSzdnSnapshotFlowAddcode odsRtSzdnSnapshotFlowAddcode) {
         startPage();
 
-        String platenumber = odsRtSzdnSnapshotFlowAddcode.getPlatenumber();
-        if(CommonUtil.isBlank(platenumber)) {
-            odsRtSzdnSnapshotFlowAddcode.setFlag("JiAnDong");
+        String queryQx = "noall";
+        String dataQuery = CommonUtil.isNull(redisCache.getCacheObject("data_query")); // 查询范围
+        if (CommonUtil.isNotBlank(dataQuery)){
+            queryQx = dataQuery;
+        }
+
+        if (!queryQx.equals("queryall")) {
+            String platenumber = odsRtSzdnSnapshotFlowAddcode.getPlatenumber();
+            if (CommonUtil.isBlank(platenumber)) {
+                odsRtSzdnSnapshotFlowAddcode.setFlag("JiAnDong");
+            }
         }
 
         // 路段
@@ -105,7 +126,7 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
                 rtn.setId(StringUtils.getUUID());
                 // 抓拍时间格式化
                 if (null != rtn.getSnapshottime()) {
-                    rtn.setSnapshottimeStr( DateUtils.parseDateToStr(DateUtils.YYYY_MM_DD_HH_MM_SS, rtn.getSnapshottime()));
+                    rtn.setSnapshottimeStr(DateUtils.parseDateToStr(DateUtils.YYYY_MM_DD_HH_MM_SS, rtn.getSnapshottime()));
                 }
             }
         }

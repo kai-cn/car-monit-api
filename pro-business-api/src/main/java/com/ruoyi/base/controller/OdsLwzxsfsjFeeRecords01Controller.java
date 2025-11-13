@@ -6,6 +6,7 @@ import com.ruoyi.base.service.IOdsLwzxsfsjFeeRecords01Service;
 import com.ruoyi.base.service.IOdsSzdnGantryService;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.page.TableDataInfo;
+import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,6 +36,9 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
     @Autowired
     private IOdsSzdnGantryService odsSzdnGantryService;
 
+    @Autowired
+    private RedisCache redisCache;
+
     /**
      * 查询基础-收费流水列表
      */
@@ -42,11 +46,20 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
     public TableDataInfo list(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01) {
         startPage();
 
-        // 权限只能查询吉安东
-        String vehicleplateQuery = odsLwzxsfsjFeeRecords01.getVehicleplate();
-        if (CommonUtil.isBlank(vehicleplateQuery)) {
-            odsLwzxsfsjFeeRecords01.setFlag("JiAnDong");
+        String queryQx = "noall";
+        String dataQuery = CommonUtil.isNull(redisCache.getCacheObject("data_query")); // 查询范围
+        if (CommonUtil.isNotBlank(dataQuery)){
+            queryQx = dataQuery;
         }
+
+        if (!queryQx.equals("queryall")) {
+            // 权限只能查询吉安东
+            String vehicleplateQuery = odsLwzxsfsjFeeRecords01.getVehicleplate();
+            if (CommonUtil.isBlank(vehicleplateQuery)) {
+                odsLwzxsfsjFeeRecords01.setFlag("JiAnDong");
+            }
+        }
+
         // 路段
         String sectionCodeStr = odsLwzxsfsjFeeRecords01.getSectionCodeStr();
         if (CommonUtil.isNotBlank(sectionCodeStr)){
@@ -99,11 +112,20 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
     public List<OdsLwzxsfsjFeeRecords01> listToExport(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01) {
         startPage();
 
-        // 权限只能查询吉安东
-        String vehicleplateQuery = odsLwzxsfsjFeeRecords01.getVehicleplate();
-        if (CommonUtil.isBlank(vehicleplateQuery)) {
-            odsLwzxsfsjFeeRecords01.setFlag("JiAnDong");
+        String queryQx = "noall";
+        String dataQuery = CommonUtil.isNull(redisCache.getCacheObject("data_query")); // 查询范围
+        if (CommonUtil.isNotBlank(dataQuery)){
+            queryQx = dataQuery;
         }
+
+        if (!queryQx.equals("queryall")) {
+            // 权限只能查询吉安东
+            String vehicleplateQuery = odsLwzxsfsjFeeRecords01.getVehicleplate();
+            if (CommonUtil.isBlank(vehicleplateQuery)) {
+                odsLwzxsfsjFeeRecords01.setFlag("JiAnDong");
+            }
+        }
+
         // 路段
         String sectionCodeStr = odsLwzxsfsjFeeRecords01.getSectionCodeStr();
         if (CommonUtil.isNotBlank(sectionCodeStr)){

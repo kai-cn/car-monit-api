@@ -319,6 +319,7 @@
         <if test="inApplyTime1 != null  and inApplyTime1 != ''">and t.transtime >= to_timestamp(#{inApplyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
         <if test="inApplyTime2 != null  and inApplyTime2 != ''">and t.transtime <![CDATA[<=]]> to_timestamp(#{inApplyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
         </where>
+        order by t.transtime desc
     </select>
 
     <select id="selectOdsLwzxsfsjFeeRecords01ById" parameterType="String" resultMap="OdsLwzxsfsjFeeRecords01Result">
