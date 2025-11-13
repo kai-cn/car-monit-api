@@ -626,4 +626,16 @@ public class OdsLwzxsfsjFeeRecords01 implements Custom {
     @TableField(exist = false)
     List<String> sectionList;
 
+    /**
+     * 计费交易时间
+     */
+    @TableField(exist = false)
+    private String transtimeStr;
+
+    /**
+     * 通过上一个门架的时间
+     */
+    @TableField(exist = false)
+    private String lastgantrytimeStr;
+
 }

@@ -8,6 +8,7 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.utils.CommonUtil;
+import com.ruoyi.common.utils.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -96,6 +97,16 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
                     }*/
                 }
 
+                // 计费交易时间
+                if (null != feeRecords.getTranstime()) {
+                    feeRecords.setTranstimeStr(DateUtils.parseDateToStr(DateUtils.YYYY_MM_DD_HH_MM_SS, feeRecords.getTranstime()));
+                }
+
+                // 计费交易时间
+                if (null != feeRecords.getLastgantrytime()) {
+                    feeRecords.setLastgantrytimeStr(DateUtils.parseDateToStr(DateUtils.YYYY_MM_DD_HH_MM_SS, feeRecords.getLastgantrytime()));
+                }
+
                 String gantryid = CommonUtil.isNull(feeRecords.getGantryid());
                 if (gantryMao.containsKey(gantryid)){
                     OdsSzdnGantry gantry = gantryMao.get(gantryid);
@@ -160,6 +171,16 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
                     /*if (vehicleplateStr.length >1){
                         feeRecords.setPlateColor(vehicleplateStr[1]);
                     }*/
+                }
+
+                // 计费交易时间
+                if (null != feeRecords.getTranstime()) {
+                    feeRecords.setTranstimeStr(DateUtils.parseDateToStr(DateUtils.YYYY_MM_DD_HH_MM_SS, feeRecords.getTranstime()));
+                }
+
+                // 计费交易时间
+                if (null != feeRecords.getLastgantrytime()) {
+                    feeRecords.setLastgantrytimeStr(DateUtils.parseDateToStr(DateUtils.YYYY_MM_DD_HH_MM_SS, feeRecords.getLastgantrytime()));
                 }
 
                 String gantryid = CommonUtil.isNull(feeRecords.getGantryid());
