@@ -47,7 +47,8 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
         startPage();
 
         String queryQx = "noall";
-        String dataQuery = CommonUtil.isNull(redisCache.getCacheObject("data_query")); // 查询范围
+        String dataQuery = CommonUtil.isNull(redisCache.getCacheObject("sys_config:data_query")); // 查询范围
+        System.out.println("查询范围参数："+dataQuery);
         if (CommonUtil.isNotBlank(dataQuery)){
             queryQx = dataQuery;
         }
@@ -113,7 +114,7 @@ public class OdsLwzxsfsjFeeRecords01Controller extends BaseController {
         startPage();
 
         String queryQx = "noall";
-        String dataQuery = CommonUtil.isNull(redisCache.getCacheObject("data_query")); // 查询范围
+        String dataQuery = CommonUtil.isNull(redisCache.getCacheObject("sys_config:data_query")); // 查询范围
         if (CommonUtil.isNotBlank(dataQuery)){
             queryQx = dataQuery;
         }
