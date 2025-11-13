@@ -853,6 +853,23 @@ public class SysUtilServiceImpl implements ISysUtilService {
         String feeStationEnterUUids = ""; // 收费站入口流水
         String feeStationExitUUids = ""; // 收费站出口流水
 
+        String captureTime = CommonUtil.isNull(trailBo.getCaptureTime());
+        String applyTime1 = "";
+        String applyTime2 = "";
+        if (CommonUtil.isNotBlank(captureTime)) {
+            // 获取开始时间
+            SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd");
+            try {
+                Date captureTimeDate1 = format2.parse(captureTime);
+                String baseQueryTime = format2.format(captureTimeDate1);
+                applyTime1 = baseQueryTime + " 00:00:00";
+                applyTime2 = baseQueryTime + " 23:59:59";
+            }catch (Exception e){
+
+                log.info("日期解析失败------------"+e.toString());
+            }
+        }
+
 
         String stateType = CommonUtil.isNull(trailBo.getStateType());
         String pointUuid = trailBo.getPointUuid();
@@ -904,7 +921,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         Map<String, OdsRtSzdnSnapshotFlowAddcode> snapshotFlowAddcodeMap = new HashMap<>();
         gantryCaptureUUids = CommonUtil.deleteEnd(gantryCaptureUUids);
         if (CommonUtil.isNotBlank(gantryCaptureUUids)) {
-            snapshotFlowAddcodeMap = snapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeByQueryUuids(gantryCaptureUUids);
+            snapshotFlowAddcodeMap = snapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeByQueryUuids(gantryCaptureUUids,applyTime1,applyTime2);
         }
 
         // 省界抓拍

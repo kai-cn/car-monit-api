@@ -59,7 +59,7 @@ public class OdsRtSzdnSnapshotFlowAddcodeServiceImpl extends ServiceImpl<OdsRtSz
      * @return
      */
     @Override
-    public Map<String, OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeByQueryUuids(String queryUuids) {
+    public Map<String, OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeByQueryUuids(String queryUuids,String applyTime1,String applyTime2) {
         Map<String, OdsRtSzdnSnapshotFlowAddcode> map = new HashMap<>();
         if(CommonUtil.isNotBlank(queryUuids)) {
             List<String> uuidList = Arrays.stream(queryUuids.split(",")).collect(Collectors.toList());
@@ -73,6 +73,8 @@ public class OdsRtSzdnSnapshotFlowAddcodeServiceImpl extends ServiceImpl<OdsRtSz
                     } else {
                         OdsRtSzdnSnapshotFlowAddcode querybo = new OdsRtSzdnSnapshotFlowAddcode();
                         querybo.setDatauuid(uuid);
+                        querybo.setApplyTime1(applyTime1);
+                        querybo.setApplyTime2(applyTime2);
                         List<OdsRtSzdnSnapshotFlowAddcode> list = odsRtSzdnSnapshotFlowAddcodeMapper.selectOdsRtSzdnSnapshotFlowAddcodeList(querybo);
                         if (null!=list && list.size() > 0) {
                             map.put(uuid, list.get(0));
