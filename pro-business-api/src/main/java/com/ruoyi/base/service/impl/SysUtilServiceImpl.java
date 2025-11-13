@@ -1008,6 +1008,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 if (snapshotFlowAddcodeMap.containsKey(pointUuid)){
                     OdsRtSzdnSnapshotFlowAddcode  gantryCaptureBO = snapshotFlowAddcodeMap.get(pointUuid);
                     trailBo.setImagesArry(gantryCaptureBO.getSnappicturepath()); // 抓拍照片
+
+                    // 车牌颜色
+                    trailBo.setPlatecolor(CommonUtil.isNull(gantryCaptureBO.getPlatecolor()));
                 }
                 break;
             case PROV_CAPTURE:
@@ -1187,6 +1190,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
             }
         }
 
+        // -------可疑车辆存储时间
+        Date now = new Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+        String formattedDate = sdf.format(now);
+
 
         for (int i = startNum; i <= endNum; i++) {
             // ----- 分页范围
@@ -1197,9 +1205,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
             }
             log.info("数据查询范围：" + carParaVO.getStartNum() + "到" + carParaVO.getEndNum());
 
-            Date now = new Date();
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
-            String formattedDate = sdf.format(now);
 
             log.info("SQL开始查询----------"+new Date());
             List<ZdataTrailTracks> carlistAll = zdataTrailTracksService.getLatestTrail(carParaVO);
@@ -1237,6 +1242,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     }
                 }
             }
+
 
             // ---------------------------------- 跨省全程屏蔽
             if (null != carlistQspb && carlistQspb.size() > 0) {
@@ -1277,6 +1283,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 tracks.setEscapedTfcj("1");  // 逃费场景
 
                                 TrailInfo trailInfo = this.changeData(tracks, josnList); // 获取设备的经纬度
+                                // 车牌颜色
+                                tracks.setPlateColor(this.getPlateColor(trailInfo.getTrailList()));
                                 trailInfo.setTrailUuid(carNo);
 
                                 String key = this.getSuspiciousKey(formattedDate, carNo);
@@ -1339,6 +1347,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 tracks.setEscapedTfcj("2");  // 路段屏蔽
 
                                 TrailInfo trailInfo = this.changeData(tracks, josnList); // 获取设备的经纬度
+
+                                // 车牌颜色
+                                tracks.setPlateColor(this.getPlateColor(trailInfo.getTrailList()));
                                 trailInfo.setTrailUuid(carNo);
 
                                 String key = this.getSuspiciousKey(formattedDate, carNo);
@@ -1351,6 +1362,35 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
         }
 
+    }
+
+    /**
+     * 获取车牌颜色
+     *
+     * @param trailList
+     * @return
+     */
+    private String getPlateColor(List<TrailBo> trailList) {
+        String plateColor = "";
+        if (null != trailList && trailList.size() > 0) {
+            int countNum = 0;
+            for (TrailBo trailBo : trailList) {
+                String stateType = CommonUtil.isNull(trailBo.getStateType());
+                if (stateType.equals(GANTRY_CAPTURE)) {
+                    // 查询第一个门架抓拍的车牌号
+                    if (countNum == 0) {
+                        TrailBo changeTrailBo = this.getByTrailBo(trailBo);
+                        if (null != changeTrailBo) {
+                            plateColor = CommonUtil.isNull(changeTrailBo.getPlatecolor());
+
+                            return plateColor;
+                        }
+                    }
+                    countNum++;
+                }
+            }
+        }
+        return plateColor;
     }
 
     /**

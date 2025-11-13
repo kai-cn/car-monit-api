@@ -126,5 +126,9 @@ public class TrailBo {
     private String isQuery;
 
 
+    /** 车牌颜色 */
+    private String platecolor;
+
+
 
 }
