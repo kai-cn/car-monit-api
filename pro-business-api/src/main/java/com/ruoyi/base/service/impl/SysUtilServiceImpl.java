@@ -1167,6 +1167,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
         carParaVO.setEndTime(endTime);
 
 
+        // 位置信息
+        Map<String,ZdataLocationDict> locationMap = zdataLocationDictService.getRedisList();
+
         // 根据路段查询路线map
         Map<String, OdsSzdnSection> sectionMap = sectionService.getSectionMap();
 
@@ -1314,10 +1317,20 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         for (TrailBo rtnTrailBo : josnList) {
                             String sectionCode = CommonUtil.isNull(rtnTrailBo.getSectionCode()); // 路段信息
                             String stateType = CommonUtil.isNull(rtnTrailBo.getStateType());
+                            String locationCode = CommonUtil.isNull(rtnTrailBo.getLocationCode()); // 设备IP地址
+
+                            String devLocatCode = "";
+                            if (locationMap.containsKey(locationCode)){
+                                devLocatCode = CommonUtil.isNull(locationMap.get(locationCode).getStandardCode()); // 收费站/门架code
+                            }
+
                             if (CommonUtil.isNotBlank(sectionCode)) {
                                 if (indexRoadCodeMap.containsKey(sectionCode)) {
                                     if (stateType.equals(GANTRY_CAPTURE)) {
                                         // 判断是否是虚拟门架---------
+                                        if (CommonUtil.isNotBlank(devLocatCode)){
+
+                                        }
 
                                         // 门架抓拍
                                         conutGantryCapture++;
