@@ -1174,9 +1174,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
         List<OdsSzdnSection> sectionlist = sectionService.getSectionList();
 
         // 筛选的路段信息-------------
-        String indexRoadCode = "G45"; // 大广高速
-        String indexSectionCode = "200R500450649000"; // 泰赣路段
-         Map<String,String> indexRoadCodeMap = new HashMap<>();
+       //  String indexRoadCode = "G45"; // 大广高速
+        String indexSectionCode = "200R500450649000"; // 泰赣路段编码
+        String indexSectionName = "泰赣路段"; //  泰赣路段
+        Map<String,String> indexRoadCodeMap = new HashMap<>();
         List<String> sectionsQueryList = new ArrayList<>();
         for (OdsSzdnSection odsSzdnSection : sectionlist) {
             String roadCode = CommonUtil.isNull(odsSzdnSection.getRoadCode()); // 路线
@@ -1226,19 +1227,19 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 // 外省进 外省出的车
                 if (trailtype.equals("0") && firstName.indexOf("门架") > -1 && endName.indexOf("门架") > -1) {
                     carlistQspb.add(zdataTrailTracksVo);
-                }
-
-                // 判断是否包含大广路段
-                String keyValue = zdataTrailTracksVo.getTrailPoints(); // 行驶轨迹
-                if (CommonUtil.isNotBlank(keyValue)) {
-                    boolean exflag = false;
-                    for (String sectionCodeValue: sectionsQueryList){
-                        if (keyValue.indexOf(sectionCodeValue) > -1){
-                            exflag = true;
+                }else{
+                    // 判断是否包含大广路段
+                    String keyValue = zdataTrailTracksVo.getTrailPoints(); // 行驶轨迹
+                    if (CommonUtil.isNotBlank(keyValue)) {
+                        boolean exflag = false;
+                        for (String sectionCodeValue: sectionsQueryList){
+                            if (keyValue.indexOf(sectionCodeValue) > -1){
+                                exflag = true;
+                            }
                         }
-                    }
-                    if (exflag){
-                        carlistLdpb.add(zdataTrailTracksVo);
+                        if (exflag){
+                            carlistLdpb.add(zdataTrailTracksVo);
+                        }
                     }
                 }
             }
@@ -1273,7 +1274,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             String escapedTypeRemark = "";
                             boolean addFlag = false;
                             if (conutFeeRecord == 0) {
-                                escapedTypeRemark = "跨省全程屏蔽：门架牌识流水数量:" + conutGantryCapture + "，门架交易流水数量:" + conutFeeRecord+"。";
+                                escapedTypeRemark = "跨省全程屏蔽：其中门架牌识流水数量:" + conutGantryCapture + "，门架交易流水数量:" + conutFeeRecord+"。";
                                 addFlag = true;
                             }
                             if (addFlag) {
@@ -1316,6 +1317,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             if (CommonUtil.isNotBlank(sectionCode)) {
                                 if (indexRoadCodeMap.containsKey(sectionCode)) {
                                     if (stateType.equals(GANTRY_CAPTURE)) {
+                                        // 判断是否是虚拟门架---------
+
                                         // 门架抓拍
                                         conutGantryCapture++;
                                     } else if (stateType.equals(FeeRecord)) {
@@ -1330,14 +1333,14 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             BigDecimal costBite = new BigDecimal(conutFeeRecord).divide(new BigDecimal(conutGantryCapture), 4, BigDecimal.ROUND_HALF_UP);
                             String escapedTypeRemark = "";
                             boolean addFlag = false;
-                           /* if (conutFeeRecord == 0) {
-                                escapedTypeRemark = "泰赣路段屏蔽：泰赣路段门架牌识流水数量:" + conutGantryCapture + "，门架交易流水数量:" + conutFeeRecord+"。";
+                            if (conutFeeRecord == 0) {
+                                escapedTypeRemark = indexSectionName+"全程屏蔽：其中门架牌识流水数量:" + conutGantryCapture + "，门架交易流水数量:" + conutFeeRecord+"。";
                                 addFlag = true;
-                            }*/
-
-                            if (bite.compareTo(costBite) >= 0){
-                                escapedTypeRemark = "泰赣路段屏蔽：泰赣路段门架牌识流水数量:" + conutGantryCapture + "，门架交易流水数量:" + conutFeeRecord+"。";
-                                addFlag = true;
+                            }else{
+                                if (bite.compareTo(costBite) >= 0){
+                                    escapedTypeRemark = indexSectionName+"部分屏蔽：其中门架牌识流水数量:" + conutGantryCapture + "，门架交易流水数量:" + conutFeeRecord+"。";
+                                    addFlag = true;
+                                }
                             }
 
                             if (addFlag) {
