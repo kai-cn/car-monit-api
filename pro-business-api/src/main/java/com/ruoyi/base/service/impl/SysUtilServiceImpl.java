@@ -102,6 +102,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
     @Value("${isLocalhost}")
     private String isLocalhost;
 
+    @Autowired
+    private IOdsSzdnGantryService odsSzdnGantryService;
+
 
     /**
      * 设置cache key
@@ -1167,6 +1170,13 @@ public class SysUtilServiceImpl implements ISysUtilService {
         carParaVO.setEndTime(endTime);
 
 
+        List<OdsSzdnGantry>  gantryList = odsSzdnGantryService.getGantryRedis();
+        Map<String,OdsSzdnGantry> gantryMao = new HashMap<>();
+        for (OdsSzdnGantry rtnOdsSzdnGantry:gantryList){
+            gantryMao.put(CommonUtil.isNull(rtnOdsSzdnGantry.getGantryCode()),rtnOdsSzdnGantry);
+        }
+
+
         // 位置信息
         Map<String,ZdataLocationDict> locationMap = zdataLocationDictService.getRedisList();
 
@@ -1327,13 +1337,21 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             if (CommonUtil.isNotBlank(sectionCode)) {
                                 if (indexRoadCodeMap.containsKey(sectionCode)) {
                                     if (stateType.equals(GANTRY_CAPTURE)) {
+                                        boolean isNotXymjFlag = true;
                                         // 判断是否是虚拟门架---------
                                         if (CommonUtil.isNotBlank(devLocatCode)){
-
+                                            // 找到门架信息
+                                            if (gantryMao.containsKey(devLocatCode)){
+                                                OdsSzdnGantry gantry = gantryMao.get(devLocatCode);
+                                                if (CommonUtil.isNull(gantry.getIsVirtual()).equals("1")){
+                                                    isNotXymjFlag = false;
+                                                }
+                                            }
                                         }
-
-                                        // 门架抓拍
-                                        conutGantryCapture++;
+                                        if (isNotXymjFlag){
+                                            // 门架抓拍
+                                            conutGantryCapture++;
+                                        }
                                     } else if (stateType.equals(FeeRecord)) {
                                         // 卡口流水
                                         conutFeeRecord++;
