@@ -147,7 +147,8 @@
         t.transtime,
         t.lastgantrytime,
         t.gantryid,
-        t.cid
+        t.cid,
+        t.passstate
     </sql>
 
 
