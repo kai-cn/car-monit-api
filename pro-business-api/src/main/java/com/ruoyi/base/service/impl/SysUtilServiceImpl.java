@@ -1327,17 +1327,20 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         for (TrailBo rtnTrailBo : josnList) {
                             String sectionCode = CommonUtil.isNull(rtnTrailBo.getSectionCode()); // 路段信息
                             String stateType = CommonUtil.isNull(rtnTrailBo.getStateType());
+                            /*
                             String locationCode = CommonUtil.isNull(rtnTrailBo.getLocationCode()); // 设备IP地址
-
                             String devLocatCode = "";
                             if (locationMap.containsKey(locationCode)){
                                 devLocatCode = CommonUtil.isNull(locationMap.get(locationCode).getStandardCode()); // 收费站/门架code
-                            }
+                            }*/
 
                             if (CommonUtil.isNotBlank(sectionCode)) {
                                 if (indexRoadCodeMap.containsKey(sectionCode)) {
                                     if (stateType.equals(GANTRY_CAPTURE)) {
-                                        boolean isNotXymjFlag = true;
+                                        // 门架抓拍
+                                        conutGantryCapture++;
+
+                                       /* boolean isNotXymjFlag = true;
                                         // 判断是否是虚拟门架---------
                                         if (CommonUtil.isNotBlank(devLocatCode)){
                                             // 找到门架信息
@@ -1351,7 +1354,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                         if (isNotXymjFlag){
                                             // 门架抓拍
                                             conutGantryCapture++;
-                                        }
+                                        }*/
                                     } else if (stateType.equals(FeeRecord)) {
                                         // 卡口流水
                                         conutFeeRecord++;
@@ -1359,20 +1362,22 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 }
                             }
                         }
-                        // 该路段门架比例一定的数值---------
-                        if (conutGantryCapture > 0 && conutGantryCapture > conutFeeRecord){
-                            BigDecimal costBite = new BigDecimal(conutFeeRecord).divide(new BigDecimal(conutGantryCapture), 4, BigDecimal.ROUND_HALF_UP);
+                        // 该路段门架比例一定的数值--------- conutGantryCapture > 0 && conutGantryCapture > conutFeeRecord
+                        if (conutGantryCapture > 0){
+                           //  BigDecimal costBite = new BigDecimal(conutFeeRecord).divide(new BigDecimal(conutGantryCapture), 4, BigDecimal.ROUND_HALF_UP);
                             String escapedTypeRemark = "";
                             boolean addFlag = false;
                             if (conutFeeRecord == 0) {
                                 escapedTypeRemark = indexSectionName+"全程屏蔽：其中门架牌识流水数量:" + conutGantryCapture + "，门架交易流水数量:" + conutFeeRecord+"。";
                                 addFlag = true;
-                            }else{
+                            }
+
+                           /* else{
                                 if (bite.compareTo(costBite) >= 0){
                                     escapedTypeRemark = indexSectionName+"部分屏蔽：其中门架牌识流水数量:" + conutGantryCapture + "，门架交易流水数量:" + conutFeeRecord+"。";
                                     addFlag = true;
                                 }
-                            }
+                            }*/
 
                             if (addFlag) {
                                 escapedType = Constants.escapedType_20;
