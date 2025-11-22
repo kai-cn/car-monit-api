@@ -365,6 +365,11 @@ public class Constants
     public static final String redisBiteKey = "sys_config:syncSuspiciousCar_bite:"; // 比例默认为0.5
     public static final String redisTimeKey = "sys_config:syncSuspiciousCar_time:"; // 默认7天
 
+    public static final String snapshotFlowList = "snapshotFlowList:";
+
+    public static final String snapshotFlowTimeList = "snapshotFlowTimeList:";
+
+    public static final String feeRecordsList = "feeRecordsList:";
 
 
 

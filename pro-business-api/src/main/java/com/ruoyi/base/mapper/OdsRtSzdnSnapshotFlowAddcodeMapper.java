@@ -37,4 +37,6 @@ public interface OdsRtSzdnSnapshotFlowAddcodeMapper extends BaseMapper<OdsRtSzdn
      * @return
      */
     List<OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeByUuidList(@Param("uuidList") List<String> uuidList);
+
+    List<OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeListNew(OdsRtSzdnSnapshotFlowAddcode bo);
 }

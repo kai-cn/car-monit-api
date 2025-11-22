@@ -41,4 +41,6 @@ public interface IOdsLwzxsfsjFeeRecords01Service extends IService<OdsLwzxsfsjFee
      */
     int selectGantryNum(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01);
 
+    List<OdsLwzxsfsjFeeRecords01> selectOdsLwzxsfsjFeeRecords01ListNew(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01);
+
 }

@@ -251,4 +251,15 @@ public class OdsRtSzdnSnapshotFlowAddcode implements Custom {
     @TableField(exist = false)
     List<String> sectionList;
 
+    @TableField(exist = false)
+    List<String> sectioncodeList;
+
+    // 起始界面
+    @TableField(exist = false)
+    private Integer startNum;
+
+    // 最后的界面
+    @TableField(exist = false)
+    private Integer endNum;
+
 }

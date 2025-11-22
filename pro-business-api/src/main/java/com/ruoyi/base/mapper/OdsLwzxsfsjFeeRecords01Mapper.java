@@ -37,4 +37,5 @@ public interface OdsLwzxsfsjFeeRecords01Mapper extends BaseMapper<OdsLwzxsfsjFee
      */
     public int selectGantryNum(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01);
 
+    List<OdsLwzxsfsjFeeRecords01> selectOdsLwzxsfsjFeeRecords01ListNew(OdsLwzxsfsjFeeRecords01 bo);
 }

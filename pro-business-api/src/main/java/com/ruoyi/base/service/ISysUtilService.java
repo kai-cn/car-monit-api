@@ -88,6 +88,15 @@ public interface ISysUtilService {
     public TrailBo getByTrailBo(TrailBo trailBo);
 
 
+    void syncSnapshotFlow(OdsRtSzdnSnapshotFlowAddcode snapshotFlow);
+
+    void syncFeeRecords(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01);
+
+    void separateSnapshotFlowTimeList();
+
+    void isFeeRecordsExist();
+
+
 
 
 }

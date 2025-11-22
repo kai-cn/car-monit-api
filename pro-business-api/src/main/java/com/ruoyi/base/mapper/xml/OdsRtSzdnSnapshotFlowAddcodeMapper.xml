@@ -162,4 +162,25 @@
         </where>
     </select>
 
+    <select id="selectOdsRtSzdnSnapshotFlowAddcodeListNew"
+            resultType="com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowAddcode">
+        SELECT t.datauuid,t.platenumber,t.snapshottime,t.gantrycode,t.sectioncode
+        FROM jl_data01.ods_rt_szdn_snapshot_flow_addcode t
+        <where>
+            <if test="sectioncode != null  and sectioncode != ''"> and t.sectioncode = #{sectioncode}</if>
+            <if test="sectioncodeList != null  and sectioncodeList.size() > 0">
+                and t.sectioncode in
+                <foreach collection="sectioncodeList" item="item" open="(" separator="," close=")">
+                    #{item}
+                </foreach>
+            </if>
+            <if test="platecolor != null  and platecolor != ''"> and t.platecolor like concat('%', #{platecolor}, '%')</if>
+            <if test="applyTime1 != null  and applyTime1 != ''">and t.snapshottime >= to_timestamp(#{applyTime1}, 'yyyy-mm-dd HH24:MI:SS')</if>
+            <if test="applyTime2 != null  and applyTime2 != ''">and t.snapshottime <![CDATA[<=]]> to_timestamp(#{applyTime2}, 'yyyy-mm-dd HH24:MI:SS')</if>
+        </where>
+        <if test="startNum != null ">  LIMIT #{startNum} </if>
+        <if test="endNum != null ">  OFFSET #{endNum} </if>
+    </select>
+
+
 </mapper>
