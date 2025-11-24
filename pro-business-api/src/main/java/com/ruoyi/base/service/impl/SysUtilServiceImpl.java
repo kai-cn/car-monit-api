@@ -1828,6 +1828,19 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 }
             }
         }
+
+        // 删除以前的
+        if (null != keys && keys.size() > 0){
+            // 删除redis
+            redisCache.deleteObject(keys);
+        }
+
+        Collection<String> freeKeys = redisCache.keys(Constants.feeRecordsList + redisDate + "*");
+        if (null != freeKeys && freeKeys.size() > 0){
+            // 删除redis
+            redisCache.deleteObject(freeKeys);
+        }
+
     }
 
     /**
