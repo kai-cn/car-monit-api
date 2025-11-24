@@ -1788,7 +1788,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             log.info("从缓存路段：取得门架抓拍数量------："+roadSupoeMjnumValue);
         }
 
-        long thirtyMinutesInMillis = 30 * 60 * 1000; // 30分钟转换为毫秒
+        long thirtyMinutesInMillis = 60 * 60 * 1000; // 30分钟转换为毫秒
 
         Collection<String> keys = redisCache.keys(Constants.snapshotFlowList + redisDate + "*");
         if (null != keys && keys.size() > 0) {
