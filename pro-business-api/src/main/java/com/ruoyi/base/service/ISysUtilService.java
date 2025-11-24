@@ -105,10 +105,7 @@ public interface ISysUtilService {
      */
     void separateSnapshotFlowTimeList();
 
-    /**
-     * 是否存在
-     */
-    void isFeeRecordsExist();
+
 
 
 

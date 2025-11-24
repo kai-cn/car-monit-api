@@ -350,12 +350,6 @@ public class SysTestController extends BaseController {
         sysUtilService.separateSnapshotFlowTimeList();
     }
 
-    @GetMapping(value = "/isFeeRecordsExist")
-    public void isFeeRecordsExist() {
-        sysUtilService.isFeeRecordsExist();
-    }
-
-
 
 
 }
