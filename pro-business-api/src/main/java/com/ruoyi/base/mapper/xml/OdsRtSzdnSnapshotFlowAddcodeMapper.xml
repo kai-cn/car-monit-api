@@ -162,8 +162,7 @@
         </where>
     </select>
 
-    <select id="selectOdsRtSzdnSnapshotFlowAddcodeListNew"
-            resultType="com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowAddcode">
+    <select id="selectOdsRtSzdnSnapshotFlowAddcodeListNew" parameterType="com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowAddcode" resultMap="OdsRtSzdnSnapshotFlowAddcodeResult">
         SELECT t.datauuid,t.platenumber,t.snapshottime,t.gantrycode,t.sectioncode
         FROM jl_data01.ods_rt_szdn_snapshot_flow_addcode t
         <where>

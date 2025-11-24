@@ -340,10 +340,10 @@
         <if test="inApplyTime2 != null  and inApplyTime2 != ''">and t.transtime <![CDATA[<=]]> to_timestamp(#{inApplyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
     </select>
 
-    <select id="selectOdsLwzxsfsjFeeRecords01ListNew" resultType="com.ruoyi.base.domain.OdsLwzxsfsjFeeRecords01">
+    <select id="selectOdsLwzxsfsjFeeRecords01ListNew" parameterType="com.ruoyi.base.domain.OdsLwzxsfsjFeeRecords01" resultMap="OdsLwzxsfsjFeeRecords01Result">
         SELECT  t.cid, t.vehicleplate, t.passstate, t.fee, t.transtime
         FROM jl_data01.ods_lwzxsfsj_fee_records_01 t
-        LEFT JOIN jl_data01.ods_szdn_gantry g ON t.gantryid = g.gantry_code
+        left join jl_data01.ods_szdn_gantry g ON t.gantryid = g.gantry_code
         <where>
             t.vehicleplate LIKE concat('%', '_1')
             <if test="sectioncode != null  and sectioncode != ''"> and g.section_code = #{sectioncode}</if>
