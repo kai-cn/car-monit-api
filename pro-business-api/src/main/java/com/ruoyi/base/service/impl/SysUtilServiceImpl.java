@@ -1251,8 +1251,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
         SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-MM-dd");
         String queryDate = sdf1.format(twoDaysAgo);
 
-        String queryStartTime = queryDate + "00:00:00";
-        String queryEndTime = queryDate + "23:59:59";
+        String queryStartTime = queryDate + " 00:00:00";
+        String queryEndTime = queryDate + " 23:59:59";
         log.info("查询时间范围" + queryStartTime + "到" + queryEndTime);
 
 
