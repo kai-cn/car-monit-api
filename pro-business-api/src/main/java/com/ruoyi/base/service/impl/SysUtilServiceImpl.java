@@ -20,7 +20,6 @@ import redis.clients.jedis.JedisCluster;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -1837,16 +1836,37 @@ public class SysUtilServiceImpl implements ISysUtilService {
      * @param snapshotList
      * @param roadSupoerMjnum
      */
-    private void isFeeRecordsExist(String key, List<OdsRtSzdnSnapshotFlowAddcode> snapshotList, int roadSupoerMjnum,String redisDate) {
+    private void isFeeRecordsExist(String key, List<OdsRtSzdnSnapshotFlowAddcode> snapshotList, int roadSupoerMjnum, String redisDate) {
 
         if (CommonUtil.isNotBlank(key) && null != snapshotList && snapshotList.size() >= roadSupoerMjnum && snapshotList.size() >= 2) {
             String[] roadCarKeyStr = key.split(":");
 
-            long startTimeLong = snapshotList.get(0).getSnapshottime().getTime();
-            long endTimeLong = snapshotList.get(snapshotList.size() -1).getSnapshottime().getTime();
+            // 门架----------
+            List<OdsSzdnGantry>  gantryList = odsSzdnGantryService.getGantryRedis();
+            Map<String,OdsSzdnGantry> gantryMao = new HashMap<>();
+            for (OdsSzdnGantry rtnOdsSzdnGantry:gantryList){
+                gantryMao.put(CommonUtil.isNull(rtnOdsSzdnGantry.getGantryCode()),rtnOdsSzdnGantry);
+            }
 
-            if (roadCarKeyStr.length > 1){
-                String redisKey = this.feeRecordsListKey(redisDate, roadCarKeyStr[1]);
+            String stateType = GANTRY_CAPTURE; // 门架抓拍
+            SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+            if (roadCarKeyStr.length > 1) {
+
+                OdsRtSzdnSnapshotFlowAddcode firstBo = snapshotList.get(0); // 第一个
+                OdsRtSzdnSnapshotFlowAddcode endBo = snapshotList.get(snapshotList.size() -1); // 最后一个
+
+                Date startTime = firstBo.getSnapshottime();
+                Date endTime = endBo.getSnapshottime();
+
+                long startTimeLong = startTime.getTime();
+                long endTimeLong = endTime.getTime();
+
+                String roadCarKey = roadCarKeyStr[1];
+                String roadCode = roadCarKey.split("@@")[0];
+
+
+                String redisKey = this.feeRecordsListKey(redisDate,roadCarKey );
                 boolean isAddFlag = false;
                 List<OdsLwzxsfsjFeeRecords01> oldList = redisCache.getCacheObject(redisKey);
                 if (null != oldList && oldList.size() > 0) {
@@ -1874,8 +1894,132 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 }
 
                 if(isAddFlag) {
+                    String carNo = firstBo.getPlatenumber();
+                    String platecolor = firstBo.getPlatecolor();
 
-                    
+                    ZdataTrailTracks tracks = new ZdataTrailTracks();
+                    tracks.setUuid(firstBo.getDatauuid());
+                    tracks.setEnvehicleid(carNo);
+                    tracks.setEnaxlecount(0);
+                    tracks.setEnterTime(startTime);
+
+                    String startGantryid = CommonUtil.isNull(firstBo.getGantrycode());
+                    tracks.setEntollstationid(startGantryid);
+                    if (gantryMao.containsKey(startGantryid)) {
+                        OdsSzdnGantry odsSzdnGantry = gantryMao.get(startGantryid);
+                        tracks.setEntollstationname(odsSzdnGantry.getGantryName()); // 门架名称
+
+                        if (CommonUtil.isNotBlank(odsSzdnGantry.getLon())) {
+                            tracks.setStartLon(odsSzdnGantry.getLon()); // 经度
+                        }
+                        if (CommonUtil.isNotBlank(odsSzdnGantry.getLat())) {
+                            tracks.setStratLat(odsSzdnGantry.getLat()); // 经度
+                        }
+                    }
+
+                    tracks.setEnvehicletype(CommonUtil.isNull(firstBo.getCartypecode())); // 车型
+                    tracks.setEnvehicleid(carNo); // 车型
+
+
+                    tracks.setExitTime(endTime);
+
+                    String endGantryid = CommonUtil.isNull(endBo.getGantrycode());
+                    tracks.setExtollstationid(endGantryid);
+                    if (gantryMao.containsKey(endGantryid)) {
+                        OdsSzdnGantry odsSzdnGantry = gantryMao.get(endGantryid);
+                        tracks.setExtollstationname(odsSzdnGantry.getGantryName()); // 门架名称
+
+                        if (CommonUtil.isNotBlank(odsSzdnGantry.getLon())) {
+                            tracks.setEndLon(odsSzdnGantry.getLon()); // 经度
+                        }
+                        if (CommonUtil.isNotBlank(odsSzdnGantry.getLat())) {
+                            tracks.setEndLat(odsSzdnGantry.getLat()); // 经度
+                        }
+                    }
+
+                    tracks.setExvehicleid(carNo);
+
+                    if (CommonUtil.isNotBlank(tracks.getStartLon())){
+                        tracks.setStartLonDec(new BigDecimal(tracks.getStartLon()));
+                    }
+                    if (CommonUtil.isNotBlank(tracks.getStratLat())){
+                        tracks.setStratLatDec(new BigDecimal(tracks.getStratLat()));
+                    }
+                    if (CommonUtil.isNotBlank(tracks.getEndLon())){
+                        tracks.setEndLonDec(new BigDecimal(tracks.getEndLon()));
+                    }
+                    if (CommonUtil.isNotBlank(tracks.getEndLat())){
+                        tracks.setEndLatDec(new BigDecimal(tracks.getEndLat()));
+                    }
+
+
+                    // -------------- 车辆轨迹点
+                    List<TrailBo> josnList = new ArrayList<>();
+                    for (OdsRtSzdnSnapshotFlowAddcode snapshotBo : snapshotList){
+                        TrailBo trailBo = new TrailBo();
+
+                        String gantryCode = CommonUtil.isNull(snapshotBo.getGantrycode());
+
+                        trailBo.setStateType(stateType);
+                        trailBo.setPlatenumber(snapshotBo.getPlatenumber());
+                        trailBo.setLocationId(gantryCode);
+                        trailBo.setLocationCode(gantryCode);
+                        trailBo.setPointUuid(snapshotBo.getDatauuid());
+                        trailBo.setSectionCode(snapshotBo.getSectioncode());
+
+
+                        Date captureTime = snapshotBo.getSnapshottime();
+                        if (null != captureTime) {
+                            trailBo.setCaptureTime(format2.format(captureTime));
+                        }
+
+                        trailBo.setDevCode(gantryCode); // 设备编号
+                        if (gantryMao.containsKey(gantryCode)) {
+                            OdsSzdnGantry odsSzdnGantry = gantryMao.get(gantryCode);
+                            String lon = odsSzdnGantry.getLon();
+                            String lat = odsSzdnGantry.getLat();
+
+                            trailBo.setPileno(odsSzdnGantry.getPileNo());
+                            if(CommonUtil.isNotBlank(lon)) {
+                                trailBo.setLon(new BigDecimal(lon));
+                            }
+                            if(CommonUtil.isNotBlank(lat)) {
+                                trailBo.setLat(new BigDecimal(lat));
+                            }
+
+                            trailBo.setDevName(odsSzdnGantry.getGantryName());  // 设备名称
+                        }
+
+                        // 设备名称没有默认位置信息--------------
+                        if (CommonUtil.isBlank(trailBo.getDevName())){
+                            trailBo.setDevName(gantryCode);
+                        }
+
+                        trailBo.setRoadCode(roadCode);
+                        josnList.add(trailBo);
+                    }
+
+
+
+                    String  escapedTypeRemark = "泰赣路段全程屏蔽：其中门架牌识流水数量:" +snapshotList.size() + "，门架交易成功流水数量:0。";
+                    String escapedType = Constants.escapedType_20;
+                    tracks.setEscapedType(escapedType); // 屏蔽
+                    tracks.setEscapedTypeRemark(escapedTypeRemark);
+                    tracks.setEscapedTfcj("2");  // 路段屏蔽
+
+                    // 车牌颜色
+                    tracks.setPlateColor(platecolor);
+
+
+                    TrailInfo trailInfo = new TrailInfo();
+                    trailInfo.setTracks(tracks);
+                    trailInfo.setTrailList(josnList);
+                    trailInfo.setTrailUuid(carNo);
+
+
+                    String kykey = this.getSuspiciousKey(redisDate, carNo);
+                    redisCache.setCacheObject(kykey, trailInfo);
+
 
                 }
             }

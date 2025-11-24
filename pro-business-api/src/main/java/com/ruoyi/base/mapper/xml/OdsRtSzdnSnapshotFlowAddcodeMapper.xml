@@ -163,7 +163,7 @@
     </select>
 
     <select id="selectOdsRtSzdnSnapshotFlowAddcodeListNew" parameterType="com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowAddcode" resultMap="OdsRtSzdnSnapshotFlowAddcodeResult">
-        SELECT t.sectioncode,t.platenumber,t.snapshottime,t.gantrycode,t.datauuid
+        SELECT t.sectioncode,t.platenumber,t.snapshottime,t.gantrycode,t.datauuid,t.cartypecode
         FROM jl_data01.ods_rt_szdn_snapshot_flow_addcode t
         <where>
             <if test="sectioncode != null  and sectioncode != ''"> and t.sectioncode = #{sectioncode}</if>
