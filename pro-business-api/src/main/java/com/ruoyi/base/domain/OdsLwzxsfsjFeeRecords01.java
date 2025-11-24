@@ -638,12 +638,6 @@ public class OdsLwzxsfsjFeeRecords01 implements Custom {
     @TableField(exist = false)
     private String lastgantrytimeStr;
 
-    // 时间查询
-    @TableField(exist = false)
-    private String applyTime1;
-
-    @TableField(exist = false)
-    private String applyTime2;
 
     // 起始界面
     @TableField(exist = false)
@@ -653,10 +647,5 @@ public class OdsLwzxsfsjFeeRecords01 implements Custom {
     @TableField(exist = false)
     private Integer endNum;
 
-    @TableField(exist = false)
-    List<String> sectioncode;
-
-    @TableField(exist = false)
-    List<String> sectioncodeList;
 
 }

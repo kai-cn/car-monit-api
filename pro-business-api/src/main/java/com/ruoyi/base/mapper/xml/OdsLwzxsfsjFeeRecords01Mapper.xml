@@ -340,23 +340,21 @@
         <if test="inApplyTime2 != null  and inApplyTime2 != ''">and t.transtime <![CDATA[<=]]> to_timestamp(#{inApplyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
     </select>
 
-    <select id="selectOdsLwzxsfsjFeeRecords01ListNew"
-            resultType="com.ruoyi.base.domain.OdsLwzxsfsjFeeRecords01">
+    <select id="selectOdsLwzxsfsjFeeRecords01ListNew" resultType="com.ruoyi.base.domain.OdsLwzxsfsjFeeRecords01">
         SELECT  t.cid, t.vehicleplate, t.passstate, t.fee, t.transtime
         FROM jl_data01.ods_lwzxsfsj_fee_records_01 t
         LEFT JOIN jl_data01.ods_szdn_gantry g ON t.gantryid = g.gantry_code
         <where>
             t.vehicleplate LIKE concat('%', '_1')
             <if test="sectioncode != null  and sectioncode != ''"> and g.section_code = #{sectioncode}</if>
-            <if test="sectioncodeList != null  and sectioncodeList.size() > 0">
-                and g.section_code in
-                <foreach collection="sectioncodeList" item="item" open="(" separator="," close=")">
-                    #{item}
+            <if test="sectionList != null and sectionList.size() > 0">
+                and
+                <foreach collection="sectionList" open="(" separator="or" close=")" item="item">
+                    g.section_code = #{item}
                 </foreach>
             </if>
-<!--            <if test="vehicleplate != null  and vehicleplate != ''"> t.vehicleplate LIKE concat('%', #{vehicleplate}, '%') </if>-->
-            <if test="applyTime1 != null  and applyTime1 != ''">and t.transtime >= to_timestamp(#{applyTime1}, 'yyyy-mm-dd HH24:MI:SS')</if>
-            <if test="applyTime2 != null  and applyTime2 != ''">and t.transtime <![CDATA[<=]]> to_timestamp(#{applyTime2}, 'yyyy-mm-dd HH24:MI:SS')</if>
+            <if test="inApplyTime1 != null  and inApplyTime1 != ''">and t.transtime >= to_timestamp(#{inApplyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
+            <if test="inApplyTime2 != null  and inApplyTime2 != ''">and t.transtime <![CDATA[<=]]> to_timestamp(#{inApplyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
             <if test="startNum != null ">  LIMIT #{startNum} </if>
             <if test="endNum != null ">  OFFSET #{endNum} </if>
         </where>

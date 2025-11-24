@@ -22,15 +22,8 @@ import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static com.ruoyi.common.constant.Constants.feeRecordsList;
-import static com.ruoyi.common.constant.Constants.snapshotFlowList;
 
 /**
  * 服务区基础信息Service业务层处理
@@ -54,8 +47,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
     public static final String FeeStationExit = "FeeStationExit";
 
     public static final String redisBiteKey = "sys_config:syncSuspiciousCar_bite"; // 比例默认为0.5
-    public static final String redisTimeKey = "sys_config:syncSuspiciousCar_time"; // 默认7天
-    public static final String supoer_mjnum = "sys_config:supoer_mjnum"; // 门架数量
+    public static final String redisTimeKey = "sys_config:syncSuspiciousCar_time"; // 默认2天
+    public static final String supoer_mjnum = "sys_config:supoer_mjnum"; //  跨省：门架数量 5个
+    public static final String road_supoer_mjnum = "sys_config:road_supoer_mjnum"; // 路段： 门架数量 3个
 
 
     @Autowired
@@ -133,6 +127,26 @@ public class SysUtilServiceImpl implements ISysUtilService {
      */
     private String getSuspiciousKey(String curData, String configKey) {
         return Constants.car_uspicious + curData + ":" + configKey;
+    }
+
+    /**
+     * 门架抓拍流水
+     *
+     * @param configKey 参数键
+     * @return 缓存键key
+     */
+    private String snapshotFlowListKey(String curData, String configKey) {
+        return Constants.snapshotFlowList + curData + ":" + configKey;
+    }
+
+    /**
+     *  门架流水key
+     *
+     * @param configKey 参数键
+     * @return 缓存键key
+     */
+    private String feeRecordsListKey(String curData, String configKey) {
+        return Constants.feeRecordsList + curData + ":" + configKey;
     }
 
 
@@ -1132,11 +1146,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
         Integer endTime = 4;
         BigDecimal bite = new BigDecimal("0.3");  // 门架抓拍和流水抓拍占比
 
-        int supoerMjnum = 5; // 同步可疑车辆门架抓拍数量5个以上
+        int supoerMjnum = 5; // 跨省：同步可疑车辆门架抓拍数量5个以上
+        int roadSupoerMjnum = 3; // 路段：门架抓拍数量和门架流水数量对比
 
 
         // -------------- 从缓存取得对应的配置
-        String redisTimeValue = redisCache.getCacheObject(redisTimeKey); // 默认3天
+        String redisTimeValue = redisCache.getCacheObject(redisTimeKey); // 默认2天
         if (CommonUtil.isNotBlank(redisTimeValue)){
             starTime = Integer.parseInt(redisTimeValue);
             log.info("从缓存取得时间配置--------："+redisTimeValue);
@@ -1151,7 +1166,13 @@ public class SysUtilServiceImpl implements ISysUtilService {
         String supoerMjnumValue = redisCache.getCacheObject(supoer_mjnum); // 比例默认为5
         if (CommonUtil.isNotBlank(supoerMjnumValue)){
             supoerMjnum = Integer.parseInt(supoerMjnumValue);
-            log.info("从缓存取得门架抓拍数量------："+supoerMjnum);
+            log.info("从缓存取得跨省：门架抓拍数量------："+supoerMjnum);
+        }
+
+        String roadSupoeMjnumValue = redisCache.getCacheObject(road_supoer_mjnum); // 比例默认为5
+        if (CommonUtil.isNotBlank(roadSupoeMjnumValue)){
+            roadSupoerMjnum = Integer.parseInt(roadSupoeMjnumValue);
+            log.info("从缓存路段：取得门架抓拍数量------："+supoerMjnum);
         }
 
 
@@ -1212,32 +1233,44 @@ public class SysUtilServiceImpl implements ISysUtilService {
             }
         }
 
+        List<String> sectionCodeList = new ArrayList<>();
+        sectionCodeList.add(indexSectionCode);
+
+
         // -------可疑车辆存储时间
         Date now = new Date();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
         String formattedDate = sdf.format(now);
 
-        //抓拍、收费流水参数
+        // -------获取当前时间的前2天
+        Date currentDate = new Date();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(currentDate);
+        calendar.add(Calendar.DAY_OF_MONTH, -starTime);
+        Date twoDaysAgo = calendar.getTime();
+        SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-MM-dd");
+        String queryDate = sdf1.format(twoDaysAgo);
+
+        String queryStartTime = queryDate + "00:00:00";
+        String queryEndTime = queryDate + "23:59:59";
+        log.info("查询时间范围" + queryStartTime + "到" + queryEndTime);
+
+
+        // 门架抓拍流水
         OdsRtSzdnSnapshotFlowAddcode snapshotFlow = new OdsRtSzdnSnapshotFlowAddcode();
         snapshotFlow.setPlatecolor("黄色");
-        snapshotFlow.setSectioncodeList(Collections.singletonList(indexSectionCode));
-        LocalDate today = LocalDate.now();
-        // 当天开始时间
-        LocalDateTime todayStart = today.atStartOfDay();
-        // 当天结束时间
-        LocalDateTime todayEnd = LocalDateTime.of(today, LocalTime.MAX);
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        snapshotFlow.setApplyTime1(todayStart.format(formatter));
-        snapshotFlow.setApplyTime2(todayEnd.format(formatter));
-        snapshotFlow.setApplyTime1("2025-11-14 00:00:00");
-        snapshotFlow.setApplyTime2("2025-11-16 23:59:59");
+        snapshotFlow.setSectionList(sectionCodeList);
+        snapshotFlow.setApplyTime1(queryStartTime);
+        snapshotFlow.setApplyTime2(queryEndTime);
 
+
+        // 门架交易流水
         OdsLwzxsfsjFeeRecords01 feeRecords01 = new OdsLwzxsfsjFeeRecords01();
-        feeRecords01.setSectioncodeList(Collections.singletonList(indexSectionCode));
-        feeRecords01.setApplyTime1(todayStart.format(formatter));
-        feeRecords01.setApplyTime2(todayEnd.format(formatter));
-        feeRecords01.setApplyTime1("2025-11-14 00:00:00");
-        feeRecords01.setApplyTime2("2025-11-16 23:59:59");
+        feeRecords01.setSectionList(sectionCodeList);
+        feeRecords01.setInApplyTime1(queryStartTime);
+        feeRecords01.setInApplyTime2(queryEndTime);
+
+
 
         for (int i = startNum; i <= endNum; i++) {
             // ----- 分页范围
@@ -1249,20 +1282,26 @@ public class SysUtilServiceImpl implements ISysUtilService {
             log.info("数据查询范围：" + carParaVO.getStartNum() + "到" + carParaVO.getEndNum());
 
 
-            log.info("SQL开始查询----------"+new Date());
+            log.info("轨迹点SQL开始查询----------"+new Date());
             List<ZdataTrailTracks> carlistAll = zdataTrailTracksService.getLatestTrail(carParaVO);
+            log.info("轨迹点SQL结束查询----------"+new Date());
 
+
+            // 查询门架抓拍流水
+            log.info("门架抓拍流水SQL开始查询----------"+new Date());
             snapshotFlow.setStartNum(carParaVO.getStartNum());
             snapshotFlow.setEndNum(carParaVO.getEndNum());
-            //查询抓拍流水
             this.syncSnapshotFlow(snapshotFlow);
+            log.info("门架抓拍流水SQL结束查询----------"+new Date());
 
+
+            // 门架交易流水
+            log.info("门架交易流水SQL开始查询----------"+new Date());
             feeRecords01.setStartNum(carParaVO.getStartNum());
             feeRecords01.setEndNum(carParaVO.getEndNum());
-            //查询收费流水
             this.syncFeeRecords(feeRecords01);
+            log.info("门架交易流水SQL开始查询----------"+new Date());
 
-            log.info("SQL结束查询----------"+new Date());
 
             // ---------------------------------- 跨省全程屏蔽
             List<ZdataTrailTracks> carlistQspb = new ArrayList<>();
@@ -1403,7 +1442,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             }
                         }
                         // 该路段门架比例一定的数值--------- conutGantryCapture > 0 && conutGantryCapture > conutFeeRecord
-                        if (conutGantryCapture > 0){
+                        if (conutGantryCapture > roadSupoerMjnum){
                            //  BigDecimal costBite = new BigDecimal(conutFeeRecord).divide(new BigDecimal(conutGantryCapture), 4, BigDecimal.ROUND_HALF_UP);
                             String escapedTypeRemark = "";
                             boolean addFlag = false;
@@ -1441,215 +1480,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
         }
 
-    }
-
-
-    @Override
-    public void syncSnapshotFlow(OdsRtSzdnSnapshotFlowAddcode snapshotFlow) {
-        // ----- 分页范围
-        log.info("数据查询范围：" + snapshotFlow.getStartNum() + "到" + snapshotFlow.getEndNum());
-        log.info("SQL开始查询----------"+new Date());
-        List<OdsRtSzdnSnapshotFlowAddcode> list = snapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeListNew(snapshotFlow);
-        for (OdsRtSzdnSnapshotFlowAddcode snapshotFlowAddcode : list) {
-            redisCache.setCacheObject(snapshotFlowList + snapshotFlowAddcode.getDatauuid(), snapshotFlowAddcode);
-        }
-        log.info("SQL结束查询----------"+new Date());
-
-    }
-
-
-    @Override
-    public void syncFeeRecords(OdsLwzxsfsjFeeRecords01 feeRecords) {
-        // ----- 分页范围
-        log.info("数据查询范围：" + feeRecords.getStartNum() + "到" + feeRecords.getEndNum());
-        log.info("SQL开始查询----------"+new Date());
-        List<OdsLwzxsfsjFeeRecords01> list = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ListNew(feeRecords);
-        for (OdsLwzxsfsjFeeRecords01 feeRecords01 : list) {
-            redisCache.setCacheObject(feeRecordsList + feeRecords01.getCid(), feeRecords01);
-        }
-        log.info("SQL结束查询----------"+new Date());
-
-    }
-
-    @Override
-    public void separateSnapshotFlowTimeList() {
-        List<OdsRtSzdnSnapshotFlowAddcode> snapshotList = new ArrayList<>();
-        Collection<String> keys = redisCache.keys( Constants.snapshotFlowList + "*");
-        if (null != keys && !keys.isEmpty()) {
-            for (String key : keys) {
-                Object cacheObject = redisCache.getCacheObject(key);
-                if (cacheObject instanceof OdsRtSzdnSnapshotFlowAddcode) {
-                    snapshotList.add((OdsRtSzdnSnapshotFlowAddcode) cacheObject);
-                }
-            }
-        }
-        if(snapshotList.isEmpty()) {
-            return;
-        }
-        //分组排序
-        Map<String, List<OdsRtSzdnSnapshotFlowAddcode>> map = snapshotList.stream().collect(Collectors.groupingBy(OdsRtSzdnSnapshotFlowAddcode::getPlatenumber, LinkedHashMap::new,
-                Collectors.collectingAndThen(Collectors.toList(),
-                        list -> list.stream().sorted(Comparator.comparing(OdsRtSzdnSnapshotFlowAddcode::getSnapshottime)).collect(Collectors.toList()))));
-        Map<String, Object> resMap = new LinkedHashMap<>();
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        long thirtyMinutesInMillis = 30 * 60 * 1000; // 30分钟转换为毫秒
-        for (Map.Entry<String, List<OdsRtSzdnSnapshotFlowAddcode>> entry : map.entrySet()) {
-            List<OdsRtSzdnSnapshotFlowAddcode> list = entry.getValue();
-            String platenumber = entry.getKey();
-            if(list.size() == 1) {
-                String key = Constants.snapshotFlowTimeList + platenumber + "_" + format.format(list.get(0).getSnapshottime());
-                redisCache.setCacheObject(key, list);
-            } else {
-                int lastIndex = 0;
-                for (int i = 1; i < list.size(); i++) {
-                    OdsRtSzdnSnapshotFlowAddcode cur = list.get(i);
-                    Date curDate = cur.getSnapshottime();//当前
-                    OdsRtSzdnSnapshotFlowAddcode prev = list.get(i - 1);
-                    Date prevDate = prev.getSnapshottime();//前一个
-                    long diff = Math.abs(curDate.getTime() - prevDate.getTime());
-                    /**
-                     粤SA5257	2025-09-10 11:04:06
-                     粤SA5257	2025-09-10 11:51:16  1  1
-                     粤SA5257	2025-09-10 12:30:29  2
-                     粤SA5257	2025-09-10 13:22:01  3  3  3
-                     粤SA5257	2025-09-10 14:29:57  4
-                     粤SA5257	2025-09-10 15:41:31  5  5
-                     */
-                    if(diff > thirtyMinutesInMillis) {
-                        //间隔超过30分钟 视为第二次通行
-                        if(i - lastIndex == 1) {
-                            //相邻2条，作为两条通行记录  多次连续会有重复
-                            String key1 = Constants.snapshotFlowTimeList + platenumber + "_" + format.format(list.get(lastIndex).getSnapshottime());
-                            List<OdsRtSzdnSnapshotFlowAddcode> value1 = new ArrayList<>();
-                            value1.add(list.get(lastIndex));
-                            resMap.putIfAbsent(key1, value1);
-                            String key2 = Constants.snapshotFlowTimeList + platenumber + "_" + format.format(curDate);
-                            List<OdsRtSzdnSnapshotFlowAddcode> value2 = new ArrayList<>();
-                            value2.add(cur);
-                            resMap.putIfAbsent(key2, value2);
-                        } else if(i - lastIndex > 1) {
-                            String key3 = Constants.snapshotFlowTimeList + platenumber + "_" + format.format(list.get(lastIndex).getSnapshottime()) + "_" + format.format(prevDate);
-                            resMap.putIfAbsent(key3, list.subList(lastIndex, i));//截取
-                        }
-                        lastIndex = i;
-                    }
-                }
-                if(lastIndex == 0) {
-                    //一条记录
-                    String key = Constants.snapshotFlowTimeList + platenumber + "_" + format.format(list.get(0).getSnapshottime())  + "_" + format.format(list.get(list.size() - 1).getSnapshottime()) ;
-                    redisCache.setCacheObject(key, list);
-                } else if(lastIndex < list.size() - 1) {
-                    //间隔在中间
-                    String key = Constants.snapshotFlowTimeList + platenumber + "_" + format.format(list.get(lastIndex).getSnapshottime()) + "_" + format.format(list.get(list.size() - 1).getSnapshottime());
-                    resMap.putIfAbsent(key, list.subList(lastIndex, list.size()));
-                } else if(lastIndex == list.size() - 1) {
-                    //间隔在末尾
-                    String key = Constants.snapshotFlowTimeList + platenumber + "_" + format.format(list.get(lastIndex).getSnapshottime());
-                    List<OdsRtSzdnSnapshotFlowAddcode> value = new ArrayList<>();
-                    value.add(list.get(lastIndex));
-                    resMap.putIfAbsent(key, value);
-                }
-            }
-        }
-        if(!resMap.isEmpty()) {
-            //存入缓存
-            for (Map.Entry<String, Object> objectEntry : resMap.entrySet()) {
-                redisCache.setCacheObject(objectEntry.getKey(), objectEntry.getValue());
-            }
-            redisCache.deleteObject(keys);//删除原始数据
-        }
-    }
-
-    @Override
-    public void isFeeRecordsExist() {
-        List<OdsLwzxsfsjFeeRecords01> feeRecordsList = new ArrayList<>();
-        Collection<String> keys = redisCache.keys( Constants.feeRecordsList + "*");
-        if (null != keys && !keys.isEmpty()) {
-            for (String key : keys) {
-                Object cacheObject = redisCache.getCacheObject(key);
-                if (cacheObject instanceof OdsLwzxsfsjFeeRecords01) {
-                    feeRecordsList.add((OdsLwzxsfsjFeeRecords01) cacheObject);
-                }
-            }
-        }
-        if (!feeRecordsList.isEmpty()) {
-            // -------可疑车辆存储时间
-            Date now = new Date();
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
-            String formattedDate = sdf.format(now);
-            for (OdsLwzxsfsjFeeRecords01 feeRecords : feeRecordsList) {
-                String vehicleplate = CommonUtil.isNull(feeRecords.getVehicleplate());
-                if (vehicleplate.contains("_")) {
-                    String[] vehicleplateStr = vehicleplate.split("_");
-                    feeRecords.setVehicleplate(vehicleplateStr[0]);
-                    feeRecords.setPlateColor(vehicleplateStr[1]);
-                }
-            }
-            //分组排序
-            Map<String, List<OdsLwzxsfsjFeeRecords01>> map = feeRecordsList.stream().collect(Collectors.groupingBy(OdsLwzxsfsjFeeRecords01::getVehicleplate,
-                    Collectors.collectingAndThen(Collectors.toList(),
-                            list -> list.stream().sorted(Comparator.comparing(OdsLwzxsfsjFeeRecords01::getTranstime)).collect(Collectors.toList()))));
-            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            Collection<String> snapShotKeys = redisCache.keys( Constants.snapshotFlowTimeList + "*");
-            if (null != snapShotKeys && !snapShotKeys.isEmpty()) {
-                for (String key : snapShotKeys) {
-                    Object cacheObject = redisCache.getCacheObject(key);
-                    List<OdsRtSzdnSnapshotFlowAddcode> snapshotFlowAddcodeList = new ArrayList<>();
-                    if(cacheObject instanceof List) {
-                        snapshotFlowAddcodeList  =  (List<OdsRtSzdnSnapshotFlowAddcode>) cacheObject;
-                    }
-                    if(key.contains("_")) {
-                        String[] split = key.split("_");
-                        String platenumber =  split[0].split(":")[1];
-                        if(split.length == 2) {
-                            continue;//只有1个时间，跳过
-                        } else if(split.length == 3)  {
-                            String startTimeStr = split[1];
-                            String endTimeStr = split[2];
-                            try {
-                                Date startTime = format.parse(startTimeStr);
-                                Date endTime = format.parse(endTimeStr);
-                                List<OdsLwzxsfsjFeeRecords01> feeRecords01List = map.get(platenumber);
-                                boolean flag= false;
-                                if (null != feeRecords01List && !feeRecords01List.isEmpty()) {
-                                    for (OdsLwzxsfsjFeeRecords01 feeRecords01 : feeRecords01List) {
-                                        Date transtime = feeRecords01.getTranstime();
-                                        if(transtime.after(startTime) && transtime.before(endTime)) {
-                                            //时间在范围里
-                                            String passstate = feeRecords01.getPassstate();
-                                            if("1".equals(passstate)) {//通行状态 成功
-                                                break;
-                                            } else if("2".equals(passstate)) {//通行状态 失败
-                                                flag = true;
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    //无流水记录
-                                  flag = true;
-                                }
-                                if(flag) {
-                                    //逃费
-                                    ZdataTrailTracks tracks = new ZdataTrailTracks();
-                                    tracks.setEscapedType(Constants.escapedType_20); // 屏蔽
-                                    tracks.setEscapedTypeRemark("");
-                                    tracks.setEscapedTfcj("1");  // 逃费场景
-                                    TrailInfo trailInfo = new TrailInfo();
-                                    // 车牌颜色
-                                    tracks.setPlateColor(snapshotFlowAddcodeList.get(0).getPlatecolor());
-                                    trailInfo.setTrailUuid(platenumber);
-                                    //存入缓存
-                                    redisCache.setCacheObject(this.getSuspiciousKey(formattedDate, platenumber), trailInfo);
-                                }
-                            } catch (ParseException e) {
-                                e.printStackTrace();
-                                throw new RuntimeException(e);
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     /**
@@ -1880,6 +1710,224 @@ public class SysUtilServiceImpl implements ISysUtilService {
     }
 
 
+    /**
+     * 获取门架抓拍流水
+     *
+     * @param snapshotFlow
+     */
+    @Override
+    public void syncSnapshotFlow(OdsRtSzdnSnapshotFlowAddcode snapshotFlow) {
+        Date now = new Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+        String redisDate = sdf.format(now);
+        // ----- 分页范围
+        List<OdsRtSzdnSnapshotFlowAddcode> list = snapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeListNew(snapshotFlow);
+        for (OdsRtSzdnSnapshotFlowAddcode snapshotFlowAddcode : list) {
+            redisCache.setCacheObject(this.snapshotFlowListKey(redisDate, snapshotFlowAddcode.getDatauuid()), snapshotFlowAddcode);
+        }
+    }
+
+
+    /**
+     * 获取门架交易流水
+     *
+     * @param feeRecords
+     */
+    @Override
+    public void syncFeeRecords(OdsLwzxsfsjFeeRecords01 feeRecords) {
+        Date now = new Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+        String redisDate = sdf.format(now);
+        // ----- 分页范围
+        List<OdsLwzxsfsjFeeRecords01> list = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ListNew(feeRecords);
+        for (OdsLwzxsfsjFeeRecords01 feeRecords01 : list) {
+            redisCache.setCacheObject(this.feeRecordsListKey(redisDate, feeRecords01.getCid()), feeRecords01);
+        }
+    }
+
+    /**
+     * 门架抓拍流水 和 获取门架交易流水 对比
+     */
+    @Override
+    public void separateSnapshotFlowTimeList() {
+        List<OdsRtSzdnSnapshotFlowAddcode> snapshotList = new ArrayList<>();
+        Collection<String> keys = redisCache.keys( Constants.snapshotFlowList + "*");
+        if (null != keys && !keys.isEmpty()) {
+            for (String key : keys) {
+                Object cacheObject = redisCache.getCacheObject(key);
+                if (cacheObject instanceof OdsRtSzdnSnapshotFlowAddcode) {
+                    snapshotList.add((OdsRtSzdnSnapshotFlowAddcode) cacheObject);
+                }
+            }
+        }
+        if(snapshotList.isEmpty()) {
+            return;
+        }
+        //分组排序
+        Map<String, List<OdsRtSzdnSnapshotFlowAddcode>> map = snapshotList.stream().collect(Collectors.groupingBy(OdsRtSzdnSnapshotFlowAddcode::getPlatenumber, LinkedHashMap::new,
+                Collectors.collectingAndThen(Collectors.toList(),
+                        list -> list.stream().sorted(Comparator.comparing(OdsRtSzdnSnapshotFlowAddcode::getSnapshottime)).collect(Collectors.toList()))));
+        Map<String, Object> resMap = new LinkedHashMap<>();
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        long thirtyMinutesInMillis = 30 * 60 * 1000; // 30分钟转换为毫秒
+        for (Map.Entry<String, List<OdsRtSzdnSnapshotFlowAddcode>> entry : map.entrySet()) {
+            List<OdsRtSzdnSnapshotFlowAddcode> list = entry.getValue();
+            String platenumber = entry.getKey();
+            if(list.size() == 1) {
+                String key = Constants.snapshotFlowTimeList + platenumber + "_" + format.format(list.get(0).getSnapshottime());
+                redisCache.setCacheObject(key, list);
+            } else {
+                int lastIndex = 0;
+                for (int i = 1; i < list.size(); i++) {
+                    OdsRtSzdnSnapshotFlowAddcode cur = list.get(i);
+                    Date curDate = cur.getSnapshottime();//当前
+                    OdsRtSzdnSnapshotFlowAddcode prev = list.get(i - 1);
+                    Date prevDate = prev.getSnapshottime();//前一个
+                    long diff = Math.abs(curDate.getTime() - prevDate.getTime());
+                    /**
+                     粤SA5257	2025-09-10 11:04:06
+                     粤SA5257	2025-09-10 11:51:16  1  1
+                     粤SA5257	2025-09-10 12:30:29  2
+                     粤SA5257	2025-09-10 13:22:01  3  3  3
+                     粤SA5257	2025-09-10 14:29:57  4
+                     粤SA5257	2025-09-10 15:41:31  5  5
+                     */
+                    if(diff > thirtyMinutesInMillis) {
+                        //间隔超过30分钟 视为第二次通行
+                        if(i - lastIndex == 1) {
+                            //相邻2条，作为两条通行记录  多次连续会有重复
+                            String key1 = Constants.snapshotFlowTimeList + platenumber + "_" + format.format(list.get(lastIndex).getSnapshottime());
+                            List<OdsRtSzdnSnapshotFlowAddcode> value1 = new ArrayList<>();
+                            value1.add(list.get(lastIndex));
+                            resMap.putIfAbsent(key1, value1);
+                            String key2 = Constants.snapshotFlowTimeList + platenumber + "_" + format.format(curDate);
+                            List<OdsRtSzdnSnapshotFlowAddcode> value2 = new ArrayList<>();
+                            value2.add(cur);
+                            resMap.putIfAbsent(key2, value2);
+                        } else if(i - lastIndex > 1) {
+                            String key3 = Constants.snapshotFlowTimeList + platenumber + "_" + format.format(list.get(lastIndex).getSnapshottime()) + "_" + format.format(prevDate);
+                            resMap.putIfAbsent(key3, list.subList(lastIndex, i));//截取
+                        }
+                        lastIndex = i;
+                    }
+                }
+                if(lastIndex == 0) {
+                    //一条记录
+                    String key = Constants.snapshotFlowTimeList + platenumber + "_" + format.format(list.get(0).getSnapshottime())  + "_" + format.format(list.get(list.size() - 1).getSnapshottime()) ;
+                    redisCache.setCacheObject(key, list);
+                } else if(lastIndex < list.size() - 1) {
+                    //间隔在中间
+                    String key = Constants.snapshotFlowTimeList + platenumber + "_" + format.format(list.get(lastIndex).getSnapshottime()) + "_" + format.format(list.get(list.size() - 1).getSnapshottime());
+                    resMap.putIfAbsent(key, list.subList(lastIndex, list.size()));
+                } else if(lastIndex == list.size() - 1) {
+                    //间隔在末尾
+                    String key = Constants.snapshotFlowTimeList + platenumber + "_" + format.format(list.get(lastIndex).getSnapshottime());
+                    List<OdsRtSzdnSnapshotFlowAddcode> value = new ArrayList<>();
+                    value.add(list.get(lastIndex));
+                    resMap.putIfAbsent(key, value);
+                }
+            }
+        }
+        if(!resMap.isEmpty()) {
+            //存入缓存
+            for (Map.Entry<String, Object> objectEntry : resMap.entrySet()) {
+                redisCache.setCacheObject(objectEntry.getKey(), objectEntry.getValue());
+            }
+            redisCache.deleteObject(keys);//删除原始数据
+        }
+    }
+
+    @Override
+    public void isFeeRecordsExist() {
+        List<OdsLwzxsfsjFeeRecords01> feeRecordsList = new ArrayList<>();
+        Collection<String> keys = redisCache.keys( Constants.feeRecordsList + "*");
+        if (null != keys && !keys.isEmpty()) {
+            for (String key : keys) {
+                Object cacheObject = redisCache.getCacheObject(key);
+                if (cacheObject instanceof OdsLwzxsfsjFeeRecords01) {
+                    feeRecordsList.add((OdsLwzxsfsjFeeRecords01) cacheObject);
+                }
+            }
+        }
+        if (!feeRecordsList.isEmpty()) {
+            // -------可疑车辆存储时间
+            Date now = new Date();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+            String formattedDate = sdf.format(now);
+            for (OdsLwzxsfsjFeeRecords01 feeRecords : feeRecordsList) {
+                String vehicleplate = CommonUtil.isNull(feeRecords.getVehicleplate());
+                if (vehicleplate.contains("_")) {
+                    String[] vehicleplateStr = vehicleplate.split("_");
+                    feeRecords.setVehicleplate(vehicleplateStr[0]);
+                    feeRecords.setPlateColor(vehicleplateStr[1]);
+                }
+            }
+            //分组排序
+            Map<String, List<OdsLwzxsfsjFeeRecords01>> map = feeRecordsList.stream().collect(Collectors.groupingBy(OdsLwzxsfsjFeeRecords01::getVehicleplate,
+                    Collectors.collectingAndThen(Collectors.toList(),
+                            list -> list.stream().sorted(Comparator.comparing(OdsLwzxsfsjFeeRecords01::getTranstime)).collect(Collectors.toList()))));
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            Collection<String> snapShotKeys = redisCache.keys( Constants.snapshotFlowTimeList + "*");
+            if (null != snapShotKeys && !snapShotKeys.isEmpty()) {
+                for (String key : snapShotKeys) {
+                    Object cacheObject = redisCache.getCacheObject(key);
+                    List<OdsRtSzdnSnapshotFlowAddcode> snapshotFlowAddcodeList = new ArrayList<>();
+                    if(cacheObject instanceof List) {
+                        snapshotFlowAddcodeList  =  (List<OdsRtSzdnSnapshotFlowAddcode>) cacheObject;
+                    }
+                    if(key.contains("_")) {
+                        String[] split = key.split("_");
+                        String platenumber =  split[0].split(":")[1];
+                        if(split.length == 2) {
+                            continue;//只有1个时间，跳过
+                        } else if(split.length == 3)  {
+                            String startTimeStr = split[1];
+                            String endTimeStr = split[2];
+                            try {
+                                Date startTime = format.parse(startTimeStr);
+                                Date endTime = format.parse(endTimeStr);
+                                List<OdsLwzxsfsjFeeRecords01> feeRecords01List = map.get(platenumber);
+                                boolean flag= false;
+                                if (null != feeRecords01List && !feeRecords01List.isEmpty()) {
+                                    for (OdsLwzxsfsjFeeRecords01 feeRecords01 : feeRecords01List) {
+                                        Date transtime = feeRecords01.getTranstime();
+                                        if(transtime.after(startTime) && transtime.before(endTime)) {
+                                            //时间在范围里
+                                            String passstate = feeRecords01.getPassstate();
+                                            if("1".equals(passstate)) {//通行状态 成功
+                                                break;
+                                            } else if("2".equals(passstate)) {//通行状态 失败
+                                                flag = true;
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    //无流水记录
+                                    flag = true;
+                                }
+                                if(flag) {
+                                    //逃费
+                                    ZdataTrailTracks tracks = new ZdataTrailTracks();
+                                    tracks.setEscapedType(Constants.escapedType_20); // 屏蔽
+                                    tracks.setEscapedTypeRemark("");
+                                    tracks.setEscapedTfcj("1");  // 逃费场景
+                                    TrailInfo trailInfo = new TrailInfo();
+                                    // 车牌颜色
+                                    tracks.setPlateColor(snapshotFlowAddcodeList.get(0).getPlatecolor());
+                                    trailInfo.setTrailUuid(platenumber);
+                                    //存入缓存
+                                    redisCache.setCacheObject(this.getSuspiciousKey(formattedDate, platenumber), trailInfo);
+                                }
+                            } catch (ParseException e) {
+                                e.printStackTrace();
+                                throw new RuntimeException(e);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
 
 

@@ -88,12 +88,26 @@ public interface ISysUtilService {
     public TrailBo getByTrailBo(TrailBo trailBo);
 
 
+    /**
+     * 获取门架抓拍流水
+     * @param snapshotFlow
+     */
     void syncSnapshotFlow(OdsRtSzdnSnapshotFlowAddcode snapshotFlow);
 
-    void syncFeeRecords(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01);
+    /**
+     * 获取门架交易流水
+     * @param feeRecords
+     */
+    void syncFeeRecords(OdsLwzxsfsjFeeRecords01 feeRecords);
 
+    /**
+     * 门架抓拍流水 和 获取门架交易流水 对比
+     */
     void separateSnapshotFlowTimeList();
 
+    /**
+     * 是否存在
+     */
     void isFeeRecordsExist();
 
 
