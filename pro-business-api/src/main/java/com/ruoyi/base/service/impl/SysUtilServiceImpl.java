@@ -1723,7 +1723,18 @@ public class SysUtilServiceImpl implements ISysUtilService {
         // ----- 分页范围
         List<OdsRtSzdnSnapshotFlowAddcode> list = snapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeListNew(snapshotFlow);
         for (OdsRtSzdnSnapshotFlowAddcode snapshotFlowAddcode : list) {
-            redisCache.setCacheObject(this.snapshotFlowListKey(redisDate, snapshotFlowAddcode.getDatauuid()), snapshotFlowAddcode);
+            if (CommonUtil.isNotBlank(snapshotFlowAddcode.getPlatecolor())){
+                // 按照路段和车牌
+                String key = CommonUtil.isNull(snapshotFlowAddcode.getSectioncode()) + "@@" + CommonUtil.isNull(snapshotFlowAddcode.getPlatecolor());
+                String redisKey = this.snapshotFlowListKey(redisDate, key);
+                List<OdsRtSzdnSnapshotFlowAddcode> keyList = new ArrayList<>();
+                List<OdsRtSzdnSnapshotFlowAddcode> oldList = redisCache.getCacheObject(redisKey);
+                if (null != oldList && oldList.size() > 0) {
+                    keyList = oldList;
+                }
+                keyList.add(snapshotFlowAddcode);
+                redisCache.setCacheObject(redisKey, keyList);
+            }
         }
     }
 
@@ -1741,7 +1752,23 @@ public class SysUtilServiceImpl implements ISysUtilService {
         // ----- 分页范围
         List<OdsLwzxsfsjFeeRecords01> list = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ListNew(feeRecords);
         for (OdsLwzxsfsjFeeRecords01 feeRecords01 : list) {
-            redisCache.setCacheObject(this.feeRecordsListKey(redisDate, feeRecords01.getCid()), feeRecords01);
+            String vehicleplate = CommonUtil.isNull(feeRecords01.getVehicleplate()); // 车牌号_颜色
+            if (vehicleplate.indexOf("_") > -1){
+                String[] vehicleplateStr = vehicleplate.split("_");
+                String vehicleplateChange = CommonUtil.isNull(vehicleplateStr[0]);
+                if (CommonUtil.isNotBlank(vehicleplateChange)){
+                    // 按照路段和车牌
+                    String key = CommonUtil.isNull(feeRecords01.getSectioncode()) + "@@" + CommonUtil.isNull(vehicleplateChange);
+                    String redisKey = this.feeRecordsListKey(redisDate, key);
+                    List<OdsLwzxsfsjFeeRecords01> keyList = new ArrayList<>();
+                    List<OdsLwzxsfsjFeeRecords01> oldList = redisCache.getCacheObject(redisKey);
+                    if (null != oldList && oldList.size() > 0) {
+                        keyList = oldList;
+                    }
+                    keyList.add(feeRecords01);
+                    redisCache.setCacheObject(redisKey, keyList);
+                }
+            };
         }
     }
 
@@ -1751,7 +1778,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
     @Override
     public void separateSnapshotFlowTimeList() {
         List<OdsRtSzdnSnapshotFlowAddcode> snapshotList = new ArrayList<>();
-        Collection<String> keys = redisCache.keys( Constants.snapshotFlowList + "*");
+
+        Date now = new Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+        String redisDate = sdf.format(now);
+
+        Collection<String> keys = redisCache.keys( Constants.snapshotFlowList + redisDate+ "*");
         if (null != keys && !keys.isEmpty()) {
             for (String key : keys) {
                 Object cacheObject = redisCache.getCacheObject(key);
@@ -1760,13 +1792,17 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 }
             }
         }
+
         if(snapshotList.isEmpty()) {
             return;
         }
+
         //分组排序
         Map<String, List<OdsRtSzdnSnapshotFlowAddcode>> map = snapshotList.stream().collect(Collectors.groupingBy(OdsRtSzdnSnapshotFlowAddcode::getPlatenumber, LinkedHashMap::new,
-                Collectors.collectingAndThen(Collectors.toList(),
-                        list -> list.stream().sorted(Comparator.comparing(OdsRtSzdnSnapshotFlowAddcode::getSnapshottime)).collect(Collectors.toList()))));
+                Collectors.collectingAndThen(Collectors.toList(),list -> list.stream().sorted(Comparator.comparing(OdsRtSzdnSnapshotFlowAddcode::getSnapshottime)).collect(Collectors.toList()))));
+
+
+
         Map<String, Object> resMap = new LinkedHashMap<>();
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         long thirtyMinutesInMillis = 30 * 60 * 1000; // 30分钟转换为毫秒

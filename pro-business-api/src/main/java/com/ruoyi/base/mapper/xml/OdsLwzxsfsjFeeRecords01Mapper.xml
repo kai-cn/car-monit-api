@@ -341,7 +341,7 @@
     </select>
 
     <select id="selectOdsLwzxsfsjFeeRecords01ListNew" parameterType="com.ruoyi.base.domain.OdsLwzxsfsjFeeRecords01" resultMap="OdsLwzxsfsjFeeRecords01Result">
-        SELECT  t.cid, t.vehicleplate, t.passstate, t.fee, t.transtime
+        SELECT  g.section_code sectioncode,t.vehicleplate,t.transtime,t.passstate,t.fee
         FROM jl_data01.ods_lwzxsfsj_fee_records_01 t
         left join jl_data01.ods_szdn_gantry g ON t.gantryid = g.gantry_code
         <where>

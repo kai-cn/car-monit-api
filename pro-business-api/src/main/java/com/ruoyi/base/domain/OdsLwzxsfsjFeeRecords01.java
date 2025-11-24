@@ -647,5 +647,11 @@ public class OdsLwzxsfsjFeeRecords01 implements Custom {
     @TableField(exist = false)
     private Integer endNum;
 
+    /**
+     * 路段编码
+     */
+    @TableField(exist = false)
+    private String sectioncode;
+
 
 }
