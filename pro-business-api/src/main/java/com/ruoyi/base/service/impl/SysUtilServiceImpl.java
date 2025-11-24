@@ -1723,9 +1723,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
         // ----- 分页范围
         List<OdsRtSzdnSnapshotFlowAddcode> list = snapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeListNew(snapshotFlow);
         for (OdsRtSzdnSnapshotFlowAddcode snapshotFlowAddcode : list) {
-            if (CommonUtil.isNotBlank(snapshotFlowAddcode.getPlatecolor())){
+            if (CommonUtil.isNotBlank(snapshotFlowAddcode.getPlatenumber())){
                 // 按照路段和车牌
-                String key = CommonUtil.isNull(snapshotFlowAddcode.getSectioncode()) + "@@" + CommonUtil.isNull(snapshotFlowAddcode.getPlatecolor());
+                String key = CommonUtil.isNull(snapshotFlowAddcode.getSectioncode()) + "@@" + CommonUtil.isNull(snapshotFlowAddcode.getPlatenumber());
                 String redisKey = this.snapshotFlowListKey(redisDate, key);
                 List<OdsRtSzdnSnapshotFlowAddcode> keyList = new ArrayList<>();
                 List<OdsRtSzdnSnapshotFlowAddcode> oldList = redisCache.getCacheObject(redisKey);
