@@ -1288,23 +1288,21 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
             log.info("轨迹点SQL开始查询----------"+new Date());
             List<ZdataTrailTracks> carlistAll = zdataTrailTracksService.getLatestTrail(carParaVO);
-            log.info("轨迹点SQL结束查询----------"+new Date());
+            log.info("轨迹点SQL结束查询----------"+new Date()+"--数据："+carlistAll.size());
 
 
             // 查询门架抓拍流水
-            log.info("门架抓拍流水SQL开始查询----------"+new Date());
             snapshotFlow.setStartNum(carParaVO.getStartNum());
             snapshotFlow.setEndNum(carParaVO.getEndNum());
             this.syncSnapshotFlow(snapshotFlow);
-            log.info("门架抓拍流水SQL结束查询----------"+new Date());
+
 
 
             // 门架交易流水
-            log.info("门架交易流水SQL开始查询----------"+new Date());
             feeRecords01.setStartNum(carParaVO.getStartNum());
             feeRecords01.setEndNum(carParaVO.getEndNum());
             this.syncFeeRecords(feeRecords01);
-            log.info("门架交易流水SQL开始查询----------"+new Date());
+
 
 
             // ---------------------------------- 跨省全程屏蔽
@@ -1720,11 +1718,13 @@ public class SysUtilServiceImpl implements ISysUtilService {
      */
     @Override
     public void syncSnapshotFlow(OdsRtSzdnSnapshotFlowAddcode snapshotFlow) {
+        log.info("门架抓拍流水SQL开始查询----------"+new Date());
         Date now = new Date();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
         String redisDate = sdf.format(now);
         // ----- 分页范围
         List<OdsRtSzdnSnapshotFlowAddcode> list = snapshotFlowAddcodeService.selectOdsRtSzdnSnapshotFlowAddcodeListNew(snapshotFlow);
+        log.info("门架抓拍流水SQL结束查询----------"+new Date()+"--数据："+list.size());
         for (OdsRtSzdnSnapshotFlowAddcode snapshotFlowAddcode : list) {
             if (CommonUtil.isNotBlank(snapshotFlowAddcode.getPlatenumber()) && null != snapshotFlowAddcode.getSnapshottime()) {
                 // 按照路段和车牌
@@ -1749,11 +1749,13 @@ public class SysUtilServiceImpl implements ISysUtilService {
      */
     @Override
     public void syncFeeRecords(OdsLwzxsfsjFeeRecords01 feeRecords) {
+        log.info("门架交易流水SQL开始查询----------"+new Date());
         Date now = new Date();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
         String redisDate = sdf.format(now);
         // ----- 分页范围
         List<OdsLwzxsfsjFeeRecords01> list = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ListNew(feeRecords);
+        log.info("门架交易流水SQL开始查询----------" + new Date() + "数据--" + list.size());
         for (OdsLwzxsfsjFeeRecords01 feeRecords01 : list) {
             String vehicleplate = CommonUtil.isNull(feeRecords01.getVehicleplate()); // 车牌号_颜色
             if (vehicleplate.indexOf("_") > -1){

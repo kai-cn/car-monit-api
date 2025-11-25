@@ -177,6 +177,7 @@
             <if test="applyTime1 != null  and applyTime1 != ''">and t.snapshottime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
             <if test="applyTime2 != null  and applyTime2 != ''">and t.snapshottime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
         </where>
+        order by t.platenumber,t.snapshottime
         <if test="startNum != null ">  LIMIT #{startNum} </if>
         <if test="endNum != null ">  OFFSET #{endNum} </if>
     </select>

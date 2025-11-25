@@ -99,7 +99,7 @@
          and  t.extime >= now() - #{endTime}  and t.extime <![CDATA[<=]]> now() - #{starTime}
 
         </where>
-
+        order by t.cid,t.extime
         <if test="startNum != null ">  LIMIT #{startNum} </if>
         <if test="endNum != null ">  OFFSET #{endNum} </if>
     </select>
