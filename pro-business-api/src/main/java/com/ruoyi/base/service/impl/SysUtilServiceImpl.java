@@ -12,6 +12,7 @@ import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.core.redis.RedisConfig;
 import com.ruoyi.common.core.redis.RedisSourceFactory;
 import com.ruoyi.common.utils.CommonUtil;
+import com.ruoyi.common.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -1925,9 +1926,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     String platecolor = firstBo.getPlatecolor();
 
                     ZdataTrailTracks tracks = new ZdataTrailTracks();
-                    tracks.setUuid(firstBo.getDatauuid());
+                    tracks.setUuid(StringUtils.getUUID());
                     tracks.setPlateKey(carNo);
-                    tracks.setEnvehicleid(carNo);
+                    // tracks.setEnvehicleid(carNo);
                     tracks.setEnaxlecount(0);
                     tracks.setEnterTime(startTime);
 
