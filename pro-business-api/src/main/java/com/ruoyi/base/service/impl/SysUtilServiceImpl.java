@@ -1926,6 +1926,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
                     ZdataTrailTracks tracks = new ZdataTrailTracks();
                     tracks.setUuid(firstBo.getDatauuid());
+                    tracks.setPlateKey(carNo);
                     tracks.setEnvehicleid(carNo);
                     tracks.setEnaxlecount(0);
                     tracks.setEnterTime(startTime);
