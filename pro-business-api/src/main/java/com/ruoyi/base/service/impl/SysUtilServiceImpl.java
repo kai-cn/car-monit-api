@@ -2028,7 +2028,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
 
 
-                    String  escapedTypeRemark = sectionName+"全程屏蔽：其中门架牌识流水数量:" +snapshotList.size() + "，门架交易成功流水数量:0。";
+                    String  escapedTypeRemark = sectionName+"路段全程屏蔽：其中门架牌识流水数量:" +snapshotList.size() + "，门架交易成功流水数量:0。";
                     String escapedType = Constants.escapedType_20;
                     tracks.setEscapedType(escapedType); // 屏蔽
                     tracks.setEscapedTypeRemark(escapedTypeRemark);
