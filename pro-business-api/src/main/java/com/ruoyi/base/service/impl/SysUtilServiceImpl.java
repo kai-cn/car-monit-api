@@ -1900,6 +1900,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 boolean isAddFlag = false;
                 List<OdsLwzxsfsjFeeRecords01> oldList = redisCache.getCacheObject(redisKey);
                 if (null != oldList && oldList.size() > 0) {
+                    boolean tempIsAddFlag = false; // 判断通行状态为1 并且 fee > 0
                     for (OdsLwzxsfsjFeeRecords01 feeRecords01 : oldList) {
                         Date transtime = feeRecords01.getTranstime();
                         if (null != transtime) {
@@ -1907,16 +1908,20 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             if (transtimelong >= startTimeLong && startTimeLong <= endTimeLong) {
                                 //时间在范围里
                                 String passstate = CommonUtil.isNull(feeRecords01.getPassstate());
+                                BigDecimal fee = feeRecords01.getFee();
                                 if ("1".equals(passstate)) {
                                     //通行状态 成功
-                                    break;
-                                } else if ("2".equals(passstate)) {
-                                    //通行状态 失败
-                                    isAddFlag = true;
+                                    if (null != fee && fee.compareTo(BigDecimal.ZERO) > 0) {
+                                        tempIsAddFlag = true;
+                                    }
                                 }
                             }
                         }
-
+                    }
+                    if (tempIsAddFlag){
+                        // 有条件
+                    }else{
+                        isAddFlag = true;
                     }
                 }else{
                     // 无数据------------
@@ -2036,7 +2041,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     String escapedType = Constants.escapedType_20;
                     tracks.setEscapedType(escapedType); // 屏蔽
                     tracks.setEscapedTypeRemark(escapedTypeRemark);
-                    tracks.setEscapedTfcj("2");  // 路段屏蔽
+                    tracks.setEscapedTfcj("3");  // 路段屏蔽
 
                     // 车牌颜色
                     tracks.setPlateColor(platecolor);
@@ -2047,9 +2052,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     trailInfo.setTrailList(josnList);
                     trailInfo.setTrailUuid(carNo);
 
-
                     String kykey = this.getSuspiciousKey(redisDate, carNo);
-                    redisCache.setCacheObject(kykey, trailInfo);
+                    Object isExistObj = redisCache.getCacheObject(kykey);
+                    if (isExistObj == null) {
+                        redisCache.setCacheObject(kykey, trailInfo);
+                    }
 
                 }
             }
