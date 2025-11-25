@@ -735,6 +735,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 tracks.setStratLat(odsSzdnToll.getLatitude()); // 经度
                             }
                         }
+                        tracks.setEntollstationid(CommonUtil.isNull(stationIpBO.getTollCode()));
                     }else {
                         // 门架
                         if (szdnGantryMap.containsKey(firstName)){
@@ -748,6 +749,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                     tracks.setStratLat(odsSzdnGantry.getLat()); // 经度
                                 }
                             }
+                            tracks.setEntollstationid(CommonUtil.isNull(gantryIpBO.getGantryCode()));
                         }
                     }
 
@@ -800,6 +802,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 tracks.setEndLat(odsSzdnToll.getLatitude()); // 经度
                             }
                         }
+                        tracks.setExtollstationid(CommonUtil.isNull(stationIpBO.getTollCode()));
                     }else {
                         // 门架
                         if (szdnGantryMap.containsKey(endName)){
@@ -813,6 +816,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                     tracks.setEndLat(odsSzdnGantry.getLat()); // 经度
                                 }
                             }
+                            tracks.setExtollstationid(CommonUtil.isNull(gantryIpBO.getGantryCode()));
                         }
                     }
                 }
@@ -1499,7 +1503,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         TrailBo changeTrailBo = this.getByTrailBo(trailBo);
                         if (null != changeTrailBo) {
                             plateColor = CommonUtil.isNull(changeTrailBo.getPlatecolor());
-
                             return plateColor;
                         }
                     }
@@ -1806,13 +1809,13 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         if (i == 0) {
                             snapshotList.add(rtndata);
                         } else {
-                            // 时间相差半个小时之内为同一组
+                            // 时间相差1个小时之内为同一组
                             Date preSnapshottime = keyList.get(i - 1).getSnapshottime();
                             Date snapshottime = rtndata.getSnapshottime();
 
                             long diff = Math.abs(snapshottime.getTime() - preSnapshottime.getTime());
                             if (diff > thirtyMinutesInMillis) {
-                                // 超过了30分钟
+                                // 超过了60分钟
                                 this.isFeeRecordsExist(key, snapshotList, roadSupoerMjnum,redisDate);
 
                                 // 重新计算---------------
@@ -1829,7 +1832,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             }
         }
 
-        // 删除以前的
+        // 删除redis
         if (null != keys && keys.size() > 0){
             // 删除redis
             redisCache.deleteObject(keys);
@@ -1861,6 +1864,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 gantryMao.put(CommonUtil.isNull(rtnOdsSzdnGantry.getGantryCode()),rtnOdsSzdnGantry);
             }
 
+            // 根据路段查询路线map
+            Map<String, OdsSzdnSection> sectionMap = sectionService.getSectionMap();
+
             String stateType = GANTRY_CAPTURE; // 门架抓拍
             SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -1876,10 +1882,18 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 long endTimeLong = endTime.getTime();
 
                 String roadCarKey = roadCarKeyStr[1];
-                String roadCode = roadCarKey.split("@@")[0];
+                String sectionCode = CommonUtil.isNull(firstBo.getSectioncode());
+
+                String sectionName = "";
+                String roadCode ="";
+                if (sectionMap.containsKey(sectionCode)){
+                    OdsSzdnSection odsSzdnSection = sectionMap.get(sectionCode);
+                    sectionName = odsSzdnSection.getSectionName();
+                    roadCode = odsSzdnSection.getRoadCode();
+                }
 
 
-                String redisKey = this.feeRecordsListKey(redisDate,roadCarKey );
+                String redisKey = this.feeRecordsListKey(redisDate,roadCarKey);
                 boolean isAddFlag = false;
                 List<OdsLwzxsfsjFeeRecords01> oldList = redisCache.getCacheObject(redisKey);
                 if (null != oldList && oldList.size() > 0) {
@@ -1931,7 +1945,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     }
 
                     tracks.setEnvehicletype(CommonUtil.isNull(firstBo.getCartypecode())); // 车型
-                    tracks.setEnvehicleid(carNo); // 车型
+                    tracks.setEnvehicleid(carNo); // 车牌号
 
 
                     tracks.setExitTime(endTime);
@@ -1950,7 +1964,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         }
                     }
 
-                    tracks.setExvehicleid(carNo);
+                    tracks.setExvehicleid(carNo); // 车牌号
 
                     if (CommonUtil.isNotBlank(tracks.getStartLon())){
                         tracks.setStartLonDec(new BigDecimal(tracks.getStartLon()));
@@ -1992,7 +2006,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             String lon = odsSzdnGantry.getLon();
                             String lat = odsSzdnGantry.getLat();
 
-                            trailBo.setPileno(odsSzdnGantry.getPileNo());
+                            trailBo.setPileno(odsSzdnGantry.getPileNo()); // 桩号
                             if(CommonUtil.isNotBlank(lon)) {
                                 trailBo.setLon(new BigDecimal(lon));
                             }
@@ -2014,7 +2028,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
 
 
-                    String  escapedTypeRemark = "泰赣路段全程屏蔽：其中门架牌识流水数量:" +snapshotList.size() + "，门架交易成功流水数量:0。";
+                    String  escapedTypeRemark = sectionName+"全程屏蔽：其中门架牌识流水数量:" +snapshotList.size() + "，门架交易成功流水数量:0。";
                     String escapedType = Constants.escapedType_20;
                     tracks.setEscapedType(escapedType); // 屏蔽
                     tracks.setEscapedTypeRemark(escapedTypeRemark);
@@ -2032,7 +2046,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
                     String kykey = this.getSuspiciousKey(redisDate, carNo);
                     redisCache.setCacheObject(kykey, trailInfo);
-
 
                 }
             }

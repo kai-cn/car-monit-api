@@ -190,6 +190,17 @@ public class CarTask {
         log.info("每天凌晨3点15执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
+    /**
+     * 每天凌晨3点45
+     * 同步可疑车俩:
+     */
+    @Scheduled(cron = "0 45 3 * * ?")
+    private void syncSuspiciousCar() {
+        log.info("每天凌晨3点45执行（同步可疑车俩）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        sysUtilService.separateSnapshotFlowTimeList();
+        log.info("每天凌晨3点45执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
+
 
 }
 
