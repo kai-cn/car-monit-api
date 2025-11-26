@@ -148,7 +148,8 @@
         t.lastgantrytime,
         t.gantryid,
         t.cid,
-        t.passstate
+        t.passstate,
+        t.fee
     </sql>
 
 
