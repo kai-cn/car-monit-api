@@ -1907,8 +1907,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             long transtimelong = transtime.getTime();
                             if (transtimelong >= startTimeLong && startTimeLong <= endTimeLong) {
                                 //时间在范围里
-                                String feecalcresult = CommonUtil.isNull(feeRecords01.getFeecalcresult()); // 计费模块响应计费结果
-                                if ("0".equals(feecalcresult)) {
+                                BigDecimal fee = feeRecords01.getFee();
+                                if (null != fee && fee.compareTo(BigDecimal.ZERO) > 0) {
                                     freeCountNum = freeCountNum + 1;
                                 }
                             }
