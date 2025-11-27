@@ -149,7 +149,7 @@
         t.gantryid,
         t.cid,
         t.passstate,
-        t.feecalcresul
+        t.feecalcresult
     </sql>
 
 
