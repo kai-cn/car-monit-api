@@ -1283,9 +1283,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 Integer endRange = (i -1) * pageSize; // 当前页 -1
                 carParaVO.setEndNum(endRange);
             }
-            log.info("数据查询范围：" + carParaVO.getStartNum() + "到" + carParaVO.getEndNum());
+            // log.info("数据查询范围：" + carParaVO.getStartNum() + "到" + carParaVO.getEndNum());
 
-
+            carParaVO.setApplyTime1(queryStartTime);
+            carParaVO.setApplyTime2(queryEndTime);
             log.info("轨迹点SQL开始查询----------"+new Date());
             List<ZdataTrailTracks> carlistAll = zdataTrailTracksService.getLatestTrail(carParaVO);
             log.info("轨迹点SQL结束查询----------"+new Date()+"--数据："+carlistAll.size());
