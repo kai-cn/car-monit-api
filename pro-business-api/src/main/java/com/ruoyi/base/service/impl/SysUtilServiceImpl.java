@@ -1900,27 +1900,23 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 boolean isAddFlag = false;
                 List<OdsLwzxsfsjFeeRecords01> oldList = redisCache.getCacheObject(redisKey);
                 if (null != oldList && oldList.size() > 0) {
-                    boolean tempIsAddFlag = false; // 判断通行状态为1 并且 fee > 0
+                    int freeCountNum = 0; // 计费模块响应计费结果 0 成功 1失败
                     for (OdsLwzxsfsjFeeRecords01 feeRecords01 : oldList) {
                         Date transtime = feeRecords01.getTranstime();
                         if (null != transtime) {
                             long transtimelong = transtime.getTime();
                             if (transtimelong >= startTimeLong && startTimeLong <= endTimeLong) {
                                 //时间在范围里
-                                String passstate = CommonUtil.isNull(feeRecords01.getPassstate());
-                                BigDecimal fee = feeRecords01.getFee();
-                                if ("1".equals(passstate)) {
-                                    //通行状态 成功
-                                    if (null != fee && fee.compareTo(BigDecimal.ZERO) > 0) {
-                                        tempIsAddFlag = true;
-                                    }
+                                String feecalcresult = CommonUtil.isNull(feeRecords01.getFeecalcresult()); // 计费模块响应计费结果
+                                if ("0".equals(feecalcresult)) {
+                                    freeCountNum = freeCountNum + 1;
                                 }
                             }
                         }
                     }
-                    if (tempIsAddFlag){
-                        // 有条件
-                    }else{
+                    if (freeCountNum > 0) {
+                        // 有数据 后续做部分
+                    } else {
                         isAddFlag = true;
                     }
                 }else{

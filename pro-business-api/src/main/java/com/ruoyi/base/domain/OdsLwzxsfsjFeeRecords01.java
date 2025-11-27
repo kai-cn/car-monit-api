@@ -136,7 +136,7 @@ public class OdsLwzxsfsjFeeRecords01 implements Custom {
     @Excel(name = "费用")
     private BigDecimal fee;
 
-    /** 计费模块响应计费结果 */
+    /** 计费模块响应计费结果  0 成功 1 失败 */
     @Excel(name = "计费模块响应计费结果")
     private String feecalcresult;
 
