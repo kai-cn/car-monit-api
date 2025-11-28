@@ -275,6 +275,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         trailBo.setLocationCode(jsonObj.getString("locationCode"));
                         trailBo.setLocationName(jsonObj.getString("locationName"));
                         trailBo.setStandardCode(jsonObj.getString("standardCode"));
+                        trailBo.setLocationId(jsonObj.getString("locationId"));
+                        trailBo.setPlatenumber(jsonObj.getString("platenumber"));
 
                         String lon = jsonObj.getString("longitude");
                         String lat = jsonObj.getString("latitude");
