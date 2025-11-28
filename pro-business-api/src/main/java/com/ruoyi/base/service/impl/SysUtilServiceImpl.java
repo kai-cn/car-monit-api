@@ -1989,7 +1989,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         tracks.setUuid(StringUtils.getUUID());
                         tracks.setPlateKey(carNo);
                         // tracks.setEnvehicleid(carNo);
-                        tracks.setEnaxlecount(0);
+                        // tracks.setEnaxlecount(0);
                         tracks.setEnterTime(startTime);
 
                         String startGantryid = CommonUtil.isNull(firstBo.getGantrycode());
