@@ -92,7 +92,15 @@
 
         <!-- 路段逃费 !-->
         <if test="flag != null and flag == 'ldtf' ">
-            and t.trailtype = 0
+            and t.trailtype = 1
+            and EXISTS (
+            SELECT 1
+            FROM UNNEST(trailpoints) AS elem
+            WHERE (elem::json->>'sectionCode') in
+                <foreach collection="sectionList" open="(" separator="," close=")" item="item">
+                    #{item}
+                </foreach>
+            )
         </if>
 
         <!-- 时间查询范围 !-->

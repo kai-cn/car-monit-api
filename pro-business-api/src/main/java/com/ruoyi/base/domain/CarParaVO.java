@@ -50,5 +50,11 @@ public class CarParaVO {
     private String flag;
 
 
+    /**
+     * 对象集合
+     */
+    List<String> sectionList;
+
+
 
 }
