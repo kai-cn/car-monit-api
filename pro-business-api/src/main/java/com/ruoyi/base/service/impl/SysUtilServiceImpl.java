@@ -1289,20 +1289,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
 
         for (int i = startNum; i <= endNum; i++) {
-            // ----- 分页范围
+            // ----- 分页范围 ： 2000一次性查询
             carParaVO.setStartNum(pageSize);
             if (i > 1){
                 Integer endRange = (i -1) * pageSize; // 当前页 -1
                 carParaVO.setEndNum(endRange);
             }
-            // log.info("数据查询范围：" + carParaVO.getStartNum() + "到" + carParaVO.getEndNum());
-
-            carParaVO.setApplyTime1(queryStartTime);
-            carParaVO.setApplyTime2(queryEndTime);
-            log.info("轨迹点SQL开始查询----------"+new Date());
-            List<ZdataTrailTracks> carlistAll = zdataTrailTracksService.getLatestTrail(carParaVO);
-            log.info("轨迹点SQL结束查询----------"+new Date()+"--数据："+carlistAll.size());
-
 
             // 查询门架抓拍流水
             snapshotFlow.setStartNum(carParaVO.getStartNum());
@@ -1310,12 +1302,25 @@ public class SysUtilServiceImpl implements ISysUtilService {
             this.syncSnapshotFlow(snapshotFlow);
 
 
-
             // 门架交易流水
             feeRecords01.setStartNum(carParaVO.getStartNum());
             feeRecords01.setEndNum(carParaVO.getEndNum());
             this.syncFeeRecords(feeRecords01);
 
+
+            // -------------轨迹点6000一次查询
+            Integer pageSizeNew = 6000;
+            carParaVO.setStartNum(pageSizeNew);
+            if (i > 1){
+                Integer endRange = (i -1) * pageSizeNew; // 当前页 -1
+                carParaVO.setEndNum(endRange);
+            }
+
+            carParaVO.setApplyTime1(queryStartTime);
+            carParaVO.setApplyTime2(queryEndTime);
+            log.info("轨迹点SQL开始查询----------"+new Date());
+            List<ZdataTrailTracks> carlistAll = zdataTrailTracksService.getLatestTrail(carParaVO);
+            log.info("轨迹点SQL结束查询----------"+new Date()+"--数据："+carlistAll.size());
 
 
             // ---------------------------------- 跨省全程屏蔽
