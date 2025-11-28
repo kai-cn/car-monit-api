@@ -369,6 +369,8 @@ public class Constants
 
     public static final String feeRecordsList = "js_car_reerecords";
 
+    public static final String trailFittingList = "js_car_trail_fitting";
+
     public static final String snapshotFlowTimeList = "snapshotFlowTimeList:";
 
 
