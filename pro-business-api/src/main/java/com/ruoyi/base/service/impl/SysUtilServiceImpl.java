@@ -51,6 +51,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
     public static final String supoer_mjnum = "sys_config:supoer_mjnum"; //  跨省：门架数量 5个
     public static final String road_supoer_mjnum = "sys_config:road_supoer_mjnum"; // 路段： 门架数量 3个
 
+    public static final String jholiday_time = "sys_config:jholiday_time"; // 节假日时间
+
 
     @Autowired
     private RedisCache redisCache;
@@ -1198,6 +1200,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
             log.info("从缓存路段：取得门架抓拍数量------："+roadSupoeMjnumValue);
         }
 
+        // 判断节假日
+        String jholidayTimeValue = CommonUtil.isNull(redisCache.getCacheObject(jholiday_time)); // 节假日
+        log.info("从缓存路段：取得节假日------："+jholidayTimeValue);
+
+
+
 
         if (CommonUtil.isNull(isLocalhost).equals("local")) {
             log.info("本地配置------："+CommonUtil.isNull(isLocalhost));
@@ -1294,6 +1302,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
         feeRecords01.setInApplyTime2(queryEndTime);
 
 
+        // 是否不是节假日
+        boolean isNotExitsjholidayFlag = true;
+        if (jholidayTimeValue.indexOf(queryDate) > -1) {
+            isNotExitsjholidayFlag = false;
+        }
+
 
         for (int i = startNum; i <= endNum; i++) {
             // ----- 分页范围 ： 2000一次性查询
@@ -1347,7 +1361,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
                 // 外省进 外省出的车
                 if (trailtype.equals("0") && firstName.indexOf("门架") > -1 && endName.indexOf("门架") > -1) {
-                    carlistQspb.add(zdataTrailTracksVo);
+                    if (isNotExitsjholidayFlag) {
+                        carlistQspb.add(zdataTrailTracksVo);
+                    }
                 }else{
                     // 判断是否包含大广路段
                     String keyValue = zdataTrailTracksVo.getTrailPoints(); // 行驶轨迹
@@ -1359,7 +1375,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
                             }
                         }
                         if (exflag){
-                            carlistLdpb.add(zdataTrailTracksVo);
+                            if (isNotExitsjholidayFlag) {
+                                carlistLdpb.add(zdataTrailTracksVo);
+                            }
                             TrailTracksVo trailTracksVo = new TrailTracksVo();
                             trailTracksVo.setPlateKey(carNo);
                             trailTracksVo.setEnterTime(zdataTrailTracksVo.getEnterTime());
@@ -1374,6 +1392,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 keyList = oldFittingList;
                             }
                             keyList.add(trailTracksVo);
+
                             redisCache.setCacheObject(trailFittingRedisKey, keyList);
 
                         }
