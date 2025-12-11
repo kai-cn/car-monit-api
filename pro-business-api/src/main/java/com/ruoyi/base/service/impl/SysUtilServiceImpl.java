@@ -107,6 +107,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
     @Autowired
     private IOdsSzdnGantryService odsSzdnGantryService;
 
+    @Autowired
+    private IOdsSzdnTollService odsSzdnTollService;
+
 
     /**
      * 设置cache key
@@ -360,6 +363,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
         // 收费站ip
         Map<String, OdsSzdnTollStationIp> szdnTollMap = odsSzdnTollStationIpService.selectStationIpMap();
 
+        // 收费站code
+        Map<String,OdsSzdnToll> odsSzdnTollMap = odsSzdnTollService.getRedisMap();
+
         // 门架IP
         Map<String, OdsSzdnGantryIp> szdnGantryMap = odsSzdnGantryIpService.selectOdsSzdnGantryIpMap();
 
@@ -371,6 +377,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
         // 根据路段查询路线map
         Map<String, OdsSzdnSection> sectionMap = sectionService.getSectionMap();
+
 
 
         String firtStationCode = "";
@@ -705,9 +712,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
             if (CommonUtil.isNotBlank(firstCode)){
                 // 收费站ip
-                if (szdnTollMap.containsKey(firstCode)){
-                    OdsSzdnTollStationIp stationIpBO = szdnTollMap.get(firstCode);
-                    OdsSzdnToll odsSzdnToll = stationIpBO.getOdsSzdnToll();
+                if (odsSzdnTollMap.containsKey(firstCode)){
+                    OdsSzdnToll odsSzdnToll = odsSzdnTollMap.get(firstCode);
                     if (null != odsSzdnToll) {
                         if (CommonUtil.isNotBlank(odsSzdnToll.getLongitude())) {
                             tracks.setStartLon(odsSzdnToll.getLongitude()); // 经度
@@ -715,6 +721,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         if (CommonUtil.isNotBlank(odsSzdnToll.getLatitude())) {
                             tracks.setStratLat(odsSzdnToll.getLatitude()); // 经度
                         }
+                        tracks.setEntollstationid(CommonUtil.isNull(odsSzdnToll.getTollCode()));
                     }
                 }else {
                     // 门架
@@ -772,9 +779,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
             if (CommonUtil.isNotBlank(endCode)){
                 // 收费站ip
-                if (szdnTollMap.containsKey(endCode)){
-                    OdsSzdnTollStationIp stationIpBO = szdnTollMap.get(endCode);
-                    OdsSzdnToll odsSzdnToll = stationIpBO.getOdsSzdnToll();
+                if (odsSzdnTollMap.containsKey(endCode)){
+                    OdsSzdnToll odsSzdnToll = odsSzdnTollMap.get(endCode);
                     if (null != odsSzdnToll) {
                         if (CommonUtil.isNotBlank(odsSzdnToll.getLongitude())) {
                             tracks.setEndLon(odsSzdnToll.getLongitude()); // 经度
@@ -782,6 +788,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         if (CommonUtil.isNotBlank(odsSzdnToll.getLatitude())) {
                             tracks.setEndLat(odsSzdnToll.getLatitude()); // 经度
                         }
+                        tracks.setExtollstationid(CommonUtil.isNull(odsSzdnToll.getTollCode()));
                     }
                 }else {
                     // 门架

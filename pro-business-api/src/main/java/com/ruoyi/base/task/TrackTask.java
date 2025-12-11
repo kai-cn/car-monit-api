@@ -43,6 +43,9 @@ public class TrackTask {
     @Autowired
     private IOdsSzdnSectionService sectionService;
 
+    @Autowired
+    private IOdsSzdnTollService odsSzdnTollService;
+
 
     /**
      * 每三分钟执行一次
@@ -69,6 +72,7 @@ public class TrackTask {
         zdataLocationDictService.updateRedis(); // 位置点信息
         dwdLcztFwqjcxxService.updateRedis(); // 服务区
         sectionService.updateRedis();//更新路段
+        odsSzdnTollService.updateRedis(); // 收费站
         log.info("每天凌晨0点执行（同步基础信息）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
