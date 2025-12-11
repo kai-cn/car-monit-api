@@ -4,11 +4,11 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.base.domain.OdsSzdnToll;
 import com.ruoyi.base.mapper.OdsSzdnTollMapper;
 import com.ruoyi.base.service.IOdsSzdnTollService;
-import com.ruoyi.common.core.domain.AjaxResult;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +25,9 @@ public class OdsSzdnTollServiceImpl extends ServiceImpl<OdsSzdnTollMapper, OdsSz
 
     @Autowired
     private OdsSzdnTollMapper odsSzdnTollMapper;
+
+    @Autowired
+    private RedisCache redisCache;
 
     /**
      * 查询收费站基础信息
@@ -59,8 +62,52 @@ public class OdsSzdnTollServiceImpl extends ServiceImpl<OdsSzdnTollMapper, OdsSz
         Map<String, OdsSzdnToll> map = new HashMap<String, OdsSzdnToll>();
         List<OdsSzdnToll> list = odsSzdnTollMapper.selectOdsSzdnTollList(odsSzdnToll);
         for (OdsSzdnToll rtn : list) {
+            // 大脑编码
             map.put(CommonUtil.isNull(rtn.getTollCode()), rtn);
+            // 国网编码
+            map.put(CommonUtil.isNull(rtn.getStateCodeMerge()), rtn);
         }
         return map;
     }
+
+
+    /**
+     * 跟新redis
+     */
+    public List<OdsSzdnToll> updateRedis(){
+        OdsSzdnToll odsSzdnToll = new OdsSzdnToll();
+        List<OdsSzdnToll> list = odsSzdnTollMapper.selectOdsSzdnTollList(odsSzdnToll);
+        redisCache.setCacheObject(Constants.station_info, list);
+        return list;
+    }
+
+
+    /**
+     * 从缓存拿到carlist
+     */
+    public Map<String,OdsSzdnToll> getRedisMap(){
+
+        List<OdsSzdnToll> list = null;
+        Object obj = redisCache.getCacheObject(Constants.station_info);
+        if (null != obj) {
+            list = (List) obj;
+        } else {
+            list = this.updateRedis();
+        }
+
+        Map<String, OdsSzdnToll> map = new HashMap<String, OdsSzdnToll>();
+        for (OdsSzdnToll rtn : list) {
+            // 大脑编码
+            map.put(CommonUtil.isNull(rtn.getTollCode()), rtn);
+            // 国网编码
+            map.put(CommonUtil.isNull(rtn.getStateCodeMerge()), rtn);
+        }
+        return map;
+
+    }
+
+
+
+
+
 }

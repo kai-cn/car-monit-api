@@ -366,7 +366,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         // 位置信息
         Map<String,ZdataLocationDict> locationMap = zdataLocationDictService.getRedisList();
 
-        //服务区信息
+        // 服务区信息
         Map<String, DwdLcztFwqjcxx> serviceNameMap = fwqjcxxService.getServiceNameMap();
 
         // 根据路段查询路线map

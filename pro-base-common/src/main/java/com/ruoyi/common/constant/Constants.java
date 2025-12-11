@@ -349,6 +349,12 @@ public class Constants
      */
     public static final String fwq_name = "fwq_name";
 
+
+    /**
+     * 收费站ip redis
+     */
+    public static final String station_info = "station_info";
+
     public static final String SECTION_ROAD_MAP = "section_road_map";
 
 

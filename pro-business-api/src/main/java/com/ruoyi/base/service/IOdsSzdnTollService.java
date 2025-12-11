@@ -2,7 +2,6 @@ package com.ruoyi.base.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ruoyi.base.domain.OdsSzdnToll;
-import com.ruoyi.common.core.domain.AjaxResult;
 
 import java.util.List;
 import java.util.Map;
@@ -37,4 +36,17 @@ public interface IOdsSzdnTollService extends IService<OdsSzdnToll> {
      * @return 收费站基础信息集合
      */
     Map<String,OdsSzdnToll> selectOdsSzdnTollMap(OdsSzdnToll odsSzdnToll);
+
+
+    /**
+     * 跟新redis
+     */
+    List<OdsSzdnToll> updateRedis();
+
+
+    /**
+     * 从缓存拿到carlist
+     */
+    Map<String,OdsSzdnToll> getRedisMap();
+
 }
