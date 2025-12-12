@@ -40,59 +40,51 @@
     </resultMap>
 
     <sql id="selectDwdLcztFwqjcxxVo">
-        t.agent_pk,
-        t.yxtzj,
-        t.fwqbm,
-        t.fwqmc,
-        t.wd,
-        t.fxmc,
-        t.fxdm,
-        t.jd,
-        t.sslxbh,
-        t.sslxmc,
-        t.ssldbh,
-        t.ssldmc,
-        t.sczhkgs,
-        t.sczhszgs,
-        t.ssglzxbm,
-        t.ssglzxmc,
-        t.xzqhmc,
-        t.yyrq,
-        t.cws,
-        t.sfszlkk,
-        t.cdzs,
-        t.sfcyfw,
-        t.sftgzsfw,
-        t.sftgqxfw,
-        t.sftgcsfw,
-        t.sftgjyfw,
-        t.mj,
-        t.sftgcshfw,
-        t.xzqhdm,
-        t.synx,
-        t.lyxt,
-        t.load_time,
-        t.all_col_pk
+        t.id agent_pk,
+        t.id_card yxtzj,
+        t.service_code fwqbm,
+        t.service_name fwqmc,
+        t.direction fxdm,
+        t.longitude jd,
+        t.latitude wd,
+        t.road_code sslxbh,
+        t.section_code ssldbh,
+        t.section_name ssldmc,
+        t.pile_no sczhkgs,
+        t.org_code ssglzxbm,
+        t.org_name ssglzxmc,
+        t.city_code xzqhmc,
+        t.district_name xzqhdm,
+        t.business_date yyrq,
+        t.parking_num cws,
+        t.has_cross sfszlkk,
+        t.charge_num cdzs,
+        t.food_service sfcyfw,
+        t.stay_service sftgzsfw,
+        t.automobile_service sftgqxfw,
+        t.supermarket_service sftgcsfw,
+        t.gas_service sftgjyfw,
+        t.service_alias_name lyxt
     </sql>
 
 
     <select id="selectDwdLcztFwqjcxxList" parameterType="com.ruoyi.base.domain.DwdLcztFwqjcxx" resultMap="DwdLcztFwqjcxxResult">
         SELECT
         <include refid="selectDwdLcztFwqjcxxVo"/>
-        FROM jl_data01.dwd_lczt_fwqjcxx t
+        FROM jl_data01.ods_szdn_service t
         WHERE 1=1
         <if test="agentPk != null  and agentPk != ''"> and t.agent_pk = #{agentPk}</if>
         <if test="yxtzj != null  and yxtzj != ''"> and t.yxtzj = #{yxtzj}</if>
-        <if test="fwqbm != null  and fwqbm != ''"> and t.fwqbm = #{fwqbm}</if>
-        <if test="fwqmc != null  and fwqmc != ''"> and t.fwqmc = #{fwqmc}</if>
+        <if test="fwqbm != null  and fwqbm != ''"> and t.service_code = #{fwqbm}</if>
+        <if test="fwqmc != null  and fwqmc != ''"> and t.service_name = #{fwqmc}</if>
         <if test="wd != null  and wd != ''"> and t.wd = #{wd}</if>
         <if test="fxmc != null  and fxmc != ''"> and t.fxmc = #{fxmc}</if>
         <if test="fxdm != null  and fxdm != ''"> and t.fxdm = #{fxdm}</if>
         <if test="jd != null  and jd != ''"> and t.jd = #{jd}</if>
-        <if test="sslxbh != null  and sslxbh != ''"> and t.sslxbh = #{sslxbh}</if>
+        <if test="sslxbh != null  and sslxbh != ''"> and t.road_code = #{sslxbh}</if>
         <if test="sslxmc != null  and sslxmc != ''"> and t.sslxmc = #{sslxmc}</if>
-        <if test="ssldbh != null  and ssldbh != ''"> and t.ssldbh = #{ssldbh}</if>
-        <if test="ssldmc != null  and ssldmc != ''"> and t.ssldmc = #{ssldmc}</if>
+        <if test="ssldbh != null  and ssldbh != ''"> and t.section_code = #{ssldbh}</if>
+        <if test="ssldmc != null  and ssldmc != ''"> and t.section_name = #{ssldmc}</if>
         <if test="sczhkgs != null  and sczhkgs != ''"> and t.sczhkgs = #{sczhkgs}</if>
         <if test="sczhszgs != null  and sczhszgs != ''"> and t.sczhszgs = #{sczhszgs}</if>
         <if test="ssglzxbm != null  and ssglzxbm != ''"> and t.ssglzxbm = #{ssglzxbm}</if>
@@ -119,7 +111,7 @@
     <select id="selectDwdLcztFwqjcxxById" parameterType="String" resultMap="DwdLcztFwqjcxxResult">
          select
          <include refid="selectDwdLcztFwqjcxxVo"/>
-         from jl_data01.dwd_lczt_fwqjcxx t
-         where t.agent_pk = #{agentPk}
+         from jl_data01.ods_szdn_service t
+         where t.id = #{agentPk}
     </select>
 </mapper>
