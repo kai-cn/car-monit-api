@@ -43,4 +43,11 @@ public interface ZdataTrailTracksMapper extends BaseMapper<ZdataTrailTracks> {
      * 轨迹查询
      */
     List<ZdataTrailTracks> getHistoryTrail(CarParaVO carParaVO);
+
+    /**
+     * 同步可疑车俩
+     * @param carParaVO
+     * @return
+     */
+    List<ZdataTrailTracks> getUnFitting(CarParaVO carParaVO);
 }

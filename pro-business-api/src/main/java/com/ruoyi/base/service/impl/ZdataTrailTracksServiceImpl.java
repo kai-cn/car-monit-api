@@ -62,4 +62,15 @@ public class ZdataTrailTracksServiceImpl extends ServiceImpl<ZdataTrailTracksMap
     public List<ZdataTrailTracks> getHistoryTrail(CarParaVO carParaVO) {
         return zdataTrailTracksMapper.getHistoryTrail(carParaVO);
     }
+
+    /**
+     * 同步可疑车俩：不在轨迹点
+     * @param carParaVO
+     * @return
+     */
+    @Override
+    public List<ZdataTrailTracks> getUnFitting(CarParaVO carParaVO){
+        return zdataTrailTracksMapper.getUnFitting(carParaVO);
+    }
+
 }

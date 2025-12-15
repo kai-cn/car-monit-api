@@ -379,6 +379,8 @@ public class Constants
 
     public static final String snapshotFlowTimeList = "snapshotFlowTimeList:";
 
+    public static final String trailUnFittingList = "js_car_trail_unfitting";
+
 
 
 

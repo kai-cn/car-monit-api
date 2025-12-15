@@ -42,4 +42,11 @@ public interface IZdataTrailTracksService extends IService<ZdataTrailTracks> {
      * @return
      */
     List<ZdataTrailTracks> getHistoryTrail(CarParaVO carParaVO);
+
+    /**
+     * 同步可疑车俩：不在轨迹点
+     * @param carParaVO
+     * @return
+     */
+    List<ZdataTrailTracks> getUnFitting(CarParaVO carParaVO);
 }

@@ -155,7 +155,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
     }
 
     /**
-     * 轨迹点key
+     * 轨迹点key：有轨迹
      *
      * @param configKey 参数键
      * @return 缓存键key
@@ -164,6 +164,16 @@ public class SysUtilServiceImpl implements ISysUtilService {
         return Constants.trailFittingList + curData + ":" + configKey;
     }
 
+
+    /**
+     * 轨迹点key：无轨迹
+     *
+     * @param configKey 参数键
+     * @return 缓存键key
+     */
+    private String trailUnFittingKey(String curData, String configKey) {
+        return Constants.trailUnFittingList + curData + ":" + configKey;
+    }
 
 
     /**
@@ -1342,6 +1352,35 @@ public class SysUtilServiceImpl implements ISysUtilService {
             log.info("轨迹点SQL开始查询----------"+new Date());
             List<ZdataTrailTracks> carlistAll = zdataTrailTracksService.getLatestTrail(carParaVO);
             log.info("轨迹点SQL结束查询----------"+new Date()+"--数据："+carlistAll.size());
+
+
+            //---------未进入轨迹点的查询
+            log.info("不存在轨迹点SQL开始查询----------"+new Date());
+            List<ZdataTrailTracks> carUnFittingList = zdataTrailTracksService.getUnFitting(carParaVO);
+            log.info("不存在轨迹点SQL结束查询----------"+new Date()+"--数据："+carlistAll.size());
+            for (ZdataTrailTracks zdataTrailTracksVo : carUnFittingList) {
+                String carNo = CommonUtil.isNull(zdataTrailTracksVo.getPlateKey());
+
+                TrailTracksVo trailTracksVo = new TrailTracksVo();
+                trailTracksVo.setPlateKey(carNo);
+                trailTracksVo.setEnterTime(zdataTrailTracksVo.getEnterTime());
+                trailTracksVo.setExitTime(zdataTrailTracksVo.getExitTime());
+
+                // 按照车牌存放当天轨迹
+                List<TrailTracksVo> keyList = new ArrayList<>();
+
+                String trailFittingRedisKey = this.trailUnFittingKey(formattedDate, carNo);
+                List<TrailTracksVo> oldFittingList = redisCache.getCacheObject(trailFittingRedisKey);
+                if (null != oldFittingList && oldFittingList.size() > 0) {
+                    keyList = oldFittingList;
+                }
+                keyList.add(trailTracksVo);
+
+                redisCache.setCacheObject(trailFittingRedisKey, keyList);
+
+
+            }
+
 
 
             // ---------------------------------- 跨省全程屏蔽

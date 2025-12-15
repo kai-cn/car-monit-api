@@ -158,4 +158,25 @@
     </select>
 
 
+    <select id="getUnFitting" parameterType="com.ruoyi.base.domain.CarParaVO" resultType="com.ruoyi.base.domain.ZdataTrailTracks">
+        select
+        t.platenumber plateKey,
+        t.entime enterTime,
+        t.extime exitTime,
+        t.trailpoints,
+        t.vehicletype envehicletype
+        from jl_data01.zdata_trail_unfitting t
+        <where>
+            <!-- 时间查询范围 !-->
+            and t.capturedate >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')
+            and t.capturedate <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS')
+
+        </where>
+        order by t.capturedate,t.platenumber
+        <if test="startNum != null ">  LIMIT #{startNum} </if>
+        <if test="endNum != null ">  OFFSET #{endNum} </if>
+    </select>
+
+
+
 </mapper>
