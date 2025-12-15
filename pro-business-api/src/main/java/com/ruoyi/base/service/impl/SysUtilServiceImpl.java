@@ -1307,6 +1307,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
         // 门架交易流水
         OdsLwzxsfsjFeeRecords01 feeRecords01 = new OdsLwzxsfsjFeeRecords01();
+        feeRecords01.setPlatecolor("_1");
         feeRecords01.setSectionList(sectionCodeList);
         feeRecords01.setInApplyTime1(queryStartTime);
         feeRecords01.setInApplyTime2(queryEndTime);
@@ -1375,6 +1376,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         trailTracksVo.setPlateKey(carNo);
                         trailTracksVo.setEnterTime(zdataTrailTracksVo.getEnterTime());
                         trailTracksVo.setExitTime(zdataTrailTracksVo.getExitTime());
+                        trailTracksVo.setEnvehicletype(zdataTrailTracksVo.getEnvehicletype());
+                        trailTracksVo.setTrailpoints(keyValue);
 
                         // 按照车牌存放当天轨迹
                         List<TrailTracksVo> keyList = new ArrayList<>();
@@ -1391,7 +1394,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     }
                 }
             }
-
 
 
             // ---------------------------------- 跨省全程屏蔽
