@@ -1356,7 +1356,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
 
             //---------未进入轨迹点的查询
-            log.info("不存在轨迹点SQL开始查询----------"+new Date());
+           /* log.info("不存在轨迹点SQL开始查询----------"+new Date());
             List<ZdataTrailTracks> carUnFittingList = zdataTrailTracksService.getUnFitting(carParaVO);
             log.info("不存在轨迹点SQL结束查询----------"+new Date()+"--数据："+carlistAll.size());
             for (ZdataTrailTracks zdataTrailTracksVo : carUnFittingList) {
@@ -1409,7 +1409,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         }
                     }
                 }
-            }
+            }*/
 
 
             // ---------------------------------- 跨省全程屏蔽
