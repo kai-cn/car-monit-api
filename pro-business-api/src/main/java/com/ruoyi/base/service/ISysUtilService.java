@@ -106,6 +106,12 @@ public interface ISysUtilService {
     void separateSnapshotFlowTimeList();
 
 
+    /**
+     * 根据 流水节点 ---和 获取门架交易流水 对比
+     */
+    void separateUnfiitingList();
+
+
 
 
 

@@ -1361,7 +1361,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
             log.info("不存在轨迹点SQL结束查询----------"+new Date()+"--数据："+carlistAll.size());
             for (ZdataTrailTracks zdataTrailTracksVo : carUnFittingList) {
                 String carNo = CommonUtil.isNull(zdataTrailTracksVo.getPlateKey());
-
                 // 判断是否包含大广路段
                 String keyValue = zdataTrailTracksVo.getTrailPoints(); // 行驶轨迹
                 if (CommonUtil.isNotBlank(keyValue)) {
@@ -1372,25 +1371,42 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         }
                     }
                     if (exflag){
-                        TrailTracksVo trailTracksVo = new TrailTracksVo();
-                        trailTracksVo.setPlateKey(carNo);
-                        trailTracksVo.setEnterTime(zdataTrailTracksVo.getEnterTime());
-                        trailTracksVo.setExitTime(zdataTrailTracksVo.getExitTime());
-                        trailTracksVo.setEnvehicletype(zdataTrailTracksVo.getEnvehicletype());
-                        trailTracksVo.setTrailpoints(keyValue);
-
-                        // 按照车牌存放当天轨迹
-                        List<TrailTracksVo> keyList = new ArrayList<>();
-
-                        String trailFittingRedisKey = this.trailUnFittingKey(formattedDate, carNo);
-                        List<TrailTracksVo> oldFittingList = redisCache.getCacheObject(trailFittingRedisKey);
-                        if (null != oldFittingList && oldFittingList.size() > 0) {
-                            keyList = oldFittingList;
+                        List<TrailBo> josnList = new ArrayList<TrailBo>();
+                        josnList = this.getTrailBoList(keyValue);
+                        // ---------------------------分析场景: 门架抓拍和流水抓拍 占比
+                        int conutGantryCapture = 0;
+                        int conutFeeRecord = 0;
+                        for (TrailBo rtnTrailBo : josnList) {
+                            String stateType = CommonUtil.isNull(rtnTrailBo.getStateType());
+                            if (stateType.equals(GANTRY_CAPTURE)) {
+                                // 门架抓拍
+                                conutGantryCapture++;
+                            } else if (stateType.equals(FeeRecord)) {
+                                // 卡口流水
+                                conutFeeRecord++;
+                            }
                         }
-                        keyList.add(trailTracksVo);
 
-                        redisCache.setCacheObject(trailFittingRedisKey, keyList);
+                        if (conutGantryCapture > roadSupoerMjnum){
+                            TrailTracksVo trailTracksVo = new TrailTracksVo();
+                            trailTracksVo.setPlateKey(carNo);
+                            trailTracksVo.setEnterTime(zdataTrailTracksVo.getEnterTime());
+                            trailTracksVo.setExitTime(zdataTrailTracksVo.getExitTime());
+                            trailTracksVo.setEnvehicletype(zdataTrailTracksVo.getEnvehicletype());
+                            trailTracksVo.setTrailpoints(keyValue);
 
+                            // 按照车牌存放当天轨迹
+                            List<TrailTracksVo> keyList = new ArrayList<>();
+
+                            String trailFittingRedisKey = this.trailUnFittingKey(formattedDate, carNo);
+                            List<TrailTracksVo> oldFittingList = redisCache.getCacheObject(trailFittingRedisKey);
+                            if (null != oldFittingList && oldFittingList.size() > 0) {
+                                keyList = oldFittingList;
+                            }
+                            keyList.add(trailTracksVo);
+
+                            redisCache.setCacheObject(trailFittingRedisKey, keyList);
+                        }
                     }
                 }
             }
@@ -2196,6 +2212,119 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     }
                 }
             }
+        }
+    }
+
+
+    /**
+     * 根据 流水节点 ---和 获取门架交易流水 对比
+     */
+    @Override
+    public void separateUnfiitingList() {
+        Date now = new Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+        String redisDate = sdf.format(now);
+        Collection<String> keys = redisCache.keys(Constants.trailUnFittingList + redisDate + "*");
+        if (null != keys && keys.size() > 0) {
+            for (String key : keys) {
+                List<TrailTracksVo> oldFittingList = redisCache.getCacheObject(key);
+                if (null != oldFittingList && oldFittingList.size() >= 0) {
+                    for (TrailTracksVo trailTracksVo : oldFittingList) {
+                        String carNo = CommonUtil.isNull(trailTracksVo.getPlateKey());
+                        String keyValue = trailTracksVo.getTrailpoints(); // 行驶轨迹
+
+                        Date startTime = trailTracksVo.getEnterTime();
+                        Date endTime = trailTracksVo.getExitTime();
+
+                        long startTimeLong = startTime.getTime();
+                        long endTimeLong = endTime.getTime();
+
+                        if (CommonUtil.isNotBlank(keyValue)) {
+                            List<TrailBo> josnList = this.getTrailBoList(keyValue);
+                            // ---------------------------分析场景: 门架抓拍和流水抓拍 占比
+                            int conutGantryCapture = 0;
+                            int conutFeeRecord = 0;
+                            for (TrailBo rtnTrailBo : josnList) {
+                                String stateType = CommonUtil.isNull(rtnTrailBo.getStateType());
+                                if (stateType.equals(GANTRY_CAPTURE)) {
+                                    // 门架抓拍
+                                    conutGantryCapture++;
+                                } else if (stateType.equals(FeeRecord)) {
+                                    // 卡口流水
+                                    conutFeeRecord++;
+                                }
+                            }
+
+                            String escapedTypeRemark = "";
+                            boolean addFlag = false;
+                            if (conutFeeRecord == 0) {
+                                escapedTypeRemark = "全程屏蔽：其中门架牌识流水数量:" + conutGantryCapture + "，门架交易流水数量:" + conutFeeRecord+"。";
+                                addFlag = true;
+                            }else{
+                                // 判断在交易流水是否有记录-----------
+                                String redisKey = this.feeRecordsListKey(redisDate,carNo);
+                                List<OdsLwzxsfsjFeeRecords01> oldList = redisCache.getCacheObject(redisKey);
+                                if (null != oldList && oldList.size() > 0) {
+                                    int freeCountNum = 0; // 计费模块响应计费结果 0 成功 1失败
+                                    for (OdsLwzxsfsjFeeRecords01 feeRecords01 : oldList) {
+                                        Date transtime = feeRecords01.getTranstime();
+                                        if (null != transtime) {
+                                            long transtimelong = transtime.getTime();
+                                            if (transtimelong >= startTimeLong && transtimelong <= endTimeLong) {
+                                                //时间在范围里
+                                                BigDecimal fee = feeRecords01.getFee();
+                                                if (null != fee && fee.compareTo(BigDecimal.ZERO) > 0) {
+                                                    freeCountNum = freeCountNum + 1;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if (freeCountNum > 0) {
+                                        // 有数据 后续做部分
+                                    } else {
+                                        escapedTypeRemark = "全程屏蔽：其中门架牌识流水数量:" + conutGantryCapture + "，门架交易流水数量:" + conutFeeRecord+"。";
+                                        addFlag = true;
+                                    }
+                                }else{
+                                    addFlag = true;
+                                }
+                            }
+
+                            if (addFlag) {
+                                ZdataTrailTracks tracks = new ZdataTrailTracks();
+                                String escapedType = Constants.escapedType_20;
+                                tracks.setEscapedType(escapedType); // 屏蔽
+                                tracks.setEscapedTypeRemark(escapedTypeRemark);
+                                tracks.setEscapedTfcj("2");  // 路段屏蔽
+
+                                TrailInfo trailInfo = this.changeData(tracks, josnList); // 获取设备的经纬度
+
+                                // 车牌颜色
+                                tracks.setPlateColor(this.getPlateColor(trailInfo.getTrailList()));
+                                trailInfo.setTrailUuid(carNo);
+
+                                String kykey = this.getSuspiciousKey(redisDate, carNo);
+                                Object isExistObj = redisCache.getCacheObject(kykey);
+                                if (isExistObj == null) {
+                                    redisCache.setCacheObject(kykey, trailInfo);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 删除redis
+        if (null != keys && keys.size() > 0){
+            // 删除redis
+            redisCache.deleteObject(keys);
+        }
+
+        Collection<String> freeKeys = redisCache.keys(Constants.feeRecordsList + redisDate + "*");
+        if (null != freeKeys && freeKeys.size() > 0){
+            // 删除redis
+            redisCache.deleteObject(freeKeys);
         }
     }
 
