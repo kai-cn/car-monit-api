@@ -1361,24 +1361,35 @@ public class SysUtilServiceImpl implements ISysUtilService {
             for (ZdataTrailTracks zdataTrailTracksVo : carUnFittingList) {
                 String carNo = CommonUtil.isNull(zdataTrailTracksVo.getPlateKey());
 
-                TrailTracksVo trailTracksVo = new TrailTracksVo();
-                trailTracksVo.setPlateKey(carNo);
-                trailTracksVo.setEnterTime(zdataTrailTracksVo.getEnterTime());
-                trailTracksVo.setExitTime(zdataTrailTracksVo.getExitTime());
+                // 判断是否包含大广路段
+                String keyValue = zdataTrailTracksVo.getTrailPoints(); // 行驶轨迹
+                if (CommonUtil.isNotBlank(keyValue)) {
+                    boolean exflag = false;
+                    for (String sectionCodeValue: sectionsQueryList){
+                        if (keyValue.indexOf(sectionCodeValue) > -1){
+                            exflag = true;
+                        }
+                    }
+                    if (exflag){
+                        TrailTracksVo trailTracksVo = new TrailTracksVo();
+                        trailTracksVo.setPlateKey(carNo);
+                        trailTracksVo.setEnterTime(zdataTrailTracksVo.getEnterTime());
+                        trailTracksVo.setExitTime(zdataTrailTracksVo.getExitTime());
 
-                // 按照车牌存放当天轨迹
-                List<TrailTracksVo> keyList = new ArrayList<>();
+                        // 按照车牌存放当天轨迹
+                        List<TrailTracksVo> keyList = new ArrayList<>();
 
-                String trailFittingRedisKey = this.trailUnFittingKey(formattedDate, carNo);
-                List<TrailTracksVo> oldFittingList = redisCache.getCacheObject(trailFittingRedisKey);
-                if (null != oldFittingList && oldFittingList.size() > 0) {
-                    keyList = oldFittingList;
+                        String trailFittingRedisKey = this.trailUnFittingKey(formattedDate, carNo);
+                        List<TrailTracksVo> oldFittingList = redisCache.getCacheObject(trailFittingRedisKey);
+                        if (null != oldFittingList && oldFittingList.size() > 0) {
+                            keyList = oldFittingList;
+                        }
+                        keyList.add(trailTracksVo);
+
+                        redisCache.setCacheObject(trailFittingRedisKey, keyList);
+
+                    }
                 }
-                keyList.add(trailTracksVo);
-
-                redisCache.setCacheObject(trailFittingRedisKey, keyList);
-
-
             }
 
 
