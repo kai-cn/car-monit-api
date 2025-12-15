@@ -1307,7 +1307,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
         // 门架交易流水
         OdsLwzxsfsjFeeRecords01 feeRecords01 = new OdsLwzxsfsjFeeRecords01();
-        feeRecords01.setPlatecolor("_1");
+        feeRecords01.setPlateColor("_1");
         feeRecords01.setSectionList(sectionCodeList);
         feeRecords01.setInApplyTime1(queryStartTime);
         feeRecords01.setInApplyTime2(queryEndTime);

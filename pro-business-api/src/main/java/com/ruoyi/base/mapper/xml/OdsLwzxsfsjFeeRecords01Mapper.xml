@@ -346,7 +346,7 @@
         FROM jl_data01.ods_lwzxsfsj_fee_records_01 t
         left join jl_data01.ods_szdn_gantry g ON t.gantryid = g.gantry_code
         <where>
-            <if test="platecolor != null  and platecolor != ''"> and  t.vehicleplate LIKE concat('%',#{platecolor})</if>
+            <if test="plateColor != null  and plateColor != ''"> and  t.vehicleplate LIKE concat('%',#{plateColor})</if>
             <if test="sectioncode != null  and sectioncode != ''"> and g.section_code = #{sectioncode}</if>
             <if test="sectionList != null and sectionList.size() > 0">
                 and

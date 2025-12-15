@@ -653,11 +653,5 @@ public class OdsLwzxsfsjFeeRecords01 implements Custom {
     @TableField(exist = false)
     private String sectioncode;
 
-    /**
-     * 车牌号
-     */
-    @TableField(exist = false)
-    private String platecolor;
-
 
 }
