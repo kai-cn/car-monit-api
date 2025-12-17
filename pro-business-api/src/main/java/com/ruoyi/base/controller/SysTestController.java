@@ -54,6 +54,9 @@ public class SysTestController extends BaseController {
     @Autowired
     private IOdsSzdnTollService odsSzdnTollService;
 
+    @Autowired
+    private IOdsSzdnSectionService sectionService;
+
     /**
      * 车俩实时轨迹同步
      */
@@ -76,6 +79,7 @@ public class SysTestController extends BaseController {
         odsSzdnTollStationIpService.updateRedis(); // 站ip redis
         zdataLocationDictService.updateRedis(); // 位置点信息
         dwdLcztFwqjcxxService.updateRedis(); // 服务区
+        sectionService.updateRedis();//更新路段
         odsSzdnTollService.updateRedis(); // 收费站
         log.info("每天凌晨0点执行（同步基础信息）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
