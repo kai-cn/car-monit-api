@@ -18,7 +18,12 @@
         <result property="orgname"    column="orgname"    />
         <result property="createdAt"    column="created_at"    />
         <result property="updatedAt"    column="updated_at"    />
-
+        <result property="latitude"    column="latitude"    />
+        <result property="longitude"    column="longitude"    />
+        <result property="pileNoK"    column="pile_no_k"    />
+        <result property="pileNo"    column="pile_no"    />
+        <result property="remark"    column="remark"    />
+        <result property="direction"    column="direction"    />
     </resultMap>
 
     <sql id="selectZdataLocationDictVo">
@@ -36,7 +41,13 @@
         t.orgcode,
         t.orgname,
         t.created_at,
-        t.updated_at
+        t.updated_at,
+        t.latitude,
+        t.longitude,
+        t.pile_no_k,
+        t.pile_no,
+        t.remark,
+        t.direction
     </sql>
 
 

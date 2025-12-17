@@ -1,5 +1,6 @@
 package com.ruoyi.base.domain;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -82,6 +83,27 @@ public class ZdataLocationDict  implements Custom {
     @JsonFormat(pattern = "yyyy-MM-dd")
     @Excel(name = "修改时间", width = 30, dateFormat = "yyyy-MM-dd")
     private Date updatedAt;
+
+    // 维度
+    private BigDecimal latitude;
+
+    // 经度
+    private BigDecimal longitude;
+
+    // 桩号K
+    private String pileNoK;
+
+    // 桩号
+    private String pileNo;
+
+    // 方向
+    private String direction;
+
+    /** 备注 */
+    @Excel(name = "备注")
+    private String remark;
+
+
 
 
 }

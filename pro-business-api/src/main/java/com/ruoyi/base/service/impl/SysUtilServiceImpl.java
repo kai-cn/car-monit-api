@@ -664,12 +664,52 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 }
             }else  if (indexType.equals("service_area")){
                 // 服务区
+                locationCode = locationCode.replaceAll("devip:","serviceip:");
+                if (locationMap.containsKey(locationCode)){
+
+                    ZdataLocationDict locationDict = locationMap.get(locationCode);
+
+                    trailBo.setDevCode(locationDict.getStandardCode()); // 设备编号
+                    trailBo.setDevName(locationDict.getName());  // 设备名称
+
+                    if (null == lon) {
+                        // 经度
+                        if (null != locationDict.getLongitude()) {
+                            trailBo.setLon(locationDict.getLongitude());
+                        }
+                    }
+
+                    if (null == lat) {
+                        // 经度
+                        if (null != locationDict.getLatitude()) {
+                            trailBo.setLat(locationDict.getLatitude());
+                        }
+                    }
+
+                    if (CommonUtil.isBlank(roadCode)){
+                        // 路线编号
+                        trailBo.setRoadCode(CommonUtil.isNull(locationDict.getRoadcode()));
+                    }
+
+                    if (CommonUtil.isBlank(sectionCode)){
+                        // 路段
+                        trailBo.setSectionCode(CommonUtil.isNull(locationDict.getSectioncode()));
+                    }
+
+                    if (CommonUtil.isBlank(pileno)){
+                        // 桩号
+                        trailBo.setPileno(CommonUtil.isNull(locationDict.getPileNo()));
+                    }
+
+                    trailBo.setDirection(locationDict.getDirection()); // 方向
+
+                }
 
             }
 
             // 设备名称没有默认位置信息--------------
             if (CommonUtil.isBlank(trailBo.getDevName())){
-                trailBo.setDevName(CommonUtil.isNull(locationCode).replaceAll("devip:",""));
+                trailBo.setDevName(CommonUtil.isNull(locationCode).replaceAll("serviceip:",""));
             }
 
         }
