@@ -663,10 +663,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     }
                 }
             }else  if (indexType.equals("service_area")){
+                log.info("轨迹点服务区的地址："+locationCode);
                 // 服务区
                 locationCode = locationCode.replaceAll("devip:","serviceip:");
                 if (locationMap.containsKey(locationCode)){
-
+                    log.info("找到服务区："+locationCode);
                     ZdataLocationDict locationDict = locationMap.get(locationCode);
 
                     trailBo.setDevCode(locationDict.getStandardCode()); // 设备编号
