@@ -673,36 +673,48 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     trailBo.setDevCode(locationDict.getStandardCode()); // 设备编号
                     trailBo.setDevName(locationDict.getName());  // 设备名称
 
-                    if (null == lon) {
-                        // 经度
-                        if (null != locationDict.getLongitude()) {
-                            trailBo.setLon(locationDict.getLongitude());
-                        }
+                    // 经度
+                    if (null != locationDict.getLongitude()) {
+                        trailBo.setLon(locationDict.getLongitude());
+                    }
+
+                    // 经度
+                    if (null != locationDict.getLatitude()) {
+                        trailBo.setLat(locationDict.getLatitude());
+                    }
+
+                    // 路线编号
+                    trailBo.setRoadCode(CommonUtil.isNull(locationDict.getRoadcode()));
+
+                    // 路段
+                    trailBo.setSectionCode(CommonUtil.isNull(locationDict.getSectioncode()));
+
+                    // 桩号
+                    trailBo.setPileno(CommonUtil.isNull(locationDict.getPileNo()));
+
+                    trailBo.setDirection(locationDict.getDirection()); // 方向
+
+                   /* if (null == lon) {
+
                     }
 
                     if (null == lat) {
-                        // 经度
-                        if (null != locationDict.getLatitude()) {
-                            trailBo.setLat(locationDict.getLatitude());
-                        }
+
                     }
 
                     if (CommonUtil.isBlank(roadCode)){
-                        // 路线编号
-                        trailBo.setRoadCode(CommonUtil.isNull(locationDict.getRoadcode()));
+
                     }
 
                     if (CommonUtil.isBlank(sectionCode)){
-                        // 路段
-                        trailBo.setSectionCode(CommonUtil.isNull(locationDict.getSectioncode()));
+
                     }
 
                     if (CommonUtil.isBlank(pileno)){
-                        // 桩号
-                        trailBo.setPileno(CommonUtil.isNull(locationDict.getPileNo()));
-                    }
 
-                    trailBo.setDirection(locationDict.getDirection()); // 方向
+                    }
+*/
+
 
                 }
 
