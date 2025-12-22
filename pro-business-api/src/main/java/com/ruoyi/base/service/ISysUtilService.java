@@ -56,6 +56,15 @@ public interface ISysUtilService {
      */
     void syncSuspiciousCarQutaz(int startNum, int endNum);
 
+
+    /**
+     * 同步可疑车俩：定时
+     * startNum : 起始页面 1  最后页面 10
+     *
+     * @return
+     */
+    void syncSuspiciousCarQutazNew(int startNum, int endNum);
+
     /**
      * 轨迹查询
      * @param carParaVO

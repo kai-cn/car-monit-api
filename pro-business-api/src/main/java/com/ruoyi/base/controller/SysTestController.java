@@ -177,7 +177,7 @@ public class SysTestController extends BaseController {
         for (int i = 1; i < 11; i++) {
             int finalI = i;
             threadTaskExecutor.execute(() -> {
-                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+                sysUtilService.syncSuspiciousCarQutazNew(finalI, finalI);
             });
         }
         log.info("每天凌晨1点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
@@ -192,7 +192,7 @@ public class SysTestController extends BaseController {
         for (int i = 11; i < 21; i++) {
             int finalI = i;
             threadTaskExecutor.execute(() -> {
-                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+                sysUtilService.syncSuspiciousCarQutazNew(finalI, finalI);
             });
         }
         log.info("每天凌晨1点15点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
@@ -207,7 +207,7 @@ public class SysTestController extends BaseController {
         for (int i = 21; i < 31; i++) {
             int finalI = i;
             threadTaskExecutor.execute(() -> {
-                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+                sysUtilService.syncSuspiciousCarQutazNew(finalI, finalI);
             });
         }
         log.info("每天凌晨1点30点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
@@ -222,7 +222,7 @@ public class SysTestController extends BaseController {
         for (int i = 31; i < 41; i++) {
             int finalI = i;
             threadTaskExecutor.execute(() -> {
-                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+                sysUtilService.syncSuspiciousCarQutazNew(finalI, finalI);
             });
         }
         log.info("每天凌晨1点45点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
@@ -237,7 +237,7 @@ public class SysTestController extends BaseController {
         for (int i = 41; i < 51; i++) {
             int finalI = i;
             threadTaskExecutor.execute(() -> {
-                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+                sysUtilService.syncSuspiciousCarQutazNew(finalI, finalI);
             });
         }
         log.info("每天凌晨2点点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
@@ -252,7 +252,7 @@ public class SysTestController extends BaseController {
         for (int i = 51; i < 61; i++) {
             int finalI = i;
             threadTaskExecutor.execute(() -> {
-                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+                sysUtilService.syncSuspiciousCarQutazNew(finalI, finalI);
             });
         }
         log.info("每天凌晨2点15点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
@@ -267,7 +267,7 @@ public class SysTestController extends BaseController {
         for (int i = 61; i < 71; i++) {
             int finalI = i;
             threadTaskExecutor.execute(() -> {
-                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+                sysUtilService.syncSuspiciousCarQutazNew(finalI, finalI);
             });
         }
         log.info("每天凌晨2点30点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
@@ -282,7 +282,7 @@ public class SysTestController extends BaseController {
         for (int i = 71; i < 81; i++) {
             int finalI = i;
             threadTaskExecutor.execute(() -> {
-                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+                sysUtilService.syncSuspiciousCarQutazNew(finalI, finalI);
             });
         }
         log.info("每天凌晨2点45点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
@@ -298,7 +298,7 @@ public class SysTestController extends BaseController {
         for (int i = 81; i < 91; i++) {
             int finalI = i;
             threadTaskExecutor.execute(() -> {
-                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+                sysUtilService.syncSuspiciousCarQutazNew(finalI, finalI);
             });
         }
         log.info("每天凌晨3点执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
@@ -313,7 +313,7 @@ public class SysTestController extends BaseController {
         for (int i = 91; i < 101; i++) {
             int finalI = i;
             threadTaskExecutor.execute(() -> {
-                sysUtilService.syncSuspiciousCarQutaz(finalI, finalI);
+                sysUtilService.syncSuspiciousCarQutazNew(finalI, finalI);
             });
         }
         log.info("每天凌晨3点15执行（同步可疑车俩）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));

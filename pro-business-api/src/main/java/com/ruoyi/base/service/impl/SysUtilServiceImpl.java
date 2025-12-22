@@ -1641,6 +1641,206 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
 
     /**
+     * 同步可疑车俩：定时
+     * startNum : 起始页面 1  最后页面 10
+     *
+     * @return
+     */
+    public void syncSuspiciousCarQutazNew(int startNum, int endNum) {
+
+        Integer pageSize = 10;
+        Integer starTime = 2;
+        Integer endTime = 4;
+        BigDecimal bite = new BigDecimal("0.3");  // 门架抓拍和流水抓拍占比
+
+        int supoerMjnum = 5; // 跨省：同步可疑车辆门架抓拍数量5个以上
+        int roadSupoerMjnum = 3; // 路段：门架抓拍数量和门架流水数量对比
+
+
+        // -------------- 从缓存取得对应的配置
+        String redisTimeValue = redisCache.getCacheObject(redisTimeKey); // 默认2天
+        if (CommonUtil.isNotBlank(redisTimeValue)) {
+            starTime = Integer.parseInt(redisTimeValue);
+            log.info("从缓存取得时间配置--------：" + redisTimeValue);
+        }
+
+        String redisBiteValue = redisCache.getCacheObject(redisBiteKey); // 比例默认为0.3
+        if (CommonUtil.isNotBlank(redisBiteValue)) {
+            bite = new BigDecimal(redisBiteValue);
+            log.info("从缓存取得占比配置------：" + bite);
+        }
+
+        String supoerMjnumValue = redisCache.getCacheObject(supoer_mjnum); // 比例默认为5
+        if (CommonUtil.isNotBlank(supoerMjnumValue)) {
+            supoerMjnum = Integer.parseInt(supoerMjnumValue);
+            log.info("从缓存取得跨省：门架抓拍数量------：" + supoerMjnum);
+        }
+
+        String roadSupoeMjnumValue = redisCache.getCacheObject(road_supoer_mjnum); // 比例默认为3
+        if (CommonUtil.isNotBlank(roadSupoeMjnumValue)) {
+            roadSupoerMjnum = Integer.parseInt(roadSupoeMjnumValue);
+            log.info("从缓存路段：取得门架抓拍数量------：" + roadSupoeMjnumValue);
+        }
+
+        // 判断节假日
+        String jholidayTimeValue = CommonUtil.isNull(redisCache.getCacheObject(jholiday_time)); // 节假日
+        log.info("从缓存路段：取得节假日------：" + jholidayTimeValue);
+
+
+        if (CommonUtil.isNull(isLocalhost).equals("local")) {
+            log.info("本地配置------：" + CommonUtil.isNull(isLocalhost));
+            // 本地  分页1000条 30 到 1 天
+            pageSize = 6000;
+            endTime = starTime * 2;
+           /* starTime = 1;
+            endTime = 60;*/
+        } else {
+            log.info("生产配置------：" + CommonUtil.isNull(isLocalhost));
+            // 生产------------- 分页1000条 14 到 7 天
+            pageSize = 6000;
+            endTime = starTime * 2;
+        }
+
+        log.info("分页配置：" + pageSize + "--时间范围" + starTime + "到" + endTime);
+
+
+        CarParaVO carParaVO = new CarParaVO();
+        //----------7 到 14天
+        carParaVO.setStarTime(starTime);
+        carParaVO.setEndTime(endTime);
+
+
+        // 门架
+        List<OdsSzdnGantry> gantryList = odsSzdnGantryService.getGantryRedis();
+        Map<String, OdsSzdnGantry> gantryMao = new HashMap<>();
+        for (OdsSzdnGantry rtnOdsSzdnGantry : gantryList) {
+            gantryMao.put(CommonUtil.isNull(rtnOdsSzdnGantry.getGantryCode()), rtnOdsSzdnGantry);
+        }
+
+        // 位置信息
+        Map<String, ZdataLocationDict> locationMap = zdataLocationDictService.getRedisList();
+
+        // 根据路段查询路线map
+        Map<String, OdsSzdnSection> sectionMap = sectionService.getSectionMap();
+
+
+        // -------可疑车辆存储时间
+        Date now = new Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+        String formattedDate = sdf.format(now);
+
+        // -------获取当前时间的前2天
+        Date currentDate = new Date();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(currentDate);
+        calendar.add(Calendar.DAY_OF_MONTH, -starTime);
+        Date twoDaysAgo = calendar.getTime();
+        SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-MM-dd");
+        String queryDate = sdf1.format(twoDaysAgo);
+
+        String queryStartTime = queryDate + " 00:00:00";
+        String queryEndTime = queryDate + " 23:59:59";
+        log.info("查询时间范围" + queryStartTime + "到" + queryEndTime);
+
+
+        // 是否不是节假日
+        boolean isNotExitsjholidayFlag = true;
+        if (jholidayTimeValue.indexOf(queryDate) > -1) {
+            isNotExitsjholidayFlag = false;
+        }
+
+
+        for (int i = startNum; i <= endNum; i++) {
+            // ----- 分页范围 ： 2000一次性查询
+            carParaVO.setStartNum(pageSize);
+            if (i > 1) {
+                Integer endRange = (i - 1) * pageSize; // 当前页 -1
+                carParaVO.setEndNum(endRange);
+            }
+
+            carParaVO.setApplyTime1(queryStartTime);
+            carParaVO.setApplyTime2(queryEndTime);
+
+            //--------- 有拟合轨迹的
+            log.info("轨迹点SQL开始查询----------" + new Date());
+            List<ZdataTrailTracks> carlistAll = zdataTrailTracksService.getLatestTrail(carParaVO);
+            log.info("轨迹点SQL结束查询----------" + new Date() + "--数据：" + carlistAll.size());
+
+
+            // -------------沒有拟合轨迹的  4000一次查询
+            Integer pageSizeNew = 4000;
+            carParaVO.setStartNum(pageSizeNew);
+            if (i > 1) {
+                Integer endRange = (i - 1) * pageSizeNew; // 当前页 -1
+                carParaVO.setEndNum(endRange);
+            }
+            log.info("不存在轨迹点SQL开始查询----------" + new Date());
+            List<ZdataTrailTracks> carUnFittingList = zdataTrailTracksService.getUnFitting(carParaVO);
+            log.info("不存在轨迹点SQL结束查询----------" + new Date() + "--数据：" + carUnFittingList.size());
+
+            if (null != carlistAll) {
+                for (ZdataTrailTracks zdataTrailTracksVo : carUnFittingList) {
+                    zdataTrailTracksVo.setUuid(StringUtils.getUUID());
+                    zdataTrailTracksVo.setFlag("1"); // 沒有的轨迹点
+                    carlistAll.add(zdataTrailTracksVo);
+                }
+            }
+
+            for (ZdataTrailTracks tracks : carlistAll) {
+                String uuid = CommonUtil.isNull(tracks.getUuid()); // 轨迹点id
+                String carNo = CommonUtil.isNull(tracks.getPlateKey()); // 车牌号
+                String keyValue = tracks.getTrailPoints(); // 行驶轨迹
+                List<TrailBo> josnList = new ArrayList<TrailBo>();
+                if (CommonUtil.isNotBlank(keyValue)) {
+                    josnList = this.getTrailBoList(keyValue);
+                    boolean isNotXymjFlag = true;  // 是否不包含虚拟门架
+                    int conutGantryCapture = 0;
+                    for (TrailBo trailBo : josnList) {
+                        String locationCode = CommonUtil.isNull(trailBo.getLocationCode()); // 设备IP地址
+                        String stateType = CommonUtil.isNull(trailBo.getStateType());  // 流水来源类型标识:可作为维度字段，用于回溯数据来源、确定查找目标表
+                        if (stateType.equals(GANTRY_CAPTURE)) {
+                            // 门架抓拍
+                            conutGantryCapture++;
+                            if (CommonUtil.isNotBlank(locationCode)) {
+                                if (locationMap.containsKey(locationCode)) {
+                                    String devLocatCode = CommonUtil.isNull(locationMap.get(locationCode).getStandardCode()); // 收费站/门架code
+                                    // 判断是否是虚拟门架---------
+                                    if (CommonUtil.isNotBlank(devLocatCode)) {
+                                        // 找到门架信息
+                                        if (gantryMao.containsKey(devLocatCode)) {
+                                            OdsSzdnGantry gantry = gantryMao.get(devLocatCode);
+                                            if (CommonUtil.isNull(gantry.getIsVirtual()).equals("1")) {
+                                                isNotXymjFlag = false;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 门架抓拍数量 > 5 并且没有经过虚拟门架
+                    if (conutGantryCapture > supoerMjnum && isNotXymjFlag) {
+                        String trailFittingRedisKey = this.trailUnFittingKey(formattedDate, uuid);
+                        redisCache.setCacheObject(trailFittingRedisKey, tracks);
+                        for (TrailBo trailBo : josnList) {
+                            String stateType = CommonUtil.isNull(trailBo.getStateType());  // 流水来源类型标识:可作为维度字段，用于回溯数据来源、确定查找目标表
+                            String pointUuid = CommonUtil.isNull(trailBo.getPointUuid());
+                            if (stateType.equals(FeeRecord)) {
+                                if (CommonUtil.isNotBlank(pointUuid)){
+                                    // redis查找
+                                    String js_feeRecord_key = Constants.js_feeRecord + uuid;
+                                    redisCache.setCacheObject(js_feeRecord_key, null);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      *  判断是否有虚拟门架
      *
      * @param trailList

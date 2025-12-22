@@ -381,6 +381,8 @@ public class Constants
 
     public static final String trailUnFittingList = "js_car_trail_unfitting";
 
+    public static final String js_feeRecord = "js_feeRecord:";
+
 
 
 
