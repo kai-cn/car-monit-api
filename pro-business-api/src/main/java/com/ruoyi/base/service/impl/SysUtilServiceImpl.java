@@ -366,11 +366,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
         }
 
         // 服务区抓拍
-        Map<String, OdsCxztFwqclls> fwqcllsMap = new HashMap<>();
+        /*Map<String, OdsCxztFwqclls> fwqcllsMap = new HashMap<>();
         serviceAreaCaptureUUids = CommonUtil.deleteEnd(serviceAreaCaptureUUids);
         if (CommonUtil.isNotBlank(serviceAreaCaptureUUids)) {
             fwqcllsMap = fwqcllsService.selectOdsCxztFwqcllsByQueryUuids(serviceAreaCaptureUUids);
-        }
+        }*/
+
 
         // 收费站ip
         Map<String, OdsSzdnTollStationIp> szdnTollMap = odsSzdnTollStationIpService.selectStationIpMap();
@@ -384,8 +385,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
         // 位置信息
         Map<String,ZdataLocationDict> locationMap = zdataLocationDictService.getRedisList();
 
-        // 服务区信息
-        Map<String, DwdLcztFwqjcxx> serviceNameMap = fwqjcxxService.getServiceNameMap();
+     /*   // 服务区信息
+        Map<String, DwdLcztFwqjcxx> serviceNameMap = fwqjcxxService.getServiceNameMap();*/
 
         // 根据路段查询路线map
         Map<String, OdsSzdnSection> sectionMap = sectionService.getSectionMap();
@@ -455,46 +456,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 case SERVICE_AREA_CAPTURE:
                     // 服务区抓拍
                     indexType ="service_area"; // 服务区
-                   /* if(fwqcllsMap.containsKey(pointUuid)) {
-                        OdsCxztFwqclls fwqclls = fwqcllsMap.get(pointUuid);
-
-                        String imagesSrc = "";
-                        // 抓拍照片url
-                        if (CommonUtil.isNotBlank(fwqclls.getTargetpicurl())){
-                            imagesSrc += fwqclls.getTargetpicurl() +",";
-                        }
-
-                        // 车牌照片
-                        if (CommonUtil.isNotBlank(fwqclls.getPlatepicurl())){
-                            imagesSrc += fwqclls.getPlatepicurl() +",";
-                        }
-
-                        // 抓拍照片
-                        trailBo.setImagesArry(CommonUtil.deleteEnd(imagesSrc)); // 抓拍照片
-                        String servicename = CommonUtil.isNull(fwqclls.getServicename());
-
-                        trailBo.setDevName(servicename);  // 设备名称
-                        if(serviceNameMap.containsKey(servicename)){
-
-                            DwdLcztFwqjcxx fwqjcxx = serviceNameMap.get(servicename);
-                            trailBo.setDevCode(fwqjcxx.getFwqbm()); // 设备编号
-
-                            if (CommonUtil.isNotBlank(fwqjcxx.getJd())) {
-                                trailBo.setLon(new BigDecimal(fwqjcxx.getJd())); // 经度
-                            }
-                            if (CommonUtil.isNotBlank(fwqjcxx.getWd())) {
-                                trailBo.setLat(new BigDecimal(fwqjcxx.getWd())); // 经度
-                            }
-                            // 路线编号
-                            trailBo.setRoadCode(CommonUtil.isNull(fwqjcxx.getSslxbh()));
-                            // 路段
-                            trailBo.setSectionCode(CommonUtil.isNull(fwqjcxx.getSsldbh()));
-
-                            // trailBo.setDirection(fwqjcxx.getFxmc()); // 方向
-                            trailBo.setPileno(CommonUtil.isNull(fwqjcxx.getSczhkgs())); // 桩号
-
-                        }
-                    }*/
                     break;
                 case STATION_CAPTURE:
                     // 收费站抓拍
