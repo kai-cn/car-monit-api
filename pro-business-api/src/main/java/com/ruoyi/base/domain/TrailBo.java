@@ -129,6 +129,9 @@ public class TrailBo {
     /** 车牌颜色 */
     private String platecolor;
 
+    // "是否虚门架 0=：否，1：是
+    private String isVirtual;
+
 
 
 }

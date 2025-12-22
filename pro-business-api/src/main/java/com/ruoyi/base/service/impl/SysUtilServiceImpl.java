@@ -621,6 +621,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
                         trailBo.setDirection(odsSzdnGantry.getDirection()); // 方向
 
+                        // 虚拟门架
+                        trailBo.setIsVirtual(odsSzdnGantry.getIsVirtual());
+
                     }
                 }
             }else  if (indexType.equals("service_area")){
@@ -1522,12 +1525,16 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 tracks.setEscapedTfcj("1");  // 逃费场景
 
                                 TrailInfo trailInfo = this.changeData(tracks, josnList); // 获取设备的经纬度
-                                // 车牌颜色
-                                tracks.setPlateColor(this.getPlateColor(trailInfo.getTrailList()));
-                                trailInfo.setTrailUuid(carNo);
 
-                                String key = this.getSuspiciousKey(formattedDate, carNo);
-                                redisCache.setCacheObject(key, trailInfo);
+                                // 判断门架抓拍是否经过了虚拟门架
+                                if (this.getIsVirtualFlag(trailInfo.getTrailList())){
+                                    // 车牌颜色
+                                    tracks.setPlateColor(this.getPlateColor(trailInfo.getTrailList()));
+                                    trailInfo.setTrailUuid(carNo);
+
+                                    String key = this.getSuspiciousKey(formattedDate, carNo);
+                                    redisCache.setCacheObject(key, trailInfo);
+                                }
                             }
                         }
                     }
@@ -1612,12 +1619,16 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
                                 TrailInfo trailInfo = this.changeData(tracks, josnList); // 获取设备的经纬度
 
-                                // 车牌颜色
-                                tracks.setPlateColor(this.getPlateColor(trailInfo.getTrailList()));
-                                trailInfo.setTrailUuid(carNo);
+                                // 判断门架抓拍是否经过了虚拟门架
+                                if (this.getIsVirtualFlag(trailInfo.getTrailList())){
+                                    // 车牌颜色
+                                    tracks.setPlateColor(this.getPlateColor(trailInfo.getTrailList()));
+                                    trailInfo.setTrailUuid(carNo);
 
-                                String key = this.getSuspiciousKey(formattedDate, carNo);
-                                redisCache.setCacheObject(key, trailInfo);
+                                    String key = this.getSuspiciousKey(formattedDate, carNo);
+                                    redisCache.setCacheObject(key, trailInfo);
+                                }
+
                             }
                         }
                     }
@@ -1627,6 +1638,28 @@ public class SysUtilServiceImpl implements ISysUtilService {
         }
 
     }
+
+
+    /**
+     *  判断是否有虚拟门架
+     *
+     * @param trailList
+     * @return
+     */
+    private boolean getIsVirtualFlag(List<TrailBo> trailList) {
+        boolean isVirtualFlag = true;
+        if (null != trailList && trailList.size() > 0) {
+            for (TrailBo trailBo : trailList) {
+                String stateType = CommonUtil.isNull(trailBo.getStateType());
+                String isVirtual = CommonUtil.isNull(trailBo.getIsVirtual());
+                if (stateType.equals(GANTRY_CAPTURE) && isVirtual.equals("1")) {
+                    isVirtualFlag = false;
+                }
+            }
+        }
+        return isVirtualFlag;
+    }
+
 
     /**
      * 获取车牌颜色
@@ -2218,10 +2251,13 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         trailInfo.setTrailList(josnList);
                         trailInfo.setTrailUuid(carNo);
 
-                        String kykey = this.getSuspiciousKey(redisDate, carNo);
-                        Object isExistObj = redisCache.getCacheObject(kykey);
-                        if (isExistObj == null) {
-                            redisCache.setCacheObject(kykey, trailInfo);
+                        // 判断门架抓拍是否经过了虚拟门架
+                        if (this.getIsVirtualFlag(trailInfo.getTrailList())){
+                            String kykey = this.getSuspiciousKey(redisDate, carNo);
+                            Object isExistObj = redisCache.getCacheObject(kykey);
+                            if (isExistObj == null) {
+                                redisCache.setCacheObject(kykey, trailInfo);
+                            }
                         }
                     }
                 }
@@ -2313,15 +2349,19 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
                                 TrailInfo trailInfo = this.changeData(tracks, josnList); // 获取设备的经纬度
 
-                                // 车牌颜色
-                                tracks.setPlateColor(this.getPlateColor(trailInfo.getTrailList()));
-                                trailInfo.setTrailUuid(carNo);
+                                // 判断门架抓拍是否经过了虚拟门架
+                                if (this.getIsVirtualFlag(trailInfo.getTrailList())){
+                                    // 车牌颜色
+                                    tracks.setPlateColor(this.getPlateColor(trailInfo.getTrailList()));
+                                    trailInfo.setTrailUuid(carNo);
 
-                                String kykey = this.getSuspiciousKey(redisDate, carNo);
-                                Object isExistObj = redisCache.getCacheObject(kykey);
-                                if (isExistObj == null) {
-                                    redisCache.setCacheObject(kykey, trailInfo);
+                                    String kykey = this.getSuspiciousKey(redisDate, carNo);
+                                    Object isExistObj = redisCache.getCacheObject(kykey);
+                                    if (isExistObj == null) {
+                                        redisCache.setCacheObject(kykey, trailInfo);
+                                    }
                                 }
+
                             }
                         }
                     }
