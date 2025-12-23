@@ -1761,10 +1761,27 @@ public class SysUtilServiceImpl implements ISysUtilService {
             carParaVO.setApplyTime1(queryStartTime);
             carParaVO.setApplyTime2(queryEndTime);
 
+
+            List<ZdataTrailTracks> carlistAll = new ArrayList<>();
+
             //--------- 有拟合轨迹的
             log.info("轨迹点SQL开始查询----------" + new Date());
-            List<ZdataTrailTracks> carlistAll = zdataTrailTracksService.getLatestTrail(carParaVO);
-            log.info("轨迹点SQL结束查询----------" + new Date() + "--数据：" + carlistAll.size());
+            List<ZdataTrailTracks> carlistFittinglist = zdataTrailTracksService.getLatestTrail(carParaVO);
+            log.info("轨迹点SQL结束查询----------" + new Date() + "--数据：" + carlistFittinglist.size());
+            for (ZdataTrailTracks zdataTrailTracksVo : carlistFittinglist) {
+                zdataTrailTracksVo.setFlag("1"); // 有的轨迹点
+               /* String trailtype = CommonUtil.isNull(zdataTrailTracksVo.getTrailtype());
+                String firstCode = CommonUtil.isNull(zdataTrailTracksVo.getEntollstationid()); // 入口收费站编号
+                String firstName = CommonUtil.repalaceSzdnTollName(zdataTrailTracksVo.getEntollstationname()); // 入口收费站名称
+                String endCode = CommonUtil.isNull(zdataTrailTracksVo.getExtollstationid()); // 出口收费站编号
+                String endName = CommonUtil.repalaceSzdnTollName(zdataTrailTracksVo.getExtollstationname()); // 出口收费站名称
+                if (trailtype.equals("0") && firstName.indexOf("门架") > -1 && endName.indexOf("门架") > -1) {
+                    carlistAll.add(zdataTrailTracksVo);
+                }else{
+                    carlistAll.add(zdataTrailTracksVo);
+                }*/
+                carlistAll.add(zdataTrailTracksVo);
+            }
 
 
             // -------------沒有拟合轨迹的  4000一次查询
@@ -1778,12 +1795,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
             List<ZdataTrailTracks> carUnFittingList = zdataTrailTracksService.getUnFitting(carParaVO);
             log.info("不存在轨迹点SQL结束查询----------" + new Date() + "--数据：" + carUnFittingList.size());
 
-            if (null != carlistAll) {
-                for (ZdataTrailTracks zdataTrailTracksVo : carUnFittingList) {
-                    zdataTrailTracksVo.setUuid(StringUtils.getUUID());
-                    zdataTrailTracksVo.setFlag("1"); // 沒有的轨迹点
-                    carlistAll.add(zdataTrailTracksVo);
-                }
+            for (ZdataTrailTracks zdataTrailTracksVo : carUnFittingList) {
+                zdataTrailTracksVo.setUuid(StringUtils.getUUID());
+                zdataTrailTracksVo.setFlag("0"); // 沒有的轨迹点
+                carlistAll.add(zdataTrailTracksVo);
             }
 
             for (ZdataTrailTracks tracks : carlistAll) {
@@ -1822,7 +1837,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     // 门架抓拍数量 > 5 并且没有经过虚拟门架
                     if (conutGantryCapture > supoerMjnum && isNotXymjFlag) {
                         String trailFittingRedisKey = this.trailUnFittingKey(formattedDate, uuid);
-                        redisCache.setCacheObject(trailFittingRedisKey, tracks);
+                        if (i <= 10) {
+                            redisCache.setCacheObject(trailFittingRedisKey, tracks);
+                        } else {
+                            redisCache.setCacheObject(trailFittingRedisKey, null);
+                        }
                         for (TrailBo trailBo : josnList) {
                             String stateType = CommonUtil.isNull(trailBo.getStateType());  // 流水来源类型标识:可作为维度字段，用于回溯数据来源、确定查找目标表
                             String pointUuid = CommonUtil.isNull(trailBo.getPointUuid());
