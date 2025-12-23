@@ -1802,9 +1802,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 carlistAll.add(zdataTrailTracksVo);
             }
 
-            for (ZdataTrailTracks tracks : carlistAll) {
+            List<String> feeRecordsUuidList = new ArrayList<>(); // 门架流水轨迹点
 
-                List<String> feeRecordsUuidList = new ArrayList<>(); // 门架流水轨迹点
+            for (ZdataTrailTracks tracks : carlistAll) {
 
                 String uuid = CommonUtil.isNull(tracks.getUuid()); // 轨迹点id
                 // String carNo = CommonUtil.isNull(tracks.getPlateKey()); // 车牌号
@@ -1861,30 +1861,44 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         redisCache.setCacheObject(trailFittingRedisKey, tracks); // 存放轨迹缓存
                     }
                 }
-
-                if (feeRecordsUuidList.size() > 0) {
-                    OdsLwzxsfsjFeeRecords01 feeRecords01 = new OdsLwzxsfsjFeeRecords01();
-                    feeRecords01.setInApplyTime1(format2.format(queryStartDate));
-                    feeRecords01.setInApplyTime2(queryEndTime);
-                    feeRecords01.setCidList(feeRecordsUuidList);
-                   // log.info("门架流水开始------" + new Date() + "时间：" + feeRecords01.getInApplyTime1() + "到" +feeRecords01.getInApplyTime2()+" 轨迹点数量："+feeRecordsUuidList.size());
-                    List<OdsLwzxsfsjFeeRecords01> FeeRecords01List = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ListNew(feeRecords01);
-                    if (feeRecordsUuidList.size() != FeeRecords01List.size()){
-                        log.info("参数----"+feeRecordsUuidList.size()+"结果"+FeeRecords01List.size());
-                    }
-                    // log.info("门架流水结束----" + new Date() + "--数据：" + FeeRecords01List.size());
-                    for (OdsLwzxsfsjFeeRecords01 rtnFeeRecords01 : FeeRecords01List) {
-                        // redis查找
-                        String js_feeRecord_key = Constants.js_feeRecord + rtnFeeRecords01.getCid();
-                        redisCache.setCacheObject(js_feeRecord_key, rtnFeeRecords01);
-                    }
-                }
-
             }
 
+            OdsLwzxsfsjFeeRecords01 feeRecords01 = new OdsLwzxsfsjFeeRecords01();
+            feeRecords01.setInApplyTime1(format2.format(queryStartDate));
+            feeRecords01.setInApplyTime2(queryEndTime);
 
+            if (feeRecordsUuidList.size() > 0) {
+                int batchSize = 1000;
+                if (feeRecordsUuidList.size() <= batchSize) {
+                    //小于1000，
+                    feeRecords01.setCidList(feeRecordsUuidList);
+                    this.queryFeeRecords01List(feeRecords01); // 查询数据
+                }else {
+                    for (int zz = 0; zz < feeRecordsUuidList.size(); zz += batchSize) {
+                        List<String> subList = feeRecordsUuidList.subList(zz, Math.min(zz + batchSize, feeRecordsUuidList.size()));
+                        // 处理subList，例如保存到数据库或进行其他操作
+                        feeRecords01.setCidList(feeRecordsUuidList);
+                        this.queryFeeRecords01List(feeRecords01); // 查询数据
+                    }
+                }
+            }
         }
     }
+
+    /**
+     * 历史轨迹查询
+     * @param feeRecords01
+     */
+    private void queryFeeRecords01List(OdsLwzxsfsjFeeRecords01 feeRecords01){
+        List<OdsLwzxsfsjFeeRecords01> FeeRecords01List = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ListNew(feeRecords01);
+        for (OdsLwzxsfsjFeeRecords01 rtnFeeRecords01 : FeeRecords01List) {
+            // redis查找
+            String js_feeRecord_key = Constants.js_feeRecord + rtnFeeRecords01.getCid();
+            redisCache.setCacheObject(js_feeRecord_key, rtnFeeRecords01);
+        }
+
+    }
+
 
     /**
      *  判断是否有虚拟门架
