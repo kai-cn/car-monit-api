@@ -1743,6 +1743,15 @@ public class SysUtilServiceImpl implements ISysUtilService {
         log.info("查询时间范围" + queryStartTime + "到" + queryEndTime);
 
 
+        SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date queryStartDate = twoDaysAgo;
+        try {
+            queryStartDate = format2.parse(queryStartTime);
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("解析错误！");
+        }
+
         // 是否不是节假日
         boolean isNotExitsjholidayFlag = true;
         if (jholidayTimeValue.indexOf(queryDate) > -1) {
@@ -1792,13 +1801,21 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 carlistAll.add(zdataTrailTracksVo);
             }
 
-            List<String> feeRecordsUuidList = new ArrayList<>(); //
+            List<String> feeRecordsUuidList = new ArrayList<>(); // 门架流水轨迹点
+
             for (ZdataTrailTracks tracks : carlistAll) {
                 String uuid = CommonUtil.isNull(tracks.getUuid()); // 轨迹点id
                 // String carNo = CommonUtil.isNull(tracks.getPlateKey()); // 车牌号
                 String keyValue = tracks.getTrailPoints(); // 行驶轨迹
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
+                    Date enterTime = tracks.getEnterTime();
+                    if (null != enterTime) {
+                        // 如果指定的时间 大于 轨迹开始时间的话
+                        if (queryStartDate.getTime() > enterTime.getTime()){
+                            queryStartDate = enterTime;
+                        }
+                    }
                     josnList = this.getTrailBoList(keyValue);
                     tracks.setTrailPoints(JSON.toJSONString(josnList));
                     boolean isNotXymjFlag = true;  // 是否不包含虚拟门架
@@ -1846,7 +1863,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
             if (feeRecordsUuidList.size() > 0) {
                 OdsLwzxsfsjFeeRecords01 feeRecords01 = new OdsLwzxsfsjFeeRecords01();
-                feeRecords01.setInApplyTime1(queryStartTime);
+                feeRecords01.setInApplyTime1(format2.format(queryStartDate));
                 feeRecords01.setInApplyTime2(queryEndTime);
                 feeRecords01.setCidList(feeRecordsUuidList);
                 List<OdsLwzxsfsjFeeRecords01> FeeRecords01List = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ListNew(feeRecords01);
