@@ -1688,14 +1688,14 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
 
         if (CommonUtil.isNull(isLocalhost).equals("local")) {
-            log.info("本地配置------：" + CommonUtil.isNull(isLocalhost));
+            // log.info("本地配置------：" + CommonUtil.isNull(isLocalhost));
             // 本地  分页1000条 30 到 1 天
             pageSize = 6000;
             endTime = starTime * 2;
            /* starTime = 1;
             endTime = 60;*/
         } else {
-            log.info("生产配置------：" + CommonUtil.isNull(isLocalhost));
+            // log.info("生产配置------：" + CommonUtil.isNull(isLocalhost));
             // 生产------------- 分页1000条 14 到 7 天
             pageSize = 6000;
             endTime = starTime * 2;
@@ -1740,17 +1740,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
         String queryStartTime = queryDate + " 00:00:00";
         String queryEndTime = queryDate + " 23:59:59";
-        log.info("查询时间范围" + queryStartTime + "到" + queryEndTime);
+       //  log.info("查询时间范围" + queryStartTime + "到" + queryEndTime);
 
 
-        SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Date queryStartDate = twoDaysAgo;
-        try {
-            queryStartDate = format2.parse(queryStartTime);
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.error("解析错误！");
-        }
+
 
         // 是否不是节假日
         boolean isNotExitsjholidayFlag = true;
@@ -1760,6 +1753,16 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
 
         for (int i = startNum; i <= endNum; i++) {
+
+            SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            Date queryStartDate = twoDaysAgo;
+            try {
+                queryStartDate = format2.parse(queryStartTime);
+            } catch (Exception e) {
+                e.printStackTrace();
+                log.error("解析错误！");
+            }
+
             // ----- 分页范围 ： 2000一次性查询
             carParaVO.setStartNum(pageSize);
             if (i > 1) {
@@ -1776,7 +1779,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             //--------- 有拟合轨迹的
             log.info("轨迹点开始------" + new Date() + "分页配置：" + carParaVO.getStartNum() + "到" + carParaVO.getEndNum());
             List<ZdataTrailTracks> carlistFittinglist = zdataTrailTracksService.getLatestTrail(carParaVO);
-            log.info("轨迹L结束-----" + new Date() + "--数据：" + carlistFittinglist.size());
+            log.info("轨迹点结束-----" + new Date() + "--数据：" + carlistFittinglist.size());
             for (ZdataTrailTracks zdataTrailTracksVo : carlistFittinglist) {
                 zdataTrailTracksVo.setFlag("1"); // 有的轨迹点
                 carlistAll.add(zdataTrailTracksVo);
@@ -1790,7 +1793,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 Integer endRange = (i - 1) * pageSizeNew; // 当前页 -1
                 carParaVO.setEndNum(endRange);
             }
-            log.info("不存在轨迹开始---" + new Date()+"分页配置：" + carParaVO.getStartNum() + "到" + carParaVO.getEndNum());
+            log.info("不存在轨迹点开始---" + new Date()+"分页配置：" + carParaVO.getStartNum() + "到" + carParaVO.getEndNum());
             List<ZdataTrailTracks> carUnFittingList = zdataTrailTracksService.getUnFitting(carParaVO);
             log.info("不存在轨迹点结束----" + new Date() + "--数据：" + carUnFittingList.size());
             for (ZdataTrailTracks zdataTrailTracksVo : carUnFittingList) {
@@ -1799,9 +1802,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 carlistAll.add(zdataTrailTracksVo);
             }
 
-            List<String> feeRecordsUuidList = new ArrayList<>(); // 门架流水轨迹点
-
             for (ZdataTrailTracks tracks : carlistAll) {
+
+                List<String> feeRecordsUuidList = new ArrayList<>(); // 门架流水轨迹点
+
                 String uuid = CommonUtil.isNull(tracks.getUuid()); // 轨迹点id
                 // String carNo = CommonUtil.isNull(tracks.getPlateKey()); // 车牌号
                 String keyValue = tracks.getTrailPoints(); // 行驶轨迹
@@ -1857,25 +1861,27 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         redisCache.setCacheObject(trailFittingRedisKey, tracks); // 存放轨迹缓存
                     }
                 }
+
+                if (feeRecordsUuidList.size() > 0) {
+                    OdsLwzxsfsjFeeRecords01 feeRecords01 = new OdsLwzxsfsjFeeRecords01();
+                    feeRecords01.setInApplyTime1(format2.format(queryStartDate));
+                    feeRecords01.setInApplyTime2(queryEndTime);
+                    feeRecords01.setCidList(feeRecordsUuidList);
+                   // log.info("门架流水开始------" + new Date() + "时间：" + feeRecords01.getInApplyTime1() + "到" +feeRecords01.getInApplyTime2()+" 轨迹点数量："+feeRecordsUuidList.size());
+                    List<OdsLwzxsfsjFeeRecords01> FeeRecords01List = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ListNew(feeRecords01);
+                    if (feeRecordsUuidList.size() != FeeRecords01List.size()){
+                        log.info("参数----"+feeRecordsUuidList.size()+"结果"+FeeRecords01List.size());
+                    }
+                    // log.info("门架流水结束----" + new Date() + "--数据：" + FeeRecords01List.size());
+                    for (OdsLwzxsfsjFeeRecords01 rtnFeeRecords01 : FeeRecords01List) {
+                        // redis查找
+                        String js_feeRecord_key = Constants.js_feeRecord + rtnFeeRecords01.getCid();
+                        redisCache.setCacheObject(js_feeRecord_key, rtnFeeRecords01);
+                    }
+                }
+
             }
 
-            if (feeRecordsUuidList.size() > 0) {
-                OdsLwzxsfsjFeeRecords01 feeRecords01 = new OdsLwzxsfsjFeeRecords01();
-                feeRecords01.setInApplyTime1(format2.format(queryStartDate));
-                feeRecords01.setInApplyTime2(queryEndTime);
-                feeRecords01.setCidList(feeRecordsUuidList);
-                log.info("门架流水开始------" + new Date() + "时间：" + feeRecords01.getInApplyTime1() + "到" +feeRecords01.getInApplyTime2()+" 轨迹点数量："+feeRecordsUuidList.size());
-                List<OdsLwzxsfsjFeeRecords01> FeeRecords01List = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ListNew(feeRecords01);
-                if (feeRecordsUuidList.size() != FeeRecords01List.size()){
-                    log.info("参数----"+feeRecordsUuidList.size()+"结果"+FeeRecords01List.size());
-                }
-                log.info("门架流水结束----" + new Date() + "--数据：" + FeeRecords01List.size());
-                for (OdsLwzxsfsjFeeRecords01 rtnFeeRecords01 : FeeRecords01List) {
-                    // redis查找
-                    String js_feeRecord_key = Constants.js_feeRecord + rtnFeeRecords01.getCid();
-                    redisCache.setCacheObject(js_feeRecord_key, rtnFeeRecords01);
-                }
-            }
 
         }
     }
