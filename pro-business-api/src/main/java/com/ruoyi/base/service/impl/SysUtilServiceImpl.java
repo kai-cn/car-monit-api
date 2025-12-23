@@ -1874,8 +1874,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
                     feeRecords01.setCidList(feeRecordsUuidList);
                     this.queryFeeRecords01List(feeRecords01); // 查询数据
                 }else {
-                    for (int zz = 0; zz < feeRecordsUuidList.size(); zz += batchSize) {
-                        List<String> subList = feeRecordsUuidList.subList(zz, Math.min(zz + batchSize, feeRecordsUuidList.size()));
+                    for (int yy = 0; yy < feeRecordsUuidList.size(); yy += batchSize) {
+                        List<String> subList = feeRecordsUuidList.subList(yy, Math.min(yy + batchSize, feeRecordsUuidList.size()));
                         // 处理subList，例如保存到数据库或进行其他操作
                         feeRecords01.setCidList(feeRecordsUuidList);
                         this.queryFeeRecords01List(feeRecords01); // 查询数据
