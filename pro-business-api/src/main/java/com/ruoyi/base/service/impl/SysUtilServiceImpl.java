@@ -1774,8 +1774,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             List<ZdataTrailTracks> carlistAll = new ArrayList<>();
 
             //--------- 有拟合轨迹的
-            log.info("轨迹点开始------" + new Date());
-            log.info("分页配置：" + carParaVO.getStartNum() + "" + carParaVO.getEndNum());
+            log.info("轨迹点开始------" + new Date() + "分页配置：" + carParaVO.getStartNum() + "到" + carParaVO.getEndNum());
             List<ZdataTrailTracks> carlistFittinglist = zdataTrailTracksService.getLatestTrail(carParaVO);
             log.info("轨迹L结束-----" + new Date() + "--数据：" + carlistFittinglist.size());
             for (ZdataTrailTracks zdataTrailTracksVo : carlistFittinglist) {
@@ -1791,8 +1790,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 Integer endRange = (i - 1) * pageSizeNew; // 当前页 -1
                 carParaVO.setEndNum(endRange);
             }
-            log.info("不存在轨迹开始---" + new Date());
-            log.info("分页配置：" + carParaVO.getStartNum() + "" + carParaVO.getEndNum());
+            log.info("不存在轨迹开始---" + new Date()+"分页配置：" + carParaVO.getStartNum() + "到" + carParaVO.getEndNum());
             List<ZdataTrailTracks> carUnFittingList = zdataTrailTracksService.getUnFitting(carParaVO);
             log.info("不存在轨迹点结束----" + new Date() + "--数据：" + carUnFittingList.size());
             for (ZdataTrailTracks zdataTrailTracksVo : carUnFittingList) {
@@ -1866,7 +1864,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 feeRecords01.setInApplyTime1(format2.format(queryStartDate));
                 feeRecords01.setInApplyTime2(queryEndTime);
                 feeRecords01.setCidList(feeRecordsUuidList);
+                log.info("门架流水开始------" + new Date() + "时间：" + feeRecords01.getInApplyTime1() + "到" +feeRecords01.getInApplyTime2()+" 轨迹点数量："+feeRecordsUuidList.size());
                 List<OdsLwzxsfsjFeeRecords01> FeeRecords01List = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ListNew(feeRecords01);
+                if (feeRecordsUuidList.size() != FeeRecords01List.size()){
+                    log.info("参数----"+feeRecordsUuidList.size()+"结果"+FeeRecords01List.size());
+                }
+                log.info("门架流水结束----" + new Date() + "--数据：" + FeeRecords01List.size());
                 for (OdsLwzxsfsjFeeRecords01 rtnFeeRecords01 : FeeRecords01List) {
                     // redis查找
                     String js_feeRecord_key = Constants.js_feeRecord + rtnFeeRecords01.getCid();
