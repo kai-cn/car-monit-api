@@ -159,6 +159,8 @@
         FROM jl_data01.ods_lwzxsfsj_fee_records_01 t
         left join jl_data01.ods_szdn_gantry g ON t.gantryid = g.gantry_code
         <where>
+        <if test="inApplyTime1 != null  and inApplyTime1 != ''">and t.transtime >= to_timestamp(#{inApplyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
+        <if test="inApplyTime2 != null  and inApplyTime2 != ''">and t.transtime <![CDATA[<=]]> to_timestamp(#{inApplyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
         <if test="bigId != null  and bigId != ''"> and t.big_id = #{bigId}</if>
         <if test="algorithmidentifier != null  and algorithmidentifier != ''"> and t.algorithmidentifier = #{algorithmidentifier}</if>
         <if test="antennaid != null  and antennaid != ''"> and t.antennaid = #{antennaid}</if>
@@ -318,8 +320,7 @@
                 g.section_code = #{item}
             </foreach>
         </if>
-        <if test="inApplyTime1 != null  and inApplyTime1 != ''">and t.transtime >= to_timestamp(#{inApplyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
-        <if test="inApplyTime2 != null  and inApplyTime2 != ''">and t.transtime <![CDATA[<=]]> to_timestamp(#{inApplyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
+
         </where>
         order by t.transtime desc
     </select>
@@ -342,10 +343,12 @@
     </select>
 
     <select id="selectOdsLwzxsfsjFeeRecords01ListNew" parameterType="com.ruoyi.base.domain.OdsLwzxsfsjFeeRecords01" resultMap="OdsLwzxsfsjFeeRecords01Result">
-        SELECT  g.section_code sectioncode,t.vehicleplate,t.transtime,t.fee
+        SELECT  g.section_code sectioncode,t.vehicleplate,t.transtime,t.fee,t.cid
         FROM jl_data01.ods_lwzxsfsj_fee_records_01 t
         left join jl_data01.ods_szdn_gantry g ON t.gantryid = g.gantry_code
         <where>
+            <if test="inApplyTime1 != null  and inApplyTime1 != ''">and t.transtime >= to_timestamp(#{inApplyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
+            <if test="inApplyTime2 != null  and inApplyTime2 != ''">and t.transtime <![CDATA[<=]]> to_timestamp(#{inApplyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
             <if test="plateColor != null  and plateColor != ''"> and  t.vehicleplate LIKE concat('%',#{plateColor})</if>
             <if test="sectioncode != null  and sectioncode != ''"> and g.section_code = #{sectioncode}</if>
             <if test="sectionList != null and sectionList.size() > 0">
@@ -354,10 +357,14 @@
                     g.section_code = #{item}
                 </foreach>
             </if>
-            <if test="inApplyTime1 != null  and inApplyTime1 != ''">and t.transtime >= to_timestamp(#{inApplyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
-            <if test="inApplyTime2 != null  and inApplyTime2 != ''">and t.transtime <![CDATA[<=]]> to_timestamp(#{inApplyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
+            <if test="cidList != null and cidList.size() > 0">
+                and cid in
+                <foreach collection="cidList" open="(" separator="," close=")" item="item">
+                    #{item}
+                </foreach>
+            </if>
         </where>
-        order by t.vehicleplate,t.transtime
+        <if test="orderByFlag != null and orderByFlag == 'order'"> order by t.vehicleplate,t.transtime </if>
         <if test="startNum != null ">  LIMIT #{startNum} </if>
         <if test="endNum != null ">  OFFSET #{endNum} </if>
     </select>

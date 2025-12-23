@@ -1661,30 +1661,30 @@ public class SysUtilServiceImpl implements ISysUtilService {
         String redisTimeValue = redisCache.getCacheObject(redisTimeKey); // 默认2天
         if (CommonUtil.isNotBlank(redisTimeValue)) {
             starTime = Integer.parseInt(redisTimeValue);
-            log.info("从缓存取得时间配置--------：" + redisTimeValue);
+           // log.info("从缓存取得时间配置--------：" + redisTimeValue);
         }
 
         String redisBiteValue = redisCache.getCacheObject(redisBiteKey); // 比例默认为0.3
         if (CommonUtil.isNotBlank(redisBiteValue)) {
             bite = new BigDecimal(redisBiteValue);
-            log.info("从缓存取得占比配置------：" + bite);
+          //  log.info("从缓存取得占比配置------：" + bite);
         }
 
         String supoerMjnumValue = redisCache.getCacheObject(supoer_mjnum); // 比例默认为5
         if (CommonUtil.isNotBlank(supoerMjnumValue)) {
             supoerMjnum = Integer.parseInt(supoerMjnumValue);
-            log.info("从缓存取得跨省：门架抓拍数量------：" + supoerMjnum);
+           // log.info("从缓存取得跨省：门架抓拍数量------：" + supoerMjnum);
         }
 
         String roadSupoeMjnumValue = redisCache.getCacheObject(road_supoer_mjnum); // 比例默认为3
         if (CommonUtil.isNotBlank(roadSupoeMjnumValue)) {
             roadSupoerMjnum = Integer.parseInt(roadSupoeMjnumValue);
-            log.info("从缓存路段：取得门架抓拍数量------：" + roadSupoeMjnumValue);
+          //  log.info("从缓存路段：取得门架抓拍数量------：" + roadSupoeMjnumValue);
         }
 
         // 判断节假日
         String jholidayTimeValue = CommonUtil.isNull(redisCache.getCacheObject(jholiday_time)); // 节假日
-        log.info("从缓存路段：取得节假日------：" + jholidayTimeValue);
+       // log.info("从缓存路段：取得节假日------：" + jholidayTimeValue);
 
 
         if (CommonUtil.isNull(isLocalhost).equals("local")) {
@@ -1701,7 +1701,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             endTime = starTime * 2;
         }
 
-        log.info("分页配置：" + pageSize + "--时间范围" + starTime + "到" + endTime);
+
 
 
         CarParaVO carParaVO = new CarParaVO();
@@ -1765,21 +1765,12 @@ public class SysUtilServiceImpl implements ISysUtilService {
             List<ZdataTrailTracks> carlistAll = new ArrayList<>();
 
             //--------- 有拟合轨迹的
-            log.info("轨迹点SQL开始查询----------" + new Date());
+            log.info("轨迹点开始------" + new Date());
+            log.info("分页配置：" + carParaVO.getStartNum() + "" + carParaVO.getEndNum());
             List<ZdataTrailTracks> carlistFittinglist = zdataTrailTracksService.getLatestTrail(carParaVO);
-            log.info("轨迹点SQL结束查询----------" + new Date() + "--数据：" + carlistFittinglist.size());
+            log.info("轨迹L结束-----" + new Date() + "--数据：" + carlistFittinglist.size());
             for (ZdataTrailTracks zdataTrailTracksVo : carlistFittinglist) {
                 zdataTrailTracksVo.setFlag("1"); // 有的轨迹点
-               /* String trailtype = CommonUtil.isNull(zdataTrailTracksVo.getTrailtype());
-                String firstCode = CommonUtil.isNull(zdataTrailTracksVo.getEntollstationid()); // 入口收费站编号
-                String firstName = CommonUtil.repalaceSzdnTollName(zdataTrailTracksVo.getEntollstationname()); // 入口收费站名称
-                String endCode = CommonUtil.isNull(zdataTrailTracksVo.getExtollstationid()); // 出口收费站编号
-                String endName = CommonUtil.repalaceSzdnTollName(zdataTrailTracksVo.getExtollstationname()); // 出口收费站名称
-                if (trailtype.equals("0") && firstName.indexOf("门架") > -1 && endName.indexOf("门架") > -1) {
-                    carlistAll.add(zdataTrailTracksVo);
-                }else{
-                    carlistAll.add(zdataTrailTracksVo);
-                }*/
                 carlistAll.add(zdataTrailTracksVo);
             }
 
@@ -1791,23 +1782,25 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 Integer endRange = (i - 1) * pageSizeNew; // 当前页 -1
                 carParaVO.setEndNum(endRange);
             }
-            log.info("不存在轨迹点SQL开始查询----------" + new Date());
+            log.info("不存在轨迹开始---" + new Date());
+            log.info("分页配置：" + carParaVO.getStartNum() + "" + carParaVO.getEndNum());
             List<ZdataTrailTracks> carUnFittingList = zdataTrailTracksService.getUnFitting(carParaVO);
-            log.info("不存在轨迹点SQL结束查询----------" + new Date() + "--数据：" + carUnFittingList.size());
-
+            log.info("不存在轨迹点结束----" + new Date() + "--数据：" + carUnFittingList.size());
             for (ZdataTrailTracks zdataTrailTracksVo : carUnFittingList) {
                 zdataTrailTracksVo.setUuid(StringUtils.getUUID());
                 zdataTrailTracksVo.setFlag("0"); // 沒有的轨迹点
                 carlistAll.add(zdataTrailTracksVo);
             }
 
+            List<String> feeRecordsUuidList = new ArrayList<>(); //
             for (ZdataTrailTracks tracks : carlistAll) {
                 String uuid = CommonUtil.isNull(tracks.getUuid()); // 轨迹点id
-                String carNo = CommonUtil.isNull(tracks.getPlateKey()); // 车牌号
+                // String carNo = CommonUtil.isNull(tracks.getPlateKey()); // 车牌号
                 String keyValue = tracks.getTrailPoints(); // 行驶轨迹
                 List<TrailBo> josnList = new ArrayList<TrailBo>();
                 if (CommonUtil.isNotBlank(keyValue)) {
                     josnList = this.getTrailBoList(keyValue);
+                    tracks.setTrailPoints(JSON.toJSONString(josnList));
                     boolean isNotXymjFlag = true;  // 是否不包含虚拟门架
                     int conutGantryCapture = 0;
                     for (TrailBo trailBo : josnList) {
@@ -1836,26 +1829,34 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
                     // 门架抓拍数量 > 5 并且没有经过虚拟门架
                     if (conutGantryCapture > supoerMjnum && isNotXymjFlag) {
-                        String trailFittingRedisKey = this.trailUnFittingKey(formattedDate, uuid);
-                        if (i <= 10) {
-                            redisCache.setCacheObject(trailFittingRedisKey, tracks);
-                        } else {
-                            redisCache.setCacheObject(trailFittingRedisKey, null);
-                        }
                         for (TrailBo trailBo : josnList) {
                             String stateType = CommonUtil.isNull(trailBo.getStateType());  // 流水来源类型标识:可作为维度字段，用于回溯数据来源、确定查找目标表
                             String pointUuid = CommonUtil.isNull(trailBo.getPointUuid());
                             if (stateType.equals(FeeRecord)) {
                                 if (CommonUtil.isNotBlank(pointUuid)){
-                                    // redis查找
-                                    String js_feeRecord_key = Constants.js_feeRecord + uuid;
-                                    redisCache.setCacheObject(js_feeRecord_key, null);
+                                    feeRecordsUuidList.add(pointUuid);
                                 }
                             }
                         }
+                        String trailFittingRedisKey = this.trailUnFittingKey(formattedDate, uuid);
+                        redisCache.setCacheObject(trailFittingRedisKey, tracks); // 存放轨迹缓存
                     }
                 }
             }
+
+            if (feeRecordsUuidList.size() > 0) {
+                OdsLwzxsfsjFeeRecords01 feeRecords01 = new OdsLwzxsfsjFeeRecords01();
+                feeRecords01.setInApplyTime1(queryStartTime);
+                feeRecords01.setInApplyTime2(queryEndTime);
+                feeRecords01.setCidList(feeRecordsUuidList);
+                List<OdsLwzxsfsjFeeRecords01> FeeRecords01List = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ListNew(feeRecords01);
+                for (OdsLwzxsfsjFeeRecords01 rtnFeeRecords01 : FeeRecords01List) {
+                    // redis查找
+                    String js_feeRecord_key = Constants.js_feeRecord + rtnFeeRecords01.getCid();
+                    redisCache.setCacheObject(js_feeRecord_key, rtnFeeRecords01);
+                }
+            }
+
         }
     }
 
@@ -2150,6 +2151,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
         String redisDate = sdf.format(now);
         // ----- 分页范围
+        feeRecords.setOrderByFlag("order");
         List<OdsLwzxsfsjFeeRecords01> list = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ListNew(feeRecords);
         log.info("门架交易流水SQL开始查询----------" + new Date() + "数据--" + list.size());
         for (OdsLwzxsfsjFeeRecords01 feeRecords01 : list) {

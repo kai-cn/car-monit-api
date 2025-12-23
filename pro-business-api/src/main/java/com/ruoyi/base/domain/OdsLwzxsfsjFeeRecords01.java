@@ -654,4 +654,11 @@ public class OdsLwzxsfsjFeeRecords01 implements Custom {
     private String sectioncode;
 
 
+    /**
+     * 排序
+     */
+    @TableField(exist = false)
+    private String orderByFlag;
+
+
 }

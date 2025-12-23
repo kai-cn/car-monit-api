@@ -74,6 +74,8 @@
         <include refid="selectOdsRtSzdnSnapshotFlowAddcodeVo"/>
         FROM jl_data01.ods_rt_szdn_snapshot_flow_addcode t
         <where>
+        <if test="applyTime1 != null  and applyTime1 != ''">and t.snapshottime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
+        <if test="applyTime2 != null  and applyTime2 != ''">and t.snapshottime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
         <if test="bigId != null  and bigId != ''"> and t.big_id = #{bigId}</if>
         <if test="datasource != null  and datasource != ''"> and t.datasource = #{datasource}</if>
         <if test="cameratype != null  and cameratype != ''"> and t.cameratype = #{cameratype}</if>
@@ -136,8 +138,7 @@
             </foreach>
         </if>
 
-        <if test="applyTime1 != null  and applyTime1 != ''">and t.snapshottime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
-        <if test="applyTime2 != null  and applyTime2 != ''">and t.snapshottime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
+
 
         </where>
         order by t.snapshottime desc
@@ -166,6 +167,8 @@
         SELECT t.sectioncode,t.platenumber,t.snapshottime,t.gantrycode,t.datauuid,t.cartypecode,t.platecolor
         FROM jl_data01.ods_rt_szdn_snapshot_flow_addcode t
         <where>
+            <if test="applyTime1 != null  and applyTime1 != ''">and t.snapshottime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
+            <if test="applyTime2 != null  and applyTime2 != ''">and t.snapshottime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
             <if test="sectioncode != null  and sectioncode != ''"> and t.sectioncode = #{sectioncode}</if>
             <if test="sectionList != null and sectionList.size() > 0">
                 and
@@ -174,8 +177,6 @@
                 </foreach>
             </if>
             <if test="platecolor != null  and platecolor != ''"> and t.platecolor like concat('%', #{platecolor}, '%')</if>
-            <if test="applyTime1 != null  and applyTime1 != ''">and t.snapshottime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
-            <if test="applyTime2 != null  and applyTime2 != ''">and t.snapshottime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS')</if>
         </where>
         order by t.platenumber,t.snapshottime
         <if test="startNum != null ">  LIMIT #{startNum} </if>
