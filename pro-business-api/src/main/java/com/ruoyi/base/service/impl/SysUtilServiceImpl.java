@@ -2537,14 +2537,14 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 addFlag = true;
                             }else{
                                 if (sussFeeRecord == 0){
-                                    escapedTypeRemark = "全程屏蔽：其中门架牌识流水数量:" + conutGantryCapture + "，门架交易流水数量(成功):" + sussFeeRecord+"。";
+                                    escapedTypeRemark = "全程屏蔽(交易成功)：其中门架牌识流水数量:" + conutGantryCapture + "，门架交易流水数量:" + conutFeeRecord+"，"+ "，门架交易流水成功数量:" + sussFeeRecord+"。";
                                     escapedTfcj = "3";
                                     escapedType = Constants.escapedType_20;
                                     addFlag = true;
                                 } else{
                                     BigDecimal costBite = new BigDecimal(conutFeeRecord).divide(new BigDecimal(sussFeeRecord), 4, BigDecimal.ROUND_HALF_UP);
                                     if (bite.compareTo(costBite) >= 0){
-                                        escapedTypeRemark = "部分屏蔽：其中门架牌识流水数量:" + conutGantryCapture + "，门架交易流水数量(成功):" + sussFeeRecord+"。";
+                                        escapedTypeRemark = "部分屏蔽(交易成功)：其中门架牌识流水数量:" + conutGantryCapture + "，门架交易流水数量:" + conutFeeRecord+"，"+ "，门架交易流水成功数量:" + sussFeeRecord+"。";
                                         escapedTfcj = "2";
                                         escapedType = Constants.escapedType_20;
                                         addFlag = true;
