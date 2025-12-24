@@ -355,7 +355,7 @@ public class SysTestController extends BaseController {
 
     @GetMapping(value = "/separateSnapshotFlowTimeList")
     public void separateSnapshotFlowTimeList() {
-        sysUtilService.separateSnapshotFlowTimeList();
+        sysUtilService.separateUnfiitingList();
     }
 
 
