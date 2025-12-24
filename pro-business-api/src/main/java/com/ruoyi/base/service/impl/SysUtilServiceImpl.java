@@ -2542,6 +2542,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 List<TrailTracksVo> oldFittingList = redisCache.getCacheObject(key);
                 if (null != oldFittingList && oldFittingList.size() >= 0) {
                     for (TrailTracksVo trailTracksVo : oldFittingList) {
+
                         String carNo = CommonUtil.isNull(trailTracksVo.getPlateKey());
                         String keyValue = trailTracksVo.getTrailpoints(); // 行驶轨迹
 
@@ -2637,7 +2638,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             redisCache.deleteObject(keys);
         }
 
-        Collection<String> freeKeys = redisCache.keys(Constants.feeRecordsList + redisDate + "*");
+        Collection<String> freeKeys = redisCache.keys(Constants.js_feeRecord + redisDate + "*");
         if (null != freeKeys && freeKeys.size() > 0){
             // 删除redis
             redisCache.deleteObject(freeKeys);
