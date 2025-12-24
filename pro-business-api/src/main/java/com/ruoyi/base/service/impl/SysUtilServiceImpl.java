@@ -1595,10 +1595,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
         Integer pageSize = 10;
         Integer starTime = 2;
         Integer endTime = 4;
-        BigDecimal bite = new BigDecimal("0.3");  // 门架抓拍和流水抓拍占比
+
 
         int supoerMjnum = 5; // 跨省：同步可疑车辆门架抓拍数量5个以上
-        int roadSupoerMjnum = 3; // 路段：门架抓拍数量和门架流水数量对比
+
 
 
         // -------------- 从缓存取得对应的配置
@@ -1608,11 +1608,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
            // log.info("从缓存取得时间配置--------：" + redisTimeValue);
         }
 
-        String redisBiteValue = redisCache.getCacheObject(redisBiteKey); // 比例默认为0.3
-        if (CommonUtil.isNotBlank(redisBiteValue)) {
-            bite = new BigDecimal(redisBiteValue);
-          //  log.info("从缓存取得占比配置------：" + bite);
-        }
 
         String supoerMjnumValue = redisCache.getCacheObject(supoer_mjnum); // 比例默认为5
         if (CommonUtil.isNotBlank(supoerMjnumValue)) {
@@ -1620,11 +1615,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
            // log.info("从缓存取得跨省：门架抓拍数量------：" + supoerMjnum);
         }
 
-        String roadSupoeMjnumValue = redisCache.getCacheObject(road_supoer_mjnum); // 比例默认为3
-        if (CommonUtil.isNotBlank(roadSupoeMjnumValue)) {
-            roadSupoerMjnum = Integer.parseInt(roadSupoeMjnumValue);
-          //  log.info("从缓存路段：取得门架抓拍数量------：" + roadSupoeMjnumValue);
-        }
 
         // 判断节假日
         String jholidayTimeValue = "2025-01-01,2025-01-02,2025-01-03"; // 节假日
@@ -1684,7 +1674,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
         String queryStartTime = queryDate + " 00:00:00";
         String queryEndTime = queryDate + " 23:59:59";
-       //  log.info("查询时间范围" + queryStartTime + "到" + queryEndTime);
+        log.info("查询时间范围" + queryStartTime + "到" + queryEndTime);
 
 
 
@@ -1830,10 +1820,6 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 }
             }
         }
-
-
-
-
     }
 
     /**
@@ -1841,7 +1827,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
      * @param feeRecords01
      */
     private void queryFeeRecords01List(OdsLwzxsfsjFeeRecords01 feeRecords01){
-        log.info("门架流水开始------" + new Date() + "时间：" + feeRecords01.getInApplyTime1() + "到" +feeRecords01.getInApplyTime2()+" 轨迹点数量："+feeRecords01.getCidList().size());
+        // log.info("门架流水开始------" + new Date() + "时间：" + feeRecords01.getInApplyTime1() + "到" +feeRecords01.getInApplyTime2()+" 轨迹点数量："+feeRecords01.getCidList().size());
         List<OdsLwzxsfsjFeeRecords01> FeeRecords01List = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ListNew(feeRecords01);
         log.info("门架流水结束----" + new Date() + "--数据：" + FeeRecords01List.size());
         for (OdsLwzxsfsjFeeRecords01 rtnFeeRecords01 : FeeRecords01List) {
