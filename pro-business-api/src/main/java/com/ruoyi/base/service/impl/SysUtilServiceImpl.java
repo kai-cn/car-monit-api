@@ -2072,7 +2072,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-                log.error("解析错误！");
+                log.error("解析错误！"+trailPoints);
             }
         }
         List<TrailBo>  rtnList = this.mapTrailBoList(trailBoList);
