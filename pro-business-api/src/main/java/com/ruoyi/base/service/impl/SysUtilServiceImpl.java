@@ -2479,6 +2479,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
         if (null != keys && keys.size() > 0) {
             for (String key : keys) {
                 ZdataTrailTracks tracks = redisCache.getCacheObject(key);
+                // 删除redis
+                redisCache.deleteObject(keys);
                 if (null != tracks) {
                     String carNo = CommonUtil.isNull(tracks.getPlateKey());
                     String keyValue = tracks.getTrailPoints(); // 行驶轨迹
@@ -2565,8 +2567,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         }
                     }
                 }
-                // 删除redis
-                redisCache.deleteObject(keys);
+
             }
         }
 
