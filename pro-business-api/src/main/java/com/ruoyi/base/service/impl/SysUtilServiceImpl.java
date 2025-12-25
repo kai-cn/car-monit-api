@@ -1602,7 +1602,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
 
         // -------------- 从缓存取得对应的配置
-        String redisTimeValue = redisCache.getCacheObject(redisTimeKey); // 默认2天
+       /* String redisTimeValue = redisCache.getCacheObject(redisTimeKey); // 默认2天
         if (CommonUtil.isNotBlank(redisTimeValue)) {
             starTime = Integer.parseInt(redisTimeValue);
            // log.info("从缓存取得时间配置--------：" + redisTimeValue);
@@ -1613,7 +1613,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         if (CommonUtil.isNotBlank(supoerMjnumValue)) {
             supoerMjnum = Integer.parseInt(supoerMjnumValue);
            // log.info("从缓存取得跨省：门架抓拍数量------：" + supoerMjnum);
-        }
+        }*/
 
 
         // 判断节假日
