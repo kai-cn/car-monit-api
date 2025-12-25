@@ -2489,12 +2489,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         if (null != josnList && josnList.size() > 0){
                             // 没有轨迹点的s
                             if (typeFlag.equals("0")) {
-                                tracks.setEntollstationid(josnList.get(0).getDevCode()); // 入口收费站编号
-                                tracks.setEntollstationname(josnList.get(0).getDevName()); // 入口收费站名称
-                                if (josnList.size() > 1) {
-                                    tracks.setExtollstationid(josnList.get(josnList.size() - 1).getDevCode()); // 出口收费站编号
-                                    tracks.setExtollstationname(josnList.get(josnList.size() - 1).getDevName()); // 出口收费站名称
-                                }
+                                tracks.setFlag("currentTrack"); // 设置起点和终点
                             }
 
                             // ---------------------------分析场景: 路段抓拍和流水抓拍 占比
