@@ -1827,7 +1827,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
      * @param feeRecords01
      */
     private void queryFeeRecords01List(OdsLwzxsfsjFeeRecords01 feeRecords01){
-        // log.info("门架流水开始------" + new Date() + "时间：" + feeRecords01.getInApplyTime1() + "到" +feeRecords01.getInApplyTime2()+" 轨迹点数量："+feeRecords01.getCidList().size());
+        log.info("门架流水开始------" + new Date() + "时间：" + feeRecords01.getInApplyTime1() + "到" +feeRecords01.getInApplyTime2()+" 轨迹点数量："+feeRecords01.getCidList().size());
         List<OdsLwzxsfsjFeeRecords01> FeeRecords01List = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ListNew(feeRecords01);
         log.info("门架流水结束----" + new Date() + "--数据：" + FeeRecords01List.size());
         for (OdsLwzxsfsjFeeRecords01 rtnFeeRecords01 : FeeRecords01List) {
