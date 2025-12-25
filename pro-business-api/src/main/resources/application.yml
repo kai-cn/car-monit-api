@@ -90,4 +90,4 @@ rediscluster:
   clusterNodes: 36.200.31.15:22400
   refresh-interval-ms: 300000      # 字典数据刷新间隔（毫秒）
 isLocalhost: local # 是否本地 prod生成
-baseUrl: http://223.84.150.189:26066/prod-api
+sysbaseUrl: http://223.84.150.189:26066/prod-api
