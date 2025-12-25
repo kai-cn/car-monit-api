@@ -192,7 +192,7 @@ public class CarTask {
 
     /**
      * 每天凌晨3点45
-     * 同步可疑车俩:
+     * 同步可疑车俩: 门架抓拍流水 和 获取门架交易流水 对比
      */
     @Scheduled(cron = "0 45 3 * * ?")
     private void syncSuspiciousCar() {
@@ -205,7 +205,7 @@ public class CarTask {
 
     /**
      * 每天凌晨4点30
-     * 同步可疑车俩: 同步可疑车辆到redis
+     * 同步可疑车俩: 轨迹点和门架流水 找到可疑车辆 并放到redis中
      */
     @Scheduled(cron = "0 30 4 * * ?")
     private void syncSuspiciousCarRedis() {
