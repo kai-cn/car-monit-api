@@ -2565,14 +2565,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         }
                     }
                 }
+                // 删除redis
+                redisCache.deleteObject(keys);
             }
         }
 
-        // 删除redis
-        if (null != keys && keys.size() > 0){
-            // 删除redis
-            redisCache.deleteObject(keys);
-        }
 
         Collection<String> freeKeys = redisCache.keys(Constants.js_feeRecord  + "*");
         if (null != freeKeys && freeKeys.size() > 0){
