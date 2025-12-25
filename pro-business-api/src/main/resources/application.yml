@@ -80,10 +80,14 @@ forest:
   backend: httpclient
   max-connections: 1000 # 连接池最大连接数，默认值为500
   max-route-connections: 500 # 每个路由的最大连接数，默认值为500
-  timeout: 30000 # 请求超时时间，单位为毫秒, 默认值为3000
-  connect-timeout: 30000 # 连接超时时间，单位为毫秒, 默认值为2000
+  timeout: 60000 # 请求超时时间，单位为毫秒, 默认值为3000
+  connect-timeout: 60000 # 连接超时时间，单位为毫秒, 默认值为2000
   logEnabled: true # 打开或关闭日志，默认为true
+  retryer: com.dtflys.forest.retryer.BackOffRetryer
+  retry-count: 2
+  max-retry-interval: 1000
 rediscluster:
   clusterNodes: 36.200.31.15:22400
   refresh-interval-ms: 300000      # 字典数据刷新间隔（毫秒）
 isLocalhost: local # 是否本地 prod生成
+baseUrl: http://223.84.150.189:26066/prod-api
