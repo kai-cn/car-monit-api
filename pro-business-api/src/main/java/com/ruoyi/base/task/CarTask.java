@@ -202,6 +202,31 @@ public class CarTask {
     }
 
 
+
+    /**
+     * 每天凌晨4点30
+     * 同步可疑车俩: 同步可疑车辆到redis
+     */
+    @Scheduled(cron = "0 30 4 * * ?")
+    private void syncSuspiciousCarRedis() {
+        log.info("每天凌晨4点30执行（同步可疑车辆到redis）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        sysUtilService.separateUnfiitingList();
+        log.info("每天凌晨4点30执行（同步可疑车辆到redis）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
+
+
+    /**
+     * 每天凌晨6点30
+     * 同步可疑车俩: 同步可疑车辆到数据库
+     */
+    @Scheduled(cron = "0 30 6 * * ?")
+    private void syncSuspiciousCarDB() {
+        log.info("每天凌晨6点30执行（同步可疑车辆到redis）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        sysUtilService.syncSuspiciousCarDB();
+        log.info("每天凌晨6点30执行（同步可疑车辆到redis）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
+
+
 }
 
 

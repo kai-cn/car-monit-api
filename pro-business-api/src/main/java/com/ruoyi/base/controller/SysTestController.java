@@ -57,6 +57,7 @@ public class SysTestController extends BaseController {
     @Autowired
     private IOdsSzdnSectionService sectionService;
 
+
     /**
      * 车俩实时轨迹同步
      */
@@ -352,12 +353,24 @@ public class SysTestController extends BaseController {
         log.info("每天凌晨同步门架信息结束 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
-
+    /**
+     * 生成可疑车辆redis
+     */
     @GetMapping(value = "/separateSnapshotFlowTimeList")
     public void separateSnapshotFlowTimeList() {
+        log.info("每天凌晨4点30执行（同步可疑车辆到redis）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
         sysUtilService.separateUnfiitingList();
+        log.info("每天凌晨4点30执行（同步可疑车辆到redis）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
     }
 
-
+    /**
+     * 生成可疑车辆redis：推送到数据库
+     */
+    @GetMapping(value = "/syncSuspiciousCar")
+    public void syncSuspiciousCar() {
+        log.info("每天凌晨6点30执行（同步可疑车辆到redis）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        sysUtilService.syncSuspiciousCarDB();
+        log.info("每天凌晨6点30执行（同步可疑车辆到redis）结束 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+    }
 
 }

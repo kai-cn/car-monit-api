@@ -116,12 +116,16 @@ public interface ISysUtilService {
 
 
     /**
-     * 根据 流水节点 ---和 获取门架交易流水 对比
+     * 根据 轨迹点和门架流水 找到可疑车辆 并放到redis中
      */
     void separateUnfiitingList();
 
 
 
+    /**
+     * 根据 轨迹点和门架流水 找到可疑车辆 并放到redis中
+     */
+    void syncSuspiciousCarDB();
 
 
 

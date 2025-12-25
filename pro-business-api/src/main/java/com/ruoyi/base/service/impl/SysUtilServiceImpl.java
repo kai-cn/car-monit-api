@@ -5,13 +5,16 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.ruoyi.base.domain.*;
+import com.ruoyi.base.forest.HttpSysUtilApiService;
 import com.ruoyi.base.service.*;
 import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.constant.HttpStatus;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.core.redis.RedisConfig;
 import com.ruoyi.common.core.redis.RedisSourceFactory;
 import com.ruoyi.common.utils.CommonUtil;
+import com.ruoyi.common.utils.SecuritySHA1Utils;
 import com.ruoyi.common.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -111,6 +114,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
     @Autowired
     private IOdsSzdnTollService odsSzdnTollService;
+
+    @Resource
+    private HttpSysUtilApiService httpSysUtilApiService;
 
 
     /**
@@ -2609,4 +2615,51 @@ public class SysUtilServiceImpl implements ISysUtilService {
         }
     }
 
+    @Override
+    public void syncSuspiciousCarDB() {
+
+        // 从redis拿
+        List<TrailInfo> trailInfoList = new ArrayList<>();
+        Date now = new Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+        String formattedDate = sdf.format(now);
+
+        Collection<String> keys = redisCache.keys(Constants.car_uspicious + formattedDate + "*");
+        if (null != keys && keys.size() > 0){
+            for (String key : keys) {
+                TrailInfo trailInfo = redisCache.getCacheObject(key);
+                trailInfoList.add(trailInfo);
+            }
+        }
+
+        // 签名key
+        String signatureKey = "car_monit_pt";
+
+        // 时间戳(毫秒)
+        Long timeStamp = System.currentTimeMillis();
+
+        // 签名
+        String signature;
+        try {
+            signature = SecuritySHA1Utils.shaEncode(signatureKey + timeStamp);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        SuspiciousCarVO suspiciousCarVO = new SuspiciousCarVO();
+        suspiciousCarVO.setSignature(signatureKey);
+        suspiciousCarVO.setTimeStamp(timeStamp);
+        suspiciousCarVO.setSignature(signature);
+        suspiciousCarVO.setTrailInfoList(trailInfoList);
+
+        JSONObject jsonObject = httpSysUtilApiService.syncSuspiciousCarTask(suspiciousCarVO);
+        Integer responseCode = jsonObject.getInteger(AjaxResult.CODE_TAG);
+        if (responseCode == HttpStatus.SUCCESS) {
+            if (null != keys && keys.size() > 0){
+                // 删除redis
+                redisCache.deleteObject(keys);
+            }
+        }
+
+    }
 }
