@@ -1805,7 +1805,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             feeRecords01.setInApplyTime2(queryEndTime);
 
             if (feeRecordsUuidList.size() > 0) {
-                int batchSize = 1000;
+                int batchSize = 2000;
                 if (feeRecordsUuidList.size() <= batchSize) {
                     //小于1000，
                     feeRecords01.setCidList(feeRecordsUuidList);
