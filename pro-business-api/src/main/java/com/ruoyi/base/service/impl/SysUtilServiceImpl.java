@@ -240,6 +240,30 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 log.info("本地redis：" + key + "对应的轨迹点：" + keyValue);
             }
         }*/
+
+       /* String carNo = "闽B105AK";
+        String key = this.getCacheKey(carNo);
+        String keyValue = redisCache.getCacheObject(key);
+        List<TrailBo> josnList = new ArrayList<TrailBo>();
+        if (CommonUtil.isNotBlank(keyValue)) {
+            josnList = JSON.parseArray(keyValue, TrailBo.class);
+
+            TrailBo trailBo = new TrailBo();
+            trailBo.setPointUuid(StringUtils.getUUID());
+            trailBo.setStateType("ServiceAreaCapture");
+            trailBo.setCaptureTime("2025-10-14 13:46:42");
+            trailBo.setLocationCode("serviceip:172.16.204.101");
+            trailBo.setLocationName("泰和北服务区");
+            trailBo.setStandardCode("G1517360826W0030");
+            trailBo.setLocationId("G1517360826W0030");
+            trailBo.setPlatenumber(carNo);
+            josnList.add(trailBo);
+
+            redisCache.setCacheObject(key, JSON.toJSONString(josnList));
+        }
+
+        String keyValue1 = redisCache.getCacheObject(key);*/
+
         return AjaxResult.success();
     }
 
