@@ -2651,13 +2651,14 @@ public class SysUtilServiceImpl implements ISysUtilService {
         }
 
         SuspiciousCarVO suspiciousCarVO = new SuspiciousCarVO();
-        suspiciousCarVO.setSignature(signatureKey);
+        suspiciousCarVO.setSignatureKey(signatureKey);
         suspiciousCarVO.setTimeStamp(timeStamp);
         suspiciousCarVO.setSignature(signature);
         suspiciousCarVO.setTrailInfoList(trailInfoList);
 
         JSONObject jsonObject = httpSysUtilApiService.syncSuspiciousCarTask(suspiciousCarVO);
         Integer responseCode = jsonObject.getInteger(AjaxResult.CODE_TAG);
+        log.info(jsonObject.toJSONString());
         if (responseCode == HttpStatus.SUCCESS) {
             if (null != keys && keys.size() > 0){
                 // 删除redis
