@@ -2655,11 +2655,13 @@ public class SysUtilServiceImpl implements ISysUtilService {
         suspiciousCarVO.setTimeStamp(timeStamp);
         suspiciousCarVO.setSignature(signature);
         suspiciousCarVO.setTrailInfoList(trailInfoList);
-
+        log.info("调用接口开始--------："+new Date());
         JSONObject jsonObject = httpSysUtilApiService.syncSuspiciousCarTask(suspiciousCarVO);
         Integer responseCode = jsonObject.getInteger(AjaxResult.CODE_TAG);
+        log.info("调用接口结束--------："+new Date());
         log.info(jsonObject.toJSONString());
         if (responseCode == HttpStatus.SUCCESS) {
+            log.info("调用接口成功返回--------："+new Date());
             if (null != keys && keys.size() > 0){
                 // 删除redis
                 redisCache.deleteObject(keys);
