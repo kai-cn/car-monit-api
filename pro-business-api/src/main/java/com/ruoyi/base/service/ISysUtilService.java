@@ -115,11 +115,6 @@ public interface ISysUtilService {
     void separateSnapshotFlowTimeList();
 
 
-    /**
-     * 根据 轨迹点和门架流水 找到可疑车辆 并放到redis中
-     */
-    void separateUnfiitingList();
-
 
 
     /**

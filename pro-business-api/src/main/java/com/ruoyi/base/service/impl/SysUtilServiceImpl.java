@@ -1652,14 +1652,14 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
 
         if (CommonUtil.isNull(isLocalhost).equals("local")) {
-            // log.info("本地配置------：" + CommonUtil.isNull(isLocalhost));
+            log.info("本地配置------：" + CommonUtil.isNull(isLocalhost));
             // 本地  分页1000条 30 到 1 天
             pageSize = 6000;
             endTime = starTime * 2;
            /* starTime = 1;
             endTime = 60;*/
         } else {
-            // log.info("生产配置------：" + CommonUtil.isNull(isLocalhost));
+            log.info("生产配置------：" + CommonUtil.isNull(isLocalhost));
             // 生产------------- 分页1000条 14 到 7 天
             pageSize = 6000;
             endTime = starTime * 2;
@@ -1772,6 +1772,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
             List<String> feeRecordsUuidList = new ArrayList<>(); // 门架流水轨迹点
 
+
+            // 符合业务的轨迹点
+            List<ZdataTrailTracks> carlistRtn = new ArrayList<>();
+            Map<String,OdsLwzxsfsjFeeRecords01> feeRecords01Map = new HashMap<>();
+
             for (ZdataTrailTracks tracks : carlistAll) {
 
                 String uuid = CommonUtil.isNull(tracks.getUuid()); // 轨迹点id
@@ -1824,8 +1829,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                 }
                             }
                         }
-                        String trailFittingRedisKey = this.trailUnFittingKey(formattedDate, uuid);
-                        redisCache.setCacheObject(trailFittingRedisKey, tracks); // 存放轨迹缓存
+                        carlistRtn.add(tracks);
                     }
                 }
             }
@@ -1839,16 +1843,31 @@ public class SysUtilServiceImpl implements ISysUtilService {
                 if (feeRecordsUuidList.size() <= batchSize) {
                     //小于1000，
                     feeRecords01.setCidList(feeRecordsUuidList);
-                    this.queryFeeRecords01List(feeRecords01); // 查询数据
+                    List<OdsLwzxsfsjFeeRecords01> feeRecords01List = this.queryFeeRecords01List(feeRecords01); // 查询数据
+                    for (OdsLwzxsfsjFeeRecords01 rtnFeeRecords01 : feeRecords01List) {
+                        feeRecords01Map.put(CommonUtil.isNull(rtnFeeRecords01.getCid()),rtnFeeRecords01);
+                    }
                 }else {
                     for (int yy = 0; yy < feeRecordsUuidList.size(); yy += batchSize) {
                         List<String> subList = feeRecordsUuidList.subList(yy, Math.min(yy + batchSize, feeRecordsUuidList.size()));
                         // 处理subList，例如保存到数据库或进行其他操作
                         feeRecords01.setCidList(subList);
-                        this.queryFeeRecords01List(feeRecords01); // 查询数据
+                        List<OdsLwzxsfsjFeeRecords01> feeRecords01List = this.queryFeeRecords01List(feeRecords01); // 查询数据
+                        for (OdsLwzxsfsjFeeRecords01 rtnFeeRecords01 : feeRecords01List) {
+                            feeRecords01Map.put(CommonUtil.isNull(rtnFeeRecords01.getCid()),rtnFeeRecords01);
+                        }
                     }
                 }
             }
+
+            // 生成可疑车辆
+            this.separateUnfiitingList(carlistRtn,feeRecords01Map);
+
+            // 执行完了 还原
+            carlistRtn = new ArrayList<>();
+            feeRecords01Map = new HashMap<>();
+
+
         }
     }
 
@@ -1856,15 +1875,11 @@ public class SysUtilServiceImpl implements ISysUtilService {
      * 历史轨迹查询
      * @param feeRecords01
      */
-    private void queryFeeRecords01List(OdsLwzxsfsjFeeRecords01 feeRecords01){
-        log.info("门架流水开始------" + new Date() + "时间：" + feeRecords01.getInApplyTime1() + "到" +feeRecords01.getInApplyTime2()+" 轨迹点数量："+feeRecords01.getCidList().size());
-        List<OdsLwzxsfsjFeeRecords01> FeeRecords01List = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ListNew(feeRecords01);
-        log.info("门架流水结束----" + new Date() + "--数据：" + FeeRecords01List.size());
-        for (OdsLwzxsfsjFeeRecords01 rtnFeeRecords01 : FeeRecords01List) {
-            // redis查找
-            String js_feeRecord_key = Constants.js_feeRecord + CommonUtil.isNull(rtnFeeRecords01.getCid());
-            redisCache.setCacheObject(js_feeRecord_key, rtnFeeRecords01);
-        }
+    private  List<OdsLwzxsfsjFeeRecords01> queryFeeRecords01List(OdsLwzxsfsjFeeRecords01 feeRecords01){
+       //  log.info("门架流水开始------" + new Date() + "时间：" + feeRecords01.getInApplyTime1() + "到" +feeRecords01.getInApplyTime2()+" 轨迹点数量："+feeRecords01.getCidList().size());
+        List<OdsLwzxsfsjFeeRecords01> feeRecords01List = feeRecords01Service.selectOdsLwzxsfsjFeeRecords01ListNew(feeRecords01);
+        log.info("门架流水结束----" + new Date() + "--数据：" + feeRecords01List.size());
+        return  feeRecords01List;
     }
 
 
@@ -2498,21 +2513,17 @@ public class SysUtilServiceImpl implements ISysUtilService {
     /**
      * 根据 流水节点 ---和 获取门架交易流水 对比
      */
-    @Override
-    public void separateUnfiitingList() {
+    private void separateUnfiitingList(List<ZdataTrailTracks> carlistRtn, Map<String,OdsLwzxsfsjFeeRecords01> feeRecords01Map) {
         Date now = new Date();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
         String redisDate = sdf.format(now);
         BigDecimal bite = new BigDecimal("0.5");  // 门架抓拍和流水抓拍占比
 
-        log.info("读取轨迹点的数据开始："+new Date());
-        Collection<String> keys = redisCache.keys(Constants.trailUnFittingList + redisDate + "*");
-        log.info("读取轨迹点的数据结束："+new Date());
-        if (null != keys && keys.size() > 0) {
-            for (String key : keys) {
-                ZdataTrailTracks tracks = redisCache.getCacheObject(key);
-                // 删除redis
-                redisCache.deleteObject(keys);
+        log.info("生成可疑的数据开始："+new Date());
+        log.info("参数:轨迹点数量" + carlistRtn.size());
+
+        if (null != carlistRtn && carlistRtn.size() > 0 && null !=feeRecords01Map) {
+            for (ZdataTrailTracks tracks : carlistRtn) {
                 if (null != tracks) {
                     String carNo = CommonUtil.isNull(tracks.getPlateKey());
                     String keyValue = tracks.getTrailPoints(); // 行驶轨迹
@@ -2541,10 +2552,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                     // 卡口流水
                                     conutFeeRecord++;
                                     if (CommonUtil.isNotBlank(pointUuid)){
-                                        String js_feeRecord_key = Constants.js_feeRecord + pointUuid;
-                                        log.info("读取抓拍的数据开始："+new Date()+"--"+js_feeRecord_key);
-                                        Object feeRecordObj = redisCache.getCacheObject(js_feeRecord_key);
-                                        log.info("读取抓拍的数据结束："+new Date());
+                                        Object feeRecordObj = feeRecords01Map.get(pointUuid);
                                         if (null != feeRecordObj) {
                                             OdsLwzxsfsjFeeRecords01 rtnFeeRecords01 = (OdsLwzxsfsjFeeRecords01) feeRecordObj;
                                             BigDecimal fee = rtnFeeRecords01.getFee();
@@ -2604,24 +2612,15 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
             }
         }
+        log.info("生成可疑车辆的数据结束："+new Date());
 
-
-       /* // 删除redis
-        if (null != keys && keys.size() > 0){
-            // 删除redis
-            redisCache.deleteObject(keys);
-        }*/
-
-        Collection<String> freeKeys = redisCache.keys(Constants.js_feeRecord  + "*");
-        if (null != freeKeys && freeKeys.size() > 0){
-            // 删除redis
-            redisCache.deleteObject(freeKeys);
-        }
     }
 
+    /**
+     * 数据推送
+     */
     @Override
     public void syncSuspiciousCarDB() {
-
         // 从redis拿
         List<TrailInfo> trailInfoList = new ArrayList<>();
         Date now = new Date();
