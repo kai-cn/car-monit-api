@@ -2505,7 +2505,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
         String redisDate = sdf.format(now);
         BigDecimal bite = new BigDecimal("0.5");  // 门架抓拍和流水抓拍占比
 
+        log.info("读取轨迹点的数据开始："+new Date());
         Collection<String> keys = redisCache.keys(Constants.trailUnFittingList + redisDate + "*");
+        log.info("读取轨迹点的数据结束："+new Date());
         if (null != keys && keys.size() > 0) {
             for (String key : keys) {
                 ZdataTrailTracks tracks = redisCache.getCacheObject(key);
@@ -2540,7 +2542,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
                                     conutFeeRecord++;
                                     if (CommonUtil.isNotBlank(pointUuid)){
                                         String js_feeRecord_key = Constants.js_feeRecord + pointUuid;
+                                        log.info("读取抓拍的数据开始："+new Date()+"--"+js_feeRecord_key);
                                         Object feeRecordObj = redisCache.getCacheObject(js_feeRecord_key);
+                                        log.info("读取抓拍的数据结束："+new Date());
                                         if (null != feeRecordObj) {
                                             OdsLwzxsfsjFeeRecords01 rtnFeeRecords01 = (OdsLwzxsfsjFeeRecords01) feeRecordObj;
                                             BigDecimal fee = rtnFeeRecords01.getFee();
