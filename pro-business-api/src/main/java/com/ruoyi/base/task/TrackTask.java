@@ -160,49 +160,7 @@ public class TrackTask {
     }
 
 
-    /**
-     * 每30分钟执行一次
-     * 同步历史轨迹没有记录的车辆
-     */
-   /* @Scheduled(cron = "0 0/20 * * * ?")
-    private void syncCurrentTrackNo() {
-        log.info("每20分钟（同步历史轨迹没有记录的车辆）开始 " +new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
 
-        // 重点车俩库
-        List<CarVO> carlist = new ArrayList<>();
-        Object obj = redisCache.getCacheObject(Constants.car_list_jc);
-        if (null != obj) {
-            carlist = (List) obj;
-        }
-
-        if (null != carlist && carlist.size() > 0) {
-            List<CarVO> noCarlist = new ArrayList<>();
-            for (CarVO carVO : carlist) {
-                String curCarNo = CommonUtil.isNull(carVO.getCarNo());
-                String curkey = Constants.car_history_trail + curCarNo;
-                List<TrailInfo> trailInfoList = redisCache.getCacheObject(curkey);
-                if (null == trailInfoList) {
-                    noCarlist.add(carVO);
-                }
-            }
-
-            if (noCarlist.size() > 0){
-                log.info("同步车辆数量 " +  noCarlist.size());
-                for (CarVO carVO : noCarlist) {
-                    String carNo = CommonUtil.isNull(carVO.getCarNo());
-                    if (CommonUtil.isNotBlank(carNo)){
-                        CarParaVO carParaVO = new CarParaVO();
-                        carParaVO.setCarNo(carNo);
-                        List<TrailInfo> trailList = sysUtilService.carTrackQuery(carParaVO);
-                        // 车辆的轨迹
-                        String key = Constants.car_history_trail + carNo;
-                        redisCache.setCacheObject(key, trailList);
-                    }
-                }
-            }
-        }
-        log.info("每20分钟执行（同步历史轨迹没有记录的车辆）结束 " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-    }*/
 
 }
 
