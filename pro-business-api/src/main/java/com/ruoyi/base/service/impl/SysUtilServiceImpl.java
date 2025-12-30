@@ -336,7 +336,26 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         trailBo.setDevCode(trailBo.getStandardCode());
                         trailBo.setDevName(trailBo.getLocationName());
 
-                        josnList.add(trailBo);
+                        // 去掉重合的
+                        SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                        long threeMinutesInMillis = 24 * 60 * 60 * 1000; // 24小时转换为毫秒
+                        // 判断和当前时间相差24小时就不加
+                        if (CommonUtil.isNull(isLocalhost).equals("local")){
+                            josnList.add(trailBo);
+                        }else{
+                            if(CommonUtil.isNotBlank(trailBo.getCaptureTime())){
+                                try {
+                                    Date captureTimeDate1 = format2.parse(trailBo.getCaptureTime());
+                                    Date captureTimeDate2 = new Date();
+                                    long diff = Math.abs(captureTimeDate2.getTime() - captureTimeDate1.getTime());
+                                    if (diff <= threeMinutesInMillis) {
+                                        josnList.add(trailBo);
+                                    }
+                                }catch (Exception e){
+                                    log.info("实时轨迹日期解析失败------------"+e.toString());
+                                }
+                            }
+                        }
                     }
 
                     List<TrailBo> rtnList = this.mapTrailBoList(josnList);
