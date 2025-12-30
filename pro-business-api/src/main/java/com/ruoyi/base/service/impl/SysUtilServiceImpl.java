@@ -294,6 +294,10 @@ public class SysUtilServiceImpl implements ISysUtilService {
             log.info("获取的配置信息："+redisConfig.getClusterNodes()+"--本地配置："+isLocalhost +"--同步车辆数量："+carlist.size());
             JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
 
+            // 去掉重合的
+            SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            long threeMinutesInMillis = 24 * 60 * 60 * 1000; // 24小时转换为毫秒
+
             for (CarVO carVO : carlist) {
                 String carNo = CommonUtil.isNull(carVO.getCarNo());
                 String keyValue = "";
@@ -336,9 +340,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         trailBo.setDevCode(trailBo.getStandardCode());
                         trailBo.setDevName(trailBo.getLocationName());
 
-                        // 去掉重合的
-                        SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                        long threeMinutesInMillis = 24 * 60 * 60 * 1000; // 24小时转换为毫秒
+
                         // 判断和当前时间相差24小时就不加
                         if (CommonUtil.isNull(isLocalhost).equals("local")){
                             josnList.add(trailBo);
