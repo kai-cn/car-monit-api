@@ -93,5 +93,48 @@ public class OdsRtSzdnSnapshotFlowAddcodeServiceImpl extends ServiceImpl<OdsRtSz
         return snapshotList;
     }
 
+    /**
+     * 游标分页查询
+     *
+     * 设计思路：
+     * - 基于游标（cursor）实现高效分页查询，避免 LIMIT OFFSET 的性能问题
+     * - cursor 参数通常表示上次查询最后一条记录的时间戳或 UUID，
+     *   本次查询从该游标位置向后扫描，保证分页性能稳定
+     * - 适用于大表（亿级）分页查询，时间复杂度 O(log n) + O(pageSize)
+     *
+     * @param cursor          游标（起始位置，如 UUID 或时间戳字符串）
+     * @param maxSnapshotTime 最大快照时间（分页查询的上界）
+     * @param pageSize        每页大小
+     * @return 查询结果列表
+     */
+    @Override
+    public List<OdsRtSzdnSnapshotFlowAddcode> queryByCursor(String cursor, String maxSnapshotTime, int pageSize) {
+        return odsRtSzdnSnapshotFlowAddcodeMapper.selectByCursorShard(
+                null,
+                maxSnapshotTime,
+                cursor,
+                null,
+                pageSize
+        );
+    }
 
+    /**
+     * 查询表中的最大快照时间
+     *
+     * 调用 Mapper 层 SQL：SELECT MAX(snapshottime) FROM ...
+     * 将返回的 java.util.Date 格式化为 "yyyy-MM-dd HH:mm:ss" 字符串
+     */
+    @Override
+    public String getMaxSnapshotTime() {
+        try {
+            java.util.Date maxDate = odsRtSzdnSnapshotFlowAddcodeMapper.getMaxSnapshotTime();
+            if (maxDate == null) {
+                return null;
+            }
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            return sdf.format(maxDate);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

@@ -177,6 +177,53 @@
         <if test="endNum != null ">  OFFSET #{endNum} </if>
     </select>
 
+    <!-- 游标分页查询轨迹数据（高性能版本） -->
+    <select id="getLatestTrailByCursor" parameterType="com.ruoyi.base.domain.CarParaVO" resultType="com.ruoyi.base.domain.ZdataTrailTracks">
+        select
+            t.cid uuid,
+            t.envehicleid plateKey,
+            t.enaxlecount,
+            t.entime enterTime,
+            t.entolllaneid,
+            t.entollstationid,
+            t.entollstationname,
+            t.envehicleclass,
+            t.envehicleid,
+            t.envehicletype,
+            t.enweight,
+            t.extime exitTime,
+            t.extolllaneid,
+            t.extollstationid,
+            t.extollstationname,
+            t.exvehicleclass,
+            t.exvehicleid,
+            t.exvehicletype,
+            t.exweight,
+            t.trailpoints,
+            t.trailtype
+        from jl_data01.zdata_trail_fitting t
+        <where>
+            <!-- 跨省全程屏蔽 !-->
+            and t.trailtype = 0
+
+            <!-- 时间查询范围 !-->
+            and t.extime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')
+            and t.extime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS')
+
+            <!-- 游标条件：优先使用时间游标，只查询出站时间大于lastExitTime的数据 -->
+            <if test="lastExitTime != null">
+                and t.extime > #{lastExitTime}
+            </if>
+            <!-- 游标条件：备选使用ID游标，只查询ID大于lastId的数据 -->
+            <if test="lastId != null and lastId != ''">
+                and t.cid > #{lastId}
+            </if>
+        </where>
+        order by t.extime, t.cid
+        <if test="pageSize != null">
+            LIMIT #{pageSize}
+        </if>
+    </select>
 
 
 </mapper>

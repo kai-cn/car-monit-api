@@ -22,7 +22,7 @@ import java.util.List;
  * @date 2025-08-29
  */
 @Data
-@TableName("ods_rt_szdn_snapshot_flow_addcode")
+@TableName(value = "ods_rt_szdn_snapshot_flow_addcode", schema = "jl_data01")
 @Accessors(chain = true)
 @EqualsAndHashCode(callSuper = false)
 public class OdsRtSzdnSnapshotFlowAddcode implements Custom {

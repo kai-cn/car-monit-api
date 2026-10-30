@@ -1,0 +1,48 @@
+# ================================================================
+# 大表查询优化服务 - 配置文件
+# 应用于：car-monit-api 项目
+# ================================================================
+
+spring:
+  # --- Elasticsearch 配置 ---
+  elasticsearch:
+    host: 127.0.0.1
+    port: 9200
+    scheme: http
+    username: elastic
+    password: changeme
+    connection-timeout: 30000
+    socket-timeout: 30000
+
+  # --- RocketMQ 配置（可选，用于数据同步） ---
+  rocketmq:
+    name-server: 127.0.0.1:9876
+    producer:
+      group: snapshot_flow_producer
+      retry-times-when-send-failed: 3
+      retry-times-when-send-async-failed: 3
+
+# --- 优化策略配置 ---
+optimization:
+  # GIN 索引查询开关
+  gin:
+    enabled: true
+
+  # 分区表裁剪开关
+  partition:
+    prune: true
+
+  # ES 路由开关（ES 可用时优先）
+  query:
+    route:
+      es: true
+    # 并行查询开关
+    parallel: true
+    # 查询超时时间（毫秒）
+    timeout-ms: 30000
+
+# --- 日志配置（查询性能日志） ---
+logging:
+  level:
+    com.ruoyi.base.service.optimization: INFO
+    org.elasticsearch: WARN

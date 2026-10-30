@@ -1,0 +1,576 @@
+车辆轨迹数据说明文档
+1.执行流程
+(1)环境初始化→创建Flink执行环境
+(2)字典广播流→通过Redis加载字典数据并广播
+(3)Kafka数据流→多源数据统一接入
+(4)核心处理链→JSON解析→按车牌分组→轨迹聚合
+(5)结果输出→高斯DB持久化
+2.车辆轨迹类型
+(1)实时轨迹→Redis留存
+(2)历史轨迹→华为高斯DB持久化
+3.轨迹处理策略
+(1)待处理队列
+①每个车牌维护一个待处理事件队列，用于缓存乱序或暂时无法拼接进轨迹的流水点。
+②定期重处理：系统每隔60秒会重新尝试处理这些事件。
+③轨迹拼接逻辑：当新流水点到达时，会尝试加入该车牌的最新轨迹。如果轨迹起止时间与新点时间差超过7天，则认为属于新轨迹，开启一条新的轨迹链。
+(2)轨迹状态保留
+①Flink状态后端只会保留30天内活跃或近期结束的轨迹状态。
+②超过30天的轨迹状态会被清理，以避免状态无限膨胀。
+注意：这是计算过程中的状态TTL，并不影响已经写入Kafka/数据库的历史轨迹结果。
+(3)活跃轨迹缓存
+①对仍在进行中的轨迹，会在Redis中维护一份副本，便于快速查询和拼接
+②Redis中的轨迹TTL：7天（604800秒）。超过时会被自动清理。
+4.数据说明
+(1)实时数据
+①存放地址：Redis
+②数据概述：车辆在途经过程中的抓拍流水与收费流水会被统一归并，按照车牌号（或唯一标识）聚合到对应的Key下，每个Key对应的Value为一份JSON数据，记录该车辆在本次行程中的完整轨迹，包含途经点与相关事件流水，用于持久化保存和还原车辆行驶路径。
+③JSON数据结构如下：
+
+字段名	含义说明	用途/备注
+pointUuid	流水唯一标识符	用于标识单条抓拍或收费流水的唯一性，支持去重、追踪和跨表关联
+stateType	流水来源类型标识	可作为维度字段，用于回溯数据来源、确定查找目标表
+captureTime	抓拍流水发生时间	用于轨迹拼接、排序和时序分析
+direction	车辆在收费站的进出方向：true=进入，false=驶出，null=非进出类	用于区分车流方向，支撑进出站逻辑和轨迹起止点判定
+locationCode	设备IP地址	可通过映射表解析IP→实体设施（门架、收费站、服务区等），实现设备到道路设施的转换
+
+④Type对应流水表：
+所属来源	数据类型	类型注释	对应流水表
+抓拍	BorderWeighingCapture,	省界称重	ods_szdn_province_border_vehicle_weight_newstructure
+抓拍	GantryCapture,	门架抓拍	ods_rt_szdn_snapshot_flow_addcode
+抓拍	ProvCapture,	省界抓拍	ods_rt_szdn_snapshot_flow_provcapture_addcode
+抓拍	ServiceAreaCapture,	服务区抓拍	/
+抓拍	StationCapture,	收费站抓拍	ods_rt_szdn_snapshot_flow_stationcapture_addcode
+收费	FeeRecord,	卡口流水	ods_lwzxsfsj_fee_records_01
+收费	FeeStationEnter,	收费站入口流水	ods_lwzxsfsj_fee_station_enter_01
+收费	FeeStationExit	收费站出口流水	ods_lwzxsfsj_fee_station_exit_01
+IP	基础表	门架设备ip	ods_szdn_gantry_ip
+IP	基础表	收费站ip	ods_szdn_toll_station_ip
+IP	历史轨迹表	收费站ip	zdata_trail_tracks
+
+
+(2)实时数据
+①存放地址：华为高斯DB
+②数据概述：历史轨迹数据以轨迹维度进行存储，每条记录代表车辆的一次完整行程。当轨迹存在缺失点时，系统会通过补点机制对轨迹进行修复。修复后的轨迹会以新的UUID生成一条完整的轨迹记录，并与原始记录保持并存关系，从而保证数据的可追溯性与版本管理。
+③JSON数据结构如下：
+
+字段名	含义说明	用途/备注
+uuid	轨迹唯一标识符	补点产生的轨迹uuid相同，用于标识一条轨迹的历史版本变化（补点变化），基于同一uuid追溯车辆轨迹变化
+type	轨迹类型	轨迹类型：0=不完整轨迹，1=完整轨迹
+point_count	轨迹点数量	当前轨迹包含的轨迹点数量
+plate_key	车牌号唯一标识	车牌号唯一标识，用于跨流水聚合
+enter_time	进入时间	表示本次行程的起点时间
+exit_time	驶出时间	表示车辆驶离的时间
+trail_points	轨迹点集合	包含车辆途经的所有抓拍点与收费流水点的详细信息
+create_time	创建时间	数据写入或生成时间，用于版本管理与数据溯源
+　　
+
+5.表结构说明
+(1)历史轨迹数据
+①车辆历史轨迹（zdata_trail_fitting）
+列名	数据类型	备注
+uuid	character varying(255)	唯一标识符（分布键，用于保证轨迹全局唯一）
+type	smallint	轨迹类型（如 0=不完整, 1=完整，后续可扩展更多状态码）
+point_count	integer	轨迹点数量（记录该轨迹包含多少个点）
+plate_key	character varying(255)	车牌唯一标识（可脱敏/加密存储，用于车辆关联）
+enter_time	timestamp without time zone	进入时间（分区键，月度分区粒度）
+exit_time	timestamp without time zone	离开时间（轨迹结束时间）
+trail_points	text	轨迹点集合，与实时轨迹的value一致，
+create_time	timestamp without time zone	记录创建时间（默认 NOW()，用于数据入库追踪）
+
+-- ----------------------------
+-- Table structure for zdata_trail_fitting
+-- ----------------------------
+DROP TABLE IF EXISTS "jl_data01"."zdata_trail_fitting";
+CREATE TABLE "jl_data01"."zdata_trail_fitting" (
+  "cid" text COLLATE "pg_catalog"."default",
+  "enaxlecount" int2,
+  "entime" timestamp(6),
+  "entolllaneid" text COLLATE "pg_catalog"."default",
+  "entollstationid" text COLLATE "pg_catalog"."default",
+  "entollstationname" text COLLATE "pg_catalog"."default",
+  "envehicleclass" int2,
+  "envehicleid" text COLLATE "pg_catalog"."default",
+  "envehicletype" int2,
+  "enweight" int4,
+  "extime" timestamp(6),
+  "extolllaneid" text COLLATE "pg_catalog"."default",
+  "extollstationid" text COLLATE "pg_catalog"."default",
+  "extollstationname" text COLLATE "pg_catalog"."default",
+  "exvehicleclass" int2,
+  "exvehicleid" text COLLATE "pg_catalog"."default",
+  "exvehicletype" int2,
+  "exweight" int4,
+  "trailpoints" _text COLLATE "pg_catalog"."default" NOT NULL,
+  "trailtype" int4
+)
+;
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."cid" IS '轨迹唯一标识（cid）';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."enaxlecount" IS '入口车轴数';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."entime" IS '入口时间';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."entolllaneid" IS '入口车道编号';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."entollstationid" IS '入口收费站编号';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."entollstationname" IS '入口收费站名称';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."envehicleclass" IS '入口车型分类（收费车型）';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."envehicleid" IS '入口车辆编号';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."envehicletype" IS '入口车辆类型代码';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."enweight" IS '入口称重（kg）';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."extime" IS '出口时间（分区键）';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."extolllaneid" IS '出口车道编号';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."extollstationid" IS '出口收费站编号';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."extollstationname" IS '出口收费站名称';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."exvehicleclass" IS '出口车型分类（收费车型）';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."exvehicleid" IS '出口车辆编号';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."exvehicletype" IS '出口车辆类型代码';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."exweight" IS '出口称重（kg）';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."trailpoints" IS '拟合轨迹点集合';
+COMMENT ON COLUMN "jl_data01"."zdata_trail_fitting"."trailtype" IS '轨迹类型';
+COMMENT ON TABLE "jl_data01"."zdata_trail_fitting" IS '车辆出入口拟合轨迹表（日分区，按 extime 分区）';
+
+
+
+
+(2)流水数据
+①省界称重（ods_szdn_province_border_vehicle_weight_newstructure）
+列名	数据类型	备注
+dataSource	character varying(50)	数据来源
+dataType	character varying(10)	数据类型
+plateNo	character varying(30)	车牌号
+siteId	character varying	站点ID
+location	character varying(50)	设备地点
+driveNo	integer	车道号
+plateColor	character varying(20)	车牌颜色索引
+plateColorCode	character varying(20)	车牌颜色代码
+plateType	character varying(20)	车牌类型索引
+plateTypeCode	character varying(20)	车牌类型代码
+vehicleColor	character varying(20)	车辆颜色代号
+vehicleColorCode	character varying(20)	车辆颜色代码
+vehicleType	character varying(20)	车辆类型代号
+vehicleTypeCode	character varying(20)	车辆类型代码
+vehicleSpeed	integer	车辆速度（km/h）
+isOverweight	integer	是否超载
+axleNum	integer	轴数
+overWeight	integer	超重量（KG）
+vehicleWeight	integer	重量（KG）
+limitWeight	integer	车辆限重（KG）
+checkTimeUnix	bigint	检测时间Unix格式
+checkTime	timestamp without time zone	检测时间
+axleModel	integer	轴型
+loadRate	double precision	超载率
+axleArray	character varying(2000)	轴型详细数据
+weighingImagesArry	character varying(1000)	图片数组
+load_time	timestamp without time zone	加载时间
+grade_level	integer	分类分级
+datauuid	character varying(50)	Uuid
+reserve1	character varying(50)	预留字段1
+reserve2	character varying(50)	预留字段2
+reserve3	character varying(50)	预留字段3
+
+②门架抓拍（ods_rt_szdn_snapshot_flow_addcode）
+列名	数据类型	备注
+big_id	bigint
+datasource	character varying(128)	数据类型
+cameratype	character varying(128)	设备类型
+deviceid	character varying(128)	设备编号
+gantrycode	character varying(128)	门架编号（分离）
+gantryname	character varying(128)	门架名称
+roadcode	character varying(128)	所属路线编码
+roadname	character varying(128)	所属路线名称
+sectioncode	character varying(128)	所属路段编码
+sectionname	character varying(128)	所属路段名称
+tollcode	character varying(128)	所属收费站编码
+tollname	character varying(128)	所属收费站名称
+orgcode	character varying(128)	所属管理中心机构编码
+orgname	character varying(128)	所属管理中心机构名称
+hexcode	character varying(128)	门架二进制编号
+direction	smallint	方向（0: 上行，1: 下行）
+pileno	character varying(128)	桩号
+lon	numeric(9,6)	经度
+lat	numeric(9,6)	纬度
+deviceip	character varying(128)	设备IP
+siteid	integer	站点ID
+laneid	smallint	车道编号
+snapshottimeunix	bigint	抓拍时间Unix格式
+snapshottime	timestamp(6) without time zone	抓拍时间
+receivedtimeunix	bigint	接收时间Unix格式
+receivedtime	timestamp(6) without time zone	接收时间
+platenumber	character varying(128)	车牌号
+platecolor	character varying(128)	车牌颜色
+platecolorcode	smallint	车牌颜色编码
+platetype	character varying(128)	车牌类型
+platetypecode	smallint	车牌类型编码
+plateconfidence	smallint	车牌置信度
+carbrand	character varying(128)	车辆品牌
+carcolor	character varying(128)	车辆颜色
+carcolorcode	smallint	车辆颜色编码
+cartype	character varying(128)	车辆类型
+cartypecode	smallint	车辆类型编码
+cardirection	character varying(128)	行驶方向
+snappicturepath	character varying(512)	图片路径
+loadtime	timestamp(6) without time zone	加载时间
+gradelevel	smallint	分类分级
+datauuid	character varying(50)	uuid
+reserve3	character varying(50)	预留字段3
+
+③省界抓拍（ods_rt_szdn_snapshot_flow_provcapture_addcode）
+列名	数据类型	备注
+big_id	bigint
+deviceip	character varying(128)	设备编号
+tailcapturetimeunix	bigint	车尾采集时间Unix
+tailcapturetime	timestamp(6) without time zone	车尾采集时间
+extendattribute	character varying(65533)	拓展信息
+smallsideimagewidth	smallint	小侧图宽度
+axletype	character varying(128)	轴型
+smallsideimageheight	smallint	小侧图高度
+platecolorcode	smallint	车牌颜色编码
+platecolor	character varying(128)	车牌颜色
+cover	character varying(128)	遮挡信息
+averageauthoritative	smallint	平均可信度
+headlanecode	smallint	车头车道号
+specialvehicle	smallint	特殊车辆标识
+carlength	smallint	车长
+resulttype	character varying(128)	结果类型
+carhight	smallint	车高
+carmodelscode	smallint	车型编码
+carmodels	character varying(128)	车型
+laneposition	character varying(128)	车道位置
+firstauthoritative	smallint	首字可信度
+tailplateimageheight	smallint	车尾车牌图高度
+axlecount	smallint	车轴数
+plateimagewidth	smallint	车牌图宽度
+specialclass	character varying(128)	特殊类别
+tailplatenumber	character varying(128)	车尾车牌号
+tailimage	character varying(128)	车尾图路径
+sidecapturetimeunix	bigint	车身图采集时间(Unix时间戳)
+sidecapturetime	timestamp(6) without time zone	车身图采集时间(可读格式)
+sidelanecode	smallint	车身车道号
+wheelbase	smallint	轴距
+attached	character varying(5000)	附加信息
+wheelcount	smallint	车轮数量
+guid	character varying(128)	全局唯一标识符
+sideimagewidth	smallint	车身图宽度
+plateimageheight	smallint	车牌图高度
+datasource	character varying(128)	数据来源
+carclass	character varying(128)	车辆分类
+gantryid	character varying(128)	门架编号
+smallsideimage	character varying(128)	小侧图路径
+headimageheight	smallint	车头图高度
+sidescenetypecode	smallint	车侧拍摄场景编码
+sidescenetype	character varying(128)	车侧拍摄场景
+tailimagewidth	smallint	车尾图宽度
+envstate	character varying(128)	环境状态
+headscenetypecode	smallint	车头拍摄场景编码
+headscenetype	character varying(128)	车头拍摄场景
+sidedrivingdirectioncode	smallint	车侧行驶方向编码
+sidedrivingdirection	character varying(128)	车侧行驶方向
+sideimageheight	smallint	车身图高度
+speed	character varying(128)	车速
+tailplateimage	character varying(128)	车尾车牌图路径
+headdrivingdirectioncode	smallint	车头行驶方向编码
+headdrivingdirection	character varying(128)	车头行驶方向
+cartype	character varying(128)	车辆类型
+plateimage	character varying(128)	车牌图路径
+changelane	character varying(128)	变道信息
+sideimage	character varying(128)	车身图路径
+tailplateposition	character varying(128)	车尾车牌位置
+headimagewidth	smallint	车头图宽度
+headimage	character varying(128)	车头图路径
+carweight	smallint	车重
+tailimageheight	smallint	车尾图高度
+devicecode	character varying(128)	设备编号
+platenumber	character varying(128)	车牌号码
+tailplatecolorcode	smallint	车尾车牌颜色编码
+tailplatecolor	character varying(128)	车尾车牌颜色
+uploadtimeunix	bigint	上传时间(Unix时间戳)
+uploadtime	timestamp(6) without time zone	上传时间(可读格式)
+impostoraxlecount	smallint	假轴数
+taillanecode	smallint	车尾车道号
+siteid	smallint	站点ID
+headcapturetimeunix	bigint	车头图采集时间(Unix时间戳)
+headcapturetime	timestamp(6) without time zone	车头图采集时间(可读格式)
+plateposition	character varying(128)	车牌位置
+tailplateimagewidth	smallint	车尾车牌图宽度
+loadtime	timestamp(6) without time zone	加载时间
+gradelevel	smallint	分类分级
+datauuid	character varying(50)	uuid
+reserve1	character varying(50)	预留字段1
+reserve2	character varying(50)	预留字段2
+reserve3	character varying(50)	预留字段3
+
+④收费站抓拍（ods_rt_szdn_snapshot_flow_stationcapture_addcode）
+列名	数据类型	备注
+big_id	bigint
+datasource	character varying(128)	数据类型
+cameratype	character varying(128)	设备类型
+deviceid	character varying(128)	设备编号
+deviceip	character varying(128)	设备IP
+tollcode	character varying(128)	收费站编码
+tollname	character varying(128)	收费站名称
+orgcode	bigint	组织机构编码
+siteid	integer	站点ID
+laneid	smallint	车道编号
+snapshottimeunix	bigint	抓拍时间Unix格式
+snapshottime	timestamp(6) without time zone	抓拍时间
+receivedtimeunix	bigint	接收时间Unix格式
+receivedtime	timestamp(6) without time zone	接收时间
+platenumber	character varying(128)	车牌号
+platecolorcode	smallint	车牌颜色编码
+platecolor	character varying(128)	车牌颜色
+platetypecode	smallint	车牌类型编码
+platetype	character varying(128)	车牌类型
+plateconfidence	smallint	车牌置信度
+carbrand	character varying(128)	车辆品牌
+carcolorcode	smallint	车辆颜色编码
+carcolor	character varying(128)	车辆颜色
+cartypecode	smallint	车辆类型编码
+cartype	character varying(128)	车辆类型
+cardirectioncode	smallint	行驶方向编码
+cardirection	character varying(128)	行驶方向
+snappicturepath	character varying(512)	图片路径
+loadtime	timestamp(6) without time zone	加载时间
+gradelevel	smallint	分类分级
+datauuid	character varying(50)	uuid
+maindirection	character varying(50)	主方向代码
+maindirectionname	character varying(50)	主方向
+reserve3	character varying(50)	预留字段3
+
+⑤卡口流水（ods_lwzxsfsj_fee_records_01）
+列名	数据类型	备注
+big_id	bigint
+algorithmidentifier	character varying(100)	算法标识
+antennaid	character varying(100)	天线ID编号(天线头编号)
+axlecount	integer	车轴数
+balanceafter	numeric(18,2)	交易后余额
+balancebefore	numeric(18,2)	交易前余额
+cardfeesumafter	numeric(18,2)	本次交易后卡片累计金额
+cardfeesumbefore	numeric(18,2)	本次交易前卡片累计金额
+computerorder	character varying(100)	控制器序号
+consumetime	integer	交易耗时（单位：ms）
+cpucardid	character varying(100)	CPU卡编号
+cpucardtype	character varying(100)	CPU卡类型
+cpuenddate	character varying(20)	CPU截止日期
+cpuissueid	character varying(100)	CPU卡片发行方标识
+cpunetid	character varying(100)	CPU卡片网络编号
+cpustartdate	character varying(20)	CPU起始日期
+cpuvehicleplate	character varying(100)	CPU 内车牌号码
+cpuvehicletype	character varying(100)	CPU内车型
+cpuversion	character varying(100)	CPU用户卡版本号
+dealstatus	character varying(100)	处理状态
+discountfee	numeric(18,2)	优惠金额
+discountfeegroup	character varying(1000)	优惠金额组合
+enlanetype	character varying(100)	入口车道类型
+entime	timestamp(6) without time zone	进站时间
+entolllaneid	character varying(100)	进站收费站车道号
+entollstationhex	character varying(100)	进站收费站hex编码
+fee	numeric(18,2)	费用
+feecalcresult	character varying(1000)	计费模块响应计费结果
+feecalcspecial	character varying(100)	计费接口特情值
+feecalcspecials	character varying(1000)	计费特情值组合
+feegroup	character varying(1000)	交易金额组合
+feeinfo1	character varying(1000)	计费信息1
+feeinfo2	character varying(1000)	计费信息2
+feeinfo3	character varying(1000)	计费信息3
+feemileage	numeric(18,2)	收费里程
+feeprovbeginhex	character varying(100)	本省计费起点
+feespare1	character varying(100)	计费协议保留字段1
+feespare2	character varying(100)	计费协议保留字段2
+feevehicletype	character varying(100)	计费车型
+gantryhex	character varying(100)	门架Hex值
+gantryhexopposite	character varying(100)	对向门架Hex值
+gantryid	character varying(100)	门架编码
+gantryordernum	integer	门架顺序号
+gantrytype	character varying(100)	门架类型
+holidaystate	character varying(100)	节假日状态
+hourbatchno	character varying(100)	小时批次号
+keyversion	character varying(100)	消费密钥版本号
+lastgantryhex	character varying(100)	上一个门架的hex编号
+lastgantrytime	timestamp(6) without time zone	通过上一个门架的时间
+matchstatus	character varying(100)	匹配状态
+mediatype	character varying(100)	通行介质类型
+nocardtimesafter	integer	本次交易后累计无卡次数
+nocardtimesbefore	integer	本次交易前累计无卡次数
+obuelectrical	integer	OBU/CPC卡电量百分比
+obuenddate	character varying(20)	OBU/CPC截止日期
+obufeesumafter	numeric(18,2)	本次交易后标签累计实收金额
+obufeesumbefore	numeric(18,2)	本次交易前标签累计实收金额
+obuinfotyperead	character varying(100)	读取标签入口信息类型
+obuinfotypewrite	character varying(100)	本次写入标签入口信息类型
+obuissueid	character varying(100)	OBU/CPC发行方标识
+obulastgantryhex	character varying(100)	OBU中上一个门架HEX
+obulastgantrytime	timestamp(6) without time zone	OBU中通过上一个门架时间
+obumac	character varying(100)	OBU /CPC物理地址
+obumileageafter	numeric(18,2)	本次交易后标签累计里程
+obumileagebefore	numeric(18,2)	本次交易前标签累计里程
+obupassstate	character varying(100)	标签入口状态
+obupayfeesumafter	numeric(18,2)	本次交易后标签累计应收金额
+obupayfeesumbefore	numeric(18,2)	本次交易前标签累计应收金额
+obuprovfeesumafter	numeric(18,2)	本次交易后标签累计金额（省内）
+obuprovfeesumbefore	numeric(18,2)	本次交易前标签累计金额 （省内）
+obuprovpayfeesumafter	numeric(18,2)	本次交易后标签累计应收金额（省内）
+obuprovpayfeesumbefore	numeric(18,2)	本次交易前标签累计应收金额（省内）
+obuprovtradesuccnumafter	integer	省内本次交易后标签累计写入成功数量
+obuprovtradesuccnumbefore	integer	省内本次交易前标签累计写入成功数量
+obusign	character varying(100)	OBU 单/双片标识
+obusn	character varying(100)	OBU/CPC序号编码
+obustartdate	character varying(20)	OBU/CPC起始日期
+obustate	character varying(100)	OBU/CPC状态
+obutotaltradesuccnumafter	integer	本次交易后标签累计写入成功总量
+obutotaltradesuccnumbefore	integer	本次交易前标签累计写入成功总量
+obutraderesult	character varying(100)	标签写入结果
+obuvehicleplate	character varying(100)	obu车牌
+obuvehicletype	character varying(100)	obu车牌类型
+obuversion	character varying(100)	OBU/CPC版本号
+params	text
+passid	character varying(100)	通行id
+passstate	character varying(100)	通行状态
+pathfitflag	character varying(100)	本次计费拟合结果标识
+payfee	numeric(18,2)	应收金额
+payfeegroup	character varying(1000)	应收金额组合
+pcrsuversion	character varying(100)	PC-RSU接口协议版本号
+provminfee	numeric(18,2)	本省累计通行金额参考
+provincenumafter	integer	本次交易后累计省份数量
+provincenumbefore	integer	本次交易前累计省份数量
+ratecompute	character varying(100)	计费模块计费模式
+ratefitcount	integer	计费模块拟合点总数
+rateversion	character varying(100)	计费模块和计费参数版本号
+readciphertextverify	character varying(100)	本次交易读取的EF04加密摘要验证结果
+receivetime	timestamp(6) without time zone	接收时间
+servicetype	character varying(100)	交易的服务类型
+stationdbtime	timestamp(6) without time zone	门架后台入库时间
+stationdealtime	timestamp(6) without time zone	门架后台处理时间
+stationmatchtime	timestamp(6) without time zone	门架后台匹配时间
+stationvalidtime	timestamp(6) without time zone	门架后台去重时间
+tac	character varying(100)	TAC码
+terminalno	character varying(100)	终端机编号
+terminaltransno	character varying(100)	PSAM卡脱机交易序列号
+tollintervalid	character varying(1000)	收费单元编号组合
+tollintervalsign	character varying(100)	收费单元处理标识
+totalweight	numeric(18,2)	车货总重
+tradeid	character varying(100)	计费交易编号
+tradereadciphertext	character varying(1000)	本次交易读取的EF04加密摘要
+traderesult	character varying(100)	卡片复合交易结果
+tradetype	character varying(100)	交易类型
+tradewriteciphertext	character varying(1000)	本次交易生成的EF04加密摘要
+transfee	numeric(18,2)	卡面扣费金额
+transno	character varying(100)	IC卡交易序号
+transtime	timestamp(6) without time zone	计费交易时间
+transtype	character varying(100)	交易类型标识
+validstatus	character varying(100)	去重状态
+vehicleclass	character varying(100)	车种
+vehiclehight	numeric(18,2)	车高
+vehiclelength	numeric(18,2)	车长
+vehicleplate	character varying(100)	车牌号+类型
+vehicleseat	character varying(100)	车辆座位数/载重
+vehiclesign	character varying(100)	车辆状态标识
+vehicletype	character varying(100)	车辆类型
+vehicleusertype	character varying(100)	车辆用户类型
+vehiclewidth	numeric(18,2)	车宽
+verifycode	character varying(100)	校验码
+load_time	timestamp(6) without time zone	加载时间
+grade_level	integer	分类分级
+
+⑥收费站入口流水（ods_lwzxsfsj_fee_station_enter_01）
+列名	数据类型	备注
+big_id	bigint
+cardid	character varying(100)	CPC卡或ETC卡的编号
+electricalpercentage	integer	单片式OBU/CPC卡电量百分比
+enaxlecount	integer	入站车轴数
+entime	timestamp(6) without time zone	入站时间
+entolllanehex	character varying(100)	入口车道hex
+entolllaneid	character varying(100)	入口车道id
+entollstationid	character varying(100)	入口收费站编码
+enweight	numeric(18,2)	入口称重
+id	character varying(100)	ID
+identifyvehicleid	character varying(100)	车牌号+车牌类型
+lanetype	character varying(100)	车道类型
+mediatype	character varying(100)	介质类型
+operid	character varying(100)	操作id
+operationmedia	character varying(100)	作业媒介
+params	text	参数
+passid	character varying(100)	通行id
+receivetime	timestamp(6) without time zone	接收时间
+shift	character varying(100)	工班号
+signstatus	character varying(100)	标记状态
+specialtype	character varying(100)	特殊类型
+tac	character varying(100)	TAC码
+terminalno	character varying(100)	终端机编号
+terminaltransno	character varying(100)	PSAM卡脱机交易序列号
+transfee	numeric(18,2)	交易金额
+transtype	character varying(100)	交易类型
+vcount	integer	总数
+vehicleclass	character varying(100)	车种
+vehicleid	character varying(100)	车牌号+车牌类型
+vehiclesign	character varying(100)	车辆识别标识
+vehiclesignid	character varying(100)	车牌识别流水号
+vehicletype	character varying(100)	车辆类型
+load_time	timestamp(6) without time zone	加载时间
+grade_level	character varying(100)	分类分级
+
+⑦收费站出口流水（ods_lwzxsfsj_fee_station_exit_01）
+列名	数据类型	备注
+big_id	bigint
+actualfeeclass	character varying(1000)	实际计费方式
+axlecount	smallint	车轴数
+discountfee	integer	优惠金额
+electricalpercentage	smallint	单片式OBU/CPC卡电量百分比
+enaxlecount	smallint	入站车轴数
+entime	timestamp(6) without time zone	进站时间
+entolllanehex	character varying(1000)	入口车道hex
+entolllaneid	character varying(1000)	进站收费站车道号
+entollstationid	character varying(1000)	入口收费站编码
+entollstationname	character varying(1000)	入口收费站名称
+envehicleclass	smallint	入口车种
+envehicleid	character varying(1000)	入口车牌号+车牌类型
+envehicletype	smallint	入口车型
+enweight	integer	入口称重
+entryoperatorid	character varying(1000)	入口操作人员id
+extime	timestamp(6) without time zone	出站时间
+extolllaneid	character varying(1000)	出口车道号编码
+extollstationid	character varying(1000)	出口收费站编码
+extollstationname	character varying(1000)	出口收费站名称
+exvehicleclass	smallint	出口车种
+exvehicleid	character varying(1000)	出口车牌号+车牌类型
+exvehicletype	smallint	出口车型
+exweight	integer	出口称重
+fee	integer	费用
+feeboardplay	character varying(1000)	费显显示信息
+feemileage	integer	收费里程
+feerate	numeric(10,4)	交易金额占比
+id	character varying(1000)	ID
+identification	character varying(1000)	开票标识
+identifyvehicleid	character varying(1000)	车牌号+车牌类型
+lanetype	character varying(1000)	车道类型
+mediano	character varying(1000)	介质编码
+mediatype	character varying(1000)	通行介质类型
+nocardcount	smallint	标签无卡累计次数
+obuid	character varying(1000)	OBU序号编码
+obusign	character varying(1000)	OBU 单/双片标识
+obutotalamount	integer	0BU 总累计交易金额
+obutotaldiscountamount	integer	OBU累计优惠后通行费金额
+operid	character varying(1000)	操作id
+params	character varying(1000)	参数
+passid	character varying(1000)	通行id
+paycardid	character varying(1000)	支付id
+payfee	integer	应收金额
+paytype	character varying(1000)	支付类型
+provfee	integer
+provtranscount	smallint	本省交易成功次数
+provincecount	smallint	通行省份个数
+receivetime	timestamp(6) without time zone	接收时间
+shift	character varying(1000)	工班号
+shortfee	integer	最短收费金额
+shortfeemileage	integer	最短路径里程数
+signstatus	character varying(1000)	标记状态
+spcrateversion	character varying(1000)	全网最小费额费率版本号
+specialtype	character varying(1000)	特殊类型
+splitprovince	text	多条省内交易信息
+tac	character varying(1000)	TAC码
+terminalno	character varying(1000)	终端机编号
+terminaltransno	character varying(1000)	PSAM卡脱机交易序列号
+transfee	integer	卡面扣费金额
+transpaytype	character varying(1000)	交易支付类型
+transtype	character varying(1000)	交易类型标识
+vehiclesign	character varying(1000)	车辆状态标识
+vehiclesignid	character varying(1000)	车牌识别流水号
+load_time	timestamp(6) without time zone	加载时间
+grade_level	character varying(1000)	分类分级
+

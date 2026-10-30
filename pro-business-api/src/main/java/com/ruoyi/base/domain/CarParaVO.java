@@ -2,6 +2,7 @@ package com.ruoyi.base.domain;
 
 import lombok.Data;
 
+import java.util.Date;
 import java.util.List;
 
 @Data
@@ -55,6 +56,10 @@ public class CarParaVO {
      */
     List<String> sectionList;
 
+    /**
+     * 游标分页的最后出站时间（用于游标分页）
+     */
+    private Date lastExitTime;
 
 
 }

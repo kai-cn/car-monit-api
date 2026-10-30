@@ -1,0 +1,47 @@
+{
+  "name": "gaussdb-snapshot-flow-source-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    
+    "tasks.max": "3",
+    
+    "kafka.bootstrap.servers": "127.0.0.1:9092",
+    
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter.schemas.enable": "true",
+    
+    "topic.prefix": "gaussdb-cdc",
+    
+    "database.hostname": "192.168.56.10",
+    "database.port": "5432",
+    "database.user": "gaussdb",
+    "database.password": "OpenGauss@123",
+    "database.dbname": "RuoYi",
+    "database.server.name": "jl_data01",
+    
+    "plugin.name": "pgoutput",
+    "slot.name": "debezium_slot_snapshot_flow",
+    
+    "publication.name": "dbz_publication_snapshot_flow",
+    
+    "table.include.list": "jl_data01.ods_rt_szdn_snapshot_flow_addcode",
+    
+    "poll.interval.ms": "1000",
+    
+    "snapshot.mode": "initial",
+    
+    "snapshot.locking.mode": "none",
+    
+    "snapshot.fetch.size": "10000",
+    
+    "errors.tolerance": "all",
+    "errors.deadletterqueue.topic.name": "ods-rt-szdn-snapshot-flow-dlq",
+    "errors.deadletterqueue.topic.partitions": "3",
+    
+    "time.precision.mode": "connect",
+    
+    "flush.lsn.enabled": "true"
+  }
+}

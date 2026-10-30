@@ -40,4 +40,7 @@ public interface IOdsRtSzdnSnapshotFlowAddcodeService extends IService<OdsRtSzdn
     List<OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeListNew(OdsRtSzdnSnapshotFlowAddcode odsRtSzdnSnapshotFlowAddcode);
 
 
+    String getMaxSnapshotTime();
+
+    List<OdsRtSzdnSnapshotFlowAddcode> queryByCursor(String cursor, String maxSnapshotTime, int pageSize);
 }

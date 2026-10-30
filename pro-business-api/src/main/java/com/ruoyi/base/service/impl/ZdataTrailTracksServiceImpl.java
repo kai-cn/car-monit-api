@@ -73,4 +73,12 @@ public class ZdataTrailTracksServiceImpl extends ServiceImpl<ZdataTrailTracksMap
         return zdataTrailTracksMapper.getUnFitting(carParaVO);
     }
 
+    /**
+     * 使用游标分页查询轨迹数据（高性能版本）
+     */
+    @Override
+    public List<ZdataTrailTracks> getLatestTrailByCursor(CarParaVO carParaVO) {
+        return zdataTrailTracksMapper.getLatestTrailByCursor(carParaVO);
+    }
+
 }

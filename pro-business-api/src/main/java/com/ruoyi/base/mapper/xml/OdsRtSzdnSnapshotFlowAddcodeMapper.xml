@@ -183,5 +183,41 @@
         <if test="endNum != null ">  OFFSET #{endNum} </if>
     </select>
 
+    <!--
+        游标分页（Keyset Pagination）查询：用于大规模数据同步
+        设计要点：
+        1) 强依赖 (snapshottime, datauuid) 联合索引 (GaussDB/PostgreSQL)
+        2) 第一次调用 cursorTime/cursorUuid 为 null
+        3) 后续批次用上一批最后一条记录的 snapshottime 和 datauuid 推进游标
+        4) 使用 ORDER BY + LIMIT，无需扫描 OFFSET 之前的全部记录
+        复杂度：O(N)（相对 limit/offset 的 O(N*offset) 大幅提升）
+    -->
+    <select id="selectByCursorShard" resultMap="OdsRtSzdnSnapshotFlowAddcodeResult">
+        SELECT t.big_id, t.datauuid, t.gantrycode, t.gantryname, t.roadcode, t.roadname,
+               t.sectioncode, t.sectionname, t.tollcode, t.tollname, t.orgcode, t.orgname,
+               t.platenumber, t.platecolor, t.platecolorcode, t.platetypecode, t.platetype,
+               t.carbrand, t.carcolor, t.cartypecode, t.cartype, t.cardirection,
+               t.snapshottime, t.snapshottimeunix, t.hexcode, t.pileno, t.lon, t.lat,
+               t.direction, t.deviceid, t.deviceip, t.gradelevel, t.loadtime, t.cameratype,
+               t.snappicturepath, t.receivedtimeunix, t.receivedtime
+        FROM jl_data01.ods_rt_szdn_snapshot_flow_addcode t
+        <where>
+            and t.snapshottime >= to_timestamp(#{startTime},'yyyy-mm-dd HH24:MI:SS')
+            and t.snapshottime <![CDATA[<]]> to_timestamp(#{endTime},'yyyy-mm-dd HH24:MI:SS')
+            <if test="cursorTime != null and cursorTime != ''">
+                and (
+                     t.snapshottime > to_timestamp(#{cursorTime},'yyyy-mm-dd HH24:MI:SS')
+                     or (
+                         t.snapshottime = to_timestamp(#{cursorTime},'yyyy-mm-dd HH24:MI:SS')
+                         <if test="cursorUuid != null and cursorUuid != ''">
+                             and t.datauuid > #{cursorUuid}
+                         </if>
+                     )
+                )
+            </if>
+        </where>
+        ORDER BY t.snapshottime ASC, t.datauuid ASC
+        LIMIT #{limit}
+    </select>
 
 </mapper>

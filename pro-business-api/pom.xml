@@ -20,6 +20,71 @@
             <groupId>com.ruoyi</groupId>
             <artifactId>pro-base-common</artifactId>
         </dependency>
+        <!-- Spring Kafka -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+        <!-- Apache Pulsar 客户端（替换 Kafka 的消息队列功能） -->
+        <!-- pulsar-client 是 Pulsar 的官方 Java 客户端，提供 Producer/Consumer API -->
+        <!-- 注意：Pulsar 2.10+ 要求 JDK 11+；如果使用 JDK 8，请使用 pulsar-client:2.9.x -->
+        <dependency>
+            <groupId>org.apache.pulsar</groupId>
+            <artifactId>pulsar-client</artifactId>
+        </dependency>
+
+        <!-- ==================== Flink 依赖（JDK 1.8 兼容，Scala 2.11，Flink 1.13.2） ==================== -->
+        <!-- Flink Core + Java API（核心依赖，提供基础的 DataSet / DataStream API） -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-java</artifactId>
+        </dependency>
+        <!-- Flink Streaming Java（流处理核心，包含 DataStream API 及算子） -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-streaming-java_2.11</artifactId>
+        </dependency>
+        <!-- Flink 客户端（StreamExecutionEnvironment.getExecutionEnvironment() 所需） -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-clients_2.11</artifactId>
+        </dependency>
+        <!-- Flink Kafka Connector（FlinkKafkaConsumer / FlinkKafkaProducer 所在依赖） -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-connector-kafka_2.11</artifactId>
+        </dependency>
+        <!-- Flink Runtime（状态后端、StateTtlConfig、Checkpoint 等核心运行时组件） -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-runtime_2.11</artifactId>
+        </dependency>
+
+        <!-- RocketMQ Spring Boot Starter -->
+         <dependency>
+            <groupId>org.apache.rocketmq</groupId>
+            <artifactId>rocketmq-spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- RabbitMQ Spring Boot Starter -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
+        <!-- Elasticsearch High Level REST Client -->
+        <dependency>
+            <groupId>org.elasticsearch.client</groupId>
+            <artifactId>elasticsearch-rest-high-level-client</artifactId>
+        </dependency>
+
+        <!-- Elasticsearch Core -->
+        <dependency>
+            <groupId>org.elasticsearch</groupId>
+            <artifactId>elasticsearch</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>

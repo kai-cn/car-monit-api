@@ -1,0 +1,503 @@
+# ================================================================
+# 大规模数据专用 - Elasticsearch 索引配置脚本
+# 目标规模：3张表，每张8亿条数据
+# 核心特性：全字段模糊查询 + 时间范围查询 + 热/暖/冷分层存储
+# ================================================================
+
+# ================================================================
+# 步骤1：创建索引模板（所有快照流水表统一模板）
+# 关键技术点：ngram tokenizer + rollover alias
+# ================================================================
+
+PUT _index_template/ods_snapshot_template
+{
+  "index_patterns": ["ods_snapshot_*"],
+  "priority": 100,
+  "template": {
+    "settings": {
+      "number_of_shards": 5,
+      "number_of_replicas": 1,
+      "refresh_interval": "5s",
+      "index": {
+        "max_result_window": 10000,
+        "routing.allocation.include.temperature": "hot",
+        "sort": {
+          "field": "snapshottime",
+          "order": "desc"
+        }
+      },
+      "analysis": {
+        "analyzer": {
+          "plate_ngram_analyzer": {
+            "type": "custom",
+            "tokenizer": "plate_ngram_tokenizer",
+            "filter": ["uppercase"]
+          },
+          "chinese_text_analyzer": {
+            "type": "custom",
+            "tokenizer": "chinese_ngram_tokenizer",
+            "filter": ["lowercase"]
+          },
+          "plate_keyword_analyzer": {
+            "type": "custom",
+            "tokenizer": "keyword",
+            "filter": ["uppercase"]
+          }
+        },
+        "tokenizer": {
+          "plate_ngram_tokenizer": {
+            "type": "ngram",
+            "min_gram": 2,
+            "max_gram": 4,
+            "token_chars": ["letter", "digit"]
+          },
+          "chinese_ngram_tokenizer": {
+            "type": "ngram",
+            "min_gram": 1,
+            "max_gram": 3,
+            "token_chars": ["letter", "digit", "cjk_token"]
+          }
+        }
+      }
+    },
+    "mappings": {
+      "_source": {
+        "enabled": true
+      },
+      "properties": {
+        "big_id": {"type": "keyword"},
+        "datauuid": {"type": "keyword"},
+
+        "snapshottime": {
+          "type": "date",
+          "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+        },
+        "snapshottimeunix": {"type": "long"},
+        "receivedtime": {"type": "date", "format": "yyyy-MM-dd HH:mm:ss"},
+
+        "gantrycode": {
+          "type": "keyword",
+          "fields": {
+            "ngram": {
+              "type": "text",
+              "analyzer": "plate_ngram_analyzer",
+              "search_analyzer": "plate_keyword_analyzer"
+            }
+          }
+        },
+        "roadcode": {
+          "type": "keyword",
+          "fields": {"ngram": {"type": "text", "analyzer": "plate_ngram_analyzer"}}
+        },
+        "sectioncode": {
+          "type": "keyword",
+          "fields": {"ngram": {"type": "text", "analyzer": "plate_ngram_analyzer"}}
+        },
+        "tollcode": {
+          "type": "keyword",
+          "fields": {"ngram": {"type": "text", "analyzer": "plate_ngram_analyzer"}}
+        },
+        "orgcode": {
+          "type": "keyword",
+          "fields": {"ngram": {"type": "text", "analyzer": "plate_ngram_analyzer"}}
+        },
+        "hexcode": {
+          "type": "keyword",
+          "fields": {"ngram": {"type": "text", "analyzer": "plate_ngram_analyzer"}}
+        },
+        "pileno": {
+          "type": "keyword",
+          "fields": {"ngram": {"type": "text", "analyzer": "plate_ngram_analyzer"}}
+        },
+
+        "gantryname": {
+          "type": "text",
+          "analyzer": "chinese_text_analyzer",
+          "fields": {"keyword": {"type": "keyword", "ignore_above": 256}}
+        },
+        "roadname": {
+          "type": "text",
+          "analyzer": "chinese_text_analyzer",
+          "fields": {"keyword": {"type": "keyword", "ignore_above": 256}}
+        },
+        "sectionname": {
+          "type": "text",
+          "analyzer": "chinese_text_analyzer",
+          "fields": {"keyword": {"type": "keyword", "ignore_above": 256}}
+        },
+        "tollname": {
+          "type": "text",
+          "analyzer": "chinese_text_analyzer",
+          "fields": {"keyword": {"type": "keyword", "ignore_above": 256}}
+        },
+        "orgname": {
+          "type": "text",
+          "analyzer": "chinese_text_analyzer",
+          "fields": {"keyword": {"type": "keyword", "ignore_above": 256}}
+        },
+
+        "platenumber": {
+          "type": "text",
+          "analyzer": "plate_ngram_analyzer",
+          "search_analyzer": "plate_keyword_analyzer",
+          "fields": {
+            "keyword": {"type": "keyword", "ignore_above": 16}
+          }
+        },
+        "platecolor": {"type": "keyword"},
+        "platetypecode": {"type": "keyword"},
+        "platetype": {"type": "keyword"},
+
+        "deviceid": {"type": "keyword"},
+        "carbrand": {"type": "keyword"},
+        "cartypecode": {"type": "keyword"},
+        "cardirection": {"type": "keyword"},
+        "cartype": {"type": "keyword"},
+        "carcolor": {"type": "keyword"},
+
+        "lon": {"type": "float"},
+        "lat": {"type": "float"},
+        "direction": {"type": "integer"},
+        "gradelevel": {"type": "integer"},
+        "snappicturepath": {"type": "keyword"}
+      }
+    },
+    "aliases": {
+      "ods_snapshot_hot_search": {}
+    }
+  }
+}
+
+# ================================================================
+# 步骤2：创建第一个 rollover 索引（热数据索引）
+# ================================================================
+
+PUT ods_snapshot_hot_202606-000001
+{
+  "aliases": {
+    "ods_snapshot_hot_search": {
+      "is_write_index": true
+    }
+  }
+}
+
+# ================================================================
+# 步骤3：交易流水表模板
+# ================================================================
+
+PUT _index_template/ods_fee_records_template
+{
+  "index_patterns": ["ods_fee_*"],
+  "priority": 100,
+  "template": {
+    "settings": {
+      "number_of_shards": 5,
+      "number_of_replicas": 1,
+      "refresh_interval": "5s",
+      "analysis": {
+        "analyzer": {
+          "plate_ngram_analyzer": {
+            "type": "custom",
+            "tokenizer": "plate_ngram_tokenizer",
+            "filter": ["uppercase"]
+          },
+          "chinese_text_analyzer": {
+            "type": "custom",
+            "tokenizer": "chinese_ngram_tokenizer",
+            "filter": ["lowercase"]
+          },
+          "plate_keyword_analyzer": {
+            "type": "custom",
+            "tokenizer": "keyword",
+            "filter": ["uppercase"]
+          }
+        },
+        "tokenizer": {
+          "plate_ngram_tokenizer": {
+            "type": "ngram",
+            "min_gram": 2,
+            "max_gram": 4,
+            "token_chars": ["letter", "digit"]
+          },
+          "chinese_ngram_tokenizer": {
+            "type": "ngram",
+            "min_gram": 1,
+            "max_gram": 3,
+            "token_chars": ["letter", "digit", "cjk_token"]
+          }
+        }
+      }
+    },
+    "mappings": {
+      "properties": {
+        "big_id": {"type": "keyword"},
+        "transtime": {"type": "date", "format": "yyyy-MM-dd HH:mm:ss"},
+        "transtype": {"type": "keyword"},
+        "vehicleplate": {
+          "type": "text",
+          "analyzer": "plate_ngram_analyzer",
+          "search_analyzer": "plate_keyword_analyzer",
+          "fields": {"keyword": {"type": "keyword"}}
+        },
+        "vehicletype": {"type": "keyword"},
+        "axiscount": {"type": "integer"},
+        "vehiclehight": {"type": "float"},
+        "fee": {"type": "float"},
+        "payfee": {"type": "float"},
+        "gantryid": {
+          "type": "keyword",
+          "fields": {"ngram": {"type": "text", "analyzer": "plate_ngram_analyzer"}}
+        },
+        "sectioncode": {"type": "keyword"},
+        "passstate": {"type": "keyword"},
+        "dealstatus": {"type": "keyword"},
+        "entime": {"type": "date", "format": "yyyy-MM-dd HH:mm:ss"},
+        "extime": {"type": "date", "format": "yyyy-MM-dd HH:mm:ss"},
+        "cid": {"type": "long"}
+      }
+    },
+    "aliases": {
+      "ods_fee_search": {}
+    }
+  }
+}
+
+PUT ods_fee_hot_202606-000001
+{
+  "aliases": {
+    "ods_fee_search": {
+      "is_write_index": true
+    }
+  }
+}
+
+# ================================================================
+# 步骤4：轨迹拟合表模板
+# ================================================================
+
+PUT _index_template/zdata_trail_template
+{
+  "index_patterns": ["zdata_trail_*"],
+  "priority": 100,
+  "template": {
+    "settings": {
+      "number_of_shards": 3,
+      "number_of_replicas": 1,
+      "refresh_interval": "10s",
+      "analysis": {
+        "analyzer": {
+          "plate_ngram_analyzer": {
+            "type": "custom",
+            "tokenizer": "plate_ngram_tokenizer",
+            "filter": ["uppercase"]
+          },
+          "chinese_text_analyzer": {
+            "type": "custom",
+            "tokenizer": "chinese_ngram_tokenizer",
+            "filter": ["lowercase"]
+          }
+        },
+        "tokenizer": {
+          "plate_ngram_tokenizer": {"type": "ngram", "min_gram": 2, "max_gram": 4},
+          "chinese_ngram_tokenizer": {"type": "ngram", "min_gram": 1, "max_gram": 3}
+        }
+      }
+    },
+    "mappings": {
+      "properties": {
+        "cid": {"type": "long"},
+        "envehicleid": {
+          "type": "text",
+          "analyzer": "plate_ngram_analyzer",
+          "fields": {"keyword": {"type": "keyword"}}
+        },
+        "exvehicleid": {
+          "type": "text",
+          "analyzer": "plate_ngram_analyzer",
+          "fields": {"keyword": {"type": "keyword"}}
+        },
+        "envehicletype": {"type": "keyword"},
+        "entime": {"type": "date", "format": "yyyy-MM-dd HH:mm:ss"},
+        "extime": {"type": "date", "format": "yyyy-MM-dd HH:mm:ss"},
+        "entollstationname": {
+          "type": "text",
+          "analyzer": "chinese_text_analyzer",
+          "fields": {"keyword": {"type": "keyword"}}
+        },
+        "extollstationname": {
+          "type": "text",
+          "analyzer": "chinese_text_analyzer",
+          "fields": {"keyword": {"type": "keyword"}}
+        }
+      }
+    },
+    "aliases": {
+      "zdata_trail_search": {}
+    }
+  }
+}
+
+PUT zdata_trail_hot_202606-000001
+{
+  "aliases": {
+    "zdata_trail_search": {
+      "is_write_index": true
+    }
+  }
+}
+
+# ================================================================
+# 步骤5：ILM 生命周期策略（热->暖->冷->删除）
+# ================================================================
+
+PUT _ilm/policy/year_data_lifecycle_policy
+{
+  "policy": {
+    "phases": {
+      "hot": {
+        "min_age": "0d",
+        "actions": {
+          "rollover": {
+            "max_age": "30d",
+            "max_docs": 50000000,
+            "max_size": "500gb"
+          },
+          "set_priority": {
+            "priority": 100
+          }
+        }
+      },
+      "warm": {
+        "min_age": "30d",
+        "actions": {
+          "set_priority": {
+            "priority": 50
+          },
+          "shrink": {
+            "number_of_shards": 1
+          },
+          "forcemerge": {
+            "max_num_segments": 1
+          },
+          "allocate": {
+            "require": {
+              "temperature": "warm"
+            }
+          }
+        }
+      },
+      "cold": {
+        "min_age": "180d",
+        "actions": {
+          "set_priority": {
+            "priority": 0
+          },
+          "freeze": {},
+          "allocate": {
+            "require": {
+              "temperature": "cold"
+            }
+          }
+        }
+      },
+      "delete": {
+        "min_age": "365d",
+        "actions": {
+          "delete": {}
+        }
+      }
+    }
+  }
+}
+
+# ================================================================
+# 步骤6：将 ILM 策略应用到索引
+# ================================================================
+
+PUT ods_snapshot_hot_202606-000001/_settings
+{
+  "index.lifecycle.name": "year_data_lifecycle_policy",
+  "index.lifecycle.rollover_alias": "ods_snapshot_hot_search"
+}
+
+PUT ods_fee_hot_202606-000001/_settings
+{
+  "index.lifecycle.name": "year_data_lifecycle_policy",
+  "index.lifecycle.rollover_alias": "ods_fee_search"
+}
+
+PUT zdata_trail_hot_202606-000001/_settings
+{
+  "index.lifecycle.name": "year_data_lifecycle_policy",
+  "index.lifecycle.rollover_alias": "zdata_trail_search"
+}
+
+# ================================================================
+# 测试样例：查询最近一年，车牌号含"赣A"
+# ================================================================
+
+POST ods_snapshot_hot_search,ods_snapshot_warm_*/_search
+{
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "range": {
+            "snapshottime": {
+              "gte": "2025-06-13 00:00:00",
+              "lte": "2026-06-13 23:59:59",
+              "format": "yyyy-MM-dd HH:mm:ss"
+            }
+          }
+        },
+        {
+          "match": {
+            "platenumber": "赣A1"
+          }
+        }
+      ]
+    }
+  },
+  "size": 100,
+  "sort": [{"snapshottime": "desc"}]
+}
+
+# ================================================================
+# 统计查询示例：按门架统计最近一年 Top 100
+# ================================================================
+
+POST ods_snapshot_hot_search,ods_snapshot_warm_*/_search
+{
+  "query": {
+    "range": {
+      "snapshottime": {
+        "gte": "now-1y",
+        "lte": "now"
+      }
+    }
+  },
+  "size": 0,
+  "aggs": {
+    "gantry_stats": {
+      "terms": {
+        "field": "gantrycode",
+        "size": 100
+      },
+      "aggs": {
+        "total_count": {
+          "value_count": {
+            "field": "datauuid"
+          }
+        }
+      }
+    }
+  }
+}
+
+# ================================================================
+# 健康检查：查看索引和分片分布
+# ================================================================
+
+GET _cat/indices/ods_snapshot_*,ods_fee_*,zdata_trail_*?v&s=index
+GET _ilm/status
+GET _cat/shards/ods_snapshot_*?v&s=store.size:desc

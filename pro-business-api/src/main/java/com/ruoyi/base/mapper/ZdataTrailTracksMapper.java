@@ -50,4 +50,11 @@ public interface ZdataTrailTracksMapper extends BaseMapper<ZdataTrailTracks> {
      * @return
      */
     List<ZdataTrailTracks> getUnFitting(CarParaVO carParaVO);
+
+    /**
+     * 使用游标分页查询轨迹数据（高性能版本）
+     * @param carParaVO
+     * @return
+     */
+    List<ZdataTrailTracks> getLatestTrailByCursor(CarParaVO carParaVO);
 }

@@ -176,4 +176,20 @@ public class DateUtils extends org.apache.commons.lang3.time.DateUtils {
     public static Timestamp getTimestampNew() {
         return Timestamp.valueOf(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()));
     }
+
+    public static String formatDate(Date date) {
+        return parseDateToStr(YYYY_MM_DD, date);
+    }
+
+    public static String formatHour(Date date) {
+        return parseDateToStr("yyyy-MM-dd HH:00:00", date);
+    }
+
+    public static Date addMinutes(Date date, int minutes) {
+        return org.apache.commons.lang3.time.DateUtils.addMinutes(date, minutes);
+    }
+
+    public static Date addHours(Date date, int hours) {
+        return org.apache.commons.lang3.time.DateUtils.addHours(date, hours);
+    }
 }
