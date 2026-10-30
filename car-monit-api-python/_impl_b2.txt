@@ -1,0 +1,491 @@
+
+===== OdsRtSzdnSnapshotFlowProvcaptureAddcodeServiceImpl.java =====
+package com.ruoyi.base.service.impl;
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowProvcaptureAddcode;
+import com.ruoyi.base.mapper.OdsRtSzdnSnapshotFlowProvcaptureAddcodeMapper;
+import com.ruoyi.base.service.IOdsRtSzdnSnapshotFlowProvcaptureAddcodeService;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
+import com.ruoyi.common.utils.CommonUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * 省界抓拍Service业务层处理
+ *
+ * @author ruoyi
+ * @date 2025-09-18
+ */
+@Service
+public class OdsRtSzdnSnapshotFlowProvcaptureAddcodeServiceImpl extends ServiceImpl<OdsRtSzdnSnapshotFlowProvcaptureAddcodeMapper, OdsRtSzdnSnapshotFlowProvcaptureAddcode> implements IOdsRtSzdnSnapshotFlowProvcaptureAddcodeService {
+
+    @Autowired
+    private OdsRtSzdnSnapshotFlowProvcaptureAddcodeMapper odsRtSzdnSnapshotFlowProvcaptureAddcodeMapper;
+
+    @Autowired
+    private RedisCache redisCache;
+
+    /**
+     * 查询省界抓拍
+     *
+     * @param bigId 省界抓拍ID
+     * @return 省界抓拍
+     */
+    @Override
+    public OdsRtSzdnSnapshotFlowProvcaptureAddcode selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeById(Long bigId) {
+        return odsRtSzdnSnapshotFlowProvcaptureAddcodeMapper.selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeById(bigId);
+    }
+
+    /**
+     * 查询省界抓拍列表
+     *
+     * @param odsRtSzdnSnapshotFlowProvcaptureAddcode 省界抓拍
+     * @return 省界抓拍
+     */
+    @Override
+    public List<OdsRtSzdnSnapshotFlowProvcaptureAddcode> selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeList(OdsRtSzdnSnapshotFlowProvcaptureAddcode odsRtSzdnSnapshotFlowProvcaptureAddcode) {
+        return odsRtSzdnSnapshotFlowProvcaptureAddcodeMapper.selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeList(odsRtSzdnSnapshotFlowProvcaptureAddcode);
+    }
+
+
+    /**
+     * 根据UUID 查询
+     * @param queryUuids
+     * @return
+     */
+    @Override
+    public Map<String, OdsRtSzdnSnapshotFlowProvcaptureAddcode> selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeByQueryUuids(String queryUuids) {
+        Map<String, OdsRtSzdnSnapshotFlowProvcaptureAddcode> map = new HashMap<>();
+        if (CommonUtil.isNotBlank(queryUuids)) {
+            List<String> uuidList = Arrays.stream(queryUuids.split(",")).collect(Collectors.toList());
+            for (String uuid : uuidList) {
+                if (CommonUtil.isNotBlank(uuid)) {
+                    // redis查找
+                    String key = Constants.DATE_PROV_CAPTURE + uuid;
+                    Object obj = redisCache.getCacheObject(key);
+                    if (null != obj) {
+                        map.put(uuid, (OdsRtSzdnSnapshotFlowProvcaptureAddcode) obj);
+                    } else {
+                        OdsRtSzdnSnapshotFlowProvcaptureAddcode querybo = new OdsRtSzdnSnapshotFlowProvcaptureAddcode();
+                        querybo.setDatauuid(uuid);
+                        List<OdsRtSzdnSnapshotFlowProvcaptureAddcode> list = odsRtSzdnSnapshotFlowProvcaptureAddcodeMapper.selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeList(querybo);
+                        if (null!=list && list.size() > 0) {
+                            map.put(uuid, list.get(0));
+                            redisCache.setCacheObject(key, list.get(0));
+                        }else{
+                            redisCache.setCacheObject(key, querybo);
+                        }
+                    }
+                }
+            }
+        }
+        return map;
+    }
+}
+
+===== OdsRtSzdnSnapshotFlowStationcaptureAddcodeServiceImpl.java =====
+package com.ruoyi.base.service.impl;
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowStationcaptureAddcode;
+import com.ruoyi.base.mapper.OdsRtSzdnSnapshotFlowStationcaptureAddcodeMapper;
+import com.ruoyi.base.service.IOdsRtSzdnSnapshotFlowStationcaptureAddcodeService;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
+import com.ruoyi.common.utils.CommonUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * 收费站抓拍Service业务层处理
+ *
+ * @author ruoyi
+ * @date 2025-09-18
+ */
+@Service
+public class OdsRtSzdnSnapshotFlowStationcaptureAddcodeServiceImpl extends ServiceImpl<OdsRtSzdnSnapshotFlowStationcaptureAddcodeMapper, OdsRtSzdnSnapshotFlowStationcaptureAddcode> implements IOdsRtSzdnSnapshotFlowStationcaptureAddcodeService {
+
+    @Autowired
+    private OdsRtSzdnSnapshotFlowStationcaptureAddcodeMapper odsRtSzdnSnapshotFlowStationcaptureAddcodeMapper;
+
+    @Autowired
+    private RedisCache redisCache;
+
+    /**
+     * 查询收费站抓拍
+     *
+     * @param bigId 收费站抓拍ID
+     * @return 收费站抓拍
+     */
+    @Override
+    public OdsRtSzdnSnapshotFlowStationcaptureAddcode selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeById(Long bigId) {
+        return odsRtSzdnSnapshotFlowStationcaptureAddcodeMapper.selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeById(bigId);
+    }
+
+    /**
+     * 查询收费站抓拍列表
+     *
+     * @param odsRtSzdnSnapshotFlowStationcaptureAddcode 收费站抓拍
+     * @return 收费站抓拍
+     */
+    @Override
+    public List<OdsRtSzdnSnapshotFlowStationcaptureAddcode> selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeList(OdsRtSzdnSnapshotFlowStationcaptureAddcode odsRtSzdnSnapshotFlowStationcaptureAddcode) {
+        return odsRtSzdnSnapshotFlowStationcaptureAddcodeMapper.selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeList(odsRtSzdnSnapshotFlowStationcaptureAddcode);
+    }
+
+    /**
+     * 根据UUID 查询
+     * @param queryUuids
+     * @return
+     */
+    @Override
+    public Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByQueryUuids(String queryUuids,String applyTime1,String applyTime2) {
+        Map<String, OdsRtSzdnSnapshotFlowStationcaptureAddcode> map = new HashMap<>();
+        if(CommonUtil.isNotBlank(queryUuids)) {
+            String[] split = queryUuids.split(",");
+            List<String> uuidList = Arrays.stream(split).collect(Collectors.toList());
+            for (String uuid : uuidList) {
+                if(CommonUtil.isNotBlank(uuid)) {
+                    // redis查找
+                    String key = Constants.DATE_STATION_CAPTURE + uuid;
+                    Object obj = redisCache.getCacheObject(key);
+                    if (null != obj) {
+                        map.put(uuid, (OdsRtSzdnSnapshotFlowStationcaptureAddcode) obj);
+                    } else {
+                        OdsRtSzdnSnapshotFlowStationcaptureAddcode querybo = new OdsRtSzdnSnapshotFlowStationcaptureAddcode();
+                        querybo.setDatauuid(uuid);
+                        querybo.setApplyTime1(applyTime1);
+                        querybo.setApplyTime2(applyTime2);
+                        List<OdsRtSzdnSnapshotFlowStationcaptureAddcode> list = odsRtSzdnSnapshotFlowStationcaptureAddcodeMapper.selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeList(querybo);
+                        if (null!=list && list.size() > 0) {
+                            map.put(uuid, list.get(0));
+                            redisCache.setCacheObject(key, list.get(0));
+                        }else{
+                            redisCache.setCacheObject(key, querybo);
+                        }
+                    }
+                }
+
+
+            }
+        }
+        return map;
+    }
+}
+
+===== OdsSzdnSectionServiceImpl.java =====
+package com.ruoyi.base.service.impl;
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ruoyi.base.domain.OdsSzdnSection;
+import com.ruoyi.base.mapper.OdsSzdnSectionMapper;
+import com.ruoyi.base.service.IOdsSzdnSectionService;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
+import com.ruoyi.common.utils.CommonUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 路段信息Service业务层处理
+ *
+ * @author ruoyi
+ * @date 2025-08-29
+ */
+@Service
+public class OdsSzdnSectionServiceImpl extends ServiceImpl<OdsSzdnSectionMapper, OdsSzdnSection> implements IOdsSzdnSectionService {
+
+    @Autowired
+    private OdsSzdnSectionMapper odsSzdnSectionMapper;
+
+    @Autowired
+    private RedisCache redisCache;
+
+    /**
+     * 查询路段信息
+     *
+     * @param id 路段信息ID
+     * @return 路段信息
+     */
+    @Override
+    public OdsSzdnSection selectOdsSzdnSectionById(String id) {
+        return odsSzdnSectionMapper.selectOdsSzdnSectionById(id);
+    }
+
+    /**
+     * 查询路段信息列表
+     *
+     * @param odsSzdnSection 路段信息
+     * @return 路段信息
+     */
+    @Override
+    public List<OdsSzdnSection> selectOdsSzdnSectionList(OdsSzdnSection odsSzdnSection) {
+        return odsSzdnSectionMapper.selectOdsSzdnSectionList(odsSzdnSection);
+    }
+
+    @Override
+    public Map<String, OdsSzdnSection> getSectionMap() {
+        List<OdsSzdnSection> list = null;
+        Object obj = redisCache.getCacheObject(Constants.SECTION_ROAD_MAP);
+        if (null != obj) {
+            list = (List) obj;
+        } else {
+            list = this.updateRedis();
+        }
+        Map<String, OdsSzdnSection> map = new HashMap<>();
+        for (OdsSzdnSection section : list) {
+            map.put(CommonUtil.isNull(section.getSectionCode()), section);
+        }
+        return map;
+    }
+
+
+    /**
+     * 获取路段map
+     * @return
+     */
+    public List<OdsSzdnSection> getSectionList(){
+        List<OdsSzdnSection> list = null;
+        Object obj = redisCache.getCacheObject(Constants.SECTION_ROAD_MAP);
+        if (null != obj) {
+            list = (List) obj;
+        } else {
+            list = this.updateRedis();
+        }
+        return list;
+    }
+
+
+
+    @Override
+    public List<OdsSzdnSection> updateRedis() {
+        List<OdsSzdnSection> sectionList = odsSzdnSectionMapper.selectOdsSzdnSectionList(new OdsSzdnSection());
+        redisCache.setCacheObject(Constants.SECTION_ROAD_MAP, sectionList);
+        return sectionList;
+    }
+}
+
+===== OdsLwzxsfsjFeeRecords01ServiceImpl.java =====
+package com.ruoyi.base.service.impl;
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ruoyi.base.domain.OdsLwzxsfsjFeeRecords01;
+import com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper;
+import com.ruoyi.base.service.IOdsLwzxsfsjFeeRecords01Service;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
+import com.ruoyi.common.utils.CommonUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * 基础-收费流水Service业务层处理
+ *
+ * @author ruoyi
+ * @date 2025-08-29
+ */
+@Service
+public class OdsLwzxsfsjFeeRecords01ServiceImpl extends ServiceImpl<OdsLwzxsfsjFeeRecords01Mapper, OdsLwzxsfsjFeeRecords01> implements IOdsLwzxsfsjFeeRecords01Service {
+
+    @Autowired
+    private OdsLwzxsfsjFeeRecords01Mapper odsLwzxsfsjFeeRecords01Mapper;
+
+    @Autowired
+    private RedisCache redisCache;
+
+    /**
+     * 查询基础-收费流水
+     *
+     * @param bigId 基础-收费流水ID
+     * @return 基础-收费流水
+     */
+    @Override
+    public OdsLwzxsfsjFeeRecords01 selectOdsLwzxsfsjFeeRecords01ById(String bigId) {
+        return odsLwzxsfsjFeeRecords01Mapper.selectOdsLwzxsfsjFeeRecords01ById(bigId);
+    }
+
+    /**
+     * 查询基础-收费流水列表
+     *
+     * @param odsLwzxsfsjFeeRecords01 基础-收费流水
+     * @return 基础-收费流水
+     */
+    @Override
+    public List<OdsLwzxsfsjFeeRecords01> selectOdsLwzxsfsjFeeRecords01List(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01) {
+        return odsLwzxsfsjFeeRecords01Mapper.selectOdsLwzxsfsjFeeRecords01List(odsLwzxsfsjFeeRecords01);
+    }
+
+    @Override
+    public Map<String, OdsLwzxsfsjFeeRecords01> selectOdsLwzxsfsjFeeRecords01ByQueryUuids(String queryUuids,String applyTime1, String applyTime2) {
+        Map<String, OdsLwzxsfsjFeeRecords01> map = new HashMap<>();
+        if(CommonUtil.isNotBlank(queryUuids)) {
+            String[] split = queryUuids.split(",");
+            List<String> uuidList = Arrays.stream(split).collect(Collectors.toList());
+            for (String uuid : uuidList) {
+                if(CommonUtil.isNotBlank(uuid)) {
+                    // redis查找
+                    String key = Constants.DATE_FeeRecord + uuid;
+                    Object obj = redisCache.getCacheObject(key);
+                    if (null != obj) {
+                        map.put(uuid, (OdsLwzxsfsjFeeRecords01) obj);
+                    } else {
+                        OdsLwzxsfsjFeeRecords01 querybo = new OdsLwzxsfsjFeeRecords01();
+                        querybo.setCid(uuid);
+                        querybo.setInApplyTime1(applyTime1);
+                        querybo.setInApplyTime2(applyTime2);
+                        List<OdsLwzxsfsjFeeRecords01> list = odsLwzxsfsjFeeRecords01Mapper.selectOdsLwzxsfsjFeeRecords01List(querybo);
+                        if (null!=list && list.size() > 0) {
+                            map.put(uuid, list.get(0));
+                            redisCache.setCacheObject(key, list.get(0));
+                        }else{
+                            redisCache.setCacheObject(key, querybo);
+                        }
+                    }
+                }
+
+
+            }
+        }
+        return map;
+    }
+
+    /**
+     * 查询基础-收费流水列表
+     *
+     * @param odsLwzxsfsjFeeRecords01 基础-收费流水
+     * @return 基础-收费流水集合
+     */
+    public int selectGantryNum(OdsLwzxsfsjFeeRecords01 odsLwzxsfsjFeeRecords01){
+        return odsLwzxsfsjFeeRecords01Mapper.selectGantryNum(odsLwzxsfsjFeeRecords01);
+    }
+
+    @Override
+    public List<OdsLwzxsfsjFeeRecords01> selectOdsLwzxsfsjFeeRecords01ListNew(OdsLwzxsfsjFeeRecords01 bo) {
+        return odsLwzxsfsjFeeRecords01Mapper.selectOdsLwzxsfsjFeeRecords01ListNew(bo);
+    }
+}
+
+===== OdsSzdnGantryServiceImpl.java =====
+package com.ruoyi.base.service.impl;
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ruoyi.base.domain.OdsSzdnGantry;
+import com.ruoyi.base.mapper.OdsSzdnGantryMapper;
+import com.ruoyi.base.service.IOdsSzdnGantryService;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
+import com.ruoyi.common.utils.CommonUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 门架信息Service业务层处理
+ *
+ * @author ruoyi
+ * @date 2025-08-29
+ */
+@Service
+public class OdsSzdnGantryServiceImpl extends ServiceImpl<OdsSzdnGantryMapper, OdsSzdnGantry> implements IOdsSzdnGantryService {
+
+    @Autowired
+    private OdsSzdnGantryMapper odsSzdnGantryMapper;
+
+    @Autowired
+    private RedisCache redisCache;
+
+    /**
+     * 查询门架信息
+     *
+     * @param id 门架信息ID
+     * @return 门架信息
+     */
+    @Override
+    public OdsSzdnGantry selectOdsSzdnGantryById(String id) {
+        return odsSzdnGantryMapper.selectOdsSzdnGantryById(id);
+    }
+
+    /**
+     * 查询门架信息列表
+     *
+     * @param odsSzdnGantry 门架信息
+     * @return 门架信息
+     */
+    @Override
+    public List<OdsSzdnGantry> selectOdsSzdnGantryList(OdsSzdnGantry odsSzdnGantry) {
+        return odsSzdnGantryMapper.selectOdsSzdnGantryList(odsSzdnGantry);
+    }
+
+
+    /**
+     * 查询门架信息列表
+     *
+     * @param
+     * @return 门架信息集合
+     */
+    public  List<OdsSzdnGantry> saveGantryRedis(){
+        List<OdsSzdnGantry> list = odsSzdnGantryMapper.selectOdsSzdnGantryList(new OdsSzdnGantry());
+        redisCache.setCacheObject(Constants.gantry_list, list);
+        return  list;
+
+    }
+
+    /**
+     * 查询门架信息列表
+     *
+     * @param
+     * @return 门架信息集合
+     */
+    public List<OdsSzdnGantry> getGantryRedis(){
+        List<OdsSzdnGantry> list = null;
+        Object obj = redisCache.getCacheObject(Constants.gantry_list);
+        if (null != obj) {
+            list = (List) obj;
+        } else {
+            list = this.saveGantryRedis();
+        }
+        return list;
+    }
+
+
+    /**
+     * 查询门架信息列表
+     *
+     * @param odsSzdnGantry 门架信息
+     * @return 门架信息集合
+     */
+    @Override
+    public Map<String, OdsSzdnGantry> selectOdsSzdnGantryMap(OdsSzdnGantry odsSzdnGantry) {
+        Map<String, OdsSzdnGantry> map = new HashMap<String, OdsSzdnGantry>();
+        List<OdsSzdnGantry> list = odsSzdnGantryMapper.selectOdsSzdnGantryList(odsSzdnGantry);
+        for (OdsSzdnGantry rtn : list) {
+            map.put(CommonUtil.isNull(rtn.getGantryCode()),rtn);
+        }
+        return map;
+    }
+
+}

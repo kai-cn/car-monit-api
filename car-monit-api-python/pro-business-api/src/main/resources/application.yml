@@ -1,0 +1,296 @@
+server:
+  port: 9901
+  servlet:
+    context-path: /
+spring:
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+  # 排除 Druid 自动配置
+  autoconfigure:
+    exclude: com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceAutoConfigure
+  datasource:
+    dynamic:
+      # 启用 p6spy 对数据源的全局代理，打印完整 SQL
+      p6spy: true
+      druid: # 全局druid参数，绝大部分值和默认保持一致。(现已支持的参数如下,不清楚含义不要乱设置)
+        # 连接池的配置信息
+        # 初始化大小，最小，最大
+        initial-size: 5
+        min-idle: 5
+        maxActive: 20
+        # 配置获取连接等待超时的时间
+        maxWait: 60000
+        # 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒
+        timeBetweenEvictionRunsMillis: 60000
+        # 配置一个连接在池中最小生存的时间，单位是毫秒
+        minEvictableIdleTimeMillis: 300000
+        validationQuery: SELECT version()
+        testWhileIdle: true
+        testOnBorrow: false
+        testOnReturn: false
+        # 打开PSCache，并且指定每个连接上PSCache的大小
+        poolPreparedStatements: true
+        maxPoolPreparedStatementPerConnectionSize: 20
+        # 配置监控统计拦截的filters，去掉后监控界面sql无法统计，'wall'用于防火墙
+        filters: stat,wall,slf4j
+        # 通过connectProperties属性来打开mergeSql功能；慢SQL记录
+        connectionProperties: druid.stat.mergeSql\=true;druid.stat.slowSqlMillis\=5000
+      datasource:
+        master:
+#          url: jdbc:postgresql://172.30.100.109:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+          url: jdbc:postgresql://192.168.56.10:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+          username: gaussdb
+          password: OpenGauss@123
+          driver-class-name: org.postgresql.Driver
+  #redis 配置
+  redis:
+    database: 0
+#    host: 172.30.100.102
+    host: 127.0.0.1
+    port: 6379
+#    password: redis321
+    lettuce:
+      pool:
+        max-active: 8   #最大连接数据库连接数,设 0 为没有限制
+        max-idle: 8     #最大等待连接中的数量,设 0 为没有限制
+        max-wait: -1ms  #最大建立连接等待时间。如果超过此时间将接到异常。设为-1表示无限制。
+        min-idle: 0     #最小等待连接中的数量,设 0 为没有限制
+      shutdown-timeout: 100ms
+
+  kafka:
+    bootstrap-servers: localhost:9092
+
+  pulsar:
+    # Pulsar Broker 地址（与 ZooKeeper + BookKeeper 组成集群）
+    # 生产环境建议配置多个 Broker: pulsar://broker1:6650,pulsar://broker2:6650
+    service-url: pulsar://localhost:6650
+
+    # 默认主题名称（persistent = 消息持久化到 BookKeeper）
+    # public/default 是 Pulsar 默认的 tenant 和 namespace
+    topic: persistent://public/default/ods-rt-szdn-snapshot-flow
+
+    # ==================== 生产者配置 ====================
+    # 生产端名称（用于幂等性和消息去重，类似 Kafka producer.id）
+    producer-name: car-monit-producer
+    # 发送超时（毫秒），与 Kafka request.timeout.ms 对应
+    send-timeout-ms: 30000
+    # 批量消息最大条数，与 Kafka batch.size 逻辑类似
+    batch-max-messages: 1000
+    # 批量最大延迟（毫秒），与 Kafka linger.ms 对应
+    batch-max-publish-delay-ms: 10
+    # 最大待确认消息数（控制缓冲区大小，避免 OOM）
+    max-pending-messages: 10000
+    # 跨分区最大待确认消息数（用于分区 Topic）
+    max-pending-messages-across-partitions: 50000
+
+    # ==================== 消费者配置 ====================
+    # 订阅名称（等价于 Kafka group.id）
+    subscription-name: ods-rt-szdn-snapshot-flow-sub
+    # 预取队列大小（控制本地缓存的消息数，类似 Kafka max.poll.records）
+    receiver-queue-size: 1000
+    # 确认超时（毫秒）：超过此时间未确认则重投
+    ack-timeout-ms: 60000
+    # 死信队列触发阈值（超过此次数的消息路由到 DLQ Topic）
+    max-retry-times: 3
+
+    # ==================== 业务配置 ====================
+    # 幂等性 TTL（秒）：Redis 标记的过期时间，避免无限增长
+    # 默认 1 天：窗口内重复的 dataId 会被去重
+    idempotent-ttl-seconds: 86400
+    # 生产者最大重试次数（数据库记录级别）
+    max-retry-count: 10
+
+#mybatis-plus 设置
+mybatis-plus:
+  mapper-locations: classpath*:com/ruoyi/base/**/xml/*Mapper.xml
+  type-aliases-package: com.ruoyi.base.domain
+  global-config:
+    # 关闭MP3.0自带的banner
+    banner: false
+    db-config:
+      #主键类型  0:"数据库ID自增",1:"该类型为未设置主键类型", 2:"用户输入ID",3:"全局唯一ID (数字类型唯一ID)", 4:"全局唯一ID UUID",5:"字符串全局唯一ID (idWorker 的字符串表示)";
+      id-type: ASSIGN_ID
+      # 默认数据库表下划线命名
+      table-underline: true
+  configuration:
+    # 这个配置会将执行的sql打印出来，在开发或测试的时候可以用org.apache.ibatis.logging.nologging.NoLoggingImpl
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # 返回类型为Map,显示null对应的字段
+    call-setters-on-nulls: true
+    map-underscore-to-camel-case: true
+#Mybatis输出sql日志
+logging:
+  level:
+    root: INFO
+    web: DEBUG
+forest:
+  bean-id: forestConfiguration
+  backend: httpclient
+  max-connections: 1000 # 连接池最大连接数，默认值为500
+  max-route-connections: 500 # 每个路由的最大连接数，默认值为500
+  timeout: 60000 # 请求超时时间，单位为毫秒, 默认值为3000
+  connect-timeout: 60000 # 连接超时时间，单位为毫秒, 默认值为2000
+  logEnabled: true # 打开或关闭日志，默认为true
+  retryer: com.dtflys.forest.retryer.BackOffRetryer
+  retry-count: 2
+  max-retry-interval: 1000
+rediscluster:
+  clusterNodes: 36.200.31.15:22400
+  refresh-interval-ms: 300000      # 字典数据刷新间隔（毫秒）
+isLocalhost: local # 是否本地 prod生成
+sysbaseUrl: http://223.84.150.189:26066/prod-api
+
+
+kafka:
+  topic:
+    snapshot-flow: ods-rt-szdn-snapshot-flow
+  max-retry-count: 10
+
+# ==================== Pulsar 消息队列配置 ====================
+# 用于替换原 Kafka 的消息发布/订阅功能
+# Pulsar 与 Kafka 核心区别：
+#   - Topic 格式: persistent://{tenant}/{namespace}/{topic}
+#   - 多订阅模式: Exclusive / Shared / Failover / Key_Shared
+#   - 消息确认: 基于 MessageId 而非 offset
+#   - 内置死信队列 + 消息重投机制（无需手动实现）
+
+
+# RocketMQ配置
+rocketmq:
+  name-server: localhost:9876
+  producer:
+    group: snapshot_flow_producer
+    retry-times-when-send-failed: 3
+    retry-times-when-send-async-failed: 3
+  consumer:
+    group: snapshot_flow_consumer
+    message-model: CLUSTERING
+    consume-thread-max: 10
+
+# RabbitMQ配置
+rabbitmq:
+  host: localhost
+  port: 5672
+  username: guest
+  password: guest
+  virtual-host: /
+  publisher-confirms: true
+  publisher-returns: true
+  listener:
+    simple:
+      concurrency: 5
+      max-concurrency: 10
+      retry:
+        enabled: true
+        max-attempts: 3
+
+# Elasticsearch配置
+elasticsearch:
+  host: localhost
+  port: 9200
+  scheme: http
+  username: elastic
+  password: changeme
+  connection-timeout: 30000
+  socket-timeout: 30000
+  # 索引管理（EsIndexManageService 使用）
+  index:
+    # 三张表对应的索引名（前端查询/导出走这些索引名）
+    snapshot: snapshot_flow
+    fee: fee_records
+    trail: trail_fitting
+    # 索引分片/副本（按 3+ 节点集群设计）
+    shards: 6
+    replicas: 1
+    # 是否在启动时自动创建缺失索引（开发环境建议开启，生产环境建议手动初始化）
+    auto-create: false
+    # ILM 生命周期策略名称（hot/warm/cold/frozen 统一策略）
+    ilm-policy: car_monit_ilm_policy
+    # 创建索引时是否挂载 ILM 策略（生产环境建议开启，实现冷热分层）
+    attach-ilm: false
+
+# 通用大表查询/导出优化配置
+optimization:
+  query:
+    # 单次 ES 查询超时（毫秒）
+    timeout-ms: 30000
+    # from + size 单次最大返回文档数（ES 默认 max_result_window = 10000）
+    max-window: 10000
+    # 时间范围超过多少天时强制走 ES（30 天以内的精确查询可走 MySQL）
+    es-force-days: 30
+  export:
+    # Scroll 单次拉取文档数
+    scroll-batch: 2000
+    # 每 N 条切一个 CSV 文件
+    file-batch: 100000
+    # 导出文件根目录
+    dir: /data/export
+    # Scroll 上下文保留时长（分钟）
+    scroll-keepalive-min: 5
+
+# 消息队列主题配置
+mq:
+  topic:
+    snapshot-flow: topic_snapshot_flow
+  dead-letter:
+    exchange: exchange.snapshot.flow.dlx
+    queue: queue.snapshot.flow.dlx
+    routing-key: snapshot.flow.dlx
+
+sync:
+  batch-size: 1000
+  full-sync-enabled: true
+  incremental-sync-interval: 60000
+  # 以下为旧版单表索引名配置，现已统一由 elasticsearch.index.* 解析，保留仅供兼容
+  # Legacy single-table index names; now unified via elasticsearch.index.* (kept for compatibility)
+  es:
+    index:
+      snapshot: snapshot_flow
+      fee: fee_records
+
+# ==================== GaussDB ↔ ES 一致性对账配置 ====================
+# 四层一致性保障的最后一层（兜底）：定时对账 + 修复
+consistency:
+  # 是否开启定时对账任务（生产环境建议 true）
+  reconcile:
+    enabled: false
+    # 对账回看月份数（仅校验最近 N 个月，控制成本）
+    lookback-months: 3
+    # 漂移告警阈值：ES 与 GaussDB 条数差异比例超过该值视为漂移
+    drift-ratio: 0.01
+    # 定时任务 cron（默认每天 02:30）
+    cron: "0 30 2 * * ?"
+
+# ==================== 数据可靠性保障配置 ====================
+reliability:
+  # 消息超时时间（毫秒），超过此时间未确认视为上报不及时
+  message-timeout-ms: 30000
+  # 最大重试次数
+  max-retry-count: 5
+  # 补偿拉取间隔（秒）
+  compensation-interval-seconds: 60
+  # 延迟告警阈值（毫秒）
+  alert-threshold-ms: 10000
+
+# ==================== 数据丢失检测配置 ====================
+detection:
+  # 检测窗口大小（分钟）
+  window-size-minutes: 60
+  # 检测间隔（分钟）
+  interval-minutes: 30
+  # 丢失率告警阈值（百分比）
+  loss-threshold-percent: 5
+
+# ==================== 延迟监控配置 ====================
+monitoring:
+  # 设备上报延迟告警阈值（毫秒）
+  device-report-threshold-ms: 5000
+  # 消息传输延迟告警阈值（毫秒）
+  message-transfer-threshold-ms: 3000
+  # 数据处理延迟告警阈值（毫秒）
+  data-process-threshold-ms: 10000
+  # 端到端延迟告警阈值（毫秒）
+  end-to-end-threshold-ms: 30000
+  # 统计窗口大小（分钟）
+  stats-window-minutes: 10

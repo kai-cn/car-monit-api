@@ -1,0 +1,20 @@
+# Runtime dependencies of the Python 3.12 port.
+# Mirrors pyproject.toml. Install with:
+#   D:\Python\Python312\python.exe -m pip install -r requirements.txt
+
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+SQLAlchemy>=2.0.30,<2.1
+psycopg[binary]>=3.1,<4.0
+httpx>=0.27,<1.0
+orjson>=3.10,<4.0
+
+# dev / verification only
+pytest>=8.0
+pytest-mock>=3.14
+
+# Deliberately NOT declared (verified unused; the Java side is emulated in-process):
+#   redis        -> com/ruoyi/common/core/redis/RedisCache.py (in-memory shim)
+#   elasticsearch-> org/elasticsearch/*                      (in-memory shim)
+#   APScheduler  -> org/springframework/scheduling/*         (CronExpression + ThreadPoolTaskScheduler)
+#   PyYAML       -> org/springframework/core/env/Environment.py (hand-written flat YAML reader)

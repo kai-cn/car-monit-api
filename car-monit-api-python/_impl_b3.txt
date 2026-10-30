@@ -1,0 +1,610 @@
+
+===== OdsSzdnTollServiceImpl.java =====
+package com.ruoyi.base.service.impl;
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ruoyi.base.domain.OdsSzdnToll;
+import com.ruoyi.base.mapper.OdsSzdnTollMapper;
+import com.ruoyi.base.service.IOdsSzdnTollService;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
+import com.ruoyi.common.utils.CommonUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 收费站基础信息Service业务层处理
+ *
+ * @author ruoyi
+ * @date 2025-08-29
+ */
+@Service
+public class OdsSzdnTollServiceImpl extends ServiceImpl<OdsSzdnTollMapper, OdsSzdnToll> implements IOdsSzdnTollService {
+
+    @Autowired
+    private OdsSzdnTollMapper odsSzdnTollMapper;
+
+    @Autowired
+    private RedisCache redisCache;
+
+    /**
+     * 查询收费站基础信息
+     *
+     * @param id 收费站基础信息ID
+     * @return 收费站基础信息
+     */
+    @Override
+    public OdsSzdnToll selectOdsSzdnTollById(String id) {
+        return odsSzdnTollMapper.selectOdsSzdnTollById(id);
+    }
+
+    /**
+     * 查询收费站基础信息列表
+     *
+     * @param odsSzdnToll 收费站基础信息
+     * @return 收费站基础信息
+     */
+    @Override
+    public List<OdsSzdnToll> selectOdsSzdnTollList(OdsSzdnToll odsSzdnToll) {
+        return odsSzdnTollMapper.selectOdsSzdnTollList(odsSzdnToll);
+    }
+
+    /**
+     * 查询收费站基础信息列表
+     *
+     * @param odsSzdnToll 收费站基础信息
+     * @return 收费站基础信息集合
+     */
+    @Override
+    public Map<String, OdsSzdnToll> selectOdsSzdnTollMap(OdsSzdnToll odsSzdnToll) {
+        Map<String, OdsSzdnToll> map = new HashMap<String, OdsSzdnToll>();
+        List<OdsSzdnToll> list = odsSzdnTollMapper.selectOdsSzdnTollList(odsSzdnToll);
+        for (OdsSzdnToll rtn : list) {
+            // 大脑编码
+            map.put(CommonUtil.isNull(rtn.getTollCode()), rtn);
+            // 国网编码
+            map.put(CommonUtil.isNull(rtn.getStateCodeMerge()), rtn);
+        }
+        return map;
+    }
+
+
+    /**
+     * 跟新redis
+     */
+    public List<OdsSzdnToll> updateRedis(){
+        OdsSzdnToll odsSzdnToll = new OdsSzdnToll();
+        List<OdsSzdnToll> list = odsSzdnTollMapper.selectOdsSzdnTollList(odsSzdnToll);
+        redisCache.setCacheObject(Constants.station_info, list);
+        return list;
+    }
+
+
+    /**
+     * 从缓存拿到carlist
+     */
+    public Map<String,OdsSzdnToll> getRedisMap(){
+
+        List<OdsSzdnToll> list = null;
+        Object obj = redisCache.getCacheObject(Constants.station_info);
+        if (null != obj) {
+            list = (List) obj;
+        } else {
+            list = this.updateRedis();
+        }
+
+        Map<String, OdsSzdnToll> map = new HashMap<String, OdsSzdnToll>();
+        for (OdsSzdnToll rtn : list) {
+            // 大脑编码
+            map.put(CommonUtil.isNull(rtn.getTollCode()), rtn);
+            // 国网编码
+            map.put(CommonUtil.isNull(rtn.getStateCodeMerge()), rtn);
+        }
+        return map;
+
+    }
+
+
+
+
+
+}
+
+===== OdsSzdnTollStationIpServiceImpl.java =====
+package com.ruoyi.base.service.impl;
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ruoyi.base.domain.OdsSzdnToll;
+import com.ruoyi.base.domain.OdsSzdnTollStationIp;
+import com.ruoyi.base.mapper.OdsSzdnTollStationIpMapper;
+import com.ruoyi.base.service.IOdsSzdnTollService;
+import com.ruoyi.base.service.IOdsSzdnTollStationIpService;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
+import com.ruoyi.common.utils.CommonUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 收费站ipService业务层处理
+ *
+ * @author ruoyi
+ * @date 2025-09-18
+ */
+@Service
+public class OdsSzdnTollStationIpServiceImpl extends ServiceImpl<OdsSzdnTollStationIpMapper, OdsSzdnTollStationIp> implements IOdsSzdnTollStationIpService {
+
+    @Autowired
+    private OdsSzdnTollStationIpMapper odsSzdnTollStationIpMapper;
+
+    @Autowired
+    private IOdsSzdnTollService odsSzdnTollService;
+
+    @Autowired
+    private RedisCache redisCache;
+
+    /**
+     * 查询收费站ip
+     *
+     * @param id 收费站ipID
+     * @return 收费站ip
+     */
+    @Override
+    public OdsSzdnTollStationIp selectOdsSzdnTollStationIpById(Long id) {
+        return odsSzdnTollStationIpMapper.selectOdsSzdnTollStationIpById(id);
+    }
+
+    /**
+     * 查询收费站ip列表
+     *
+     * @param odsSzdnTollStationIp 收费站ip
+     * @return 收费站ip
+     */
+    @Override
+    public List<OdsSzdnTollStationIp> selectOdsSzdnTollStationIpList(OdsSzdnTollStationIp odsSzdnTollStationIp) {
+        return odsSzdnTollStationIpMapper.selectOdsSzdnTollStationIpList(odsSzdnTollStationIp);
+    }
+
+    /**
+     * 查询收费站ip列表
+     *
+     * @param
+     * @return 收费站ip集合
+     */
+    @Override
+    public Map<String,OdsSzdnTollStationIp> selectStationIpMap(){
+        Map<String,OdsSzdnTollStationIp> map = new HashMap<String,OdsSzdnTollStationIp>();
+        // 收费站ip列表
+        List<OdsSzdnTollStationIp> list = this.getRedisList();
+        for (OdsSzdnTollStationIp rtn : list) {
+            map.put("stationip:"+CommonUtil.isNull(rtn.getIp()), rtn);
+            map.put("stationip:"+CommonUtil.isNull(rtn.getTollCode()), rtn);
+
+            map.put("station:"+CommonUtil.isNull(rtn.getIp()), rtn);
+            map.put("station:"+CommonUtil.isNull(rtn.getTollCode()), rtn);
+
+            // 根据code查询
+            map.put(CommonUtil.isNull(rtn.getIp()), rtn);
+            map.put(CommonUtil.isNull(rtn.getTollCode()), rtn);
+
+            map.put(CommonUtil.repalaceSzdnTollName(rtn.getTollName()), rtn);
+
+        }
+        return map;
+    }
+
+
+    /**
+     * 跟新redis
+     */
+    public List<OdsSzdnTollStationIp> updateRedis(){
+        // 收费站ip列表
+        List<OdsSzdnTollStationIp> list = odsSzdnTollStationIpMapper.selectOdsSzdnTollStationIpList(new OdsSzdnTollStationIp());
+        // 收费站map
+        Map<String,OdsSzdnToll> odsSzdnTollMap = odsSzdnTollService.selectOdsSzdnTollMap(new OdsSzdnToll());
+        for (OdsSzdnTollStationIp rtn : list) {
+            String key = CommonUtil.isNull(rtn.getTollCode()); // 收费站编号
+            if (odsSzdnTollMap.containsKey(key)){
+                rtn.setOdsSzdnToll(odsSzdnTollMap.get(key));
+            }
+        }
+        redisCache.setCacheObject(Constants.station_ip, list);
+        return  list;
+    }
+
+
+    /**
+     * 从缓存拿到redis
+     */
+    public List<OdsSzdnTollStationIp> getRedisList(){
+        List<OdsSzdnTollStationIp> list = null;
+        Object obj = redisCache.getCacheObject(Constants.station_ip);
+        if (null != obj) {
+            list = (List) obj;
+        } else {
+            list = this.updateRedis();
+        }
+        return list;
+    }
+
+
+}
+
+===== OdsSzdnGantryIpServiceImpl.java =====
+package com.ruoyi.base.service.impl;
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ruoyi.base.domain.OdsSzdnGantry;
+import com.ruoyi.base.domain.OdsSzdnGantryIp;
+import com.ruoyi.base.mapper.OdsSzdnGantryIpMapper;
+import com.ruoyi.base.service.IOdsSzdnGantryIpService;
+import com.ruoyi.base.service.IOdsSzdnGantryService;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
+import com.ruoyi.common.utils.CommonUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * 省界设备ipService业务层处理
+ *
+ * @author ruoyi
+ * @date 2025-09-18
+ */
+@Service
+public class OdsSzdnGantryIpServiceImpl extends ServiceImpl<OdsSzdnGantryIpMapper, OdsSzdnGantryIp> implements IOdsSzdnGantryIpService {
+
+    @Autowired
+    private OdsSzdnGantryIpMapper odsSzdnGantryIpMapper;
+
+    @Autowired
+    private IOdsSzdnGantryService odsSzdnGantryService;
+
+    @Autowired
+    private RedisCache redisCache;
+
+    /**
+     * 查询省界设备ip
+     *
+     * @param id 省界设备ipID
+     * @return 省界设备ip
+     */
+    @Override
+    public OdsSzdnGantryIp selectOdsSzdnGantryIpById(Long id) {
+        return odsSzdnGantryIpMapper.selectOdsSzdnGantryIpById(id);
+    }
+
+    /**
+     * 查询省界设备ip列表
+     *
+     * @param odsSzdnGantryIp 省界设备ip
+     * @return 省界设备ip
+     */
+    @Override
+    public List<OdsSzdnGantryIp> selectOdsSzdnGantryIpList(OdsSzdnGantryIp odsSzdnGantryIp) {
+        return odsSzdnGantryIpMapper.selectOdsSzdnGantryIpList(odsSzdnGantryIp);
+    }
+
+
+    /**
+     * 查询省界设备ip列表
+     *
+     * @return 省界设备ip集合
+     */
+    @Override
+    public Map<String, OdsSzdnGantryIp> selectOdsSzdnGantryIpMap() {
+        Map<String, OdsSzdnGantryIp> map = new HashMap<String, OdsSzdnGantryIp>();
+        List<OdsSzdnGantryIp> list = this.getRedisList();
+
+        for (OdsSzdnGantryIp rtn : list) {
+
+            // 门架
+            map.put("gantryip:"+CommonUtil.isNull(""+rtn.getId()),rtn);
+            map.put("gantryip:"+CommonUtil.isNull(""+rtn.getGantryCode()),rtn);
+
+            // 省界门架称重事件
+            map.put("bwlocation:"+CommonUtil.isNull(""+rtn.getId()),rtn);
+            map.put("bwlocation:"+CommonUtil.isNull(""+rtn.getGantryCode()),rtn);
+
+            // 省界门架抓拍事件模型
+            map.put("gantryid:"+CommonUtil.isNull(""+rtn.getId()),rtn);
+            map.put("gantryid:"+CommonUtil.isNull(""+rtn.getGantryCode()),rtn);
+
+
+            // 卡口流水
+            map.put("gantry:"+CommonUtil.isNull(""+rtn.getId()),rtn);
+            map.put("gantry:"+CommonUtil.isNull(""+rtn.getGantryCode()),rtn);
+
+
+            // 通过IP 或者code查询
+            map.put(CommonUtil.isNull(rtn.getId()),rtn);
+            map.put(CommonUtil.isNull(rtn.getGantryCode()),rtn);
+
+
+        }
+        return map;
+
+    }
+
+    @Override
+    public Set<String> selectIPSet() {
+        return odsSzdnGantryIpMapper.selectIPSet();
+    }
+
+
+    /**
+     * 跟新redis
+     */
+    public  List<OdsSzdnGantryIp> updateRedis(){
+        Map<String, OdsSzdnGantryIp> map = new HashMap<String, OdsSzdnGantryIp>();
+        List<OdsSzdnGantryIp> list = odsSzdnGantryIpMapper.selectOdsSzdnGantryIpList(new OdsSzdnGantryIp());
+        OdsSzdnGantry odsSzdnGantry = new OdsSzdnGantry();
+        Map<String,OdsSzdnGantry> osSzdnGantryMap = odsSzdnGantryService.selectOdsSzdnGantryMap(odsSzdnGantry);
+        for (OdsSzdnGantryIp rtn : list) {
+            String key = CommonUtil.isNull(rtn.getGantryCode()); // 门架编号
+            if(osSzdnGantryMap.containsKey(key)){
+                rtn.setOdsSzdnGantry(osSzdnGantryMap.get(key));
+            }
+        }
+        redisCache.setCacheObject(Constants.gantry_ip, list);
+        return  list;
+    }
+
+
+    /**
+     * 从缓存拿到carlist
+     */
+    public List<OdsSzdnGantryIp> getRedisList(){
+        List<OdsSzdnGantryIp> list = null;
+        Object obj = redisCache.getCacheObject(Constants.gantry_ip);
+        if (null != obj) {
+            list = (List) obj;
+        } else {
+            list = this.updateRedis();
+        }
+        return list;
+    }
+
+
+}
+
+===== OdsRtSzdnSnapshotFlowAddcodeServiceImpl.java =====
+package com.ruoyi.base.service.impl;
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowAddcode;
+import com.ruoyi.base.mapper.OdsRtSzdnSnapshotFlowAddcodeMapper;
+import com.ruoyi.base.service.IOdsRtSzdnSnapshotFlowAddcodeService;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.redis.RedisCache;
+import com.ruoyi.common.utils.CommonUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * 门架抓拍流水Service业务层处理
+ *
+ * @author ruoyi
+ * @date 2025-08-29
+ */
+@Service
+public class OdsRtSzdnSnapshotFlowAddcodeServiceImpl extends ServiceImpl<OdsRtSzdnSnapshotFlowAddcodeMapper, OdsRtSzdnSnapshotFlowAddcode> implements IOdsRtSzdnSnapshotFlowAddcodeService {
+
+    @Autowired
+    private OdsRtSzdnSnapshotFlowAddcodeMapper odsRtSzdnSnapshotFlowAddcodeMapper;
+
+    @Autowired
+    private RedisCache redisCache;
+
+    /**
+     * 查询门架抓拍流水
+     *
+     * @param bigId 门架抓拍流水ID
+     * @return 门架抓拍流水
+     */
+    @Override
+    public OdsRtSzdnSnapshotFlowAddcode selectOdsRtSzdnSnapshotFlowAddcodeById(String bigId) {
+        return odsRtSzdnSnapshotFlowAddcodeMapper.selectOdsRtSzdnSnapshotFlowAddcodeById(bigId);
+    }
+
+    /**
+     * 查询门架抓拍流水列表
+     *
+     * @param odsRtSzdnSnapshotFlowAddcode 门架抓拍流水
+     * @return 门架抓拍流水
+     */
+    @Override
+    public List<OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeList(OdsRtSzdnSnapshotFlowAddcode odsRtSzdnSnapshotFlowAddcode) {
+        return odsRtSzdnSnapshotFlowAddcodeMapper.selectOdsRtSzdnSnapshotFlowAddcodeList(odsRtSzdnSnapshotFlowAddcode);
+    }
+
+    /**
+     * 通过UUID 查询
+     * @param queryUuids
+     * @return
+     */
+    @Override
+    public Map<String, OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeByQueryUuids(String queryUuids,String applyTime1,String applyTime2) {
+        Map<String, OdsRtSzdnSnapshotFlowAddcode> map = new HashMap<>();
+        if(CommonUtil.isNotBlank(queryUuids)) {
+            List<String> uuidList = Arrays.stream(queryUuids.split(",")).collect(Collectors.toList());
+            for (String uuid : uuidList) {
+                if (CommonUtil.isNotBlank(uuid)){
+                    // redis查找
+                    String key = Constants.DATE_GANTRY_CAPTURE + uuid;
+                    Object obj = redisCache.getCacheObject(key);
+                    if (null != obj) {
+                        map.put(uuid, (OdsRtSzdnSnapshotFlowAddcode) obj);
+                    } else {
+                        OdsRtSzdnSnapshotFlowAddcode querybo = new OdsRtSzdnSnapshotFlowAddcode();
+                        querybo.setDatauuid(uuid);
+                        querybo.setApplyTime1(applyTime1);
+                        querybo.setApplyTime2(applyTime2);
+                        List<OdsRtSzdnSnapshotFlowAddcode> list = odsRtSzdnSnapshotFlowAddcodeMapper.selectOdsRtSzdnSnapshotFlowAddcodeList(querybo);
+                        if (null!=list && list.size() > 0) {
+                            map.put(uuid, list.get(0));
+                            redisCache.setCacheObject(key, list.get(0));
+                        }else{
+                            redisCache.setCacheObject(key, querybo);
+                        }
+                    }
+                }
+
+            }
+        }
+        return map;
+    }
+
+    @Override
+    public List<OdsRtSzdnSnapshotFlowAddcode> selectOdsRtSzdnSnapshotFlowAddcodeListNew(OdsRtSzdnSnapshotFlowAddcode bo) {
+        List<OdsRtSzdnSnapshotFlowAddcode> snapshotList = odsRtSzdnSnapshotFlowAddcodeMapper.selectOdsRtSzdnSnapshotFlowAddcodeListNew(bo);
+        return snapshotList;
+    }
+
+    /**
+     * 游标分页查询
+     *
+     * 设计思路：
+     * - 基于游标（cursor）实现高效分页查询，避免 LIMIT OFFSET 的性能问题
+     * - cursor 参数通常表示上次查询最后一条记录的时间戳或 UUID，
+     *   本次查询从该游标位置向后扫描，保证分页性能稳定
+     * - 适用于大表（亿级）分页查询，时间复杂度 O(log n) + O(pageSize)
+     *
+     * @param cursor          游标（起始位置，如 UUID 或时间戳字符串）
+     * @param maxSnapshotTime 最大快照时间（分页查询的上界）
+     * @param pageSize        每页大小
+     * @return 查询结果列表
+     */
+    @Override
+    public List<OdsRtSzdnSnapshotFlowAddcode> queryByCursor(String cursor, String maxSnapshotTime, int pageSize) {
+        return odsRtSzdnSnapshotFlowAddcodeMapper.selectByCursorShard(
+                null,
+                maxSnapshotTime,
+                cursor,
+                null,
+                pageSize
+        );
+    }
+
+    /**
+     * 查询表中的最大快照时间
+     *
+     * 调用 Mapper 层 SQL：SELECT MAX(snapshottime) FROM ...
+     * 将返回的 java.util.Date 格式化为 "yyyy-MM-dd HH:mm:ss" 字符串
+     */
+    @Override
+    public String getMaxSnapshotTime() {
+        try {
+            java.util.Date maxDate = odsRtSzdnSnapshotFlowAddcodeMapper.getMaxSnapshotTime();
+            if (maxDate == null) {
+                return null;
+            }
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            return sdf.format(maxDate);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+}
+
+===== ZdataTrailTracksServiceImpl.java =====
+package com.ruoyi.base.service.impl;
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ruoyi.base.domain.CarParaVO;
+import com.ruoyi.base.domain.ZdataTrailTracks;
+import com.ruoyi.base.mapper.ZdataTrailTracksMapper;
+import com.ruoyi.base.service.IZdataTrailTracksService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+/**
+ * 轨迹数据Service业务层处理
+ *
+ * @author ruoyi
+ * @date 2025-09-18
+ */
+@Service
+public class ZdataTrailTracksServiceImpl extends ServiceImpl<ZdataTrailTracksMapper, ZdataTrailTracks> implements IZdataTrailTracksService {
+
+    @Autowired
+    private ZdataTrailTracksMapper zdataTrailTracksMapper;
+
+
+    /**
+     * 查询轨迹数据
+     *
+     * @param uuid 轨迹数据ID
+     * @return 轨迹数据
+     */
+    @Override
+    public ZdataTrailTracks selectZdataTrailTracksById(String uuid) {
+        return zdataTrailTracksMapper.selectZdataTrailTracksById(uuid);
+    }
+
+    /**
+     * 查询轨迹数据列表
+     *
+     * @param zdataTrailTracks 轨迹数据
+     * @return 轨迹数据
+     */
+    @Override
+    public List<ZdataTrailTracks> selectZdataTrailTracksList(ZdataTrailTracks zdataTrailTracks) {
+        return zdataTrailTracksMapper.selectZdataTrailTracksList(zdataTrailTracks);
+    }
+
+    /**
+     * 同步可疑车俩
+     * @param carParaVO
+     * @return
+     */
+    @Override
+    public List<ZdataTrailTracks> getLatestTrail(CarParaVO carParaVO) {
+        return zdataTrailTracksMapper.getLatestTrail(carParaVO);
+    }
+
+    /**
+     * 轨迹查询
+     */
+    @Override
+    public List<ZdataTrailTracks> getHistoryTrail(CarParaVO carParaVO) {
+        return zdataTrailTracksMapper.getHistoryTrail(carParaVO);
+    }
+
+    /**
+     * 同步可疑车俩：不在轨迹点
+     * @param carParaVO
+     * @return
+     */
+    @Override
+    public List<ZdataTrailTracks> getUnFitting(CarParaVO carParaVO){
+        return zdataTrailTracksMapper.getUnFitting(carParaVO);
+    }
+
+    /**
+     * 使用游标分页查询轨迹数据（高性能版本）
+     */
+    @Override
+    public List<ZdataTrailTracks> getLatestTrailByCursor(CarParaVO carParaVO) {
+        return zdataTrailTracksMapper.getLatestTrailByCursor(carParaVO);
+    }
+
+}

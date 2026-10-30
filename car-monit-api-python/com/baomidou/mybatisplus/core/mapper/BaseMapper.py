@@ -1,0 +1,255 @@
+# -*- coding: utf-8 -*-
+"""com.baomidou.mybatisplus.core.mapper.BaseMapper
+
+【无 Java 源文件：框架类替身】
+Java 侧来自 MyBatis-Plus jar：com.baomidou.mybatisplus.core.mapper.BaseMapper<T>
+本文件按原包路径重建，使 23 个业务 Mapper 的 import 与 Java 完全一致：
+
+    Java : import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+    Py   : from com.baomidou.mybatisplus.core.mapper.BaseMapper import BaseMapper
+
+【Java→Python 关键差异】
+1) MyBatis-Plus 在运行时用 JDK 动态代理 + 泛型反射生成 Mapper 实现类；
+   Python 没有等价机制，这里改为「实体类型显式注入 + 进程内表数据」的普通类，
+   子类在 __init__ 中调用 super().__init__(实体类) 即可获得基础 CRUD。
+2) Java 的 `T selectById(Serializable id)` → Python `selectById(pk)`；
+   Java 的 `Serializable`（可序列化主键）在 Python 中统一为 Any（str/int/UUID 均可）。
+3) Java 的 Wrapper 条件构造器 → Python 回调谓词/Tuple 字典；
+   `selectList(null)` 在 Java 中表示无条件，Python 同样支持 None。
+4) 返回值语义保持一致：insert/updateById/deleteById 返回「影响行数 int」，
+   查询返回实体副本（模拟数据库往返产生的全新对象，避免与内存表共享引用）。
+5) 表名/主键名取自实体元信息：@TableName → TABLE_NAME，@TableId → metadata["table_id"]。
+"""
+from __future__ import annotations
+
+import copy
+import uuid
+from dataclasses import fields
+from datetime import date, datetime, time
+from typing import Any, Callable, Generic, Iterable, List, Optional, TypeVar
+
+T = TypeVar("T")
+
+__all__ = ["BaseMapper"]
+
+
+class BaseMapper(Generic[T]):
+    """MyBatis-Plus BaseMapper<T> 的 Python 等价物。
+
+    仅覆盖工程内实际使用到的方法（insert/updateById/deleteById/selectById/
+    selectList/selectCount/selectOne/selectBatchIds/deleteBatchIds/...）。
+    """
+
+    def __init__(self, entity_cls: Optional[type] = None) -> None:
+        self.entity_cls = entity_cls
+        # 【Java→Python】数据库表 → 进程内 list；insert 顺序即「无 ORDER BY」时的返回顺序
+        self._rows: List[T] = []
+        self._seq = 0
+
+    # ------------------------------------------------------------------ 元信息
+    def getTableName(self) -> str:
+        """等价 @TableName(...)。"""
+        return getattr(self.entity_cls, "TABLE_NAME", None) or self.entity_cls.__name__
+
+    def getPkName(self) -> str:
+        """等价 @TableId 标注的列名；未标注时回退为 "id"。"""
+        for field_info in self._tableFields():
+            if field_info.metadata.get("table_id"):
+                return field_info.name
+        return "id"
+
+    def getIdType(self) -> Optional[str]:
+        """等价 @TableId(type = IdType.ASSIGN_UUID / AUTO)。"""
+        for field_info in self._tableFields():
+            if field_info.metadata.get("table_id"):
+                return field_info.metadata.get("id_type")
+        return None
+
+    def _tableFields(self):
+        # @TableField(exist = false) 的字段不是数据库列，参与查询条件时需忽略
+        return [f for f in fields(self.entity_cls) if f.metadata.get("exist", True)]
+
+    # ------------------------------------------------------------------ 查询
+    def selectById(self, pk: Any) -> Optional[T]:
+        """按主键查询；查不到返回 None（对应 MyBatis 返回 null）。"""
+        key = self.getPkName()
+        for row in self._rows:
+            if getattr(row, key, None) == pk:
+                return self._copy(row)
+        return None
+
+    def selectBatchIds(self, id_list: Iterable[Any]) -> List[T]:
+        """等价 selectBatchIds(Collection<? extends Serializable>)。"""
+        key = self.getPkName()
+        wanted = list(id_list or [])
+        return [self._copy(r) for r in self._rows if getattr(r, key, None) in wanted]
+
+    def selectOne(self, query: Any = None) -> Optional[T]:
+        """等价 selectOne(Wrapper)：取第一条，无则 None。"""
+        rows = self.selectList(query)
+        return rows[0] if rows else None
+
+    def selectList(self, query: Any = None) -> List[T]:
+        """等价 selectList(Wrapper)：query 支持 None/dict/实体对象/谓词回调。
+
+        【Java→Python】Java 的 Wrapper 会被 MyBatis-Plus 拼成完整 SQL
+        （WHERE + ORDER BY + last("LIMIT n")）交给数据库；这里先内存过滤，
+        再调用 Wrapper 的 sortRows() 执行排序与截断，否则
+        `orderByAsc(...).last("LIMIT 1000")` 的分页语义会丢失。
+        """
+        rows = [r for r in self._rows if self._matches(r, query)]
+        sort_rows = getattr(query, "sortRows", None)
+        if callable(sort_rows):
+            rows = sort_rows(rows)
+        return [self._copy(r) for r in rows]
+
+    def selectCount(self, query: Any = None) -> int:
+        """等价 selectCount(Wrapper)：返回 long，Python 为 int。
+
+        注意 COUNT(*) 不关心 ORDER BY / LIMIT，因此不调用 sortRows()。
+        """
+        return sum(1 for r in self._rows if self._matches(r, query))
+
+    def selectByMap(self, column_map: dict) -> List[T]:
+        """等价 selectByMap(Map<String, Object>)。"""
+        return [self._copy(r) for r in self._rows if self._matches(r, column_map)]
+
+    # ------------------------------------------------------------------ 写入
+    def insert(self, entity: T) -> int:
+        """等价 insert(T)：返回影响行数 1。"""
+        self._assignIdIfAbsent(entity)
+        self._rows.append(copy.deepcopy(entity))
+        return 1
+
+    def insertOrUpdate(self, entity: T) -> int:
+        """等价 insertOrUpdate(T)：主键存在则更新，否则插入。"""
+        key = self.getPkName()
+        if getattr(entity, key, None) is not None and self.selectById(getattr(entity, key)) is not None:
+            return self.updateById(entity)
+        return self.insert(entity)
+
+    def updateById(self, entity: T) -> int:
+        """等价 updateById(T)：按主键整行覆盖，返回影响行数。"""
+        key = self.getPkName()
+        pk = getattr(entity, key, None)
+        for index, row in enumerate(self._rows):
+            if getattr(row, key, None) == pk:
+                self._rows[index] = copy.deepcopy(entity)
+                return 1
+        return 0
+
+    def deleteById(self, pk: Any) -> int:
+        """等价 deleteById(Serializable)。"""
+        key = self.getPkName()
+        before = len(self._rows)
+        self._rows = [r for r in self._rows if getattr(r, key, None) != pk]
+        return before - len(self._rows)
+
+    def deleteBatchIds(self, id_list: Iterable[Any]) -> int:
+        """等价 deleteBatchIds(Collection<? extends Serializable>)。"""
+        key = self.getPkName()
+        wanted = list(id_list or [])
+        before = len(self._rows)
+        self._rows = [r for r in self._rows if getattr(r, key, None) not in wanted]
+        return before - len(self._rows)
+
+    def deleteByMap(self, column_map: dict) -> int:
+        """等价 deleteByMap(Map<String, Object>)。"""
+        before = len(self._rows)
+        self._rows = [r for r in self._rows if not self._matches(r, column_map)]
+        return before - len(self._rows)
+
+    # ------------------------------------------------------------------ 自定义 SQL 支撑
+    def selectWhere(
+        self,
+        predicate: Optional[Callable[[T], bool]] = None,
+        order_by: Optional[Callable[[T], Any]] = None,
+        reverse: bool = False,
+        limit: Optional[int] = None,
+        offset: int = 0,
+    ) -> List[T]:
+        """供子类实现 @Select 自定义 SQL 使用的内存查询原语。
+
+        【Java→Python】MyBatis 把 SQL 交给数据库执行；这里是纯内存过滤，
+        ORDER BY / LIMIT 由调用方以函数参数表达。
+        """
+        rows = [r for r in self._rows if (predicate(r) if predicate else True)]
+        if order_by is not None:
+            # 与 SQL 一致的 NULL 处理：None 参与排序时统一排在最前
+            rows.sort(key=lambda r: (order_by(r) is None, order_by(r)), reverse=reverse)
+        if offset:
+            rows = rows[offset:]
+        if limit is not None:
+            rows = rows[:limit]
+        return [self._copy(r) for r in rows]
+
+    def updateWhere(self, predicate: Callable[[T], bool], values: Any) -> int:
+        """供子类实现 @Update 自定义 SQL 使用：返回影响行数。"""
+        affected = 0
+        for row in self._rows:
+            if not predicate(row):
+                continue
+            patch = values(row) if callable(values) else values
+            for name, value in patch.items():
+                if hasattr(row, name):
+                    setattr(row, name, value)
+            affected += 1
+        return affected
+
+    # ------------------------------------------------------------------ 内部工具
+    def _copy(self, row: T) -> T:
+        return copy.deepcopy(row)
+
+    def _assignIdIfAbsent(self, entity: T) -> None:
+        """模拟 @TableId 的主键生成策略。"""
+        key = self.getPkName()
+        current = getattr(entity, key, None)
+        if current not in (None, ""):
+            return
+        if self.getIdType() == "ASSIGN_UUID":
+            # MyBatis-Plus ASSIGN_UUID 生成 32 位无横线 UUID
+            setattr(entity, key, uuid.uuid4().hex)
+        else:
+            self._seq += 1
+            setattr(entity, key, self._seq)
+
+    def _matches(self, row: T, query: Any) -> bool:
+        if query is None:
+            return True
+        if callable(query):
+            return bool(query(row))
+        # Wrapper 替身（QueryWrapper/LambdaQueryWrapper）约定提供 toPredicate()
+        to_predicate = getattr(query, "toPredicate", None)
+        if callable(to_predicate):
+            return bool(to_predicate()(row))
+        if isinstance(query, dict):
+            # Java: eq(column, value) and 连接；Python: dict 全等匹配
+            return all(getattr(row, k, None) == v for k, v in query.items())
+        # 实体对象作查询条件：与 MyBatis XML <if test="xxx != null"> 一致，仅非空字段参与
+        matched = True
+        for field_info in self._tableFields():
+            value = getattr(query, field_info.name, None)
+            if value is None:
+                continue
+            if getattr(row, field_info.name, None) != value:
+                matched = False
+                break
+        return matched
+
+    @staticmethod
+    def toComparable(value: Any) -> Any:
+        """把 Date / 时间字符串统一成可比较的 datetime。
+
+        【Java→Python】JDBC 驱动会按列类型转换字符串时间；Python 内存表必须显式转换，
+        否则 datetime 与 str 比较会抛 TypeError。转换失败时退回原值（保留字典序比较）。
+        """
+        if value is None or isinstance(value, datetime):
+            return value
+        if isinstance(value, date):
+            return datetime.combine(value, time.min)
+        if isinstance(value, str):
+            from com.ruoyi.common.utils.DateUtils import DateUtils
+
+            parsed = DateUtils.parseDate(value)
+            return parsed if parsed is not None else value
+        return value
