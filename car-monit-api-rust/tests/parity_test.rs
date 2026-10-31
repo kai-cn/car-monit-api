@@ -144,3 +144,86 @@ fn message_status_and_checksum_are_stable() {
     let checksum = car_monit_api_rust::utils::md5_hex("");
     assert_eq!(checksum, "d41d8cd98f00b204e9800998ecf8427e");
 }
+
+#[test]
+fn java_date_whitelist_matches_parse_date_patterns() {
+    use car_monit_api_rust::handlers::common::java_date_parseable;
+    // DateUtils.parsePatterns 能整串匹配的形式：Java 会解析并拼进 WHERE
+    for ok in [
+        "2025-09-08 00:00:00",
+        "2025-09-08 08:00",
+        "2025-09-08",
+        "2025-09",
+        "2025/09/08",
+        "2025/09",
+        "2025.09.08",
+        "2025.09",
+    ] {
+        assert!(java_date_parseable(ok), "{ok} 应当被 Java 接受");
+    }
+    // 白名单之外的形式：Java 的 parseDate 返回 null，条件被静默忽略
+    for no in [
+        "2025-09-08T00:00:00.000+00:00",
+        "1969-12-31T16:00:00.000+00:00",
+        "2025-09-08T00:00:00Z",
+        "not-a-date",
+        "",
+        "2025-13-01",
+    ] {
+        assert!(!java_date_parseable(no), "{no} 应当被 Java 忽略");
+    }
+}
+
+#[test]
+fn whitelisted_date_formats_stay_deserializable() {
+    // 白名单保留下来的参数必须能被实体反序列化，否则会从 Java 的 200 变成 Rust 的 400。
+    for s in [
+        "2025-09-08 00:00:00",
+        "2025-09-08 08:00",
+        "2025-09-08",
+        "2025-09",
+        "2025/09/08",
+        "2025/09",
+        "2025.09.08",
+        "2025.09",
+    ] {
+        let dt = utils::parse_time(s).unwrap_or_else(|e| panic!("{s} 解析失败: {e}"));
+        assert!(dt.to_rfc3339().starts_with("2025-09"), "{s} -> {dt}");
+    }
+}
+
+#[tokio::test]
+async fn java_query_drops_unparseable_date_params_like_init_binder() {
+    use axum::extract::FromRequestParts;
+    use car_monit_api_rust::handlers::common::JavaQuery;
+    use car_monit_api_rust::models::OdsRtSzdnSnapshotFlowProvcaptureAddcode;
+
+    let state = ();
+    // ISO 值：Java 丢弃该条件 -> tailcapturetime 保持 null
+    let mut parts = axum::http::Request::builder()
+        .uri("/base/provcapture/list?pageNum=1&pageSize=1&tailcapturetime=1969-12-31T16%3A00%3A00.000%2B00%3A00")
+        .body(())
+        .unwrap()
+        .into_parts()
+        .0;
+    let JavaQuery(q) = JavaQuery::<OdsRtSzdnSnapshotFlowProvcaptureAddcode>::from_request_parts(
+        &mut parts, &state,
+    )
+    .await
+    .unwrap();
+    assert!(q.tailcapturetime.utc().is_none());
+
+    // 白名单内格式：条件生效
+    let mut parts = axum::http::Request::builder()
+        .uri("/base/provcapture/list?tailcapturetime=1969-12-31%2016%3A00%3A00")
+        .body(())
+        .unwrap()
+        .into_parts()
+        .0;
+    let JavaQuery(q) = JavaQuery::<OdsRtSzdnSnapshotFlowProvcaptureAddcode>::from_request_parts(
+        &mut parts, &state,
+    )
+    .await
+    .unwrap();
+    assert!(q.tailcapturetime.utc().is_some());
+}

@@ -99,7 +99,6 @@ def main():
             if k not in SKIP_KEYS
             and isinstance(v, (str, int, float))
             and str(v).strip() != ''
-            and 'T' not in str(v)[:25]
         ][:MAX_FIELDS]
         for k in keys:
             url = '%s%s&%s=%s' % (path, base_q, k, urllib.parse.quote(str(row[k])))

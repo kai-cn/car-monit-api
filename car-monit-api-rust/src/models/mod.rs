@@ -3,6 +3,7 @@ pub mod car_vo;
 pub mod dwd_lczt_fwqjcxx;
 pub mod dwd_lczt_sfsjcxx;
 pub mod dwd_lczt_sfzjcxx;
+pub mod java_date_fields;
 pub mod kafka_message_record;
 pub mod ods_cxzt_fwqclls;
 pub mod ods_lwzxsfsj_fee_gantry_fusion01;
@@ -31,6 +32,14 @@ pub mod zdata_trail_tracks;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+/// 对应 Java `BaseController.initBinder` + `DateUtils.parseDate`：
+/// 列出该实体里在 Java 声明为 `java.util.Date` 的查询参数名。Spring 用固定模式白名单
+/// 解析这些参数，解析失败返回 null，于是 XML 的 `<if test="x != null">` 条件不会拼进 SQL。
+/// 只有 `JavaQuery` 提取器会据此丢弃无法解析的日期参数，行为与 Java 一致。
+pub trait JavaDateFields {
+    const JAVA_DATE_FIELDS: &'static [&'static str] = &[];
+}
 
 // ---------------------------------------------------------------------------
 // Java 标量 → Rust 类型

@@ -82,6 +82,12 @@ pub fn parse_time(s: &str) -> Result<DateTime<Utc>, String> {
         "%Y/%m/%d %H:%M:%S",
         "%Y-%m-%dT%H:%M:%S%.fZ",
         "%Y-%m-%dT%H:%M:%S%.f%:z",
+        // DateUtils.parsePatterns 里其余可整串匹配的形式（查询参数会用到的必须能解析，
+        // 否则被白名单保留下来后反而 400，与 Java 的 200 不一致）。
+        "%Y-%m-%d %H:%M",
+        "%Y/%m/%d %H:%M",
+        "%Y.%m.%d %H:%M:%S",
+        "%Y.%m.%d %H:%M",
     ] {
         if let Ok(dt) = NaiveDateTime::parse_from_str(s, fmt) {
             return Ok(Utc.from_utc_datetime(&dt));
@@ -90,10 +96,23 @@ pub fn parse_time(s: &str) -> Result<DateTime<Utc>, String> {
             return Ok(dt.with_timezone(&Utc));
         }
     }
-    for fmt in ["%Y-%m-%d", "%Y/%m/%d"] {
+    for fmt in ["%Y-%m-%d", "%Y/%m/%d", "%Y.%m.%d"] {
         if let Ok(d) = NaiveDate::parse_from_str(s, fmt) {
             let dt = d.and_hms_opt(0, 0, 0).unwrap();
             return Ok(Utc.from_utc_datetime(&dt));
+        }
+    }
+    // yyyy-MM / yyyy/MM / yyyy.MM：Java 会补成当月 1 日 00:00:00
+    for sep in ['-', '/', '.'] {
+        if let Some(pos) = s.find(sep) {
+            let (y, m) = (&s[..pos], &s[pos + 1..]);
+            if y.len() == 4 && matches!(m.len(), 1 | 2) {
+                if let (Ok(yy), Ok(mm)) = (y.parse::<i32>(), m.parse::<u32>()) {
+                    if let Some(d) = chrono::NaiveDate::from_ymd_opt(yy, mm, 1) {
+                        return Ok(Utc.from_utc_datetime(&d.and_hms_opt(0, 0, 0).unwrap()));
+                    }
+                }
+            }
         }
     }
     // 兼容纯数字时间戳（秒 / 毫秒）

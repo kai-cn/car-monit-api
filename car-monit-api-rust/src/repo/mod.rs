@@ -70,10 +70,18 @@ pub fn push_where(qb: &mut QueryBuilder<'_, Postgres>, conds: &[Cond]) {
                 qb.push(")");
             }
             Cond::Gte(col, v) => {
-                qb.push(*col).push(" >= ").push_bind(v.clone());
+                // PARITY: XML 写成 `col >= to_timestamp(#{f},'yyyy-mm-dd HH24:MI:SS')`，
+                // 直接绑定文本会让数据库报类型错误，必须走同一个 to_timestamp 转换。
+                qb.push(*col)
+                    .push(" >= to_timestamp(")
+                    .push_bind(v.clone())
+                    .push(", 'yyyy-mm-dd HH24:MI:SS')");
             }
             Cond::Lte(col, v) => {
-                qb.push(*col).push(" <= ").push_bind(v.clone());
+                qb.push(*col)
+                    .push(" <= to_timestamp(")
+                    .push_bind(v.clone())
+                    .push(", 'yyyy-mm-dd HH24:MI:SS')");
             }
         }
     }

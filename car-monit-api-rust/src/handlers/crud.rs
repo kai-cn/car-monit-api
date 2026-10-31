@@ -93,7 +93,7 @@ macro_rules! crud_handlers {
     ($list:ident, $export:ident, $all:ident, $ajax:ident, $flat:ident, $field:ident, $ty:ty) => {
         pub async fn $list(
             State(s): State<Arc<AppState>>,
-            Query(q): Query<$ty>,
+            JavaQuery(q): JavaQuery<$ty>,
             Query(p): Query<PageQuery>,
         ) -> AppResult<Response> {
             list_impl(&s.$field, q, &p).await
@@ -101,7 +101,7 @@ macro_rules! crud_handlers {
 
         pub async fn $export(
             State(s): State<Arc<AppState>>,
-            Query(q): Query<$ty>,
+            JavaQuery(q): JavaQuery<$ty>,
             Query(p): Query<PageQuery>,
         ) -> AppResult<Response> {
             export_impl(&s.$field, q, &p).await

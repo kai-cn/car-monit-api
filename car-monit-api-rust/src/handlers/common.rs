@@ -136,3 +136,128 @@ pub fn map_response(pairs: Vec<(&str, Value)>) -> Response {
 pub fn biz_map_error(message: impl Into<String>) -> Response {
     json_ok(json!({ "code": 500, "message": message.into() }))
 }
+
+// ============================================================
+// Java 的日期参数白名单绑定
+// ============================================================
+
+/// `DateUtils.parsePatterns`（pro-base-common/DateUtils.java:28-31）。
+/// Java 的 `BaseController.initBinder` 用这 12 种模式解析所有 `java.util.Date` 查询参数，
+/// 且要求整串匹配；不匹配时 `parseDate` 返回 null，对应的 `<if test="x != null">` 条件
+/// 根本不会拼进 SQL —— 也就是「过滤条件被静默忽略」，HTTP 仍然 200。
+const JAVA_DATE_PATTERNS: &[&str] = &[
+    "%Y-%m-%d %H:%M:%S",
+    "%Y-%m-%d %H:%M",
+    "%Y-%m-%d",
+    "%Y/%m/%d %H:%M:%S",
+    "%Y/%m/%d %H:%M",
+    "%Y/%m/%d",
+    "%Y.%m.%d %H:%M:%S",
+    "%Y.%m.%d %H:%M",
+    "%Y.%m.%d",
+];
+
+/// 对应 `DateUtils.parseDate(String)` 的成功/失败判定（不做时区换算，只判断能否解析）。
+pub fn java_date_parseable(s: &str) -> bool {
+    use chrono::{NaiveDate, NaiveDateTime};
+    let s = s.trim();
+    if s.is_empty() {
+        return false;
+    }
+    for f in JAVA_DATE_PATTERNS {
+        if NaiveDateTime::parse_from_str(s, f).is_ok() || NaiveDate::parse_from_str(s, f).is_ok() {
+            return true;
+        }
+    }
+    // yyyy-MM / yyyy/MM / yyyy.MM：只到年份+月份
+    for sep in ['-', '/', '.'] {
+        if let Some(pos) = s.find(sep) {
+            let (y, m) = (&s[..pos], &s[pos + 1..]);
+            if y.len() == 4
+                && matches!(m.len(), 1 | 2)
+                && y.parse::<i32>().is_ok()
+                && m.parse::<u32>()
+                    .map(|v| (1..=12).contains(&v))
+                    .unwrap_or(false)
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn percent_decode(s: &str) -> String {
+    let bytes = s.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut i = 0usize;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'%' if i + 2 < bytes.len() => {
+                let hex = &bytes[i + 1..i + 3];
+                match u8::from_str_radix(std::str::from_utf8(hex).unwrap_or(""), 16) {
+                    Ok(b) => {
+                        out.push(b);
+                        i += 3;
+                    }
+                    Err(_) => {
+                        out.push(b'%');
+                        i += 1;
+                    }
+                }
+            }
+            b'+' => {
+                out.push(b' ');
+                i += 1;
+            }
+            b => {
+                out.push(b);
+                i += 1;
+            }
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// 与 `axum::extract::Query<T>` 等价，但先按 Java 的规则丢弃解析失败的日期参数。
+/// 只用于绑定实体（19 张基础表的 list/listToExport、feeGantry、snapshotflow 等）。
+pub struct JavaQuery<T>(pub T);
+
+impl<T, S> axum::extract::FromRequestParts<S> for JavaQuery<T>
+where
+    T: serde::de::DeserializeOwned + crate::models::JavaDateFields,
+    S: Send + Sync,
+{
+    type Rejection = axum::extract::rejection::QueryRejection;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        let raw = parts.uri.query().unwrap_or_default().to_string();
+        let kept: Vec<String> = raw
+            .split('&')
+            .filter(|p| !p.is_empty())
+            .filter(|p| {
+                let (k, v) = match p.split_once('=') {
+                    Some(kv) => kv,
+                    None => (*p, ""),
+                };
+                let key = percent_decode(k);
+                !<T as crate::models::JavaDateFields>::JAVA_DATE_FIELDS
+                    .iter()
+                    .any(|f| *f == key.as_str())
+                    || java_date_parseable(&percent_decode(v))
+            })
+            .map(|p| p.to_string())
+            .collect();
+        if let Ok(uri) = axum::http::Uri::builder()
+            .path_and_query(format!("{}?{}", parts.uri.path(), kept.join("&")))
+            .build()
+        {
+            parts.uri = uri;
+        }
+        let q = axum::extract::Query::<T>::from_request_parts(parts, state).await?;
+        Ok(JavaQuery(q.0))
+    }
+}

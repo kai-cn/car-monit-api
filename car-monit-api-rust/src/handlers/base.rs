@@ -147,7 +147,7 @@ async fn decorate_fee_records(
 
 pub async fn fee_gantry_list(
     State(state): State<Arc<AppState>>,
-    Query(q): Query<OdsLwzxsfsjFeeGantryFusion01>,
+    JavaQuery(q): JavaQuery<OdsLwzxsfsjFeeGantryFusion01>,
     Query(page): Query<PageQuery>,
 ) -> AppResult<Response> {
     let p = page_params(&page);
@@ -172,7 +172,7 @@ pub async fn fee_gantry_list(
 
 pub async fn snapshot_flow_list(
     State(state): State<Arc<AppState>>,
-    Query(mut q): Query<OdsRtSzdnSnapshotFlowAddcode>,
+    JavaQuery(mut q): JavaQuery<OdsRtSzdnSnapshotFlowAddcode>,
     Query(page): Query<PageQuery>,
 ) -> AppResult<Response> {
     prepare_snapshot(&state, &mut q).await;
@@ -195,7 +195,7 @@ pub async fn snapshot_flow_list(
 
 pub async fn snapshot_flow_export(
     State(state): State<Arc<AppState>>,
-    Query(mut q): Query<OdsRtSzdnSnapshotFlowAddcode>,
+    JavaQuery(mut q): JavaQuery<OdsRtSzdnSnapshotFlowAddcode>,
     Query(page): Query<PageQuery>,
 ) -> AppResult<Response> {
     prepare_snapshot(&state, &mut q).await;

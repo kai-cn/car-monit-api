@@ -375,7 +375,7 @@ cargo test
 | 10 | **启动与业务请求已实测** | 使用 yml 中的 GaussDB/Redis | Java/Rust 双端 74 + 93 个场景一致，另有 200+ 组过滤条件逐字段对照 | 见第 10、11 节；Kafka/ES 的真实生产链路仍需独立联调 |
 | 11 | **Rust 工具链 1.90** | 2026 年的最新稳定版可能更高；本机已装 1.90 | 部分 2026 crate 可能要求更新 | 升级时改 `rust-toolchain.toml` 与 `Cargo.toml` 的 `rust-version`，再跑 `cargo test` |
 | 12 | **ES / Kafka 未做完整数据集成** | 本机 ES 磁盘 97%、触发 flood-stage 只读；Kafka 未启动 | 已按 Java mapping 建索引，但仅验证了空索引路径；消息总线为 Noop | 清理磁盘后执行全量/增量同步，并用 Kafka 联调消费链路 |
-| 13 | **日期型查询参数白名单** | Java `BaseController.initBinder` 用 `DateUtils.parseDate`（12 种模式，全串匹配）绑定 `Date` 字段，解析失败即静默置 null，条件不生效 | 客户端把响应里的 ISO 值（如 `1969-12-31T16:00:00.000+00:00`）原样回填时，Java 忽略该过滤条件、Rust 会按其过滤（返回更少行） | 属 Java 侧的宽松行为；如需严格一致，需要在 Rust 增加只用于 query 绑定的日期白名单提取器 |
+| 13 | ~~日期型查询参数白名单~~（已修） | Java `BaseController.initBinder` 用 `DateUtils.parseDate`（12 种模式，全串匹配）绑定 `Date` 字段，解析失败即静默置 null，条件不生效 | 客户端把响应里的 ISO 值（如 `1969-12-31T16:00:00.000+00:00`）原样回填时，Java 忽略该过滤条件 | Rust 用 `JavaQuery` 提取器 + `JavaDateFields` 清单复刻：解析失败的日期参数在进入实体前被丢弃（见 11.2 第 7 条） |
 | 14 | **`/api/v1/large/fee|trail` 的降级查询在本环境无结果** | Java 实体 `@TableName` 未写 schema，MyBatis-Plus 生成非限定表名；当前库 `search_path` 不含 `jl_data01`，降级 SQL 报错后 `query()` 吞异常返回空列表 | Rust 同样使用非限定表名并吞异常，两端均返回 `code=200, data=[]` | 若生产库把 `jl_data01` 放进 `search_path`，两端会同时恢复为真实降级结果 |
 
 ---
@@ -526,6 +526,20 @@ Java 的部分 XML 引用的是 SELECT 别名（服务区的 `t.agent_pk`、省�
    `sysutil` / `base` 各入口：`rows=[]` 但 `total` 仍是真实匹配数。
 6. **非法数字主键**：`/manager/fwqclls/abc`、`/base/gantryIp/abc`、`/base/tollStationIp/abc`
    走 `entity_repo_numeric!` → Spring `@PathVariable Long` 的 400，而不是数据库 500。
+7. **日期型查询参数按 Java 白名单绑定**：Java 的 `BaseController.initBinder` 对所有
+   `java.util.Date` 属性用 `DateUtils.parseDate`（12 种模式、要求整串匹配）解析，失败返回 null，
+   于是 `<if test="x != null">` 条件根本不拼进 SQL（HTTP 仍 200、返回全量）。
+   Rust 新增 `JavaDateFields`（`tools/gen_date_fields.py` 从实体扫描生成）与 `JavaQuery` 提取器，
+   在进入实体反序列化之前丢弃白名单之外的日期参数；`utils::parse_time` 同时补齐白名单里的
+   `yyyy-MM`、`yyyy/MM/dd HH:mm`、`yyyy.MM.dd` 等形式，保证「被保留的参数一定能解析」，
+   否则会从 Java 的 200 变成 Rust 的 400。
+   典型用例：`provcapture?tailcapturetime=1969-12-31T16:00:00.000+00:00`（Java 忽略 → 356 行）、
+   `=1969-12-31 16:00:00`（Java 生效 → 0 行），两端现在都一致。
+8. **时间范围条件必须走 `to_timestamp`**：XML 写的是
+   `and t.entime >= to_timestamp(#{inApplyTime1},'yyyy-mm-dd HH24:MI:SS')`。
+   之前 Rust 直接绑定文本，`inApplyTime1=2025-09` 这类「Java/SimpleDateFormat 能解析、
+   数据库隐式转换不能」的值会让 SQLx 报类型错误 → 500（Java 是 200/0）。
+   `Cond::Gte/Lte` 改为渲染 `to_timestamp($n,'yyyy-mm-dd HH24:MI:SS')`，与 XML 字面一致。
 
 ### 11.3 复核矩阵与结果
 
@@ -536,10 +550,11 @@ Java 的部分 XML 引用的是 SELECT 别名（服务区的 `t.agent_pk`、省�
 |---|---|---|
 | 第 1 轮（4 段式基线） | `python tools/compare_api.py` | `ok=74 bad=0` |
 | 第 2 轮（分页/过滤/非法 ID/POST/405） | `python tools/compare_round2.py` | `ok=93 bad=0` |
-| 第 3 轮（18 张表 × 每表 ≤12 个真实值过滤） | `python tools/compare_round3.py` | `checked=186 bad=0` |
+| 第 3 轮（18 张表 × 每表 ≤12 个真实值过滤，含 ISO 时间值） | `python tools/compare_round3.py` | `checked=186 bad=0` |
+| 日期/时间范围边界（白名单内、白名单外、非法串） | 临时脚本 | `bad=0`（修 `to_timestamp` 前 1 处 500） |
 | 详情端点 | `/base/{fwqjcxx,sfsjcxx,sfzjcxx}/{id}` | 状态码与响应体一致 |
 | 轨迹查询 | `/base/sysutil/carTrackQueryByCarNo?carNo=…` | 一致（`total=0`）；`carTrackQueryByTime` 依赖 `car_list_jc`，需清缓存后两端一致 |
-| 单元/集成测试 | `cargo test` | 16 passed, 0 failed |
+| 单元/集成测试 | `cargo test` | 19 passed, 0 failed |
 
 未做双端实测的：`POST /api/v1/large/sync/{full,incremental}`（会向 ES 回灌数据，本机 ES 磁盘 97%）
 与消息消费链路；`sync/full`、`sync/repair` 的响应结构已与 Java 控制器逐字段核对（后台线程 + 固定文案）。
@@ -559,5 +574,5 @@ python tools/compare_round3.py      # checked=186 bad=0
 ```
 
 `tools/compare_round3.py` 的做法：先用 Java 无过滤列表取一行样本，再把该行每个非空标量字段
-作为查询参数分别打 Java/Rust，比较状态码与 `total`；值中含 `T` 的 ISO 时间串跳过
-（原因见第 7 节第 13 条）。
+作为查询参数分别打 Java/Rust，比较状态码与 `total`。ISO 时间串不再跳过——
+`JavaQuery` 已按 Java 的白名单把它丢弃（见 11.2 第 7 条）。

@@ -291,8 +291,19 @@ def main():
     with open(os.path.join(out_dir, 'mod.rs'), 'w', encoding='utf-8', newline='\n') as f:
         for m in sorted(set(mods)):
             f.write('pub mod %s;\n' % m)
+        # tools/gen_date_fields.py 生成的实体日期字段清单（Java 的 Date 绑定白名单用）
+        f.write('pub mod java_date_fields;\n')
         f.write('\nuse chrono::{DateTime, Utc};\n')
         f.write('use serde::{Deserialize, Deserializer, Serialize, Serializer};\n\n')
+        f.write('''/// 对应 Java `BaseController.initBinder` + `DateUtils.parseDate`：
+/// 列出该实体里在 Java 声明为 `java.util.Date` 的查询参数名。Spring 用固定模式白名单
+/// 解析这些参数，解析失败返回 null，于是 XML 的 `<if test="x != null">` 条件不会拼进 SQL。
+/// 只有 `JavaQuery` 提取器会据此丢弃无法解析的日期参数，行为与 Java 一致。
+pub trait JavaDateFields {
+    const JAVA_DATE_FIELDS: &'static [&'static str] = &[];
+}
+
+''')
         f.write(r"""
 // ---------------------------------------------------------------------------
 // Java 标量 → Rust 类型

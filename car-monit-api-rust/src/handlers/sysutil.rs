@@ -32,7 +32,7 @@ pub async fn save_redis(State(state): State<Arc<AppState>>) -> AppResult<Respons
 
 pub async fn car_track_by_car_no(
     State(state): State<Arc<AppState>>,
-    Query(mut vo): Query<CarParaVO>,
+    JavaQuery(mut vo): JavaQuery<CarParaVO>,
     Query(page): Query<PageQuery>,
 ) -> AppResult<Response> {
     let p = page_params(&page);
@@ -59,7 +59,7 @@ pub async fn car_track_by_car_no(
 
 pub async fn car_track_by_time(
     State(state): State<Arc<AppState>>,
-    Query(mut vo): Query<CarParaVO>,
+    JavaQuery(mut vo): JavaQuery<CarParaVO>,
     Query(page): Query<PageQuery>,
 ) -> AppResult<Response> {
     let p = page_params(&page);
