@@ -1,0 +1,144 @@
+# 来源: pro-business-api/src/main/resources/application.yml + application-optimization.yml
+# 键路径与 Java 完全一致，可直接并排 diff；新增项在注释里标注「Rust 侧新增」。
+server:
+  port: 9901
+  context-path: /
+  mode: release                 # Rust 侧新增：日志级别语义（对应 Spring profile）
+
+spring:
+  datasource:
+    dynamic:
+      datasource:
+        master:
+          url: jdbc:postgresql://192.168.56.10:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+          username: gaussdb
+          password: OpenGauss@123
+          driver-class-name: org.postgresql.Driver
+          max-open-conns: 20     # Druid maxActive
+          max-idle-conns: 5      # Druid min-idle
+          conn-max-lifetime-seconds: 1800
+          log-sql: false         # p6spy / StdOutImpl 等价物
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  password: ""
+  database: 0
+  pool-size: 16
+
+kafka:
+  bootstrap-servers: localhost:9092
+  topic:
+    snapshot-flow: ods-rt-szdn-snapshot-flow
+  max-retry-count: 10
+  group-id: ods-rt-szdn-snapshot-flow-sub
+
+pulsar:
+  service-url: pulsar://localhost:6650
+  topic: persistent://public/default/ods-rt-szdn-snapshot-flow
+  producer-name: car-monit-producer
+  send-timeout-ms: 30000
+  batch-max-messages: 1000
+  batch-max-publish-delay-ms: 10
+  max-pending-messages: 10000
+  subscription-name: ods-rt-szdn-snapshot-flow-sub
+  receiver-queue-size: 1000
+  ack-timeout-ms: 60000
+  max-retry-times: 3
+  idempotent-ttl-seconds: 86400
+  max-retry-count: 10
+
+rocketmq:
+  name-server: localhost:9876
+  producer:
+    group: snapshot_flow_producer
+  consumer:
+    group: snapshot_flow_consumer
+    message-model: CLUSTERING
+    consume-thread-max: 10
+
+rabbitmq:
+  host: localhost
+  port: 5672
+  username: guest
+  password: guest
+  virtual-host: /
+  enabled: false
+
+elasticsearch:
+  host: localhost
+  port: 9200
+  scheme: http
+  username: elastic
+  password: changeme
+  connection-timeout-ms: 30000
+  socket-timeout-ms: 30000
+  index:
+    snapshot: snapshot_flow
+    fee: fee_records
+    trail: trail_fitting
+    shards: 6
+    replicas: 1
+    auto-create: false
+    ilm-policy: car_monit_ilm_policy
+    attach-ilm: false
+
+optimization:
+  scale-level: LEVEL_10M
+  query:
+    timeout-ms: 30000
+    max-window: 10000
+    es-force-days: 30
+  export:
+    scroll-batch: 2000
+    file-batch: 100000
+    dir: /data/export
+    scroll-keepalive-min: 5
+
+mq:
+  topic:
+    snapshot-flow: topic_snapshot_flow
+  dead-letter:
+    exchange: exchange.snapshot.flow.dlx
+    queue: queue.snapshot.flow.dlx
+    routing-key: snapshot.flow.dlx
+
+sync:
+  batch-size: 1000
+  full-sync-enabled: true
+  incremental-sync-interval: 60000
+
+consistency:
+  reconcile:
+    enabled: false
+    lookback-months: 3
+    drift-ratio: 0.01
+    cron: "0 30 2 * * ?"
+
+reliability:
+  message-timeout-ms: 30000
+  max-retry-count: 5
+  compensation-interval-seconds: 60
+  alert-threshold-ms: 10000
+
+detection:
+  window-size-minutes: 60
+  interval-minutes: 30
+  loss-threshold-percent: 5
+
+monitoring:
+  device-report-threshold-ms: 5000
+  message-transfer-threshold-ms: 3000
+  data-process-threshold-ms: 10000
+  end-to-end-threshold-ms: 30000
+  stats-window-minutes: 10
+
+logging:
+  level: info
+  format: text
+
+app:
+  env: local                    # 对应 application.yml 的 isLocalhost
+  sysbase-url: http://223.84.150.189:26066/prod-api
+  consumer-enabled: true        # Rust 侧新增（默认与 Java 一致：消费端启动）
+  enable-scheduler: true        # Rust 侧新增（默认与 Java 一致：@EnableScheduling）
