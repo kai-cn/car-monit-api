@@ -38,9 +38,11 @@ TARGETS = [
     ('/base/trailtracks/list', 'trailtracks'),
 ]
 
-# 快照表必须有时间范围才有样本行（与 Java/Go 一致的实测经验）
+# 快照表必须有时间范围才有样本行（与 Java/Go 一致的实测经验）；
+# platenumber=%25（LIKE 通配）用来避开 Java 的数据权限分支（没有车牌时会追加 orgcode='030000011'）
 SEED = {
-    'snapshotflow': 'applyTime1=2025-09-08%2000:00:00&applyTime2=2025-09-09%2000:00:00',
+    'snapshotflow': 'applyTime1=2025-09-08%2000:00:00&applyTime2=2025-09-09%2000:00:00'
+                    '&platenumber=%25',
 }
 SKIP_KEYS = {
     'id', 'pageNum', 'pageSize', 'searchValue', 'createBy', 'createTime',
@@ -101,7 +103,12 @@ def main():
             and str(v).strip() != ''
         ][:MAX_FIELDS]
         for k in keys:
-            url = '%s%s&%s=%s' % (path, base_q, k, urllib.parse.quote(str(row[k])))
+            # 探针字段与种子参数同名时去掉种子里的那一份：重复键会让 Java 取首值、
+            # 而 HTTP 层默认可能报 400，测的就不再是同一个语义
+            q = base_q
+            if ('&%s=' % k) in q:
+                q = '&'.join(p for p in q.split('&') if not p.startswith('%s=' % k))
+            url = '%s%s&%s=%s' % (path, q, k, urllib.parse.quote(str(row[k])))
             ja = fetch(JAVA, url)
             ru = fetch(RUST, url)
             checked += 1

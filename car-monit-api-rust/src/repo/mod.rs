@@ -391,7 +391,7 @@ entity_repo!(
     "",
     fee_records_filters
 );
-entity_repo!(
+entity_repo_numeric!(
     FeeStationEnterRepo,
     OdsLwzxsfsjFeeStationEnter01,
     "jl_data01.ods_lwzxsfsj_fee_station_enter_01",
@@ -420,7 +420,7 @@ entity_repo!(
     "ORDER BY snapshottime DESC",
     snapshot_filters
 );
-entity_repo!(
+entity_repo_numeric!(
     ProvCaptureRepo,
     OdsRtSzdnSnapshotFlowProvcaptureAddcode,
     "jl_data01.ods_rt_szdn_snapshot_flow_provcapture_addcode",
@@ -429,7 +429,7 @@ entity_repo!(
     "",
     prov_capture_filters
 );
-entity_repo!(
+entity_repo_numeric!(
     StationCaptureRepo,
     OdsRtSzdnSnapshotFlowStationcaptureAddcode,
     "jl_data01.ods_rt_szdn_snapshot_flow_stationcapture_addcode",

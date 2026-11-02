@@ -112,7 +112,9 @@ pub async fn car_track_by_car_no(
     OriginalUri(uri): OriginalUri,
     Query(c): Query<RawQuery>,
 ) -> Response {
-    if c.get("carNo").map(|v| v.is_empty()).unwrap_or(true) {
+    // PARITY: @RequestParam String carNo 是必填参数——缺失才 400；
+    // 传空串时 Java 正常执行（只是不放 platenumber 模糊条件）。
+    if !c.contains_key("carNo") {
         return spring_bad_request(uri.path());
     }
     let (start, end) = match time_range(&c, uri.path()) {

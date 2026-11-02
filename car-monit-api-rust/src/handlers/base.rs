@@ -23,7 +23,7 @@ use serde_json::Value;
 use crate::error::AppResult;
 use crate::handlers::common::*;
 use crate::models::*;
-use crate::response::TableDataInfo;
+use crate::response::{AjaxResult, TableDataInfo};
 use crate::state::AppState;
 use crate::utils;
 
@@ -151,15 +151,18 @@ pub async fn fee_gantry_list(
     Query(page): Query<PageQuery>,
 ) -> AppResult<Response> {
     let p = page_params(&page);
+    let total = state.fee_gantry.count(&q).await?;
     let mut rows = if p.empty {
         Vec::new()
     } else {
-        state.fee_gantry.list(&q, p.page_size, p.offset()).await?
+        state
+            .fee_gantry
+            .list(&q, p.page_size, p.offset_for(total))
+            .await?
     };
     for r in &mut rows {
         r.id = utils::uuid_simple().into();
     }
-    let total = state.fee_gantry.count(&q).await?;
     Ok(json_ok(TableDataInfo::new(
         serde_json::to_value(rows)?,
         total,
@@ -177,16 +180,16 @@ pub async fn snapshot_flow_list(
 ) -> AppResult<Response> {
     prepare_snapshot(&state, &mut q).await;
     let p = page_params(&page);
+    let total = state.snapshot_flow.count(&q).await?;
     let mut rows = if p.empty {
         Vec::new()
     } else {
         state
             .snapshot_flow
-            .list(&q, p.page_size, p.offset())
+            .list(&q, p.page_size, p.offset_for(total))
             .await?
     };
     decorate_snapshot(&mut rows, true);
-    let total = state.snapshot_flow.count(&q).await?;
     Ok(json_ok(TableDataInfo::new(
         serde_json::to_value(rows)?,
         total,
@@ -200,12 +203,13 @@ pub async fn snapshot_flow_export(
 ) -> AppResult<Response> {
     prepare_snapshot(&state, &mut q).await;
     let p = page_params(&page);
+    let total = state.snapshot_flow.count(&q).await?;
     let mut rows = if p.empty {
         Vec::new()
     } else {
         state
             .snapshot_flow
-            .list(&q, p.page_size, p.offset())
+            .list(&q, p.page_size, p.offset_for(total))
             .await?
     };
     // PARITY: listToExport 不做图片域名替换（Java 只做 id + 时间格式化）
@@ -258,4 +262,27 @@ pub async fn vehicle_weight_detail_500(Path(id): Path<String>) -> Response {
 
 pub async fn trail_tracks_detail_500(Path(id): Path<String>) -> Response {
     spring_internal_error(&format!("/base/trailtracks/{}", id))
+}
+
+/// 对应 `ZdataTrailTracksController.getInfo(@PathVariable("uuid") String)`。
+/// PARITY: `zdata_trail_tracks.uuid` 不唯一，MyBatis `selectOne()` 命中多行会抛
+/// `TooManyResultsException`（实测同一 uuid 有 17 行）→ Spring 500；
+/// 命中 0 行返回 `AjaxResult.success(null)`；恰好 1 行才正常返回。
+pub async fn trail_tracks_detail(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> AppResult<Response> {
+    let rows = state
+        .trail_tracks
+        .repo
+        .list(vec![crate::repo::Cond::Eq("uuid", id.clone().into())], 2, 0)
+        .await?;
+    match rows.len() {
+        0 => Ok(json_ok(AjaxResult::success(None::<Value>))),
+        1 => {
+            let body = AjaxResult::success(Some(serde_json::to_value(&rows[0])?));
+            Ok(json_ok(body))
+        }
+        _ => Ok(spring_internal_error(&format!("/base/trailtracks/{}", id))),
+    }
 }

@@ -21,6 +21,9 @@ use uuid::Uuid;
 
 const REQUEST_ID: HeaderName = HeaderName::from_static("x-request-id");
 
+/// GET 请求行里 `path?query` 的最大字节数（对齐 Tomcat maxHttpHeaderSize 的实测结果）。
+const MAX_URI_BYTES: usize = 8075;
+
 tokio::task_local! {
     /// 当前请求路径：供 AppError → Spring /error 响应体使用（无需在每个 handler 传参）。
     pub static CURRENT_PATH: String;
@@ -36,6 +39,24 @@ pub async fn request_id_and_log(req: Request, next: Next) -> Response {
         .unwrap_or_else(|| Uuid::new_v4().simple().to_string());
     let method = req.method().clone();
     let path = req.uri().path().to_string();
+
+    // PARITY: Tomcat 的 maxHttpHeaderSize=8192 连请求行一起算，实测 GET 的
+    // `path?query` 上限是 8075 字节（8075 → 200，8076 → 400）。Rust 侧用 hyper，
+    // 默认上限不同，长参数（例如把整段轨迹 JSON 当过滤值传进来）会在 Java 400 而 Rust 200。
+    // 这里补上同样的长度闸门，让状态码一致（Java 的 400 页面是容器 HTML，不属于应用契约，
+    // Rust 继续返回应用的 Spring 错误 JSON，差异记录在 README 已知差异表）。
+    if req
+        .uri()
+        .path_and_query()
+        .map(|pq| pq.as_str().len())
+        .unwrap_or(0)
+        > MAX_URI_BYTES
+    {
+        return crate::handlers::common::json_status(
+            axum::http::StatusCode::BAD_REQUEST,
+            crate::router::spring_error(axum::http::StatusCode::BAD_REQUEST, "Bad Request", &path),
+        );
+    }
 
     let span =
         tracing::info_span!("http.request", request_id = %rid, method = %method, path = %path);

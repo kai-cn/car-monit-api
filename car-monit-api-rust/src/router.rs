@@ -105,7 +105,7 @@ fn routes() -> Router<Arc<AppState>> {
         .route("/base/org/listAll", get(crud::org_all))
         .route("/base/org/{id}", get(crud::org_ajax))
         .route("/base/trailtracks/list", get(crud::trail_tracks_list))
-        .route("/base/trailtracks/{id}", get(base::trail_tracks_detail_500))
+        .route("/base/trailtracks/{id}", get(base::trail_tracks_detail))
         // ---- /base/sysutil ----
         .route("/base/sysutil/saveRedis", get(sysutil::save_redis))
         .route(

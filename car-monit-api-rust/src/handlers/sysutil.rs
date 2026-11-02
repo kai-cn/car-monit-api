@@ -129,7 +129,7 @@ fn fill_decimal(dst: &mut JFloat, raw: &str, field: &str) -> AppResult<()> {
 
 pub async fn get_by_trail_bo(
     State(state): State<Arc<AppState>>,
-    Query(bo): Query<TrailBo>,
+    JavaQuery(bo): JavaQuery<TrailBo>,
 ) -> AppResult<Response> {
     let result = state.sysutil.get_by_trail_bo(&bo).await?;
     Ok(json_ok(result))

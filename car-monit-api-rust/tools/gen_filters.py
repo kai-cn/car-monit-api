@@ -149,8 +149,20 @@ def emit_range(field, column, op, model, fields, lines):
         lines.append('    // 不支持的时间字段类型 %s: %s' % (ty, field))
 
 
+LITERAL_IF = re.compile(r"^(\w+)\s*!=\s*null\s+and\s+\1\s*==\s*'([^']+)'$")
+LITERAL_THEN = re.compile(r"^\s*and\s+t\.(\w+)\s*=\s*'([^']+)'\s*$")
+
+
 def parse_block(test, body):
-    """返回 ('eq'|'like'|'gte'|'lte'|'in'|'skip', field, column)。"""
+    """返回 ('eq'|'like'|'gte'|'lte'|'in'|'literal'|'broken', ...)。"""
+    # 形如 <if test="flag != null and flag == 'JiAnDong'"> and t.orgcode = '030000011'
+    # MyBatis 的 OGNL 对多字符单引号串按字符串比较，是生效的（此前误判为未生效）。
+    t = re.sub(r'\s+', ' ', test).strip()
+    m = LITERAL_IF.match(t)
+    if m:
+        lit = LITERAL_THEN.match(re.sub(r'\s+', ' ', body))
+        if lit:
+            return ('literal', m.group(1), m.group(2), lit.group(1), lit.group(2))
     field_m = re.match(r'\s*(\w+)', test)
     if not field_m:
         return None
@@ -208,7 +220,7 @@ def main():
             parsed = parse_block(test, inner)
             if not parsed:
                 continue
-            op, field, column = parsed
+            op, field, column = parsed[0], parsed[1], parsed[2]
             key = (op, field, column)
             if key in seen:
                 continue
@@ -221,6 +233,14 @@ def main():
                 emit_range(field, column, op, model, fields, lines)
             elif op == 'in':
                 emit_eq(field, column, model, fields, lines)
+            elif op == 'literal':
+                _, field, want, column, lit = parsed
+                entry = fields.get(norm(field))
+                rn = access(entry[0]) if entry else field
+                lines.append('    // PARITY: XML 的 flag 字面量条件（OGNL 字符串比较生效）')
+                lines.append('    if q.%s.as_str() == "%s" {' % (rn, want))
+                lines.append('        v.push(Cond::Eq("%s", "%s".into()));' % (column, lit))
+                lines.append('    }')
             elif op == 'broken':
                 lines.append('    // PARITY: XML 引用了不存在的属性 #{%s}，Java 抛 BindingException -> 500。' % column)
                 rn = access(fields.get(norm(field), (field, ''))[0])

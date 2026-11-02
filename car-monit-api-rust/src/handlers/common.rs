@@ -41,6 +41,20 @@ impl PageParams {
             (self.page_num - 1) * self.page_size
         }
     }
+
+    /// PARITY: 实测 Java 的 PageHelper `reasonable=true` 生效——
+    /// pageNum < 1 归 1；pageNum 超过总页数时钳位到最后一页（不是返回空行）。
+    /// 因为钳位依赖总数，调用方需要先 count 再取 offset（与 PageHelper 先 count 后取数一致）。
+    pub fn offset_for(&self, total: i64) -> i64 {
+        let mut num = self.page_num.max(1);
+        if self.page_size > 0 {
+            let pages = (total + self.page_size - 1) / self.page_size;
+            if pages > 0 && num > pages {
+                num = pages;
+            }
+        }
+        (num - 1) * self.page_size
+    }
 }
 
 /// 对应 BaseController.startPage()：默认 pageNum=1、pageSize=10。
@@ -219,6 +233,24 @@ fn percent_decode(s: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
+/// 对应 Spring `MethodArgumentTypeMismatchException` → `/error` 的 400 JSON 错误体。
+/// PARITY: Axum 默认的 Query 拒绝返回纯文本 `Failed to deserialize query string: ...`，
+/// Java 返回的是 `{timestamp,status,error,message,path}`；这里统一成 Java 的形状。
+#[derive(Debug)]
+pub struct SpringQueryRejection(pub axum::extract::rejection::QueryRejection);
+
+impl IntoResponse for SpringQueryRejection {
+    fn into_response(self) -> Response {
+        let path = crate::middleware::CURRENT_PATH
+            .try_with(|p| p.clone())
+            .unwrap_or_default();
+        json_status(
+            StatusCode::BAD_REQUEST,
+            crate::router::spring_error(StatusCode::BAD_REQUEST, "Bad Request", &path),
+        )
+    }
+}
+
 /// 与 `axum::extract::Query<T>` 等价，但先按 Java 的规则丢弃解析失败的日期参数。
 /// 只用于绑定实体（19 张基础表的 list/listToExport、feeGantry、snapshotflow 等）。
 pub struct JavaQuery<T>(pub T);
@@ -228,28 +260,48 @@ where
     T: serde::de::DeserializeOwned + crate::models::JavaDateFields,
     S: Send + Sync,
 {
-    type Rejection = axum::extract::rejection::QueryRejection;
+    type Rejection = SpringQueryRejection;
 
     async fn from_request_parts(
         parts: &mut axum::http::request::Parts,
         state: &S,
     ) -> Result<Self, Self::Rejection> {
         let raw = parts.uri.query().unwrap_or_default().to_string();
-        let kept: Vec<String> = raw
-            .split('&')
-            .filter(|p| !p.is_empty())
-            .filter(|p| {
-                let (k, v) = match p.split_once('=') {
-                    Some(kv) => kv,
-                    None => (*p, ""),
-                };
-                let key = percent_decode(k);
-                !<T as crate::models::JavaDateFields>::JAVA_DATE_FIELDS
-                    .iter()
-                    .any(|f| *f == key.as_str())
-                    || java_date_parseable(&percent_decode(v))
+        // PARITY: 绑定前做两件事，都与 Java 对齐
+        //  1) 同名参数重复出现时，Spring 把它们用逗号拼成一个值再绑定
+        //     （实测 `platenumber=%&platenumber=%` 在 Java 变成 `%,%` → LIKE 不命中；
+        //      Rust 走 serde_urlencoded 会当重复字段直接 400）；
+        //  2) Date 字段只认 DateUtils.parseDate 的 12 种模式，解析失败要像 Spring 的
+        //     PropertyEditor 那样把参数丢掉（条件不生效），而不是报错。
+        let mut kept: Vec<(String, String)> = Vec::new(); // (原始键, 已拼接的值)
+        for pair in raw.split('&').filter(|p| !p.is_empty()) {
+            let (k, v) = match pair.split_once('=') {
+                Some(kv) => kv,
+                None => (pair, ""),
+            };
+            let key = percent_decode(k);
+            let date_field = <T as crate::models::JavaDateFields>::JAVA_DATE_FIELDS
+                .iter()
+                .any(|f| *f == key.as_str());
+            if date_field && !java_date_parseable(&percent_decode(v)) {
+                continue;
+            }
+            if let Some(slot) = kept.iter_mut().find(|(ek, _)| ek == k) {
+                slot.1.push(',');
+                slot.1.push_str(v);
+            } else {
+                kept.push((k.to_string(), v.to_string()));
+            }
+        }
+        let kept: Vec<String> = kept
+            .into_iter()
+            .map(|(k, v)| {
+                if v.is_empty() && !k.contains('=') {
+                    k
+                } else {
+                    format!("{}={}", k, v)
+                }
             })
-            .map(|p| p.to_string())
             .collect();
         if let Ok(uri) = axum::http::Uri::builder()
             .path_and_query(format!("{}?{}", parts.uri.path(), kept.join("&")))
@@ -257,7 +309,9 @@ where
         {
             parts.uri = uri;
         }
-        let q = axum::extract::Query::<T>::from_request_parts(parts, state).await?;
+        let q = axum::extract::Query::<T>::from_request_parts(parts, state)
+            .await
+            .map_err(SpringQueryRejection)?;
         Ok(JavaQuery(q.0))
     }
 }

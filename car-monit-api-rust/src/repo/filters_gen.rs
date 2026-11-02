@@ -50,6 +50,10 @@ pub fn snapshot_filters(q: &OdsRtSzdnSnapshotFlowAddcode) -> Vec<Cond> {
     if !q.orgcode.is_empty() {
         v.push(Cond::Eq("orgcode", q.orgcode.clone().into()));
     }
+    // PARITY: XML 的 flag 字面量条件（OGNL 字符串比较生效）
+    if q.flag.as_str() == "JiAnDong" {
+        v.push(Cond::Eq("orgcode", "030000011".into()));
+    }
     if !q.orgname.is_empty() {
         v.push(Cond::Like("orgname", q.orgname.clone().into()));
     }

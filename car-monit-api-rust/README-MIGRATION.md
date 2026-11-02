@@ -371,7 +371,7 @@ cargo test
 | 6 | **Redis 序列化不兼容** | Java FastJson/JDK vs Rust JSON | 切换期共用 key 会解析失败 | 上线前 `DEL` 字典/轨迹/消息类 key；或双写过渡 |
 | 7 | **PageHelper total vs 本页行数** | 轨迹查询没有 COUNT（避免打穿 8 亿级表） | `/base/sysutil/*`、`/progressive/*` 的 `total` 是本页行数（与 Go 版一致） | 前端分页控件行为需确认 |
 | 8 | **`pageSize` 上限 1000** | Go 版为保护大表加入 | 超过 1000 会被截断 | 与 Go 版保持一致；如需完全对齐 Java 可移除 `page_params` 的上限 |
-| 9 | **`flag="JiAnDong"` 条件** | 实测 Java XML 的 OGNL `flag == 'JiAnDong'` 未生效（无范围查询返回全表 900 行） | Rust 同样忽略 flag，与实测一致 | 若 Java 修复 OGNL 比较，再同步加回 orgcode 过滤 |
+| 9 | **数据权限过滤（`sys_config:data_query`）** | Java 控制器读 Redis `sys_config:data_query`：不等于 `queryall` 且 `platenumber` 为空时设 `flag='JiAnDong'`，Mapper 追加 `orgcode='030000011'`（OGNL 的多字符单引号按字符串比较，是生效的） | 该 key 缺失时 Java 只返回吉安东辖区数据；Rust 现在同样按开关追加过滤 | 切流前确认两端读同一个 Redis key；key 值不同会造成「数据量差异」而非代码差异 |
 | 10 | **启动与业务请求已实测** | 使用 yml 中的 GaussDB/Redis | Java/Rust 双端 74 + 93 个场景一致，另有 200+ 组过滤条件逐字段对照 | 见第 10、11 节；Kafka/ES 的真实生产链路仍需独立联调 |
 | 11 | **Rust 工具链 1.90** | 2026 年的最新稳定版可能更高；本机已装 1.90 | 部分 2026 crate 可能要求更新 | 升级时改 `rust-toolchain.toml` 与 `Cargo.toml` 的 `rust-version`，再跑 `cargo test` |
 | 12 | **ES / Kafka 未做完整数据集成** | 本机 ES 磁盘 97%、触发 flood-stage 只读；Kafka 未启动 | 已按 Java mapping 建索引，但仅验证了空索引路径；消息总线为 Noop | 清理磁盘后执行全量/增量同步，并用 Kafka 联调消费链路 |
@@ -457,8 +457,9 @@ python tools/compare_api.py
    为标量类型实现 `compatible()` 与按实际 SQL 类型解码。
 3. **时区**：JDBC `serverTimezone=Asia/Shanghai` + Jackson UTC 输出；`Date` 字段需要 -8h，
    而 Java String 字段走 `getString` 返回墙钟时间、不能偏移。两类分别处理。
-4. **快照列表 SQL**：按 `OdsRtSzdnSnapshotFlowAddcodeMapper.xml` 只选 17 列并 `ORDER BY snapshottime DESC`；
-   实测 `flag == 'JiAnDong'` 的 OGNL 条件未生效，Rust 同步忽略。
+4. **快照列表 SQL**：按 `OdsRtSzdnSnapshotFlowAddcodeMapper.xml` 只选 17 列并 `ORDER BY snapshottime DESC`。
+   当时的 `flag == 'JiAnDong'` 之所以看起来「未生效」，是因为 Redis 里恰好有 `sys_config:data_query=queryall`；
+   该开关的完整语义见第 12 节第 1 条。
 5. **渐进式查询不分页**：Java phase1 直接 `selectList`（无 PageHelper），pageSize 被忽略；
    Rust 改为无 LIMIT 的 `list_unbounded`。
 6. **feeGantry 列表 id**：Java 每行临时生成 UUID，Rust 同步。
@@ -576,3 +577,65 @@ python tools/compare_round3.py      # checked=186 bad=0
 `tools/compare_round3.py` 的做法：先用 Java 无过滤列表取一行样本，再把该行每个非空标量字段
 作为查询参数分别打 Java/Rust，比较状态码与 `total`。ISO 时间串不再跳过——
 `JavaQuery` 已按 Java 的白名单把它丢弃（见 11.2 第 7 条）。
+
+---
+
+## 12. 第四轮：全量双端接口校验（2026-11-02）
+
+框架：`tools/verify_full.py`（7 个阶段，548 项用例）；逐条结果写入
+`docs/VERIFICATION-FULL-20261102.md`，原始数据在 `.run/verify/*.json`。
+判定口径升级为「状态码 + 响应体深度比较 + 键顺序 + 原始字节」，
+Java 每行随机生成的 `id`/`taskId` 只比存在性与类型。
+
+本轮新发现并修复的差异（都是双端实测才暴露、静态读代码看不到的）：
+
+1. **数据权限过滤没落地**。`OdsRtSzdnSnapshotFlowAddcodeController.list/listToExport` 读 Redis
+   `sys_config:data_query`；只要它不是 `queryall` 且 `platenumber` 为空，就设 `flag='JiAnDong'`，
+   Mapper 追加 `orgcode = '030000011'`（OGNL 的多字符单引号按字符串比较，是生效的）。
+   上一轮误判为「OGNL 未生效」→ Rust 忽略 flag → 无车牌过滤时 Rust 300 行、Java 0 行。
+   现在 `tools/gen_filters.py` 会把 `<if test="flag != null and flag == 'X'"> and t.col = 'Y'`
+   这类字面量条件也生成出来（共 572 条 `<if>`）。
+2. **`@PathVariable Long` 的类型转换契约**。`provcapture / stationcapture / feeStationEnter`
+   详情主键在 Java 是 `Long`，非数字 ID（含 `listAll`、`abc`、`__no_such_id__`）走
+   `MethodArgumentTypeMismatchException` → Spring 400；Rust 之前按字符串查库 → 500。
+   这三张表改用 `entity_repo_numeric!`。
+3. **绑定失败要输出 Spring 的 400 JSON**。数值字段传非数字（`axlecount=abc`）时 Java 返回
+   `{timestamp,status,error,message,path}`，Axum 默认返回纯文本
+   `Failed to deserialize query string: …`。新增 `SpringQueryRejection`。
+4. **`zdata_trail_tracks.uuid` 不唯一**。Java `selectOne()` 命中多行抛 `TooManyResultsException`
+   （实测同一 uuid 17 行）→ 500；0 行 → `{"msg":"操作成功","code":200}`；恰好 1 行才返回数据。
+   Rust 之前对所有 id 一律 500，现在按行数三分支。
+5. **`AjaxResult` 的键顺序**。Java 是 `HashMap`，实测稳定输出 `msg → code → data`；
+   Rust 之前是 `code,msg,data`。`response::envelope()` 改为同序并有测试锁定。
+   （`TableDataInfo` 与 large 系列用 POJO/`LinkedHashMap`，顺序本来就一致。）
+6. **PageHelper 的 `reasonable` 越界钳位**。`pageNum` 超过总页数时 Java 返回**最后一页**
+   （`gantry` total=1526、`pageSize=3`、`pageNum=9999` → 末尾 2 行），不是空列表。
+   新增 `PageParams::offset_for(total)`，各 list/listToExport 先 `count` 再取数
+   （PageHelper 本来就是先 count 后取数）。
+7. **容器级请求行长度上限**。Tomcat `maxHttpHeaderSize=8192` 把请求行也算进去，
+   实测 `path?query` 上限 8075 字节（8075→200，8076→400）。`middleware.rs` 加同长度闸门；
+   Java 此时是容器 HTML 错误页，Rust 继续返回应用的 Spring JSON —— 状态码一致，body 属容器差异。
+8. **降级查询的日期字段变 null**。`/api/v1/large/snapshot`、`/api/v1/unified/snapshot/list`
+   原先 `SELECT *` → `row_to_json` → `from_value::<实体>`，而 `row_to_json` 对
+   `timestamp without time zone` 按 `DateTime<Utc>` 取列会解码失败并静默变 null，
+   导致 `snapshottime/receivedtime/loadtime` 与 Java 不一致。
+   改为 `query_as::<_, 实体>`（等价于 Java 用 Mapper 取实体），与 `/base/.../list` 同源编码。
+9. **`type` 参数不该校验**。Java 的 `resolve(type)`/`resolveDs(type)` 对未知值一律 `default → SNAPSHOT`；
+   Rust 之前回「type 只能是 snapshot / fee / trail」。`parse_type_lenient` 改为默认 Snapshot。
+10. **`carNo` 必填语义**。Java 的 `@RequestParam String carNo` 只有**缺失**才 400，
+    传空串正常执行（只是不放模糊条件）；Rust 之前空串也 400。改为按存在性判断。
+11. **重复查询参数的绑定规则**。Spring 对同名参数会把多个值用逗号拼成一个再绑定
+    （实测 `platenumber=%&platenumber=%` 在 Java 变成 `%,%` → LIKE 不命中 → 0 行；
+    `pageNum=1&pageNum=2` 会让数值字段变成 `1,2`），
+    而 `serde_urlencoded` 把重复字段直接判成 400。`JavaQuery` 改为按 Java 的逗号拼接语义合并。
+
+环境变化也值得一提：本轮期间 Java 的定时同步任务把 ES 索引 `snapshot_flow`（300 docs）建好，
+所以 large/unified 的路由与 10-31 那轮不同（`fee_records`、`trail_fitting` 仍不存在 →
+两端都走降级 → 结果仍一致）。
+
+最终结果：`inventory 2/2`、`base 140/140`、`filters 343`（一致 342 + 容器级 1）、
+`query 34/34`、`sysutil 10`（一致 7 + 跳过 3）、`contract 19/19` —— 合计 548 项，0 项应用层不一致。
+同时 `compare_api.py ok=74 bad=0`、`compare_round2.py ok=93 bad=0`、`compare_round3.py checked=186 bad=0`，
+`cargo test` 20 passed（新增时间格式解析、AjaxResult 键序、`JavaQuery` 丢弃日期参数三组用例）。
+
+跳过项与残留风险记录在 `docs/VERIFICATION-FULL-20261102.md` 第 6 节。

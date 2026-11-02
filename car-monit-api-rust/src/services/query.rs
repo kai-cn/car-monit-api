@@ -16,7 +16,7 @@ use serde_json::{json, Value};
 use tracing::{error, info, warn};
 
 use crate::config::{ElasticsearchConfig, OptimizationConfig};
-use crate::db::{row_to_json, Db};
+use crate::db::Db;
 use crate::error::{AppError, AppResult};
 use crate::es::{build_fuzzy_query, extract_hits, EsClient};
 use crate::models::{OdsLwzxsfsjFeeRecords01, OdsRtSzdnSnapshotFlowAddcode, ZdataTrailFitting};
@@ -63,14 +63,12 @@ pub fn parse_data_source(s: &str) -> AppResult<DataSource> {
 
 /// 对应 LargeScaleQueryController.resolveDs：非法值静默降级为 snapshot。
 pub fn parse_type_lenient(t: &str) -> AppResult<DataSource> {
+    // PARITY: Java 的 resolve(type)/resolveDs(type) 对未知取值不报错，一律落到 SNAPSHOT 分支
+    // （switch default），所以 stats/export/sync 接口传 type=bogus 时仍按门架快照查询执行。
     match t.trim().to_lowercase().as_str() {
-        "" | "snapshot" => Ok(DataSource::Snapshot),
         "fee" => Ok(DataSource::Fee),
         "trail" => Ok(DataSource::Trail),
-        other => Err(AppError::bad_request(format!(
-            "type 只能是 snapshot / fee / trail，当前为 {}",
-            other
-        ))),
+        _ => Ok(DataSource::Snapshot),
     }
 }
 
@@ -292,6 +290,27 @@ impl QueryService {
     }
 
     /// 对应 queryFromDB：GaussDB 降级路径，LIMIT 1000 + 内存分页。
+    /// 用 sqlx 直接解码成实体（与 Mapper 的 resultMap 等价），保证列类型/时区处理
+    /// 与 `/base/.../list` 完全一致。
+    async fn fetch_entities<T>(&self, sql: &str, args: &[String]) -> AppResult<Vec<T>>
+    where
+        T: for<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> + Send + Unpin,
+    {
+        let mut q = sqlx::query_as::<_, T>(sql);
+        for a in args {
+            q = q.bind(a);
+        }
+        Ok(q.fetch_all(&self.db.pool).await?)
+    }
+
+    /// 对应 Java `queryFromMysql`：用 Mapper 直接取**实体**（`selectList(QueryWrapper)`），
+    /// 再把实体序列化输出。
+    ///
+    /// PARITY: 之前这里是 `SELECT *` + `row_to_json` + `from_value`，`row_to_json` 对
+    /// `timestamp without time zone` 走 `DateTime<Utc>` 会解码失败并静默变成 null，
+    /// 导致 `/api/v1/large|unified` 的降级结果里 snapshottime/receivedtime/loadtime 全为 null，
+    /// 而 Java 返回实体（走 sqlx 的 JIsoDateTime/Day 解码 + 与 Jackson 一致的格式化）。
+    /// 改为直接 `query_as::<_, 实体>` 后，编码与 `/base/.../list` 完全一致。
     pub async fn query_from_db(
         &self,
         ds: DataSource,
@@ -304,28 +323,49 @@ impl QueryService {
         let meta = self.meta(ds);
         let mut where_clauses: Vec<String> = Vec::new();
         let mut args: Vec<String> = Vec::new();
-        if !start_time.trim().is_empty() {
-            args.push(start_time.into());
-            where_clauses.push(format!("{} >= ${}", meta.time_field, args.len()));
+
+        // Java 用 java.sql.Timestamp.valueOf(...)，无法解析时抛异常 -> query() 捕获 -> 空列表。
+        let mut push_time = |col: &str, op: &str, v: &str| -> AppResult<bool> {
+            if v.trim().is_empty() {
+                return Ok(true);
+            }
+            match utils::parse_time(v) {
+                Ok(t) => {
+                    args.push(utils::format_datetime(&t));
+                    where_clauses.push(format!(
+                        "{} {} to_timestamp(${}, 'yyyy-mm-dd HH24:MI:SS')",
+                        col,
+                        op,
+                        args.len()
+                    ));
+                    Ok(true)
+                }
+                Err(_) => Ok(false),
+            }
+        };
+        if !push_time(meta.time_field, ">=", start_time)? {
+            return Ok(Vec::new());
         }
-        if !end_time.trim().is_empty() {
-            args.push(end_time.into());
-            where_clauses.push(format!("{} <= ${}", meta.time_field, args.len()));
+        if !push_time(meta.time_field, "<=", end_time)? {
+            return Ok(Vec::new());
         }
+
         for (k, v) in fuzzy {
             if v.trim().is_empty() {
                 continue;
             }
-            let Some(physical) = meta.logical_to_physical.get(k.as_str()) else {
-                return Err(AppError::bad_request(format!(
-                    "不支持的模糊查询字段: {}",
-                    k
-                )));
-            };
+            // PARITY: Java 用 translation.getOrDefault(key, key)，未知字段直接当物理列名，
+            // 于是 SQL 报错 -> 被 query() 捕获 -> 空列表。
+            let physical = meta
+                .logical_to_physical
+                .get(k.as_str())
+                .cloned()
+                .unwrap_or(k.as_str());
             args.push(format!("%{}%", v));
-            // PARITY: Java QueryWrapper.like → 大小写敏感的 LIKE。
+            // PARITY: Java QueryWrapper.like -> 大小写敏感的 LIKE。
             where_clauses.push(format!("{} LIKE ${}", physical, args.len()));
         }
+
         let mut sql = format!("SELECT * FROM {}", meta.table);
         if !where_clauses.is_empty() {
             sql.push_str(" WHERE ");
@@ -333,19 +373,24 @@ impl QueryService {
         }
         sql.push_str(" LIMIT 1000");
 
-        let mut q = sqlx::query(&sql);
-        for a in &args {
-            q = q.bind(a);
-        }
-        let rows = q.fetch_all(&self.db.pool).await?;
-        let docs: Vec<Value> = rows.iter().map(row_to_json).collect();
-        // 对应 Java queryFromMysql：返回实体对象（camelCase + 瞬态字段），而不是原始列 Map。
-        let docs = self.convert_docs(ds, docs);
+        let rows_value: Value = match ds {
+            DataSource::Snapshot => serde_json::to_value(
+                self.fetch_entities::<OdsRtSzdnSnapshotFlowAddcode>(&sql, &args)
+                    .await?,
+            )?,
+            DataSource::Fee => serde_json::to_value(
+                self.fetch_entities::<OdsLwzxsfsjFeeRecords01>(&sql, &args)
+                    .await?,
+            )?,
+            DataSource::Trail => serde_json::to_value(
+                self.fetch_entities::<ZdataTrailFitting>(&sql, &args)
+                    .await?,
+            )?,
+        };
+        let docs: Vec<Value> = rows_value.as_array().cloned().unwrap_or_default();
         Ok(page_in_memory(docs, page_num, page_size))
     }
 
-    /// 对应 Java `JSON.parseObject(hit.getSourceAsString(), targetClass)`：
-    /// ES 文档（可能是 snake_case）反序列化为实体，再按 Java 字段名/默认值输出。
     pub fn convert_docs(&self, ds: DataSource, docs: Vec<Value>) -> Vec<Value> {
         docs.into_iter()
             .map(|doc| {

@@ -42,6 +42,13 @@ fn ajax_result_omits_null_data_like_java() {
     let ok = serde_json::to_value(AjaxResult::success(None)).unwrap();
     assert_eq!(ok, json!({ "code": 200, "msg": "操作成功" }));
 
+    // PARITY: Java 的 AjaxResult 继承 HashMap，实测输出顺序是 msg → code → data。
+    let s = serde_json::to_string(&AjaxResult::success(Some(json!({"a": 1})))).unwrap();
+    assert!(
+        s.starts_with("{\"msg\":\"操作成功\",\"code\":200,\"data\""),
+        "AjaxResult 键顺序应与 Java HashMap 一致: {s}"
+    );
+
     let ok_data = serde_json::to_value(AjaxResult::success(Some(json!(1)))).unwrap();
     assert_eq!(ok_data["data"], json!(1));
 
@@ -226,4 +233,25 @@ async fn java_query_drops_unparseable_date_params_like_init_binder() {
     .await
     .unwrap();
     assert!(q.tailcapturetime.utc().is_some());
+}
+
+#[test]
+fn parse_time_accepts_es_and_row_json_formats() {
+    // row_to_json（chrono to_rfc3339）与 ES 文档里的日期字符串都必须能解析，
+    // 否则 /api/v1/large|unified 的 DB 降级路径会把日期字段变成 null。
+    for s in [
+        "2025-09-08T10:51:00+00:00",
+        "2025-09-08T10:51:00.000+00:00",
+        "2025-09-08T10:51:00Z",
+        "2025-09-08 10:51:00",
+        "2025-09-10",
+        "2025/09/10",
+        "1757299860",
+    ] {
+        let t = utils::parse_time(s).unwrap_or_else(|e| panic!("{s} 解析失败: {e}"));
+        assert!(
+            t.to_rfc3339().starts_with("2025-09") || s.chars().all(|c| c.is_ascii_digit()),
+            "{s} -> {t}"
+        );
+    }
 }
