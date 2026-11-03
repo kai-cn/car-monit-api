@@ -1,0 +1,53 @@
+HTTP 200  5ms  err=None
+{
+ "total": 302,
+ "rows": [
+  {
+   "id": 40017,
+   "tollCode": "S0089360020040",
+   "tollName": "莲花西收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.145.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40025,
+   "tollCode": "S42360824F0010",
+   "tollName": "新干北收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.121.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40031,
+   "tollCode": "S46361024F0010",
+   "tollName": "崇仁收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.103.59",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40041,
+   "tollCode": "G45360826F0010",
+   "tollName": "泰和收费站",
+   "orgCode": "020000253",
+   "ip": "36.121.8.70",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40042,
+   "tollCode": "S41360731F0020",
+   "tollName": "仙下收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.131.130",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

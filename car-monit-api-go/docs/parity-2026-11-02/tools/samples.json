@@ -1,0 +1,448 @@
+{
+ "fwqjcxx": {
+  "path": "/base/fwqjcxx/list",
+  "pk": "agentPk",
+  "pk_value": "1",
+  "filters": [
+   [
+    "agentPk",
+    "1"
+   ],
+   [
+    "yxtzj",
+    "45L4479928780847000"
+   ],
+   [
+    "fwqbm",
+    "G0321361123W0010"
+   ],
+   [
+    "fwqmc",
+    "三清山西服务区"
+   ]
+  ],
+  "row_count": 5,
+  "total": 218
+ },
+ "sfsjcxx": {
+  "path": "/base/sfsjcxx/list",
+  "pk": "agentPk",
+  "pk_value": "d2c6df4afa7ff18d48786d728d3919d2",
+  "filters": [
+   [
+    "agentPk",
+    "d2c6df4afa7ff18d48786d728d3919d2"
+   ],
+   [
+    "yxtzj",
+    "1531950771411013633"
+   ],
+   [
+    "sfsmc",
+    "上万收费所"
+   ],
+   [
+    "jd",
+    "117.43187400"
+   ]
+  ],
+  "row_count": 5,
+  "total": 24
+ },
+ "sfzjcxx": {
+  "path": "/base/sfzjcxx/list",
+  "pk": "agentPk",
+  "pk_value": "363bc7b76e508c55dcb259cf6a3f007e",
+  "filters": [
+   [
+    "agentPk",
+    "363bc7b76e508c55dcb259cf6a3f007e"
+   ],
+   [
+    "yxtzj",
+    "1495673117678645249"
+   ],
+   [
+    "sfzdm",
+    "G56360429F0010"
+   ],
+   [
+    "sfzmc",
+    "均桥收费站"
+   ]
+  ],
+  "row_count": 5,
+  "total": 320
+ },
+ "fwqclls": {
+  "path": "/manager/fwqclls/list",
+  "pk": "bigId",
+  "pk_value": 1,
+  "filters": [
+   [
+    "datauuid",
+    "uuid-fwq-20251023001"
+   ]
+  ],
+  "row_count": 3,
+  "total": 3
+ },
+ "feeGantry": {
+  "path": "/base/feeGantry/list",
+  "pk": "bigId",
+  "pk_value": "59",
+  "filters": [
+   [
+    "actualfeeclass",
+    "1"
+   ],
+   [
+    "axlecount",
+    6
+   ],
+   [
+    "createtime",
+    "2024-11-11T10:09:21.000+00:00"
+   ],
+   [
+    "discountfee",
+    1388
+   ]
+  ],
+  "row_count": 5,
+  "total": 200
+ },
+ "feerecords": {
+  "path": "/base/feerecords/list",
+  "pk": "bigId",
+  "pk_value": null,
+  "filters": [],
+  "row_count": 0,
+  "total": null
+ },
+ "feeStationEnter": {
+  "path": "/base/feeStationEnter/list",
+  "pk": "bigId",
+  "pk_value": 2308,
+  "filters": [
+   [
+    "cardid",
+    "15012312232021029616"
+   ],
+   [
+    "electricalpercentage",
+    100
+   ],
+   [
+    "enaxlecount",
+    2
+   ],
+   [
+    "entime",
+    "2024-11-24"
+   ]
+  ],
+  "row_count": 5,
+  "total": 317
+ },
+ "feestationexit": {
+  "path": "/base/feestationexit/list",
+  "pk": "bigId",
+  "pk_value": "11150377",
+  "filters": [
+   [
+    "actualfeeclass",
+    "0"
+   ],
+   [
+    "axlecount",
+    2
+   ],
+   [
+    "discountfee",
+    0
+   ],
+   [
+    "electricalpercentage",
+    0
+   ]
+  ],
+  "row_count": 5,
+  "total": 270
+ },
+ "snapshotflow": {
+  "path": "/base/snapshotflow/list",
+  "pk": "datauuid",
+  "pk_value": "c2d437fd-5c2e-40b5-98fd-6581a0f94c1b",
+  "filters": [
+   [
+    "gantryname",
+    "韶口互通-泰和南互通门架1"
+   ],
+   [
+    "roadname",
+    "大广高速公路"
+   ],
+   [
+    "sectionname",
+    "泰赣"
+   ],
+   [
+    "direction",
+    1
+   ]
+  ],
+  "row_count": 5,
+  "total": 251
+ },
+ "provcapture": {
+  "path": "/base/provcapture/list",
+  "pk": "bigId",
+  "pk_value": 312748,
+  "filters": [
+   [
+    "deviceip",
+    "36.101.189.5"
+   ],
+   [
+    "tailcapturetimeunix",
+    -28800
+   ],
+   [
+    "tailcapturetime",
+    "1969-12-31T16:00:00.000+00:00"
+   ],
+   [
+    "platecolorcode",
+    1
+   ]
+  ],
+  "row_count": 5,
+  "total": 356
+ },
+ "stationcapture": {
+  "path": "/base/stationcapture/list",
+  "pk": "bigId",
+  "pk_value": 20113483,
+  "filters": [
+   [
+    "datasource",
+    "ZdTrails:StationCapture"
+   ],
+   [
+    "cameratype",
+    "StationCapture"
+   ],
+   [
+    "deviceid",
+    "00000000"
+   ],
+   [
+    "deviceip",
+    "36.105.104.121"
+   ]
+  ],
+  "row_count": 5,
+  "total": 851
+ },
+ "gantry": {
+  "path": "/base/gantry/list",
+  "pk": "id",
+  "pk_value": "18",
+  "filters": [
+   [
+    "gantryCode",
+    "G003536012000720010"
+   ],
+   [
+    "gantryName",
+    "瑞金北互通-宁都东互通门架1"
+   ],
+   [
+    "roadCode",
+    "G35"
+   ],
+   [
+    "sectionCode",
+    "200R500350729001"
+   ]
+  ],
+  "row_count": 5,
+  "total": 1526
+ },
+ "gantryIp": {
+  "path": "/base/gantryIp/list",
+  "pk": "id",
+  "pk_value": 1,
+  "filters": [
+   [
+    "gantryCode",
+    "S003636011000510010"
+   ],
+   [
+    "gantryName",
+    "南安互通-峡江互通门架1"
+   ],
+   [
+    "orgCode",
+    "020000253"
+   ],
+   [
+    "ip",
+    "36.121.3.43"
+   ]
+  ],
+  "row_count": 5,
+  "total": 1033
+ },
+ "vehicleweight": {
+  "path": "/base/vehicleweight/list",
+  "pk": "-",
+  "pk_value": null,
+  "filters": [
+   [
+    "dataSource",
+    "ZdTrails:BorderWeighing"
+   ],
+   [
+    "dataType",
+    "weigh"
+   ],
+   [
+    "plateNo",
+    "车牌图片未匹配"
+   ],
+   [
+    "siteId",
+    "4"
+   ]
+  ],
+  "row_count": 5,
+  "total": 300
+ },
+ "section": {
+  "path": "/base/section/list",
+  "pk": "id",
+  "pk_value": "18",
+  "filters": [
+   [
+    "roadCode",
+    "G6021"
+   ],
+   [
+    "roadName",
+    "杭长高速"
+   ],
+   [
+    "sectionCode",
+    "200R560210671000"
+   ],
+   [
+    "sectionName",
+    "乐温"
+   ]
+  ],
+  "row_count": 5,
+  "total": 85
+ },
+ "toll": {
+  "path": "/base/toll/list",
+  "pk": "id",
+  "pk_value": "1",
+  "filters": [
+   [
+    "roadCode",
+    "S43"
+   ],
+   [
+    "idCard",
+    "44L4464527980850000"
+   ],
+   [
+    "tollCode",
+    "S43361002F0020"
+   ],
+   [
+    "tollName",
+    "抚州东收费站"
+   ]
+  ],
+  "row_count": 5,
+  "total": 321
+ },
+ "tollStationIp": {
+  "path": "/base/tollStationIp/list",
+  "pk": "id",
+  "pk_value": 40017,
+  "filters": [
+   [
+    "tollCode",
+    "S0089360020040"
+   ],
+   [
+    "tollName",
+    "莲花西收费站"
+   ],
+   [
+    "orgCode",
+    "030000008"
+   ],
+   [
+    "ip",
+    "36.106.145.9"
+   ]
+  ],
+  "row_count": 5,
+  "total": 302
+ },
+ "org": {
+  "path": "/base/org/list",
+  "pk": "bigId",
+  "pk_value": "24945",
+  "filters": [
+   [
+    "orgCode",
+    "000000936"
+   ],
+   [
+    "orgName",
+    "中心机关"
+   ],
+   [
+    "orgShortName",
+    "中心机关"
+   ],
+   [
+    "orgParentId",
+    "030000009"
+   ]
+  ],
+  "row_count": 5,
+  "total": 481
+ },
+ "trailtracks": {
+  "path": "/base/trailtracks/list",
+  "pk": "uuid",
+  "pk_value": "e0e22490-fb40-4795-947b-68565d864aa7",
+  "filters": [
+   [
+    "type",
+    0
+   ],
+   [
+    "pointCount",
+    45
+   ],
+   [
+    "plateKey",
+    "赣CEA826"
+   ],
+   [
+    "enterTime",
+    "2025-09-10 04:39:49"
+   ]
+  ],
+  "row_count": 5,
+  "total": 1379
+ }
+}

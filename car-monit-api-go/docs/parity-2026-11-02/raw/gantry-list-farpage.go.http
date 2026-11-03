@@ -1,0 +1,33 @@
+HTTP 200  66ms  err=None
+{
+ "total": 1526,
+ "rows": [
+  {
+   "id": "1905",
+   "gantryCode": "G006036032003520010",
+   "gantryName": "新余东互通-新余互通门架1",
+   "roadCode": "G60",
+   "sectionCode": "200R500600657000",
+   "tollCode": "G60360502F0030",
+   "orgCode": "030000008",
+   "hexCode": "387839",
+   "direction": "0",
+   "pileNo": "K839+080",
+   "lon": "115.04576600136618",
+   "lat": "27.882457252812536",
+   "isVirtual": "0",
+   "mileage": null,
+   "boundaryGantryType": null,
+   "gantryType": "0",
+   "cityCode": "360502",
+   "districtName": "江西省新余市渝水区",
+   "belongGroup": "1",
+   "gantryCodeMerge": "G006036032003520010",
+   "gantryNameAlias": "新余东互通-新余互通门架1",
+   "remark": "新余东",
+   "isData": null
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

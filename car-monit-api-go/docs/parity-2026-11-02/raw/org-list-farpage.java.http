@@ -1,0 +1,27 @@
+HTTP 200  5ms  err=None
+{
+ "total": 481,
+ "rows": [
+  {
+   "bigId": "25398",
+   "orgCode": "050000018",
+   "orgName": "集团领导",
+   "orgShortName": "集团领导",
+   "orgParentId": "010000001",
+   "orgLevelCode": "0000001100010057",
+   "orgIsVirtual": "1",
+   "orgMaintenance": "1",
+   "orgSequence": 1,
+   "orgIsManager": "0",
+   "orgIsDeleted": "0",
+   "orgCategory": "10",
+   "orgIsAuthorized": "0",
+   "orgAddress": null,
+   "orgIsYhAutarky": "0",
+   "loadTime": "2025-08-28",
+   "gradeLevel": 1
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

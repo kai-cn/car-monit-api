@@ -1,0 +1,8 @@
+HTTP 405  3ms  err=None
+{
+ "timestamp": "2026-11-03T04:01:30.660+00:00",
+ "status": 405,
+ "error": "Method Not Allowed",
+ "message": "",
+ "path": "/base/sysutilTest/syncSuspiciousCar3"
+}

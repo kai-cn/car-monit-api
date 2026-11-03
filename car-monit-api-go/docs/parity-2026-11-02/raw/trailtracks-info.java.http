@@ -1,0 +1,8 @@
+HTTP 500  15ms  err=None
+{
+ "timestamp": "2026-11-03T04:01:10.117+00:00",
+ "status": 500,
+ "error": "Internal Server Error",
+ "message": "",
+ "path": "/base/trailtracks/e0e22490-fb40-4795-947b-68565d864aa7"
+}

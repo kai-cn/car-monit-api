@@ -1,0 +1,10 @@
+HTTP 200  12ms  err=None
+{
+ "msg": "操作成功",
+ "code": 200,
+ "data": {
+  "ods_rt_szdn_snapshot_flow_addcode": "LEVEL_10M",
+  "ods_lwzxsfsj_fee_records_01": "LEVEL_10M",
+  "zdata_trail_fitting": "LEVEL_10M"
+ }
+}

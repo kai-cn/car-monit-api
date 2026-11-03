@@ -1,0 +1,5 @@
+HTTP 200  5ms  err=None
+{
+ "code": 500,
+ "message": "ERROR: invalid input syntax for type timestamp: \"1759248000000\" (SQLSTATE 22007)"
+}

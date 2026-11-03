@@ -1,0 +1,58 @@
+HTTP 200  4ms  err=None
+{
+ "total": 1033,
+ "rows": [
+  {
+   "id": 1033,
+   "gantryCode": "G004536015000920010",
+   "gantryName": "安福互通-油田互通门架1",
+   "orgCode": "030000008",
+   "ip": "36.106.134.118",
+   "brand": "HUAWEI",
+   "type": null,
+   "odsSzdnGantry": null
+  },
+  {
+   "id": 1032,
+   "gantryCode": "G006036032003510010",
+   "gantryName": "新余互通-新余东互通门架1",
+   "orgCode": "030000008",
+   "ip": "36.106.103.144",
+   "brand": "Signalway",
+   "type": null,
+   "odsSzdnGantry": null
+  },
+  {
+   "id": 1031,
+   "gantryCode": "G006036032003510010",
+   "gantryName": "新余互通-新余东互通门架1",
+   "orgCode": "030000008",
+   "ip": "36.106.103.143",
+   "brand": "Signalway",
+   "type": null,
+   "odsSzdnGantry": null
+  },
+  {
+   "id": 1030,
+   "gantryCode": "G006036032003520010",
+   "gantryName": "新余东互通-新余互通门架1",
+   "orgCode": "030000008",
+   "ip": "36.106.103.131",
+   "brand": "Signalway",
+   "type": null,
+   "odsSzdnGantry": null
+  },
+  {
+   "id": 1029,
+   "gantryCode": "G006036032003520010",
+   "gantryName": "新余东互通-新余互通门架1",
+   "orgCode": "030000008",
+   "ip": "36.106.103.130",
+   "brand": "Signalway",
+   "type": null,
+   "odsSzdnGantry": null
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

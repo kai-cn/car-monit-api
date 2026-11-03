@@ -1,0 +1,24 @@
+HTTP 200  6ms  err=None
+{
+ "msg": "操作成功",
+ "code": 200,
+ "data": {
+  "bigId": "24945",
+  "orgCode": "000000936",
+  "orgName": "中心机关",
+  "orgShortName": "中心机关",
+  "orgParentId": "030000009",
+  "orgLevelCode": "00000011005300050001",
+  "orgIsVirtual": "1",
+  "orgMaintenance": "1",
+  "orgSequence": 1,
+  "orgIsManager": "0",
+  "orgIsDeleted": "0",
+  "orgCategory": "03",
+  "orgIsAuthorized": "0",
+  "orgAddress": null,
+  "orgIsYhAutarky": "0",
+  "loadTime": "2025-08-28",
+  "gradeLevel": 1
+ }
+}

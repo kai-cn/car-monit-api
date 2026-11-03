@@ -1,0 +1,118 @@
+Java 端点 85 个，Go 端点 85 个（不含 /healthz /debug/pprof）
+
+## Java 有、Go 无
+  GET    /api/v1/unified/{ds}/list                            UnifiedQueryController                       L64  -> Map<String, Object>
+  POST   /api/v1/unified/{ds}/export/submit                   UnifiedQueryController                       L112  -> Map<String, Object>
+
+## Go 有、Java 无
+  GET    /api/v1/unified/:ds/list                             query
+  POST   /api/v1/unified/:ds/export/submit                    query
+
+## 全量对照表
+| 方法 | 路径 | Java 类 | Java 行 | Go 状态 | Go 标志 |
+|---|---|---|---|---|---|
+| GET | `/base/fwqjcxx/list` | DwdLcztFwqjcxxController | 31 | 有 | AllowAll |
+| GET | `/base/fwqjcxx/{agentPk}` | DwdLcztFwqjcxxController | 40 | 有 | AllowAll |
+| GET | `/base/fwqjcxx/listAll` | DwdLcztFwqjcxxController | 48 | 有 | AllowAll |
+| GET | `/base/sfsjcxx/list` | DwdLcztSfsjcxxController | 29 | 有 | AllowAll |
+| GET | `/base/sfsjcxx/{agentPk}` | DwdLcztSfsjcxxController | 39 | 有 | AllowAll |
+| GET | `/base/sfsjcxx/listAll` | DwdLcztSfsjcxxController | 48 | 有 | AllowAll |
+| GET | `/base/sfzjcxx/list` | DwdLcztSfzjcxxController | 29 | 有 | AllowAll |
+| GET | `/base/sfzjcxx/{agentPk}` | DwdLcztSfzjcxxController | 39 | 有 | AllowAll |
+| GET | `/base/sfzjcxx/listAll` | DwdLcztSfzjcxxController | 48 | 有 | AllowAll |
+| GET | `/api/v1/large/snapshot` | LargeScaleQueryController | 54 | 有 | query |
+| GET | `/api/v1/large/fee` | LargeScaleQueryController | 68 | 有 | query |
+| GET | `/api/v1/large/trail` | LargeScaleQueryController | 82 | 有 | query |
+| GET | `/api/v1/large/carTrackQueryByCarNo` | LargeScaleQueryController | 99 | 有 | query |
+| GET | `/api/v1/large/stats/group` | LargeScaleQueryController | 164 | 有 | query |
+| POST | `/api/v1/large/export/submit` | LargeScaleQueryController | 201 | 有 | query |
+| GET | `/api/v1/large/export/status/{taskId}` | LargeScaleQueryController | 227 | 有 | query |
+| POST | `/api/v1/large/sync/full` | LargeScaleQueryController | 256 | 有 | query |
+| POST | `/api/v1/large/sync/incremental` | LargeScaleQueryController | 272 | 有 | query |
+| POST | `/api/v1/large/sync/repair` | LargeScaleQueryController | 291 | 有 | query |
+| GET | `/manager/fwqclls/list` | OdsCxztFwqcllsController | 32 | 有 | crud |
+| GET | `/manager/fwqclls/{bigId}` | OdsCxztFwqcllsController | 43 | 有 | crud |
+| GET | `/base/feeGantry/list` | OdsLwzxsfsjFeeGantryFusion01Controller | 32 | 有 | FlatInfo |
+| GET | `/base/feeGantry/{bigId}` | OdsLwzxsfsjFeeGantryFusion01Controller | 48 | 有 | FlatInfo |
+| GET | `/base/feerecords/list` | OdsLwzxsfsjFeeRecords01Controller | 46 | 有 | AllowExport,FlatInfo |
+| GET | `/base/feerecords/listToExport` | OdsLwzxsfsjFeeRecords01Controller | 123 | 有 | AllowExport,FlatInfo |
+| GET | `/base/feerecords/{bigId}` | OdsLwzxsfsjFeeRecords01Controller | 201 | 有 | AllowExport,FlatInfo |
+| GET | `/base/feeStationEnter/list` | OdsLwzxsfsjFeeStationEnter01Controller | 32 | 有 | NumericID |
+| GET | `/base/feeStationEnter/{bigId}` | OdsLwzxsfsjFeeStationEnter01Controller | 44 | 有 | NumericID |
+| GET | `/base/feestationexit/list` | OdsLwzxsfsjFeeStationExit01Controller | 29 | 有 | crud |
+| GET | `/base/feestationexit/{bigId}` | OdsLwzxsfsjFeeStationExit01Controller | 39 | 有 | crud |
+| GET | `/base/snapshotflow/list` | OdsRtSzdnSnapshotFlowAddcodeController | 40 | 有 | AllowExport,FlatInfo |
+| GET | `/base/snapshotflow/listToExport` | OdsRtSzdnSnapshotFlowAddcodeController | 92 | 有 | AllowExport,FlatInfo |
+| GET | `/base/snapshotflow/{bigId}` | OdsRtSzdnSnapshotFlowAddcodeController | 140 | 有 | AllowExport,FlatInfo |
+| GET | `/base/provcapture/list` | OdsRtSzdnSnapshotFlowProvcaptureAddcodeController | 33 | 有 | NumericID |
+| GET | `/base/provcapture/{bigId}` | OdsRtSzdnSnapshotFlowProvcaptureAddcodeController | 45 | 有 | NumericID |
+| GET | `/base/stationcapture/list` | OdsRtSzdnSnapshotFlowStationcaptureAddcodeController | 33 | 有 | NumericID |
+| GET | `/base/stationcapture/{bigId}` | OdsRtSzdnSnapshotFlowStationcaptureAddcodeController | 45 | 有 | NumericID |
+| GET | `/base/gantry/list` | OdsSzdnGantryController | 29 | 有 | AllowAll |
+| GET | `/base/gantry/{id}` | OdsSzdnGantryController | 39 | 有 | AllowAll |
+| GET | `/base/gantry/listAll` | OdsSzdnGantryController | 48 | 有 | AllowAll |
+| GET | `/base/gantryIp/list` | OdsSzdnGantryIpController | 31 | 有 | crud |
+| GET | `/base/gantryIp/{id}` | OdsSzdnGantryIpController | 43 | 有 | crud |
+| GET | `/base/vehicleweight/list` | OdsSzdnProvinceBorderVehicleWeightNewstructureController | 33 | 有 | crud |
+| GET | `/base/vehicleweight/{dataSource}` | OdsSzdnProvinceBorderVehicleWeightNewstructureController | 45 | 有 | crud |
+| GET | `/base/vehicleweight/map` | OdsSzdnProvinceBorderVehicleWeightNewstructureController | 50 | 有 | hand |
+| GET | `/base/section/list` | OdsSzdnSectionController | 29 | 有 | AllowAll |
+| GET | `/base/section/{id}` | OdsSzdnSectionController | 39 | 有 | AllowAll |
+| GET | `/base/section/listAll` | OdsSzdnSectionController | 48 | 有 | AllowAll |
+| GET | `/base/toll/list` | OdsSzdnTollController | 32 | 有 | AllowAll |
+| GET | `/base/toll/{id}` | OdsSzdnTollController | 42 | 有 | AllowAll |
+| GET | `/base/toll/listAll` | OdsSzdnTollController | 50 | 有 | AllowAll |
+| GET | `/base/tollStationIp/list` | OdsSzdnTollStationIpController | 31 | 有 | crud |
+| GET | `/base/tollStationIp/{id}` | OdsSzdnTollStationIpController | 43 | 有 | crud |
+| GET | `/base/org/list` | OdsYhglVBaseOrgController | 32 | 有 | AllowAll |
+| GET | `/base/org/{bigId}` | OdsYhglVBaseOrgController | 42 | 有 | AllowAll |
+| GET | `/base/org/listAll` | OdsYhglVBaseOrgController | 51 | 有 | AllowAll |
+| GET | `/progressive/snapshotflow/list` | ProgressiveQueryController | 53 | 有 | query |
+| GET | `/progressive/feerecords/list` | ProgressiveQueryController | 92 | 有 | query |
+| GET | `/progressive/trailfitting/list` | ProgressiveQueryController | 128 | 有 | query |
+| GET | `/progressive/scale-level` | ProgressiveQueryController | 164 | 有 | query |
+| GET | `/base/sysutilTest/syncCurrentTrack` | SysTestController | 64 | 有 | hand |
+| GET | `/base/sysutilTest/syncBaseInfo` | SysTestController | 75 | 有 | hand |
+| GET | `/base/sysutilTest/syncHistroyTrack` | SysTestController | 92 | 有 | hand |
+| GET | `/base/sysutilTest/syncSuspiciousCar1` | SysTestController | 175 | 有 | 501桩 |
+| GET | `/base/sysutilTest/syncSuspiciousCar2` | SysTestController | 190 | 有 | 501桩 |
+| GET | `/base/sysutilTest/syncSuspiciousCar3` | SysTestController | 205 | 有 | 501桩 |
+| GET | `/base/sysutilTest/syncSuspiciousCar4` | SysTestController | 220 | 有 | 501桩 |
+| GET | `/base/sysutilTest/syncSuspiciousCar5` | SysTestController | 235 | 有 | 501桩 |
+| GET | `/base/sysutilTest/syncSuspiciousCar6` | SysTestController | 250 | 有 | 501桩 |
+| GET | `/base/sysutilTest/syncSuspiciousCar7` | SysTestController | 265 | 有 | 501桩 |
+| GET | `/base/sysutilTest/syncSuspiciousCar8` | SysTestController | 280 | 有 | 501桩 |
+| GET | `/base/sysutilTest/syncSuspiciousCar9` | SysTestController | 296 | 有 | 501桩 |
+| GET | `/base/sysutilTest/syncSuspiciousCar10` | SysTestController | 311 | 有 | 501桩 |
+| GET | `/base/sysutilTest/syncOdsSzdnGantry` | SysTestController | 327 | 有 | 501桩 |
+| GET | `/base/sysutilTest/separateSnapshotFlowTimeList` | SysTestController | 359 | 有 | 501桩 |
+| GET | `/base/sysutil/saveRedis` | SysUtilController | 33 | 有 | hand |
+| GET | `/base/sysutil/carTrackQueryByCarNo` | SysUtilController | 77 | 有 | hand |
+| GET | `/base/sysutil/carTrackQueryByTime` | SysUtilController | 117 | 有 | hand |
+| POST | `/base/sysutil/changeTrailInfo` | SysUtilController | 163 | 有 | hand |
+| GET | `/base/sysutil/getByTrailBo` | SysUtilController | 199 | 有 | hand |
+| GET | `/api/v1/unified/{ds}/list` | UnifiedQueryController | 64 | **缺** |  |
+| POST | `/api/v1/unified/{ds}/export/submit` | UnifiedQueryController | 112 | **缺** |  |
+| GET | `/api/v1/unified/export/status/{taskId}` | UnifiedQueryController | 141 | 有 | query |
+| GET | `/base/trailtracks/list` | ZdataTrailTracksController | 31 | 有 | crud |
+| GET | `/base/trailtracks/{uuid}` | ZdataTrailTracksController | 43 | 有 | crud |
+
+## Java 返回类型分布（信封判定用）
+   19  AjaxResult
+    1  List<DwdLcztFwqjcxx>
+    1  List<DwdLcztSfsjcxx>
+    1  List<DwdLcztSfzjcxx>
+    1  List<OdsLwzxsfsjFeeRecords01>
+    1  List<OdsRtSzdnSnapshotFlowAddcode>
+    1  List<OdsSzdnGantry>
+    1  List<OdsSzdnSection>
+    1  List<OdsSzdnToll>
+    1  List<OdsYhglVBaseOrg>
+   13  Map<String, Object>
+    1  OdsLwzxsfsjFeeGantryFusion01
+    1  OdsLwzxsfsjFeeRecords01
+    1  OdsRtSzdnSnapshotFlowAddcode
+   24  TableDataInfo
+    1  TrailBo
+    1  TrailInfo
+   15  void

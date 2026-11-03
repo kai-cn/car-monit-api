@@ -1,0 +1,83 @@
+HTTP 200  4ms  err=None
+{
+ "total": 85,
+ "rows": [
+  {
+   "id": "18",
+   "roadCode": "G6021",
+   "roadName": "杭长高速",
+   "sectionCode": "200R560210671000",
+   "sectionName": "乐温",
+   "startPileNo": 379,
+   "endPileNo": 397,
+   "orgCode": "020110017",
+   "orgName": "南昌东管理中心",
+   "orgLevelCode": "0000001100530011",
+   "orgCategory": "03",
+   "mileage": 0,
+   "openDate": "2005-10-31"
+  },
+  {
+   "id": "27",
+   "roadCode": "G76",
+   "roadName": "厦蓉高速",
+   "sectionCode": "200R500760712000",
+   "sectionName": "瑞赣",
+   "startPileNo": 317,
+   "endPileNo": 446,
+   "orgCode": "030000007",
+   "orgName": "赣州管理中心",
+   "orgLevelCode": "0000001100530004",
+   "orgCategory": "03",
+   "mileage": 128,
+   "openDate": "2009-03-31"
+  },
+  {
+   "id": "30",
+   "roadCode": "S41",
+   "roadName": "宁定高速",
+   "sectionCode": "200R50041360804000",
+   "sectionName": "宁安",
+   "startPileNo": 0,
+   "endPileNo": 163,
+   "orgCode": "030000007",
+   "orgName": "赣州管理中心",
+   "orgLevelCode": "0000001100530004",
+   "orgCategory": "03",
+   "mileage": 163,
+   "openDate": "2016-11-30"
+  },
+  {
+   "id": "32",
+   "roadCode": "G45",
+   "roadName": "大广高速",
+   "sectionCode": "200R500450697001",
+   "sectionName": "武吉南",
+   "startPileNo": 2779,
+   "endPileNo": 2873,
+   "orgCode": "030000008",
+   "orgName": "宜春管理中心",
+   "orgLevelCode": "0000001100530007",
+   "orgCategory": "03",
+   "mileage": 94,
+   "openDate": "2007-12-31"
+  },
+  {
+   "id": "36",
+   "roadCode": "S89",
+   "roadName": "上莲高速",
+   "sectionCode": "200R50089360780000",
+   "sectionName": "萍洪",
+   "startPileNo": 0,
+   "endPileNo": 33,
+   "orgCode": "030000008",
+   "orgName": "宜春管理中心",
+   "orgLevelCode": "0000001100530007",
+   "orgCategory": "03",
+   "mileage": 33,
+   "openDate": "2014-11-30"
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

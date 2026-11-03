@@ -1,0 +1,53 @@
+HTTP 200  4ms  err=None
+{
+ "total": 302,
+ "rows": [
+  {
+   "id": 40308,
+   "tollCode": "S33361125F0010",
+   "tollName": "横峰收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.124.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40307,
+   "tollCode": "S38360923F0120",
+   "tollName": "宜丰南收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.120.98",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40306,
+   "tollCode": "G35360603F0010",
+   "tollName": "鹰潭南收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.111.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40305,
+   "tollCode": "G35361128F0020",
+   "tollName": "鄱阳收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.108.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40304,
+   "tollCode": "G70361002F0020",
+   "tollName": "抚州收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.117.59",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

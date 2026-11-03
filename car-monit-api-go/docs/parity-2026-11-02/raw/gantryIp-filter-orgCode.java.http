@@ -1,0 +1,58 @@
+HTTP 200  6ms  err=None
+{
+ "total": 74,
+ "rows": [
+  {
+   "id": 1,
+   "gantryCode": "S003636011000510010",
+   "gantryName": "南安互通-峡江互通门架1",
+   "orgCode": "020000253",
+   "ip": "36.121.3.43",
+   "brand": "Signalway",
+   "type": null,
+   "odsSzdnGantry": null
+  },
+  {
+   "id": 2,
+   "gantryCode": "S003636011000520010",
+   "gantryName": "峡江互通-南安互通门架1",
+   "orgCode": "020000253",
+   "ip": "36.121.3.51",
+   "brand": "Signalway",
+   "type": null,
+   "odsSzdnGantry": null
+  },
+  {
+   "id": 3,
+   "gantryCode": "S003636011001010010",
+   "gantryName": "吉水互通-吉水北枢纽门架1",
+   "orgCode": "020000253",
+   "ip": "36.121.4.40",
+   "brand": "Signalway",
+   "type": null,
+   "odsSzdnGantry": null
+  },
+  {
+   "id": 4,
+   "gantryCode": "S003636011001020010",
+   "gantryName": "吉水北枢纽-吉水互通门架1",
+   "orgCode": "020000253",
+   "ip": "36.121.4.47",
+   "brand": "Signalway",
+   "type": null,
+   "odsSzdnGantry": null
+  },
+  {
+   "id": 5,
+   "gantryCode": "S003636011001210010",
+   "gantryName": "吉水北枢纽-吉安北互通门架1",
+   "orgCode": "020000253",
+   "ip": "36.121.5.38",
+   "brand": "HUAWEI",
+   "type": null,
+   "odsSzdnGantry": null
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

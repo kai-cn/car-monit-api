@@ -1,0 +1,5 @@
+HTTP 200  6ms  err=None
+{
+ "code": 500,
+ "msg": "OdsSzdnProvinceBorderVehicleWeightNewstructureRepo.Count: ERROR: column \"datasource\" does not exist (SQLSTATE 42703)"
+}

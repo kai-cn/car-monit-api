@@ -1,0 +1,47 @@
+HTTP 200  6ms  err=None
+{
+ "total": 851,
+ "rows": [
+  {
+   "bigId": 45952447,
+   "datasource": "ZdTrails:StationCapture",
+   "cameratype": "StationCapture",
+   "deviceid": "00000000",
+   "deviceip": "36.103.136.75",
+   "tollcode": "G1517361030F0060",
+   "tollname": "小布收费站",
+   "orgcode": 30000011,
+   "siteid": 15,
+   "laneid": 2,
+   "snapshottimeunix": 1759388240,
+   "snapshottime": "2025-10-02",
+   "receivedtimeunix": 1759388202,
+   "receivedtime": "2025-10-02",
+   "platenumber": "赣BMA367",
+   "platecolorcode": 3,
+   "platecolor": "蓝色",
+   "platetypecode": 21,
+   "platetype": "标准民用车与军车",
+   "plateconfidence": 0,
+   "carbrand": "其他",
+   "carcolorcode": 0,
+   "carcolor": "未知",
+   "cartypecode": 7,
+   "cartype": "货车",
+   "cardirectioncode": 0,
+   "cardirection": null,
+   "snappicturepath": "http://jxjt.isilon.com/lwcllssjcj/trailPhotos/StationCapture/20251002/36.103.136.75_20251002145642.jpg",
+   "loadtime": "2025-10-02",
+   "gradelevel": 1,
+   "datauuid": "568220ff-25d7-4c47-830b-ece94ebdbb2d",
+   "maindirection": "2",
+   "maindirectionname": "出⼝(正向)",
+   "reserve3": null,
+   "queryUuids": null,
+   "applyTime1": null,
+   "applyTime2": null
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

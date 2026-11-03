@@ -1,0 +1,18 @@
+HTTP 200  6ms  err=None
+{
+ "total": 1,
+ "rows": [
+  {
+   "id": 1,
+   "gantryCode": "S003636011000510010",
+   "gantryName": "南安互通-峡江互通门架1",
+   "orgCode": "020000253",
+   "ip": "36.121.3.43",
+   "brand": "Signalway",
+   "type": null,
+   "odsSzdnGantry": null
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

@@ -1,0 +1,9 @@
+HTTP 200  4ms  err=None
+{
+ "code": 200,
+ "data": {},
+ "groupBy": "not_a_col;drop",
+ "message": "ok",
+ "topN": 10,
+ "type": "snapshot"
+}

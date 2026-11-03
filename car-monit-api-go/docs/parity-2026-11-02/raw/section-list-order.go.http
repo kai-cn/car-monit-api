@@ -1,0 +1,83 @@
+HTTP 200  4ms  err=None
+{
+ "total": 85,
+ "rows": [
+  {
+   "id": "91",
+   "roadCode": "S77",
+   "roadName": "大广高速",
+   "sectionCode": "200R500450697101",
+   "sectionName": "宜春联络线",
+   "startPileNo": 96,
+   "endPileNo": 105,
+   "orgCode": "030000008",
+   "orgName": "宜春管理中心",
+   "orgLevelCode": "0000001100530007",
+   "orgCategory": null,
+   "mileage": 9,
+   "openDate": "2007-12-31"
+  },
+  {
+   "id": "9",
+   "roadCode": "G0321",
+   "roadName": "德上高速",
+   "sectionCode": "200R503210741000",
+   "sectionName": "德昌",
+   "startPileNo": 1144,
+   "endPileNo": 1170,
+   "orgCode": "020110017",
+   "orgName": "南昌东管理中心",
+   "orgLevelCode": "0000001100530011",
+   "orgCategory": "03",
+   "mileage": 26,
+   "openDate": "2011-08-31"
+  },
+  {
+   "id": "89",
+   "roadCode": "G0321",
+   "roadName": "德上高速",
+   "sectionCode": "200R503210683100",
+   "sectionName": "祁婺",
+   "startPileNo": 1083,
+   "endPileNo": 1121,
+   "orgCode": "030000009",
+   "orgName": "景德镇管理中心",
+   "orgLevelCode": "0000001100530005",
+   "orgCategory": "03",
+   "mileage": 37,
+   "openDate": "2006-10-31"
+  },
+  {
+   "id": "88",
+   "roadCode": "S81",
+   "roadName": "铜宜高速",
+   "sectionCode": "200R50081360780003",
+   "sectionName": "宜遂",
+   "startPileNo": 301,
+   "endPileNo": 404,
+   "orgCode": "020000253",
+   "orgName": "吉安西管理中心",
+   "orgLevelCode": "0000001100530007",
+   "orgCategory": "03",
+   "mileage": 102,
+   "openDate": "2022-11-30"
+  },
+  {
+   "id": "87",
+   "roadCode": "S81",
+   "roadName": "铜宜高速",
+   "sectionCode": "200R50081360780002",
+   "sectionName": "宜遂",
+   "startPileNo": 209,
+   "endPileNo": 301,
+   "orgCode": "030000008",
+   "orgName": "宜春管理中心",
+   "orgLevelCode": "0000001100530007",
+   "orgCategory": "03",
+   "mileage": 92,
+   "openDate": "2022-11-30"
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

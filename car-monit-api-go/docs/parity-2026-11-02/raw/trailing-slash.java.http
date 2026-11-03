@@ -1,0 +1,33 @@
+HTTP 200  9ms  err=None
+{
+ "total": 1526,
+ "rows": [
+  {
+   "id": "18",
+   "gantryCode": "G003536012000720010",
+   "gantryName": "瑞金北互通-宁都东互通门架1",
+   "roadCode": "G35",
+   "sectionCode": "200R500350729001",
+   "tollCode": "G35360730F0020",
+   "orgCode": "030000007",
+   "hexCode": "39110A",
+   "direction": "1",
+   "pileNo": "ZK1396+010",
+   "lon": "116.13113948740477",
+   "lat": "26.22047484041828",
+   "isVirtual": "0",
+   "mileage": "30672",
+   "boundaryGantryType": null,
+   "gantryType": "0",
+   "cityCode": "360730",
+   "districtName": "江西省赣州市宁都县",
+   "belongGroup": "1",
+   "gantryCodeMerge": "G003536012000720010",
+   "gantryNameAlias": "瑞金北互通-宁都东互通门架1",
+   "remark": "鹰潭",
+   "isData": null
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

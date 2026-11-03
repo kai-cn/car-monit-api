@@ -1,0 +1,53 @@
+HTTP 200  5ms  err=None
+{
+ "total": 302,
+ "rows": [
+  {
+   "id": 40044,
+   "tollCode": "S89360301F0040",
+   "tollName": "上栗收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.148.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40047,
+   "tollCode": "G1517360826F0020",
+   "tollName": "禾市收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.103.65",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40060,
+   "tollCode": "G60360982F0020",
+   "tollName": "临江收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.7.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40064,
+   "tollCode": "G70360112F0010",
+   "tollName": "新祺周收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.4.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40073,
+   "tollCode": "G1517360825F0040",
+   "tollName": "水南收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.134.59",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

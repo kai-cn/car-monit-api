@@ -1,0 +1,8 @@
+HTTP 400  12ms  err=None
+{
+ "error": "Bad Request",
+ "message": "",
+ "path": "/base/stationcapture/not-a-number",
+ "status": 400,
+ "timestamp": "2026-11-03T04:01:03.986+00:00"
+}

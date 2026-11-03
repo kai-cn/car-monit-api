@@ -1,0 +1,27 @@
+HTTP 200  7ms  err=None
+{
+ "total": 1,
+ "rows": [
+  {
+   "agentPk": "d2c6df4afa7ff18d48786d728d3919d2",
+   "yxtzj": "1531950771411013633",
+   "sfsbm": null,
+   "sfsmc": "上万收费所",
+   "jd": "117.43187400",
+   "wd": "28.46829500",
+   "sslxbh": "S33",
+   "sslxmc": "上万高速公路",
+   "ssldbh": "200R50033360804000",
+   "ssldmc": "上万高速上万段",
+   "sczhK": "K20+100",
+   "sczhN": "20.100",
+   "ssglzxbm": "020110017",
+   "ssglzxmc": null,
+   "lyxt": "机电运维管理系统",
+   "loadTime": "2025-08-29 06:11:00",
+   "allColPk": "1f594ad0aeb3dc00af2ecca389b1615c"
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

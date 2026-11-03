@@ -1,0 +1,8 @@
+HTTP 400  5ms  err=None
+{
+ "timestamp": "2026-11-03T04:00:57.945+00:00",
+ "status": 400,
+ "error": "Bad Request",
+ "message": "",
+ "path": "/manager/fwqclls/not-a-number"
+}

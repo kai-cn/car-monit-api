@@ -1,0 +1,141 @@
+[
+ {
+  "case": "large-snapshot-5min",
+  "submit": "/api/v1/large/export/submit",
+  "java": {
+   "submit_status": 200,
+   "submit_body": {
+    "code": 200,
+    "message": "导出任务已提交",
+    "type": "snapshot",
+    "taskId": "5abfe6f6-da43-4f8e-842b-9bad8875ee6d"
+   },
+   "taskId": "5abfe6f6-da43-4f8e-842b-9bad8875ee6d",
+   "final": {
+    "code": 200,
+    "status": "FAILED",
+    "totalExported": 0,
+    "filePartCount": 0,
+    "submitTime": 1793607996195,
+    "endTime": 0
+   },
+   "states": [
+    "RUNNING",
+    "FAILED"
+   ]
+  },
+  "go": {
+   "submit_status": 200,
+   "submit_body": {
+    "code": 200,
+    "message": "导出任务已提交",
+    "taskId": "dfb81c24-5fdf-42d1-8e7c-5e720f7f5e91",
+    "type": "snapshot"
+   },
+   "taskId": "dfb81c24-5fdf-42d1-8e7c-5e720f7f5e91",
+   "final": {
+    "code": 200,
+    "endTime": 1793607998739,
+    "filePartCount": 0,
+    "status": "FAILED",
+    "submitTime": 1793607998728,
+    "totalExported": 0
+   },
+   "states": [
+    "RUNNING",
+    "FAILED"
+   ]
+  }
+ },
+ {
+  "case": "unified-snapshot-5min",
+  "submit": "/api/v1/unified/snapshot/export/submit",
+  "java": {
+   "submit_status": 200,
+   "submit_body": {
+    "code": 200,
+    "message": "导出任务已提交, 请用 taskId 轮询状态",
+    "taskId": "7ee79161-400d-42e7-949a-f812d32dec64"
+   },
+   "taskId": "7ee79161-400d-42e7-949a-f812d32dec64",
+   "final": {
+    "code": 200,
+    "status": "FAILED",
+    "totalExported": 0,
+    "filePartCount": 0,
+    "submitTime": 1793608001240,
+    "errorMessage": "Elasticsearch exception [type=search_phase_execution_exception, reason=all shards failed]"
+   },
+   "states": [
+    "FAILED"
+   ]
+  },
+  "go": {
+   "submit_status": 200,
+   "submit_body": {
+    "code": 200,
+    "message": "导出任务已提交, 请用 taskId 轮询状态",
+    "taskId": "44441cd6-19b5-4057-abc9-538ce9e92add"
+   },
+   "taskId": "44441cd6-19b5-4057-abc9-538ce9e92add",
+   "final": {
+    "code": 200,
+    "errorMessage": "开始 scroll 失败: Elasticsearch exception [type=search_phase_execution_exception, reason=all shards failed]",
+    "filePartCount": 0,
+    "status": "FAILED",
+    "submitTime": 1793608001261,
+    "totalExported": 0
+   },
+   "states": [
+    "RUNNING",
+    "FAILED"
+   ]
+  }
+ },
+ {
+  "case": "unified-fee-5min",
+  "submit": "/api/v1/unified/fee/export/submit",
+  "java": {
+   "submit_status": 200,
+   "submit_body": {
+    "code": 200,
+    "message": "导出任务已提交, 请用 taskId 轮询状态",
+    "taskId": "082c2e41-60c5-4711-8fae-76905c5ba870"
+   },
+   "taskId": "082c2e41-60c5-4711-8fae-76905c5ba870",
+   "final": {
+    "code": 200,
+    "status": "FAILED",
+    "totalExported": 0,
+    "filePartCount": 0,
+    "submitTime": 1793608003775,
+    "errorMessage": "Elasticsearch exception [type=search_phase_execution_exception, reason=all shards failed]"
+   },
+   "states": [
+    "RUNNING",
+    "FAILED"
+   ]
+  },
+  "go": {
+   "submit_status": 200,
+   "submit_body": {
+    "code": 200,
+    "message": "导出任务已提交, 请用 taskId 轮询状态",
+    "taskId": "451fade7-ffc4-459b-aa15-1aa5a53a4102"
+   },
+   "taskId": "451fade7-ffc4-459b-aa15-1aa5a53a4102",
+   "final": {
+    "code": 200,
+    "errorMessage": "开始 scroll 失败: Elasticsearch exception [type=search_phase_execution_exception, reason=all shards failed]",
+    "filePartCount": 0,
+    "status": "FAILED",
+    "submitTime": 1793608006296,
+    "totalExported": 0
+   },
+   "states": [
+    "RUNNING",
+    "FAILED"
+   ]
+  }
+ }
+]

@@ -1,0 +1,5 @@
+HTTP 200  6ms  err=None
+{
+ "code": 500,
+ "message": "统计查询异常：[size] must be greater than 0. Found [0] in [group_by_gantrycode]"
+}

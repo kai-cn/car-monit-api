@@ -1,0 +1,8 @@
+HTTP 500  13ms  err=None
+{
+ "timestamp": "2026-11-03T04:00:58.521+00:00",
+ "status": 500,
+ "error": "Internal Server Error",
+ "message": "",
+ "path": "/base/feerecords/list"
+}

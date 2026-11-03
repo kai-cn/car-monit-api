@@ -1,0 +1,83 @@
+HTTP 200  4ms  err=None
+{
+ "total": 5,
+ "rows": [
+  {
+   "id": "18",
+   "roadCode": "G6021",
+   "roadName": "杭长高速",
+   "sectionCode": "200R560210671000",
+   "sectionName": "乐温",
+   "startPileNo": 379,
+   "endPileNo": 397,
+   "orgCode": "020110017",
+   "orgName": "南昌东管理中心",
+   "orgLevelCode": "0000001100530011",
+   "orgCategory": "03",
+   "mileage": 0,
+   "openDate": "2005-10-31"
+  },
+  {
+   "id": "63",
+   "roadCode": "G6021",
+   "roadName": "杭长高速",
+   "sectionCode": "200R560210745000",
+   "sectionName": "奉铜",
+   "startPileNo": 482,
+   "endPileNo": 635,
+   "orgCode": "030000010",
+   "orgName": "南昌西管理中心",
+   "orgLevelCode": "0000001100530006",
+   "orgCategory": "03",
+   "mileage": 131,
+   "openDate": "2011-12-31"
+  },
+  {
+   "id": "62",
+   "roadCode": "G6021",
+   "roadName": "杭长高速",
+   "sectionCode": "200R560210744000",
+   "sectionName": "昌奉",
+   "startPileNo": 445,
+   "endPileNo": 482,
+   "orgCode": "030000010",
+   "orgName": "南昌西管理中心",
+   "orgLevelCode": "0000001100530006",
+   "orgCategory": "03",
+   "mileage": 37,
+   "openDate": "2011-11-30"
+  },
+  {
+   "id": "10",
+   "roadCode": "G6021",
+   "roadName": "杭长高速",
+   "sectionCode": "200R560210741000",
+   "sectionName": "德昌",
+   "startPileNo": 175,
+   "endPileNo": 379,
+   "orgCode": "020110017",
+   "orgName": "南昌东管理中心",
+   "orgLevelCode": "0000001100530011",
+   "orgCategory": "03",
+   "mileage": 177,
+   "openDate": "2011-08-31"
+  },
+  {
+   "id": "42",
+   "roadCode": "G6021",
+   "roadName": "杭长高速",
+   "sectionCode": "200R560210683000",
+   "sectionName": "景婺黄",
+   "startPileNo": 165,
+   "endPileNo": 175,
+   "orgCode": "030000009",
+   "orgName": "景德镇管理中心",
+   "orgLevelCode": "0000001100530005",
+   "orgCategory": "03",
+   "mileage": 10,
+   "openDate": "2006-10-31"
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

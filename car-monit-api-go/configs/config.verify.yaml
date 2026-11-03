@@ -1,0 +1,154 @@
+# ============================================================================
+# JAVA 对照: pro-business-api/src/main/resources/application.yml
+# 键路径与 Java 侧逐项对齐（保留 spring: / kafka: / elasticsearch: 等原始段落名），
+# 便于用 diff 工具同时对照两份 YAML。「Go 侧新增」的键会在注释里标注。
+# ============================================================================
+server:
+  port: 9903                 # application.yml:2
+  context-path: /            # application.yml:4
+  mode: release              # Go 侧新增：gin 运行模式（debug/release）
+
+spring:
+  datasource:
+    dynamic:
+      datasource:
+        master:
+          # application.yml:42 —— GaussDB（openGauss）以 PostgreSQL 协议兼容
+          url: jdbc:postgresql://192.168.56.10:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai
+          username: gaussdb
+          password: OpenGauss@123
+          driver-class-name: org.postgresql.Driver
+          # Go 侧新增：Druid initial-size / maxActive / maxWait 的等价物
+          max-open-conns: 20
+          max-idle-conns: 5
+          conn-max-lifetime: 30m
+          slow-threshold: 5s
+          log-sql: true
+
+redis:
+  host: 127.0.0.1            # application.yml:50
+  port: 6379                 # application.yml:51
+  password: ""               # application.yml:52（注释状态）
+  # 比对专用：Java 固定用 db0（application.yml:48），Go 换到 db1 做隔离。
+  # 原因：两边用同一套 key（如 DATE_BorderWeighingCapture:<uuid>）但序列化格式不同——
+  # Java 的 RedisCache 写的是带 "@type" 的 fastjson2 文本，读回来才能强转成实体；
+  # Go 写的是普通 JSON，Java 读到就只能得到 JSONObject，强转实体失败直接 500。
+  # 不隔离的话 /base/vehicleweight/map 一类的结果取决于“谁最后一次写入了这个 key”，
+  # 比对结论不可复现。隔离后 Java 读到的是自己写的缓存，Go 落到自己的空库后回源 DB。
+  database: 1                # 仅本副本；configs/config.yaml 仍与 Java 一致为 0
+  pool-size: 16              # Go 侧新增：lettuce pool.max-active 等价物
+
+kafka:
+  bootstrap-servers: localhost:9092   # application.yml:62
+  group-id: car-monit-go              # Go 侧新增：对应 @KafkaListener groupId
+  topic:
+    snapshot-flow: ods-rt-szdn-snapshot-flow   # application.yml:147
+  max-retry-count: 10                        # application.yml:148
+
+pulsar:
+  service-url: pulsar://localhost:6650                    # application.yml:67
+  topic: persistent://public/default/ods-rt-szdn-snapshot-flow  # application.yml:71
+  producer-name: car-monit-producer                        # application.yml:75
+  send-timeout-ms: 30000                                   # application.yml:77
+  batch-max-messages: 1000                                 # application.yml:79
+  batch-max-publish-delay-ms: 10                           # application.yml:81
+  max-pending-messages: 10000                              # application.yml:83
+  subscription-name: ods-rt-szdn-snapshot-flow-sub         # application.yml:89
+  receiver-queue-size: 1000                                # application.yml:91
+  ack-timeout-ms: 60000                                    # application.yml:93
+  max-retry-times: 3                                       # application.yml:95
+  idempotent-ttl-seconds: 86400                            # application.yml:100
+  max-retry-count: 10                                      # application.yml:102
+
+rocketmq:
+  name-server: localhost:9876                              # application.yml:161
+  producer:
+    group: snapshot_flow_producer                          # application.yml:163
+  consumer:
+    group: snapshot_flow_consumer                          # application.yml:167
+    message-model: CLUSTERING                              # application.yml:168
+    consume-thread-max: 10                                 # application.yml:169
+
+rabbitmq:
+  host: localhost                                          # application.yml:173
+  port: 5672                                               # application.yml:174
+  username: guest                                          # application.yml:175
+  password: guest                                          # application.yml:176
+  virtual-host: /                                          # application.yml:177
+  enabled: false                                           # Go 侧新增：未接 AMQP 时保持关闭，避免启动期连不上
+
+elasticsearch:
+  host: localhost            # application.yml:190
+  port: 9200                 # application.yml:191
+  scheme: http               # application.yml:192
+  username: elastic          # application.yml:193
+  password: changeme         # application.yml:194
+  connection-timeout: 30s    # application.yml:195（Java 是毫秒数字，Go 用时间字符串）
+  socket-timeout: 30s        # application.yml:196
+  index:
+    snapshot: snapshot_flow  # application.yml:200
+    fee: fee_records         # application.yml:201
+    trail: trail_fitting     # application.yml:202
+    shards: 6                # application.yml:204
+    replicas: 1              # application.yml:205
+    auto-create: false       # application.yml:207
+    ilm-policy: car_monit_ilm_policy  # application.yml:209
+    attach-ilm: false        # application.yml:211
+
+optimization:
+  scale-level: LEVEL_10M     # application.yml:66 中的 @Value("${optimization.scale-level:LEVEL_10M}")
+  query:
+    timeout-ms: 30000        # application.yml:216
+    max-window: 10000        # application.yml:218
+    es-force-days: 30        # application.yml:220
+  export:
+    scroll-batch: 2000       # application.yml:224
+    file-batch: 100000       # application.yml:226
+    dir: ./data/export       # application.yml:228（Java 是 /data/export，Windows 本地开发改为相对路径）
+    scroll-keepalive-min: 5  # application.yml:230
+
+mq:
+  topic:
+    snapshot-flow: topic_snapshot_flow            # application.yml:235
+  dead-letter:
+    exchange: exchange.snapshot.flow.dlx          # application.yml:237
+    queue: queue.snapshot.flow.dlx                # application.yml:238
+    routing-key: snapshot.flow.dlx                # application.yml:239
+
+sync:
+  batch-size: 1000                                # application.yml:242
+  full-sync-enabled: true                         # application.yml:243
+  incremental-sync-interval: 60000                # application.yml:244（毫秒，与 Java 一致）
+
+consistency:
+  reconcile:
+    enabled: false                                # application.yml:257
+    lookback-months: 3                            # application.yml:259
+    drift-ratio: 0.01                             # application.yml:261
+    cron: "0 30 2 * * ?"                          # application.yml:263（Quartz 6 段式，cron 适配见 scheduler）
+
+reliability:
+  message-timeout-ms: 30000                       # application.yml:268
+  max-retry-count: 5                              # application.yml:270
+  compensation-interval-seconds: 60               # application.yml:272
+  alert-threshold-ms: 10000                       # application.yml:274
+
+detection:
+  window-size-minutes: 60                         # application.yml:279
+  interval-minutes: 30                            # application.yml:280
+  loss-threshold-percent: 5                       # application.yml:282
+
+monitoring:
+  device-report-threshold-ms: 5000                # application.yml:288
+  message-transfer-threshold-ms: 3000             # application.yml:290
+  data-process-threshold-ms: 10000                # application.yml:292
+  end-to-end-threshold-ms: 30000                  # application.yml:294
+  stats-window-minutes: 10                        # application.yml:296
+
+logging:
+  level: info                                     # application.yml:125（root: INFO）
+  format: text                                    # Go 侧新增：text | json（logback-spring.xml 的等价开关）
+
+app:
+  env: local                                      # application.yml:141（isLocalhost: local）
+  sysbase-url: http://223.84.150.189:26066/prod-api  # application.yml:142

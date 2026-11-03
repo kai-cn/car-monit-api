@@ -1,0 +1,34 @@
+HTTP 200  22ms  err=None
+{
+ "total": 321,
+ "rows": [
+  {
+   "id": "619",
+   "roadCode": "G72",
+   "idCard": "44L4459329640849315",
+   "tollCode": "G0072360300100",
+   "tollName": "官田收费站",
+   "pileNo": "432.515",
+   "orgName": "吉安东管理中心",
+   "hexCode": null,
+   "stateCode": "G0072360300100",
+   "orgCode": "030000011",
+   "longitude": "115.57580724196156",
+   "latitude": "26.429337439105986",
+   "openDate": null,
+   "tollAliasName": "官田收费站",
+   "inMonitorResource": null,
+   "laneMonitorResource": null,
+   "squareMonitorResource": null,
+   "dynamicMonitorResource": null,
+   "tollCodeMerge": "G0072360300100",
+   "stateCodeMerge": "G0072360300100",
+   "tollNameMerge": "官田收费站",
+   "sectionCode": "200R500720729000",
+   "tollOrgCode": "009432279",
+   "isAccess": "1"
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

@@ -1,0 +1,1 @@
+{"key": "sys_config:data_query", "value": "\"queryall\"", "note": "从 Go 的 db1 移除以与 Java(db0，被共驻服务周期性清空)对齐；恢复=把 value 原样 SET 回 db1"}

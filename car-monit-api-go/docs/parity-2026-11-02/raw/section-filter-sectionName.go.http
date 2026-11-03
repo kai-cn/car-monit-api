@@ -1,0 +1,53 @@
+HTTP 200  6ms  err=None
+{
+ "total": 3,
+ "rows": [
+  {
+   "id": "18",
+   "roadCode": "G6021",
+   "roadName": "杭长高速",
+   "sectionCode": "200R560210671000",
+   "sectionName": "乐温",
+   "startPileNo": 379,
+   "endPileNo": 397,
+   "orgCode": "020110017",
+   "orgName": "南昌东管理中心",
+   "orgLevelCode": "0000001100530011",
+   "orgCategory": "03",
+   "mileage": 0,
+   "openDate": "2005-10-31"
+  },
+  {
+   "id": "16",
+   "roadCode": "G6001",
+   "roadName": "南昌绕城高速",
+   "sectionCode": "200R560010657000",
+   "sectionName": "乐温",
+   "startPileNo": 0,
+   "endPileNo": 69,
+   "orgCode": "020110017",
+   "orgName": "南昌东管理中心",
+   "orgLevelCode": "0000001100530011",
+   "orgCategory": "03",
+   "mileage": 1,
+   "openDate": "2004-08-31"
+  },
+  {
+   "id": "23",
+   "roadCode": "G70",
+   "roadName": "福银高速",
+   "sectionCode": "200R500700853000",
+   "sectionName": "乐温",
+   "startPileNo": 525,
+   "endPileNo": 592,
+   "orgCode": "020110017",
+   "orgName": "南昌东管理中心",
+   "orgLevelCode": "0000001100530011",
+   "orgCategory": "03",
+   "mileage": 67,
+   "openDate": "2004-08-31"
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

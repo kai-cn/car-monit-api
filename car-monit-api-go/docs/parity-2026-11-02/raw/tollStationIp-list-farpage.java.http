@@ -1,0 +1,26 @@
+HTTP 200  15ms  err=None
+{
+ "total": 302,
+ "rows": [
+  {
+   "id": 40285,
+   "tollCode": "G60360323F0010",
+   "tollName": "芦溪收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.109.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40302,
+   "tollCode": "S32360424F0050",
+   "tollName": "渣津收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.124.98",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

@@ -1,0 +1,58 @@
+HTTP 200  4ms  err=None
+{
+ "total": 1033,
+ "rows": [
+  {
+   "id": 6,
+   "gantryCode": "S003636011001220010",
+   "gantryName": "吉安北互通-吉水北枢纽门架1",
+   "orgCode": "020000253",
+   "ip": "36.121.5.41",
+   "brand": "HUAWEI",
+   "type": null,
+   "odsSzdnGantry": null
+  },
+  {
+   "id": 7,
+   "gantryCode": "S003636011001410010",
+   "gantryName": "吉安北互通-吉安市互通门架1",
+   "orgCode": "020000253",
+   "ip": "36.121.5.44",
+   "brand": "HUAWEI",
+   "type": null,
+   "odsSzdnGantry": null
+  },
+  {
+   "id": 8,
+   "gantryCode": "S003636011001420010",
+   "gantryName": "吉安市互通-吉安北互通门架1",
+   "orgCode": "020000253",
+   "ip": "36.121.5.47",
+   "brand": "HUAWEI",
+   "type": null,
+   "odsSzdnGantry": null
+  },
+  {
+   "id": 9,
+   "gantryCode": "G007036004002020010",
+   "gantryName": "温圳东互通-架桥互通门架1",
+   "orgCode": "020110017",
+   "ip": "36.100.128.122",
+   "brand": "HUAWEI",
+   "type": null,
+   "odsSzdnGantry": null
+  },
+  {
+   "id": 10,
+   "gantryCode": "G007036004002020010",
+   "gantryName": "温圳东互通-架桥互通门架1",
+   "orgCode": "020110017",
+   "ip": "36.100.128.124",
+   "brand": "HUAWEI",
+   "type": null,
+   "odsSzdnGantry": null
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

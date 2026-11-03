@@ -1,0 +1,15 @@
+HTTP 200  4ms  err=None
+{
+ "msg": "操作成功",
+ "code": 200,
+ "data": {
+  "id": 1,
+  "gantryCode": "S003636011000510010",
+  "gantryName": "南安互通-峡江互通门架1",
+  "orgCode": "020000253",
+  "ip": "36.121.3.43",
+  "brand": "Signalway",
+  "type": null,
+  "odsSzdnGantry": null
+ }
+}

@@ -1,0 +1,83 @@
+HTTP 200  14ms  err=None
+{
+ "total": 85,
+ "rows": [
+  {
+   "id": "63",
+   "roadCode": "G6021",
+   "roadName": "杭长高速",
+   "sectionCode": "200R560210745000",
+   "sectionName": "奉铜",
+   "startPileNo": 482,
+   "endPileNo": 635,
+   "orgCode": "030000010",
+   "orgName": "南昌西管理中心",
+   "orgLevelCode": "0000001100530006",
+   "orgCategory": "03",
+   "mileage": 131,
+   "openDate": "2011-12-31"
+  },
+  {
+   "id": "69",
+   "roadCode": "S20",
+   "roadName": "彭湖高速",
+   "sectionCode": "200R50020360729000",
+   "sectionName": "彭湖",
+   "startPileNo": 0,
+   "endPileNo": 63,
+   "orgCode": "030000254",
+   "orgName": "九江管理中心",
+   "orgLevelCode": "0000001100530013",
+   "orgCategory": "03",
+   "mileage": 63,
+   "openDate": "2010-08-31"
+  },
+  {
+   "id": "71",
+   "roadCode": "S22",
+   "roadName": "都九高速",
+   "sectionCode": "200R500560553000",
+   "sectionName": "昌九",
+   "startPileNo": 69,
+   "endPileNo": 72,
+   "orgCode": "030000255",
+   "orgName": "南昌北管理中心",
+   "orgLevelCode": "0000001100530014",
+   "orgCategory": "03",
+   "mileage": 3,
+   "openDate": "1995-12-31"
+  },
+  {
+   "id": "1",
+   "roadCode": "G45",
+   "roadName": "大广高速",
+   "sectionCode": "200R500450642000",
+   "sectionName": "昌泰",
+   "startPileNo": 2873,
+   "endPileNo": 2915,
+   "orgCode": "020000253",
+   "orgName": "吉安西管理中心",
+   "orgLevelCode": "0000001100530012",
+   "orgCategory": "03",
+   "mileage": 41,
+   "openDate": "2003-05-31"
+  },
+  {
+   "id": "15",
+   "roadCode": "G70",
+   "roadName": "福银高速",
+   "sectionCode": "200R500700657000",
+   "sectionName": "温沙",
+   "startPileNo": 347,
+   "endPileNo": 525,
+   "orgCode": "030000006",
+   "orgName": "抚州管理中心",
+   "orgLevelCode": "0000001100530009",
+   "orgCategory": "03",
+   "mileage": 172,
+   "openDate": "2004-08-31"
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

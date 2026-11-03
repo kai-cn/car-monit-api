@@ -1,0 +1,2726 @@
+HTTP 200  16ms  err=None
+{
+ "total": 302,
+ "rows": [
+  {
+   "id": 40017,
+   "tollCode": "S0089360020040",
+   "tollName": "莲花西收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.145.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40025,
+   "tollCode": "S42360824F0010",
+   "tollName": "新干北收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.121.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40031,
+   "tollCode": "S46361024F0010",
+   "tollName": "崇仁收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.103.59",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40041,
+   "tollCode": "G45360826F0010",
+   "tollName": "泰和收费站",
+   "orgCode": "020000253",
+   "ip": "36.121.8.70",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40042,
+   "tollCode": "S41360731F0020",
+   "tollName": "仙下收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.131.130",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40044,
+   "tollCode": "S89360301F0040",
+   "tollName": "上栗收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.148.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40047,
+   "tollCode": "G1517360826F0020",
+   "tollName": "禾市收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.103.65",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40060,
+   "tollCode": "G60360982F0020",
+   "tollName": "临江收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.7.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40064,
+   "tollCode": "G70360112F0010",
+   "tollName": "新祺周收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.4.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40073,
+   "tollCode": "G1517360825F0040",
+   "tollName": "水南收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.134.59",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40078,
+   "tollCode": "G6001360112F0010",
+   "tollName": "生米收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.3.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40097,
+   "tollCode": "G1517360881F0040",
+   "tollName": "拿山收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.105.54",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40101,
+   "tollCode": "S81360902F0020",
+   "tollName": "宜春北收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.167.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40102,
+   "tollCode": "G35361023F0010",
+   "tollName": "白舍收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.134.46",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40108,
+   "tollCode": "G0321361130F0010",
+   "tollName": "婺源收费站",
+   "orgCode": "030000009",
+   "ip": "36.104.110.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40111,
+   "tollCode": "ZGA1360112F0010",
+   "tollName": "昌北机场收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.3.81",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40119,
+   "tollCode": "G56361130F0020",
+   "tollName": "溪头收费站",
+   "orgCode": "030000009",
+   "ip": "36.104.102.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40120,
+   "tollCode": "G70360404F0020",
+   "tollName": "庐山通远收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.11.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40144,
+   "tollCode": "G76360703F0020",
+   "tollName": "唐江收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.102.207",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40146,
+   "tollCode": "S46360822F0020",
+   "tollName": "乌江收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.109.19",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40160,
+   "tollCode": "S47360121F0020",
+   "tollName": "冈上收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.124.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40165,
+   "tollCode": "G60361003F0020",
+   "tollName": "东乡收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.113.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40182,
+   "tollCode": "VHTS810036118",
+   "tollName": "芳溪收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.163.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40195,
+   "tollCode": "G60360502F0030",
+   "tollName": "罗坊收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.103.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40220,
+   "tollCode": "G6011360730F0020",
+   "tollName": "黄陂收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.123.75",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40227,
+   "tollCode": "G70360425F0010",
+   "tollName": "共青南收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.7.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40235,
+   "tollCode": "G70360425F0030",
+   "tollName": "永修收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.5.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40238,
+   "tollCode": "G70360121F0010",
+   "tollName": "南新收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.121.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40257,
+   "tollCode": "G56361128F0010",
+   "tollName": "田畈街收费站",
+   "orgCode": "030000254",
+   "ip": "36.122.8.252",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40274,
+   "tollCode": "G76360781F0030",
+   "tollName": "瑞金东收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.125.3",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40282,
+   "tollCode": "G1517361030F0060",
+   "tollName": "小布收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.136.75",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40288,
+   "tollCode": "G60361125F0010",
+   "tollName": "杨梅岭收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.107.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40299,
+   "tollCode": "S22360483F0040",
+   "tollName": "庐山星子收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.16.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40301,
+   "tollCode": "S33361126F0010",
+   "tollName": "弋阳北收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.123.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40010,
+   "tollCode": "G70360425F0020",
+   "tollName": "艾城收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.6.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40015,
+   "tollCode": "G45360926F0010",
+   "tollName": "带溪收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.104.75",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40024,
+   "tollCode": "G1517360825F0030",
+   "tollName": "青原南收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.131.73",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40029,
+   "tollCode": "G35361027F0010",
+   "tollName": "金溪收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.130.60",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40039,
+   "tollCode": "G6011360981F0030",
+   "tollName": "洛市收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.141.150",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40045,
+   "tollCode": "G60361121F0030",
+   "tollName": "上饶经开区收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.106.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40049,
+   "tollCode": "G45360828F0020",
+   "tollName": "万安收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.109.101",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40059,
+   "tollCode": "G60361126F0010",
+   "tollName": "弋阳收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.108.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40063,
+   "tollCode": "S32360424F0020",
+   "tollName": "修水北收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.122.98",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40065,
+   "tollCode": "S41360726F0040",
+   "tollName": "版石收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.135.8",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40067,
+   "tollCode": "S42361002F0010",
+   "tollName": "罗湖收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.116.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40074,
+   "tollCode": "G6021361127F0020",
+   "tollName": "瑞洪收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.118.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40081,
+   "tollCode": "S0089360020030",
+   "tollName": "六市收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.144.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40083,
+   "tollCode": "G76360702F0010",
+   "tollName": "赣州北收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.119.117",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40085,
+   "tollCode": "G1517360580010",
+   "tollName": "广昌南收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.128.59",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40088,
+   "tollCode": "S36360924F0010",
+   "tollName": "双峰收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.160.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40089,
+   "tollCode": "G6011360121F0010",
+   "tollName": "广福收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.139.150",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40093,
+   "tollCode": "G60360502F0010",
+   "tollName": "分宜收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.105.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40099,
+   "tollCode": "S42360981F0010",
+   "tollName": "杜市收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.117.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40113,
+   "tollCode": "ZGA6360121F0010",
+   "tollName": "瑶湖收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.124.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40114,
+   "tollCode": "G76360725F0020",
+   "tollName": "关田收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.106.207",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40123,
+   "tollCode": "G6021360124F0010",
+   "tollName": "军山湖收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.119.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40126,
+   "tollCode": "G6021360921F0030",
+   "tollName": "会埠收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.16.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40135,
+   "tollCode": "G6021360926F0010",
+   "tollName": "天柱峰收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.19.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40149,
+   "tollCode": "S43361002F0010",
+   "tollName": "东临新区收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.144.40",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40163,
+   "tollCode": "G45360827F0010",
+   "tollName": "遂川收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.110.101",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40173,
+   "tollCode": "G6021361127F0010",
+   "tollName": "余干收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.117.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40174,
+   "tollCode": "S30360425F0030",
+   "tollName": "云居山收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.109.85",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40183,
+   "tollCode": "G56360401F0090",
+   "tollName": "九江收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.13.18",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40184,
+   "tollCode": "VHTG700356100",
+   "tollName": "熊村匝道收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.111.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40188,
+   "tollCode": "ZGA6360121F0010",
+   "tollName": "瑶湖收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.124.8",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40198,
+   "tollCode": "G56360401F0080",
+   "tollName": "九江东收费站",
+   "orgCode": "030000254",
+   "ip": "36.122.2.252",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40205,
+   "tollCode": "G76360704F0010",
+   "tollName": "赣县东收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.117.123",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40219,
+   "tollCode": "S38360923F0090",
+   "tollName": "万载西收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.152.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40223,
+   "tollCode": "G6021360921F0040",
+   "tollName": "上富收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.17.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40224,
+   "tollCode": "G45360827F0020",
+   "tollName": "汤村收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.111.101",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40226,
+   "tollCode": "S32360424F0040",
+   "tollName": "大桥收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.125.98",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40233,
+   "tollCode": "S0030360480010",
+   "tollName": "九龙湖收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.114.61",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40250,
+   "tollCode": "S0020360100050",
+   "tollName": "彭泽西收费站",
+   "orgCode": "030000254",
+   "ip": "36.122.18.251",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40251,
+   "tollCode": "G70360112F0080",
+   "tollName": "杨家湖南收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.120.8",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40254,
+   "tollCode": "G70360124F0030",
+   "tollName": "架桥收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.127.8",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40259,
+   "tollCode": "S20360430F0010",
+   "tollName": "彭泽核电收费站",
+   "orgCode": "030000254",
+   "ip": "36.122.12.252",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40264,
+   "tollCode": "G35361127F0010",
+   "tollName": "黄金埠收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.110.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40276,
+   "tollCode": "G70361002F0030",
+   "tollName": "东馆收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.115.69",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40286,
+   "tollCode": "G70360112F0080_2",
+   "tollName": "杨家湖北收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.120.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40293,
+   "tollCode": "S46361024F0020",
+   "tollName": "相山收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.105.19",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40303,
+   "tollCode": "S49360112F0010",
+   "tollName": "南昌北收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.2.18",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40304,
+   "tollCode": "G70361002F0020",
+   "tollName": "抚州收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.117.59",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40308,
+   "tollCode": "S33361125F0010",
+   "tollName": "横峰收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.124.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40022,
+   "tollCode": "S41360726F0010",
+   "tollName": "安远南收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.136.8",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40026,
+   "tollCode": "S0030360480010",
+   "tollName": "九龙湖收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.114.60",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40027,
+   "tollCode": "G72360830F0020",
+   "tollName": "永新西收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.110.63",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40036,
+   "tollCode": "S89360301F0050",
+   "tollName": "福田收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.146.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40038,
+   "tollCode": "G6011360730F0010",
+   "tollName": "宁都西收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.124.77",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40050,
+   "tollCode": "VV360222170395392110",
+   "tollName": "景德镇西收费站",
+   "orgCode": "030000254",
+   "ip": "36.122.9.252",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40051,
+   "tollCode": "G70360426F0020",
+   "tollName": "共青城收费站（东）",
+   "orgCode": "030000255",
+   "ip": "36.120.8.17",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40055,
+   "tollCode": "G0060360250110",
+   "tollName": "余江收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.112.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40076,
+   "tollCode": "ZGA5360881F0010",
+   "tollName": "井冈山收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.106.70",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40091,
+   "tollCode": "G60360681F0020",
+   "tollName": "鹰潭东收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.110.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40107,
+   "tollCode": "G0035360070050",
+   "tollName": "乐平收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.107.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40112,
+   "tollCode": "G56360401F0090",
+   "tollName": "九江收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.13.17",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40118,
+   "tollCode": "G0321361181F0020",
+   "tollName": "新岗山收费站",
+   "orgCode": "030000009",
+   "ip": "36.104.109.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40011,
+   "tollCode": "S0037360440020",
+   "tollName": "庐山白鹿收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.19.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40016,
+   "tollCode": "G6021361181F0030",
+   "tollName": "三清山收费站",
+   "orgCode": "030000009",
+   "ip": "36.104.108.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40019,
+   "tollCode": "G72360821F0010",
+   "tollName": "敖城收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.108.65",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40030,
+   "tollCode": "S20360429F0010",
+   "tollName": "湖口东收费站",
+   "orgCode": "030000254",
+   "ip": "36.122.10.252",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40032,
+   "tollCode": "S42360981F0020",
+   "tollName": "桥东收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.118.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40037,
+   "tollCode": "G60360323F0020",
+   "tollName": "萍乡收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.110.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40054,
+   "tollCode": "S38360923F0080",
+   "tollName": "慈化收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.153.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40056,
+   "tollCode": "S81360926F0010",
+   "tollName": "铜鼓东收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.161.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40061,
+   "tollCode": "HSG1517439913",
+   "tollName": "头陂收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.129.61",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40092,
+   "tollCode": "S38360923F0030",
+   "tollName": "高安收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.117.88",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40098,
+   "tollCode": "G0060360250020",
+   "tollName": "玉山收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.102.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40100,
+   "tollCode": "S41360726F0020",
+   "tollName": "三百山收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.137.82",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40104,
+   "tollCode": "S47360121F0010",
+   "tollName": "南昌南收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.123.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40106,
+   "tollCode": "G56361130F0040",
+   "tollName": "婺源北收费站",
+   "orgCode": "030000009",
+   "ip": "36.104.104.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40116,
+   "tollCode": "G60360502F0020",
+   "tollName": "新余收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.104.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40147,
+   "tollCode": "G1517360826F0010",
+   "tollName": "碧溪收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.104.55",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40153,
+   "tollCode": "S86360728F0010",
+   "tollName": "鹅公收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.128.108",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40164,
+   "tollCode": "G35361021F0010",
+   "tollName": "南城东收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.132.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40176,
+   "tollCode": "S22360428F0020",
+   "tollName": "都昌西收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.15.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40179,
+   "tollCode": "S41360730F0020",
+   "tollName": "宁都南收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.127.130",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40185,
+   "tollCode": "S0046360470010",
+   "tollName": "金溪西收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.137.60",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40190,
+   "tollCode": "G60360121F0010",
+   "tollName": "向塘收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.9.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40207,
+   "tollCode": "S29360222F0010",
+   "tollName": "西湖收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.133.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40217,
+   "tollCode": "VV360982416818962110",
+   "tollName": "双金收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.122.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40230,
+   "tollCode": "G6021361129F0050",
+   "tollName": "万年北收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.115.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40242,
+   "tollCode": "G45360821F0030",
+   "tollName": "油田收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.133.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40253,
+   "tollCode": "S41360731F0040",
+   "tollName": "靖石收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.133.8",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40271,
+   "tollCode": "G6021360921F0050",
+   "tollName": "靖安收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.14.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40272,
+   "tollCode": "G6021361181F0020",
+   "tollName": "德兴收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.113.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40291,
+   "tollCode": "G6021361127F0030",
+   "tollName": "珠湖收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.116.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40292,
+   "tollCode": "G70361022F0020",
+   "tollName": "黎川收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.112.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40298,
+   "tollCode": "G0076360260010",
+   "tollName": "会昌北收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.113.3",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40306,
+   "tollCode": "G35360603F0010",
+   "tollName": "鹰潭南收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.111.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40028,
+   "tollCode": "S0089360020010",
+   "tollName": "萍乡南收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.141.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40034,
+   "tollCode": "S33361129F0010",
+   "tollName": "万年收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.121.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40043,
+   "tollCode": "G45360923F0010",
+   "tollName": "上高收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.107.115",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40052,
+   "tollCode": "G56361130F0050",
+   "tollName": "赋春收费站",
+   "orgCode": "030000009",
+   "ip": "36.104.105.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40062,
+   "tollCode": "G60360112F0020",
+   "tollName": "丰厚收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.8.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40072,
+   "tollCode": "G0321361181F0010",
+   "tollName": "大茅山收费站",
+   "orgCode": "030000009",
+   "ip": "36.104.111.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40075,
+   "tollCode": "S47360121F0010",
+   "tollName": "南昌南收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.123.122",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40084,
+   "tollCode": "G70360124F0010",
+   "tollName": "进贤西收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.128.8",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40086,
+   "tollCode": "G60360981F0020",
+   "tollName": "泉港收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.5.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40094,
+   "tollCode": "G60360124F0020",
+   "tollName": "温家圳收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.11.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40095,
+   "tollCode": "S46361025F0020",
+   "tollName": "流坑收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.107.19",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40109,
+   "tollCode": "S30360423F0010",
+   "tollName": "武宁收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.112.98",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40110,
+   "tollCode": "S41360731F0010",
+   "tollName": "银坑收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.130.130",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40127,
+   "tollCode": "S81360924F0010",
+   "tollName": "黄岗收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.162.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40130,
+   "tollCode": "S43361002F0020",
+   "tollName": "抚州东收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.145.55",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40137,
+   "tollCode": "G60360902F0020",
+   "tollName": "宜春收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.107.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40138,
+   "tollCode": "S38360923F0050",
+   "tollName": "西山收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.115.88",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40142,
+   "tollCode": "G56360222F0020",
+   "tollName": "景德镇北收费站",
+   "orgCode": "030000009",
+   "ip": "36.104.107.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40145,
+   "tollCode": "S41360726F0030",
+   "tollName": "龙布收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.134.8",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40150,
+   "tollCode": "S49360112F0010",
+   "tollName": "南昌北收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.2.17",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40158,
+   "tollCode": "G60360323F0030",
+   "tollName": "湘东收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.111.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40180,
+   "tollCode": "G6021360921F0020",
+   "tollName": "奉新收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.13.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40191,
+   "tollCode": "ZGA7360112F0010",
+   "tollName": "南昌西收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.15.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40194,
+   "tollCode": "G76360704F0040",
+   "tollName": "赣县北收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.118.117",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40208,
+   "tollCode": "G56360401F0080",
+   "tollName": "九江东收费站",
+   "orgCode": "030000254",
+   "ip": "36.122.2.251",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40209,
+   "tollCode": "G60360121F0020",
+   "tollName": "黄马收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.10.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40210,
+   "tollCode": "G76360731F0020",
+   "tollName": "禾丰收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.114.130",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40211,
+   "tollCode": "G35361023F0020",
+   "tollName": "南丰收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.133.71",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40229,
+   "tollCode": "G70360401F0050_2",
+   "tollName": "柴桑收费站（西）",
+   "orgCode": "030000255",
+   "ip": "36.120.12.17",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40231,
+   "tollCode": "G72360732F0010",
+   "tollName": "兴国东收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.114.63",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40241,
+   "tollCode": "G60360982F0040",
+   "tollName": "樟树收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.29.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40243,
+   "tollCode": "G45360924F0010",
+   "tollName": "宜丰收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.106.88",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40252,
+   "tollCode": "G6011360825F0010",
+   "tollName": "永丰南收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.122.70",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40255,
+   "tollCode": "G72360826F0020",
+   "tollName": "泰和北收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.118.46",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40269,
+   "tollCode": "S22360483F0010",
+   "tollName": "马回岭收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.10.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40273,
+   "tollCode": "G56361130F0030",
+   "tollName": "江湾收费站",
+   "orgCode": "030000009",
+   "ip": "36.104.103.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40275,
+   "tollCode": "G72360826F0010",
+   "tollName": "泰和东收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.117.109",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40279,
+   "tollCode": "S41360731F0030",
+   "tollName": "于都东收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.132.130",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40297,
+   "tollCode": "G72360730F0010",
+   "tollName": "宁都收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.113.87",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40305,
+   "tollCode": "G35361128F0020",
+   "tollName": "鄱阳收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.108.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40307,
+   "tollCode": "S38360923F0120",
+   "tollName": "宜丰南收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.120.98",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40018,
+   "tollCode": "VV360426508998521100",
+   "tollName": "德安收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.9.16",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40033,
+   "tollCode": "G45360424F0010",
+   "tollName": "修水收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.102.135",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40035,
+   "tollCode": "VHTS810058195",
+   "tollName": "三兴收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.165.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40066,
+   "tollCode": "ZGA1360112F0010",
+   "tollName": "昌北机场收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.3.80",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40068,
+   "tollCode": "G0035360080070",
+   "tollName": "广昌收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.135.66",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40103,
+   "tollCode": "G1517360825F0050",
+   "tollName": "上固收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.133.77",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40105,
+   "tollCode": "G1517360580030",
+   "tollName": "宁都北收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.130.75",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40117,
+   "tollCode": "G1517360881F0010",
+   "tollName": "井冈山机场收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.102.50",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40122,
+   "tollCode": "G76360781F0020",
+   "tollName": "瑞金西收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.126.3",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40134,
+   "tollCode": "S30360423F0030",
+   "tollName": "巾口收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.111.95",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40136,
+   "tollCode": "S46360822F0010",
+   "tollName": "吉水南收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.110.19",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40143,
+   "tollCode": "G35361028F0010",
+   "tollName": "高田收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.131.60",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40148,
+   "tollCode": "G6011361025F0080",
+   "tollName": "流坑南收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.121.77",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40156,
+   "tollCode": "G70360124F0020",
+   "tollName": "进贤南收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.119.8",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40157,
+   "tollCode": "G45360821F0020",
+   "tollName": "安福收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.134.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40175,
+   "tollCode": "G35360222F0030",
+   "tollName": "三龙收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.135.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40186,
+   "tollCode": "G60360982F0010",
+   "tollName": "黄土岗收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.102.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40189,
+   "tollCode": "G6011361025F0070",
+   "tollName": "乐安北收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.143.150",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40192,
+   "tollCode": "S69360822F0010",
+   "tollName": "吉水收费站",
+   "orgCode": "020000253",
+   "ip": "36.121.4.70",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40199,
+   "tollCode": "G6021361181F0060",
+   "tollName": "德兴铜矿收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.112.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40203,
+   "tollCode": "G60360902F0030",
+   "tollName": "彬江收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.106.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40212,
+   "tollCode": "S38360923F0110",
+   "tollName": "上高西收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.121.98",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40236,
+   "tollCode": "G35360202F0010",
+   "tollName": "景德镇南收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.105.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40260,
+   "tollCode": "S0089360020020",
+   "tollName": "源头收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.142.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40265,
+   "tollCode": "S38360923F0060",
+   "tollName": "高安东收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.116.88",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40266,
+   "tollCode": "S32360424F0010",
+   "tollName": "修水西收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.123.98",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40277,
+   "tollCode": "G72360732F0020",
+   "tollName": "鼎龙收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.115.70",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40280,
+   "tollCode": "S69360801F0010",
+   "tollName": "吉安南收费站",
+   "orgCode": "020000253",
+   "ip": "36.121.6.70",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40284,
+   "tollCode": "G56360428F0010",
+   "tollName": "中馆收费站",
+   "orgCode": "030000254",
+   "ip": "36.122.6.252",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40296,
+   "tollCode": "G72360735F0020",
+   "tollName": "石城南收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.112.87",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40300,
+   "tollCode": "S38360923F0070",
+   "tollName": "上栗东收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.155.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40009,
+   "tollCode": "G70360121F0050",
+   "tollName": "蒋巷收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.122.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40008,
+   "tollCode": "S20360429F0010",
+   "tollName": "湖口东收费站",
+   "orgCode": "030000254",
+   "ip": "36.102.103.52",
+   "brand": "signalway",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40021,
+   "tollCode": "G72360830F0010",
+   "tollName": "永新收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.109.67",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40023,
+   "tollCode": "HSS81206492",
+   "tollName": "桐木收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.154.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40040,
+   "tollCode": "S81360922F0030",
+   "tollName": "罗城收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.164.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40053,
+   "tollCode": "G60360681F0010",
+   "tollName": "贵溪收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.109.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40057,
+   "tollCode": "S69360823F0010",
+   "tollName": "峡江收费站",
+   "orgCode": "020000253",
+   "ip": "36.121.3.70",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40071,
+   "tollCode": "G45360703F0030",
+   "tollName": "横市收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.112.101",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40079,
+   "tollCode": "G1517361030F0020",
+   "tollName": "长桥收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.125.85",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40080,
+   "tollCode": "G70360401F0050",
+   "tollName": "柴桑收费站（东）",
+   "orgCode": "030000255",
+   "ip": "36.120.12.18",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40082,
+   "tollCode": "S46361025F0010",
+   "tollName": "乐安收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.106.19",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40090,
+   "tollCode": "G70361002F0040",
+   "tollName": "临川北收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.116.50",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40124,
+   "tollCode": "G70360426F0020_2",
+   "tollName": "共青城收费站（西）",
+   "orgCode": "030000255",
+   "ip": "36.120.8.18",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40125,
+   "tollCode": "G0076360260030",
+   "tollName": "于都收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.115.130",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40129,
+   "tollCode": "S30360425F0020",
+   "tollName": "梅棠收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.110.115",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40152,
+   "tollCode": "S42360981F0030",
+   "tollName": "丽村收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.119.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40154,
+   "tollCode": "G60361102F0010",
+   "tollName": "广丰收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.103.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40155,
+   "tollCode": "S86360728F0020",
+   "tollName": "定南东收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.129.71",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40161,
+   "tollCode": "G0060360060010",
+   "tollName": "昌西南收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.2.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40166,
+   "tollCode": "S46361002F0010",
+   "tollName": "临川南收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.102.51",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40169,
+   "tollCode": "G35360735F0020",
+   "tollName": "石城北收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.121.3",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40181,
+   "tollCode": "S81360902F0010",
+   "tollName": "袁州收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.168.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40187,
+   "tollCode": "G6021360924F0010",
+   "tollName": "花桥收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.18.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40197,
+   "tollCode": "G35360222F0020",
+   "tollName": "经公桥收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.134.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40202,
+   "tollCode": "S46361002F0020",
+   "tollName": "抚州南收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.138.53",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40216,
+   "tollCode": "G70360121F0030",
+   "tollName": "南昌东收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.125.8",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40234,
+   "tollCode": "G060N360200090",
+   "tollName": "泾口收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.120.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40240,
+   "tollCode": "G60360902F0010",
+   "tollName": "西村收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.108.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40244,
+   "tollCode": "G0060360060010",
+   "tollName": "昌西南收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.2.3",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40247,
+   "tollCode": "G70361021F0010",
+   "tollName": "上塘收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.113.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40262,
+   "tollCode": "G70361002F0010",
+   "tollName": "罗针收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.118.8",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40263,
+   "tollCode": "G6011360981F0020",
+   "tollName": "铁路收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.142.150",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40281,
+   "tollCode": "S33360681F0010",
+   "tollName": "白田收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.122.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40289,
+   "tollCode": "G56360222F0010",
+   "tollName": "景德镇东收费站",
+   "orgCode": "030000009",
+   "ip": "36.104.106.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40290,
+   "tollCode": "S38360923F0100",
+   "tollName": "万载收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.151.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40012,
+   "tollCode": "G35360603F0020",
+   "tollName": "龙虎山收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.129.63",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40013,
+   "tollCode": "S89360301F0030",
+   "tollName": "长平收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.147.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40014,
+   "tollCode": "G6021360926F0020",
+   "tollName": "铜鼓收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.20.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40020,
+   "tollCode": "S61360821F0010",
+   "tollName": "吉安东收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.126.70",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40005,
+   "tollCode": "G0076360260030",
+   "tollName": "于都收费站",
+   "orgCode": "030000007",
+   "ip": "10.102.12.22",
+   "brand": "huawei",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40046,
+   "tollCode": "G0056360220030",
+   "tollName": "湖口收费站",
+   "orgCode": "030000254",
+   "ip": "36.122.3.252",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40048,
+   "tollCode": "G35361128F0010",
+   "tollName": "凰岗收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.106.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40058,
+   "tollCode": "G0060360250130",
+   "tollName": "进贤收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.114.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40069,
+   "tollCode": "S37360401F0010",
+   "tollName": "姑塘收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.18.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40070,
+   "tollCode": "S69360502F0010",
+   "tollName": "南安收费站",
+   "orgCode": "020000253",
+   "ip": "36.121.2.70",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40077,
+   "tollCode": "G76360702F0020",
+   "tollName": "赣州西收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.120.174",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40087,
+   "tollCode": "S38360923F0020",
+   "tollName": "高安西收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.118.98",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40096,
+   "tollCode": "G70360112F0100",
+   "tollName": "瑶北收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.123.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40115,
+   "tollCode": "G6021360281F0010",
+   "tollName": "乐平南收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.114.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40132,
+   "tollCode": "G45360828F0010",
+   "tollName": "韶口收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.108.101",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40139,
+   "tollCode": "G56360429F0010",
+   "tollName": "均桥收费站",
+   "orgCode": "030000254",
+   "ip": "36.122.4.252",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40159,
+   "tollCode": "G45360821F0010",
+   "tollName": "吉安县收费站",
+   "orgCode": "020000253",
+   "ip": "36.121.7.70",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40167,
+   "tollCode": "S46361026F0010",
+   "tollName": "宜黄收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.104.19",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40168,
+   "tollCode": "G72360732F0030",
+   "tollName": "兴国西收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.116.61",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40171,
+   "tollCode": "G45360521F0010",
+   "tollName": "洞村收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.108.105",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40193,
+   "tollCode": "G6021360123F0010",
+   "tollName": "安义收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.12.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40204,
+   "tollCode": "G1517360825F0010",
+   "tollName": "三坊收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.132.59",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40214,
+   "tollCode": "G1517360881F0050",
+   "tollName": "龙市收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.120.71",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40215,
+   "tollCode": "G60361121F0010",
+   "tollName": "上饶西收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.105.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40218,
+   "tollCode": "G70360121F0040",
+   "tollName": "塔城收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.126.8",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40222,
+   "tollCode": "S69360801F0030",
+   "tollName": "吉安北收费站",
+   "orgCode": "020000253",
+   "ip": "36.121.5.70",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40228,
+   "tollCode": "S46360825F0010",
+   "tollName": "永丰收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.108.19",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40232,
+   "tollCode": "G76360724F0030",
+   "tollName": "上犹东收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.103.207",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40237,
+   "tollCode": "G6011360981F0010",
+   "tollName": "丰城东收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.140.150",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40239,
+   "tollCode": "G56361128F0020",
+   "tollName": "油墩街收费站",
+   "orgCode": "030000254",
+   "ip": "36.122.7.252",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40245,
+   "tollCode": "G35361129F0010",
+   "tollName": "万年西收费站",
+   "orgCode": "020110017",
+   "ip": "36.107.109.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40249,
+   "tollCode": "G72360821F0020",
+   "tollName": "永阳收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.107.70",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40283,
+   "tollCode": "S22360483F0020",
+   "tollName": "庐山温泉收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.17.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40287,
+   "tollCode": "G35360781F0010",
+   "tollName": "瑞金南收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.124.3",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40294,
+   "tollCode": "S42361003F0010",
+   "tollName": "东乡西收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.115.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40295,
+   "tollCode": "G76360724F0010",
+   "tollName": "上犹西收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.104.207",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40121,
+   "tollCode": "G45360424F0040",
+   "tollName": "何市收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.103.105",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40128,
+   "tollCode": "S61360822F0010",
+   "tollName": "文陂收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.127.59",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40131,
+   "tollCode": "G35360730F0020",
+   "tollName": "固村收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.122.3",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40133,
+   "tollCode": "G0321361123F0020",
+   "tollName": "玉山西收费站",
+   "orgCode": "030000009",
+   "ip": "36.104.113.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40140,
+   "tollCode": "G60360983F0010",
+   "tollName": "胡家坊收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.6.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40141,
+   "tollCode": "G35360781F0020",
+   "tollName": "瑞金北收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.123.3",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40151,
+   "tollCode": "G1517360825F0020",
+   "tollName": "万合收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.135.69",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40162,
+   "tollCode": "G45360502F0010",
+   "tollName": "仙女湖收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.131.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40170,
+   "tollCode": "G45360502F0020",
+   "tollName": "新余南收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.132.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40172,
+   "tollCode": "S42360982F0030",
+   "tollName": "樟树东收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.120.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40177,
+   "tollCode": "S22360428F0010",
+   "tollName": "都昌东收费站",
+   "orgCode": "030000255",
+   "ip": "36.120.14.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40178,
+   "tollCode": "G1517360881F0060",
+   "tollName": "鹅岭收费站",
+   "orgCode": "030000011",
+   "ip": "36.103.119.60",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40196,
+   "tollCode": "G76360731F0010",
+   "tollName": "罗坳收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.116.130",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40200,
+   "tollCode": "G0321361123F0010",
+   "tollName": "三清山西收费站",
+   "orgCode": "030000009",
+   "ip": "36.104.112.14",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40201,
+   "tollCode": "G35361030F0010",
+   "tollName": "赤水收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.136.74",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40206,
+   "tollCode": "S30360423F0020",
+   "tollName": "澧溪收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.113.165",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40213,
+   "tollCode": "ZGA7360112F0010",
+   "tollName": "南昌西收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.15.3",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40221,
+   "tollCode": "G76360725F0030",
+   "tollName": "文英收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.107.207",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40225,
+   "tollCode": "VV360981189136482110",
+   "tollName": "丰城收费站",
+   "orgCode": "030000010",
+   "ip": "36.123.4.2",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40246,
+   "tollCode": "S81360902F0030",
+   "tollName": "万载南收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.166.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40248,
+   "tollCode": "G45360924F0020",
+   "tollName": "天宝收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.105.105",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40256,
+   "tollCode": "S38360923F0010",
+   "tollName": "上高东收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.119.98",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40258,
+   "tollCode": "S20360430F0020",
+   "tollName": "彭泽收费站",
+   "orgCode": "030000254",
+   "ip": "36.122.11.252",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40261,
+   "tollCode": "G56360428F0020",
+   "tollName": "蔡岭收费站",
+   "orgCode": "030000254",
+   "ip": "36.122.5.252",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40267,
+   "tollCode": "G70361021F0020",
+   "tollName": "南城收费站",
+   "orgCode": "030000006",
+   "ip": "36.100.114.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40268,
+   "tollCode": "G60361121F0020",
+   "tollName": "上饶东收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.104.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40270,
+   "tollCode": "G60360603F0010",
+   "tollName": "鹰潭西收费站",
+   "orgCode": "020110016",
+   "ip": "36.105.111.121",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40278,
+   "tollCode": "G76360725F0010",
+   "tollName": "崇义收费站",
+   "orgCode": "030000007",
+   "ip": "36.101.105.207",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40285,
+   "tollCode": "G60360323F0010",
+   "tollName": "芦溪收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.109.4",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  },
+  {
+   "id": 40302,
+   "tollCode": "S32360424F0050",
+   "tollName": "渣津收费站",
+   "orgCode": "030000255",
+   "ip": "36.102.124.98",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

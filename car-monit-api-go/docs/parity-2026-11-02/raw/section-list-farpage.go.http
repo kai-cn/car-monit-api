@@ -1,0 +1,83 @@
+HTTP 200  4ms  err=None
+{
+ "total": 85,
+ "rows": [
+  {
+   "id": "28",
+   "roadCode": "G76",
+   "roadName": "厦蓉高速",
+   "sectionCode": "200R500760756000",
+   "sectionName": "赣崇",
+   "startPileNo": 446,
+   "endPileNo": 534,
+   "orgCode": "030000007",
+   "orgName": "赣州管理中心",
+   "orgLevelCode": "0000001100530004",
+   "orgCategory": "03",
+   "mileage": 88,
+   "openDate": "2012-11-30"
+  },
+  {
+   "id": "44",
+   "roadCode": "S30",
+   "roadName": "永武高速",
+   "sectionCode": "200R50030360741000",
+   "sectionName": "永武",
+   "startPileNo": 0,
+   "endPileNo": 104,
+   "orgCode": "030000255",
+   "orgName": "南昌北管理中心",
+   "orgLevelCode": "0000001100530014",
+   "orgCategory": "03",
+   "mileage": 104,
+   "openDate": "2011-08-31"
+  },
+  {
+   "id": "49",
+   "roadCode": "G1517",
+   "roadName": "莆炎高速",
+   "sectionCode": "200R515170804000",
+   "sectionName": "船广",
+   "startPileNo": 401,
+   "endPileNo": 422,
+   "orgCode": "030000011",
+   "orgName": "吉安东管理中心",
+   "orgLevelCode": "0000001100530008",
+   "orgCategory": "03",
+   "mileage": 21,
+   "openDate": "2016-11-30"
+  },
+  {
+   "id": "68",
+   "roadCode": "ZGA2",
+   "roadName": "杭瑞景德镇连接线",
+   "sectionCode": "200R500A2360611000",
+   "sectionName": "九景",
+   "startPileNo": 0,
+   "endPileNo": 5,
+   "orgCode": "030000254",
+   "orgName": "九江管理中心",
+   "orgLevelCode": "0000001100530013",
+   "orgCategory": "03",
+   "mileage": 5,
+   "openDate": "2000-10-31"
+  },
+  {
+   "id": "83",
+   "roadCode": "G4521",
+   "roadName": "南龙高速",
+   "sectionCode": "200R50041360804011",
+   "sectionName": "南龙",
+   "startPileNo": 0,
+   "endPileNo": 132,
+   "orgCode": "030000007",
+   "orgName": "赣州管理中心",
+   "orgLevelCode": "0000001100530004",
+   "orgCategory": "03",
+   "mileage": null,
+   "openDate": "2022-09-29"
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

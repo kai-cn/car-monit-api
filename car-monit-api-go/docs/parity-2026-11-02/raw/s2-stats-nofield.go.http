@@ -1,0 +1,5 @@
+HTTP 200  2ms  err=None
+{
+ "code": 500,
+ "message": "groupBy 不能为空"
+}

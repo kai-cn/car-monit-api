@@ -1,0 +1,5 @@
+HTTP 200  6022ms  err=None
+{
+ "code": 200,
+ "message": "增量同步完成（三表，基于 Redis 水位）"
+}

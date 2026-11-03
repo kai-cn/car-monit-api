@@ -1,0 +1,5 @@
+HTTP 200  19ms  err=None
+{
+ "code": 500,
+ "message": "统计查询异常：Elasticsearch exception [type=search_phase_execution_exception, reason=all shards failed]"
+}

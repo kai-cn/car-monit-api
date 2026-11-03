@@ -1,0 +1,8 @@
+HTTP 405  4ms  err=None
+{
+ "timestamp": "2026-11-03T04:01:30.533+00:00",
+ "status": 405,
+ "error": "Method Not Allowed",
+ "message": "",
+ "path": "/base/sysutilTest/syncBaseInfo"
+}

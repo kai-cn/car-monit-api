@@ -1,0 +1,8 @@
+HTTP 400  2ms  err=None
+{
+ "timestamp": "2026-11-03T04:01:07.659+00:00",
+ "status": 400,
+ "error": "Bad Request",
+ "message": "",
+ "path": "/base/tollStationIp/__no_such_id__"
+}

@@ -1,0 +1,5 @@
+HTTP 200  16ms  err=None
+{
+ "code": 500,
+ "msg": "OdsSzdnProvinceBorderVehicleWeightNewstructureRepo.Count: ERROR: column \"datatype\" does not exist (SQLSTATE 42703)"
+}

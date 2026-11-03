@@ -1,0 +1,23 @@
+HTTP 200  4ms  err=None
+{
+ "total": 1,
+ "rows": [
+  {
+   "id": "18",
+   "roadCode": "G6021",
+   "roadName": "杭长高速",
+   "sectionCode": "200R560210671000",
+   "sectionName": "乐温",
+   "startPileNo": 379,
+   "endPileNo": 397,
+   "orgCode": "020110017",
+   "orgName": "南昌东管理中心",
+   "orgLevelCode": "0000001100530011",
+   "orgCategory": "03",
+   "mileage": 0,
+   "openDate": "2005-10-31"
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

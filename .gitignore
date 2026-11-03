@@ -60,3 +60,22 @@ gen_code
 
 ### node ###
 node_modules
+
+### python ###
+__pycache__/
+*.py[cod]
+.venv/
+
+### 本地探针 / 编译产物 / 运行产物（体积大且可再生，不入库） ###
+_probe/
+_probe_go/
+_probe_bin/
+logs/
+car-monit-api-go/data/
+
+### 同仓库下的 rust 工作副本（另有独立 worktree，不在主 worktree 提交） ###
+car-monit-api-rust/
+
+### 第三方工具状态 ###
+.mimocode/
+.qoder/

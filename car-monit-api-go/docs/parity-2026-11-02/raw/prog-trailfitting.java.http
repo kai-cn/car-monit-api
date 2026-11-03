@@ -1,0 +1,8 @@
+HTTP 500  4ms  err=None
+{
+ "timestamp": "2026-11-03T04:01:13.348+00:00",
+ "status": 500,
+ "error": "Internal Server Error",
+ "message": "",
+ "path": "/progressive/trailfitting/list"
+}

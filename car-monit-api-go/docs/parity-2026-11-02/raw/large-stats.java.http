@@ -1,0 +1,9 @@
+HTTP 200  9ms  err=None
+{
+ "code": 200,
+ "message": "ok",
+ "type": "snapshot",
+ "groupBy": "gantryName",
+ "topN": 10,
+ "data": {}
+}

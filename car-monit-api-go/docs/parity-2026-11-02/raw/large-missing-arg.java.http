@@ -1,0 +1,8 @@
+HTTP 400  3ms  err=None
+{
+ "timestamp": "2026-11-03T04:01:11.025+00:00",
+ "status": 400,
+ "error": "Bad Request",
+ "message": "",
+ "path": "/api/v1/large/snapshot"
+}

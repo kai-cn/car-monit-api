@@ -1,0 +1,8 @@
+HTTP 400  3ms  err=None
+{
+ "error": "Bad Request",
+ "message": "",
+ "path": "/base/tollStationIp/not-a-number",
+ "status": 400,
+ "timestamp": "2026-11-03T04:01:07.672+00:00"
+}

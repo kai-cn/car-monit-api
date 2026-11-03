@@ -1,0 +1,17 @@
+HTTP 200  7ms  err=None
+{
+ "total": 1,
+ "rows": [
+  {
+   "id": 40017,
+   "tollCode": "S0089360020040",
+   "tollName": "莲花西收费站",
+   "orgCode": "030000008",
+   "ip": "36.106.145.9",
+   "brand": "haikang",
+   "odsSzdnToll": null
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}

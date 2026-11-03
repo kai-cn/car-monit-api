@@ -1,0 +1,5 @@
+HTTP 200  3ms  err=None
+{
+ "code": 500,
+ "msg": "OdsSzdnProvinceBorderVehicleWeightNewstructureRepo.Count: ERROR: column \"plateno\" does not exist (SQLSTATE 42703)"
+}

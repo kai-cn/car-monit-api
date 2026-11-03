@@ -1,0 +1,8 @@
+HTTP 400  1ms  err=None
+{
+ "error": "Bad Request",
+ "message": "",
+ "path": "/base/sysutil/carTrackQueryByCarNo",
+ "status": 400,
+ "timestamp": "2026-11-03T01:41:53.949+00:00"
+}

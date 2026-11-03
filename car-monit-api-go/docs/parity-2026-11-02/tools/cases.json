@@ -1,0 +1,5268 @@
+[
+ {
+  "id": "fwqjcxx-list-default",
+  "group": "fwqjcxx",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/fwqjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "fwqjcxx-list-page2",
+  "group": "fwqjcxx",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/fwqjcxx/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "fwqjcxx-list-noargs",
+  "group": "fwqjcxx",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/fwqjcxx/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "fwqjcxx-list-pagesize0",
+  "group": "fwqjcxx",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/fwqjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "fwqjcxx-list-pagesize-1",
+  "group": "fwqjcxx",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/fwqjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "fwqjcxx-list-bigpagesize",
+  "group": "fwqjcxx",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/fwqjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "fwqjcxx-list-farpage",
+  "group": "fwqjcxx",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/fwqjcxx/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "fwqjcxx-list-order",
+  "group": "fwqjcxx",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/fwqjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "agentPk",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "fwqjcxx-filter-agentPk",
+  "group": "fwqjcxx",
+  "note": "等值过滤 agentPk=1",
+  "method": "GET",
+  "path": "/base/fwqjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "agentPk": "1"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "fwqjcxx-filter-yxtzj",
+  "group": "fwqjcxx",
+  "note": "等值过滤 yxtzj=45L4479928780847000",
+  "method": "GET",
+  "path": "/base/fwqjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "yxtzj": "45L4479928780847000"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "fwqjcxx-filter-fwqbm",
+  "group": "fwqjcxx",
+  "note": "等值过滤 fwqbm=G0321361123W0010",
+  "method": "GET",
+  "path": "/base/fwqjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "fwqbm": "G0321361123W0010"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "fwqjcxx-filter-fwqmc",
+  "group": "fwqjcxx",
+  "note": "等值过滤 fwqmc=三清山西服务区",
+  "method": "GET",
+  "path": "/base/fwqjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "fwqmc": "三清山西服务区"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "fwqjcxx-full-set",
+  "group": "fwqjcxx",
+  "note": "整表集合比对（pageSize=218，按 agentPk 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/base/fwqjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "218"
+  },
+  "body": null,
+  "cap": 218,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "fwqjcxx-info",
+  "group": "fwqjcxx",
+  "note": "详情 /{agentPk} 命中 agentPk=1",
+  "method": "GET",
+  "path": "/base/fwqjcxx/1",
+  "params": {
+   "agentPk": "1"
+  },
+  "body": null,
+  "cap": 0,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "fwqjcxx-info-miss",
+  "group": "fwqjcxx",
+  "note": "详情 /{agentPk} 不存在",
+  "method": "GET",
+  "path": "/base/fwqjcxx/__no_such_id__",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "fwqjcxx-listAll",
+  "group": "fwqjcxx",
+  "note": "全量列表（裸数组，无信封）",
+  "method": "GET",
+  "path": "/base/fwqjcxx/listAll",
+  "params": null,
+  "body": null,
+  "cap": 200,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfsjcxx-list-default",
+  "group": "sfsjcxx",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/sfsjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfsjcxx-list-page2",
+  "group": "sfsjcxx",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/sfsjcxx/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfsjcxx-list-noargs",
+  "group": "sfsjcxx",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/sfsjcxx/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfsjcxx-list-pagesize0",
+  "group": "sfsjcxx",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/sfsjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfsjcxx-list-pagesize-1",
+  "group": "sfsjcxx",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/sfsjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfsjcxx-list-bigpagesize",
+  "group": "sfsjcxx",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/sfsjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfsjcxx-list-farpage",
+  "group": "sfsjcxx",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/sfsjcxx/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfsjcxx-list-order",
+  "group": "sfsjcxx",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/sfsjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "agentPk",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfsjcxx-filter-agentPk",
+  "group": "sfsjcxx",
+  "note": "等值过滤 agentPk=d2c6df4afa7ff18d48786d728d3919d2",
+  "method": "GET",
+  "path": "/base/sfsjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "agentPk": "d2c6df4afa7ff18d48786d728d3919d2"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfsjcxx-filter-yxtzj",
+  "group": "sfsjcxx",
+  "note": "等值过滤 yxtzj=1531950771411013633",
+  "method": "GET",
+  "path": "/base/sfsjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "yxtzj": "1531950771411013633"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfsjcxx-filter-sfsmc",
+  "group": "sfsjcxx",
+  "note": "等值过滤 sfsmc=上万收费所",
+  "method": "GET",
+  "path": "/base/sfsjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "sfsmc": "上万收费所"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfsjcxx-filter-jd",
+  "group": "sfsjcxx",
+  "note": "等值过滤 jd=117.43187400",
+  "method": "GET",
+  "path": "/base/sfsjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "jd": "117.43187400"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfsjcxx-full-set",
+  "group": "sfsjcxx",
+  "note": "整表集合比对（pageSize=24，按 agentPk 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/base/sfsjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "24"
+  },
+  "body": null,
+  "cap": 24,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfsjcxx-info",
+  "group": "sfsjcxx",
+  "note": "详情 /{agentPk} 命中 agentPk=d2c6df4afa7ff18d48786d728d3919d2",
+  "method": "GET",
+  "path": "/base/sfsjcxx/d2c6df4afa7ff18d48786d728d3919d2",
+  "params": {
+   "agentPk": "d2c6df4afa7ff18d48786d728d3919d2"
+  },
+  "body": null,
+  "cap": 0,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfsjcxx-info-miss",
+  "group": "sfsjcxx",
+  "note": "详情 /{agentPk} 不存在",
+  "method": "GET",
+  "path": "/base/sfsjcxx/__no_such_id__",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfsjcxx-listAll",
+  "group": "sfsjcxx",
+  "note": "全量列表（裸数组，无信封）",
+  "method": "GET",
+  "path": "/base/sfsjcxx/listAll",
+  "params": null,
+  "body": null,
+  "cap": 200,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfzjcxx-list-default",
+  "group": "sfzjcxx",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/sfzjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfzjcxx-list-page2",
+  "group": "sfzjcxx",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/sfzjcxx/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfzjcxx-list-noargs",
+  "group": "sfzjcxx",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/sfzjcxx/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfzjcxx-list-pagesize0",
+  "group": "sfzjcxx",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/sfzjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfzjcxx-list-pagesize-1",
+  "group": "sfzjcxx",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/sfzjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfzjcxx-list-bigpagesize",
+  "group": "sfzjcxx",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/sfzjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfzjcxx-list-farpage",
+  "group": "sfzjcxx",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/sfzjcxx/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfzjcxx-list-order",
+  "group": "sfzjcxx",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/sfzjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "agentPk",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfzjcxx-filter-agentPk",
+  "group": "sfzjcxx",
+  "note": "等值过滤 agentPk=363bc7b76e508c55dcb259cf6a3f007e",
+  "method": "GET",
+  "path": "/base/sfzjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "agentPk": "363bc7b76e508c55dcb259cf6a3f007e"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfzjcxx-filter-yxtzj",
+  "group": "sfzjcxx",
+  "note": "等值过滤 yxtzj=1495673117678645249",
+  "method": "GET",
+  "path": "/base/sfzjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "yxtzj": "1495673117678645249"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfzjcxx-filter-sfzdm",
+  "group": "sfzjcxx",
+  "note": "等值过滤 sfzdm=G56360429F0010",
+  "method": "GET",
+  "path": "/base/sfzjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "sfzdm": "G56360429F0010"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfzjcxx-filter-sfzmc",
+  "group": "sfzjcxx",
+  "note": "等值过滤 sfzmc=均桥收费站",
+  "method": "GET",
+  "path": "/base/sfzjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "sfzmc": "均桥收费站"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfzjcxx-full-set",
+  "group": "sfzjcxx",
+  "note": "整表集合比对（pageSize=320，按 agentPk 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/base/sfzjcxx/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "320"
+  },
+  "body": null,
+  "cap": 320,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfzjcxx-info",
+  "group": "sfzjcxx",
+  "note": "详情 /{agentPk} 命中 agentPk=363bc7b76e508c55dcb259cf6a3f007e",
+  "method": "GET",
+  "path": "/base/sfzjcxx/363bc7b76e508c55dcb259cf6a3f007e",
+  "params": {
+   "agentPk": "363bc7b76e508c55dcb259cf6a3f007e"
+  },
+  "body": null,
+  "cap": 0,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfzjcxx-info-miss",
+  "group": "sfzjcxx",
+  "note": "详情 /{agentPk} 不存在",
+  "method": "GET",
+  "path": "/base/sfzjcxx/__no_such_id__",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "sfzjcxx-listAll",
+  "group": "sfzjcxx",
+  "note": "全量列表（裸数组，无信封）",
+  "method": "GET",
+  "path": "/base/sfzjcxx/listAll",
+  "params": null,
+  "body": null,
+  "cap": 200,
+  "pk": "agentPk",
+  "ignore": null
+ },
+ {
+  "id": "fwqclls-list-default",
+  "group": "fwqclls",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/manager/fwqclls/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "fwqclls-list-page2",
+  "group": "fwqclls",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/manager/fwqclls/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "fwqclls-list-noargs",
+  "group": "fwqclls",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/manager/fwqclls/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "fwqclls-list-pagesize0",
+  "group": "fwqclls",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/manager/fwqclls/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "fwqclls-list-pagesize-1",
+  "group": "fwqclls",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/manager/fwqclls/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "fwqclls-list-bigpagesize",
+  "group": "fwqclls",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/manager/fwqclls/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "fwqclls-list-farpage",
+  "group": "fwqclls",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/manager/fwqclls/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "fwqclls-list-order",
+  "group": "fwqclls",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/manager/fwqclls/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "bigId",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "fwqclls-filter-datauuid",
+  "group": "fwqclls",
+  "note": "等值过滤 datauuid=uuid-fwq-20251023001",
+  "method": "GET",
+  "path": "/manager/fwqclls/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "datauuid": "uuid-fwq-20251023001"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "fwqclls-full-set",
+  "group": "fwqclls",
+  "note": "整表集合比对（pageSize=3，按 bigId 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/manager/fwqclls/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "3"
+  },
+  "body": null,
+  "cap": 3,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "fwqclls-info",
+  "group": "fwqclls",
+  "note": "详情 /{bigId} 命中 bigId=1",
+  "method": "GET",
+  "path": "/manager/fwqclls/1",
+  "params": {
+   "bigId": 1
+  },
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "fwqclls-info-miss",
+  "group": "fwqclls",
+  "note": "详情 /{bigId} 不存在",
+  "method": "GET",
+  "path": "/manager/fwqclls/__no_such_id__",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "fwqclls-info-badid",
+  "group": "fwqclls",
+  "note": "详情 非数字 id（Spring 类型转换 400）",
+  "method": "GET",
+  "path": "/manager/fwqclls/not-a-number",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feeGantry-list-default",
+  "group": "feeGantry",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/feeGantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "feeGantry-list-page2",
+  "group": "feeGantry",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/feeGantry/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "feeGantry-list-noargs",
+  "group": "feeGantry",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/feeGantry/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "bigId",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "feeGantry-list-pagesize0",
+  "group": "feeGantry",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/feeGantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "feeGantry-list-pagesize-1",
+  "group": "feeGantry",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/feeGantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "feeGantry-list-bigpagesize",
+  "group": "feeGantry",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/feeGantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "bigId",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "feeGantry-list-farpage",
+  "group": "feeGantry",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/feeGantry/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "feeGantry-list-order",
+  "group": "feeGantry",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/feeGantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "bigId",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "feeGantry-filter-actualfeeclass",
+  "group": "feeGantry",
+  "note": "等值过滤 actualfeeclass=1",
+  "method": "GET",
+  "path": "/base/feeGantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "actualfeeclass": "1"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "feeGantry-filter-axlecount",
+  "group": "feeGantry",
+  "note": "等值过滤 axlecount=6",
+  "method": "GET",
+  "path": "/base/feeGantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "axlecount": 6
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "feeGantry-filter-createtime",
+  "group": "feeGantry",
+  "note": "等值过滤 createtime=2024-11-11T10:09:21.000+00:00",
+  "method": "GET",
+  "path": "/base/feeGantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "createtime": "2024-11-11T10:09:21.000+00:00"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "feeGantry-filter-discountfee",
+  "group": "feeGantry",
+  "note": "等值过滤 discountfee=1388",
+  "method": "GET",
+  "path": "/base/feeGantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "discountfee": 1388
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "feeGantry-full-set",
+  "group": "feeGantry",
+  "note": "整表集合比对（pageSize=200，按 bigId 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/base/feeGantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "200"
+  },
+  "body": null,
+  "cap": 200,
+  "pk": "bigId",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "feeGantry-info",
+  "group": "feeGantry",
+  "note": "详情 /{bigId} 命中 bigId=59",
+  "method": "GET",
+  "path": "/base/feeGantry/59",
+  "params": {
+   "bigId": "59"
+  },
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "feeGantry-info-miss",
+  "group": "feeGantry",
+  "note": "详情 /{bigId} 不存在",
+  "method": "GET",
+  "path": "/base/feeGantry/__no_such_id__",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "feerecords-list-default",
+  "group": "feerecords",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/feerecords/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feerecords-list-page2",
+  "group": "feerecords",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/feerecords/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feerecords-list-noargs",
+  "group": "feerecords",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/feerecords/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feerecords-list-pagesize0",
+  "group": "feerecords",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/feerecords/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feerecords-list-pagesize-1",
+  "group": "feerecords",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/feerecords/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feerecords-list-bigpagesize",
+  "group": "feerecords",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/feerecords/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feerecords-list-farpage",
+  "group": "feerecords",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/feerecords/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feerecords-list-order",
+  "group": "feerecords",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/feerecords/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "bigId",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feerecords-listToExport",
+  "group": "feerecords",
+  "note": "导出列表（裸数组）",
+  "method": "GET",
+  "path": "/base/feerecords/listToExport",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feeStationEnter-list-default",
+  "group": "feeStationEnter",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/feeStationEnter/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feeStationEnter-list-page2",
+  "group": "feeStationEnter",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/feeStationEnter/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feeStationEnter-list-noargs",
+  "group": "feeStationEnter",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/feeStationEnter/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feeStationEnter-list-pagesize0",
+  "group": "feeStationEnter",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/feeStationEnter/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feeStationEnter-list-pagesize-1",
+  "group": "feeStationEnter",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/feeStationEnter/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feeStationEnter-list-bigpagesize",
+  "group": "feeStationEnter",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/feeStationEnter/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feeStationEnter-list-farpage",
+  "group": "feeStationEnter",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/feeStationEnter/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feeStationEnter-list-order",
+  "group": "feeStationEnter",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/feeStationEnter/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "bigId",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feeStationEnter-filter-cardid",
+  "group": "feeStationEnter",
+  "note": "等值过滤 cardid=15012312232021029616",
+  "method": "GET",
+  "path": "/base/feeStationEnter/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "cardid": "15012312232021029616"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feeStationEnter-filter-electricalpercentage",
+  "group": "feeStationEnter",
+  "note": "等值过滤 electricalpercentage=100",
+  "method": "GET",
+  "path": "/base/feeStationEnter/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "electricalpercentage": 100
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feeStationEnter-filter-enaxlecount",
+  "group": "feeStationEnter",
+  "note": "等值过滤 enaxlecount=2",
+  "method": "GET",
+  "path": "/base/feeStationEnter/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "enaxlecount": 2
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feeStationEnter-filter-entime",
+  "group": "feeStationEnter",
+  "note": "等值过滤 entime=2024-11-24",
+  "method": "GET",
+  "path": "/base/feeStationEnter/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "entime": "2024-11-24"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feeStationEnter-full-set",
+  "group": "feeStationEnter",
+  "note": "整表集合比对（pageSize=317，按 bigId 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/base/feeStationEnter/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "317"
+  },
+  "body": null,
+  "cap": 317,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feeStationEnter-info",
+  "group": "feeStationEnter",
+  "note": "详情 /{bigId} 命中 bigId=2308",
+  "method": "GET",
+  "path": "/base/feeStationEnter/2308",
+  "params": {
+   "bigId": 2308
+  },
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feeStationEnter-info-miss",
+  "group": "feeStationEnter",
+  "note": "详情 /{bigId} 不存在",
+  "method": "GET",
+  "path": "/base/feeStationEnter/__no_such_id__",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feeStationEnter-info-badid",
+  "group": "feeStationEnter",
+  "note": "详情 非数字 id（Spring 类型转换 400）",
+  "method": "GET",
+  "path": "/base/feeStationEnter/not-a-number",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feestationexit-list-default",
+  "group": "feestationexit",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/feestationexit/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feestationexit-list-page2",
+  "group": "feestationexit",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/feestationexit/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feestationexit-list-noargs",
+  "group": "feestationexit",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/feestationexit/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feestationexit-list-pagesize0",
+  "group": "feestationexit",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/feestationexit/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feestationexit-list-pagesize-1",
+  "group": "feestationexit",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/feestationexit/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feestationexit-list-bigpagesize",
+  "group": "feestationexit",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/feestationexit/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feestationexit-list-farpage",
+  "group": "feestationexit",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/feestationexit/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feestationexit-list-order",
+  "group": "feestationexit",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/feestationexit/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "bigId",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feestationexit-filter-actualfeeclass",
+  "group": "feestationexit",
+  "note": "等值过滤 actualfeeclass=0",
+  "method": "GET",
+  "path": "/base/feestationexit/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "actualfeeclass": "0"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feestationexit-filter-axlecount",
+  "group": "feestationexit",
+  "note": "等值过滤 axlecount=2",
+  "method": "GET",
+  "path": "/base/feestationexit/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "axlecount": 2
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feestationexit-filter-discountfee",
+  "group": "feestationexit",
+  "note": "等值过滤 discountfee=0",
+  "method": "GET",
+  "path": "/base/feestationexit/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "discountfee": 0
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feestationexit-filter-electricalpercentage",
+  "group": "feestationexit",
+  "note": "等值过滤 electricalpercentage=0",
+  "method": "GET",
+  "path": "/base/feestationexit/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "electricalpercentage": 0
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feestationexit-full-set",
+  "group": "feestationexit",
+  "note": "整表集合比对（pageSize=270，按 bigId 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/base/feestationexit/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "270"
+  },
+  "body": null,
+  "cap": 270,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feestationexit-info",
+  "group": "feestationexit",
+  "note": "详情 /{bigId} 命中 bigId=11150377",
+  "method": "GET",
+  "path": "/base/feestationexit/11150377",
+  "params": {
+   "bigId": "11150377"
+  },
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "feestationexit-info-miss",
+  "group": "feestationexit",
+  "note": "详情 /{bigId} 不存在",
+  "method": "GET",
+  "path": "/base/feestationexit/__no_such_id__",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "snapshotflow-list-default",
+  "group": "snapshotflow",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/snapshotflow/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "datauuid",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "snapshotflow-list-page2",
+  "group": "snapshotflow",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/snapshotflow/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "datauuid",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "snapshotflow-list-noargs",
+  "group": "snapshotflow",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/snapshotflow/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "datauuid",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "snapshotflow-list-pagesize0",
+  "group": "snapshotflow",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/snapshotflow/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "datauuid",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "snapshotflow-list-pagesize-1",
+  "group": "snapshotflow",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/snapshotflow/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "datauuid",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "snapshotflow-list-bigpagesize",
+  "group": "snapshotflow",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/snapshotflow/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "datauuid",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "snapshotflow-list-farpage",
+  "group": "snapshotflow",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/snapshotflow/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "datauuid",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "snapshotflow-list-order",
+  "group": "snapshotflow",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/snapshotflow/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "datauuid",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "datauuid",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "snapshotflow-filter-gantryname",
+  "group": "snapshotflow",
+  "note": "等值过滤 gantryname=韶口互通-泰和南互通门架1",
+  "method": "GET",
+  "path": "/base/snapshotflow/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "gantryname": "韶口互通-泰和南互通门架1"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "datauuid",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "snapshotflow-filter-roadname",
+  "group": "snapshotflow",
+  "note": "等值过滤 roadname=大广高速公路",
+  "method": "GET",
+  "path": "/base/snapshotflow/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "roadname": "大广高速公路"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "datauuid",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "snapshotflow-filter-sectionname",
+  "group": "snapshotflow",
+  "note": "等值过滤 sectionname=泰赣",
+  "method": "GET",
+  "path": "/base/snapshotflow/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "sectionname": "泰赣"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "datauuid",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "snapshotflow-filter-direction",
+  "group": "snapshotflow",
+  "note": "等值过滤 direction=1",
+  "method": "GET",
+  "path": "/base/snapshotflow/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "direction": 1
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "datauuid",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "snapshotflow-full-set",
+  "group": "snapshotflow",
+  "note": "整表集合比对（pageSize=251，按 datauuid 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/base/snapshotflow/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "251"
+  },
+  "body": null,
+  "cap": 251,
+  "pk": "datauuid",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "snapshotflow-info",
+  "group": "snapshotflow",
+  "note": "详情 /{bigId} 命中 bigId=c2d437fd-5c2e-40b5-98fd-6581a0f94c1b",
+  "method": "GET",
+  "path": "/base/snapshotflow/c2d437fd-5c2e-40b5-98fd-6581a0f94c1b",
+  "params": {
+   "bigId": "c2d437fd-5c2e-40b5-98fd-6581a0f94c1b"
+  },
+  "body": null,
+  "cap": 0,
+  "pk": "datauuid",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "snapshotflow-info-miss",
+  "group": "snapshotflow",
+  "note": "详情 /{bigId} 不存在",
+  "method": "GET",
+  "path": "/base/snapshotflow/__no_such_id__",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "datauuid",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "snapshotflow-listToExport",
+  "group": "snapshotflow",
+  "note": "导出列表（裸数组）",
+  "method": "GET",
+  "path": "/base/snapshotflow/listToExport",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "datauuid",
+  "ignore": [
+   "id"
+  ]
+ },
+ {
+  "id": "provcapture-list-default",
+  "group": "provcapture",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/provcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "provcapture-list-page2",
+  "group": "provcapture",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/provcapture/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "provcapture-list-noargs",
+  "group": "provcapture",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/provcapture/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "provcapture-list-pagesize0",
+  "group": "provcapture",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/provcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "provcapture-list-pagesize-1",
+  "group": "provcapture",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/provcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "provcapture-list-bigpagesize",
+  "group": "provcapture",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/provcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "provcapture-list-farpage",
+  "group": "provcapture",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/provcapture/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "provcapture-list-order",
+  "group": "provcapture",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/provcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "bigId",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "provcapture-filter-deviceip",
+  "group": "provcapture",
+  "note": "等值过滤 deviceip=36.101.189.5",
+  "method": "GET",
+  "path": "/base/provcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "deviceip": "36.101.189.5"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "provcapture-filter-tailcapturetimeunix",
+  "group": "provcapture",
+  "note": "等值过滤 tailcapturetimeunix=-28800",
+  "method": "GET",
+  "path": "/base/provcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "tailcapturetimeunix": -28800
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "provcapture-filter-tailcapturetime",
+  "group": "provcapture",
+  "note": "等值过滤 tailcapturetime=1969-12-31T16:00:00.000+00:00",
+  "method": "GET",
+  "path": "/base/provcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "tailcapturetime": "1969-12-31T16:00:00.000+00:00"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "provcapture-filter-platecolorcode",
+  "group": "provcapture",
+  "note": "等值过滤 platecolorcode=1",
+  "method": "GET",
+  "path": "/base/provcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "platecolorcode": 1
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "provcapture-full-set",
+  "group": "provcapture",
+  "note": "整表集合比对（pageSize=356，按 bigId 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/base/provcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "356"
+  },
+  "body": null,
+  "cap": 356,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "provcapture-info",
+  "group": "provcapture",
+  "note": "详情 /{bigId} 命中 bigId=312748",
+  "method": "GET",
+  "path": "/base/provcapture/312748",
+  "params": {
+   "bigId": 312748
+  },
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "provcapture-info-miss",
+  "group": "provcapture",
+  "note": "详情 /{bigId} 不存在",
+  "method": "GET",
+  "path": "/base/provcapture/__no_such_id__",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "provcapture-info-badid",
+  "group": "provcapture",
+  "note": "详情 非数字 id（Spring 类型转换 400）",
+  "method": "GET",
+  "path": "/base/provcapture/not-a-number",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "stationcapture-list-default",
+  "group": "stationcapture",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/stationcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "stationcapture-list-page2",
+  "group": "stationcapture",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/stationcapture/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "stationcapture-list-noargs",
+  "group": "stationcapture",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/stationcapture/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "stationcapture-list-pagesize0",
+  "group": "stationcapture",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/stationcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "stationcapture-list-pagesize-1",
+  "group": "stationcapture",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/stationcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "stationcapture-list-bigpagesize",
+  "group": "stationcapture",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/stationcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "stationcapture-list-farpage",
+  "group": "stationcapture",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/stationcapture/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "stationcapture-list-order",
+  "group": "stationcapture",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/stationcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "bigId",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "stationcapture-filter-datasource",
+  "group": "stationcapture",
+  "note": "等值过滤 datasource=ZdTrails:StationCapture",
+  "method": "GET",
+  "path": "/base/stationcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "datasource": "ZdTrails:StationCapture"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "stationcapture-filter-cameratype",
+  "group": "stationcapture",
+  "note": "等值过滤 cameratype=StationCapture",
+  "method": "GET",
+  "path": "/base/stationcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "cameratype": "StationCapture"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "stationcapture-filter-deviceid",
+  "group": "stationcapture",
+  "note": "等值过滤 deviceid=00000000",
+  "method": "GET",
+  "path": "/base/stationcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "deviceid": "00000000"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "stationcapture-filter-deviceip",
+  "group": "stationcapture",
+  "note": "等值过滤 deviceip=36.105.104.121",
+  "method": "GET",
+  "path": "/base/stationcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "deviceip": "36.105.104.121"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "stationcapture-full-set",
+  "group": "stationcapture",
+  "note": "整表集合比对（pageSize=851，按 bigId 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/base/stationcapture/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "851"
+  },
+  "body": null,
+  "cap": 851,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "stationcapture-info",
+  "group": "stationcapture",
+  "note": "详情 /{bigId} 命中 bigId=20113483",
+  "method": "GET",
+  "path": "/base/stationcapture/20113483",
+  "params": {
+   "bigId": 20113483
+  },
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "stationcapture-info-miss",
+  "group": "stationcapture",
+  "note": "详情 /{bigId} 不存在",
+  "method": "GET",
+  "path": "/base/stationcapture/__no_such_id__",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "stationcapture-info-badid",
+  "group": "stationcapture",
+  "note": "详情 非数字 id（Spring 类型转换 400）",
+  "method": "GET",
+  "path": "/base/stationcapture/not-a-number",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "gantry-list-default",
+  "group": "gantry",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/gantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantry-list-page2",
+  "group": "gantry",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/gantry/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantry-list-noargs",
+  "group": "gantry",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/gantry/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantry-list-pagesize0",
+  "group": "gantry",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/gantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantry-list-pagesize-1",
+  "group": "gantry",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/gantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantry-list-bigpagesize",
+  "group": "gantry",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/gantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantry-list-farpage",
+  "group": "gantry",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/gantry/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantry-list-order",
+  "group": "gantry",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/gantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "id",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantry-filter-gantryCode",
+  "group": "gantry",
+  "note": "等值过滤 gantryCode=G003536012000720010",
+  "method": "GET",
+  "path": "/base/gantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "gantryCode": "G003536012000720010"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantry-filter-gantryName",
+  "group": "gantry",
+  "note": "等值过滤 gantryName=瑞金北互通-宁都东互通门架1",
+  "method": "GET",
+  "path": "/base/gantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "gantryName": "瑞金北互通-宁都东互通门架1"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantry-filter-roadCode",
+  "group": "gantry",
+  "note": "等值过滤 roadCode=G35",
+  "method": "GET",
+  "path": "/base/gantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "roadCode": "G35"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantry-filter-sectionCode",
+  "group": "gantry",
+  "note": "等值过滤 sectionCode=200R500350729001",
+  "method": "GET",
+  "path": "/base/gantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "sectionCode": "200R500350729001"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantry-full-set",
+  "group": "gantry",
+  "note": "整表集合比对（pageSize=1526，按 id 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/base/gantry/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "1526"
+  },
+  "body": null,
+  "cap": 1526,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantry-info",
+  "group": "gantry",
+  "note": "详情 /{id} 命中 id=18",
+  "method": "GET",
+  "path": "/base/gantry/18",
+  "params": {
+   "id": "18"
+  },
+  "body": null,
+  "cap": 0,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantry-info-miss",
+  "group": "gantry",
+  "note": "详情 /{id} 不存在",
+  "method": "GET",
+  "path": "/base/gantry/__no_such_id__",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantry-listAll",
+  "group": "gantry",
+  "note": "全量列表（裸数组，无信封）",
+  "method": "GET",
+  "path": "/base/gantry/listAll",
+  "params": null,
+  "body": null,
+  "cap": 200,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantryIp-list-default",
+  "group": "gantryIp",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/gantryIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantryIp-list-page2",
+  "group": "gantryIp",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/gantryIp/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantryIp-list-noargs",
+  "group": "gantryIp",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/gantryIp/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantryIp-list-pagesize0",
+  "group": "gantryIp",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/gantryIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantryIp-list-pagesize-1",
+  "group": "gantryIp",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/gantryIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantryIp-list-bigpagesize",
+  "group": "gantryIp",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/gantryIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantryIp-list-farpage",
+  "group": "gantryIp",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/gantryIp/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantryIp-list-order",
+  "group": "gantryIp",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/gantryIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "id",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantryIp-filter-gantryCode",
+  "group": "gantryIp",
+  "note": "等值过滤 gantryCode=S003636011000510010",
+  "method": "GET",
+  "path": "/base/gantryIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "gantryCode": "S003636011000510010"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantryIp-filter-gantryName",
+  "group": "gantryIp",
+  "note": "等值过滤 gantryName=南安互通-峡江互通门架1",
+  "method": "GET",
+  "path": "/base/gantryIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "gantryName": "南安互通-峡江互通门架1"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantryIp-filter-orgCode",
+  "group": "gantryIp",
+  "note": "等值过滤 orgCode=020000253",
+  "method": "GET",
+  "path": "/base/gantryIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orgCode": "020000253"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantryIp-filter-ip",
+  "group": "gantryIp",
+  "note": "等值过滤 ip=36.121.3.43",
+  "method": "GET",
+  "path": "/base/gantryIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "ip": "36.121.3.43"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantryIp-full-set",
+  "group": "gantryIp",
+  "note": "整表集合比对（pageSize=1033，按 id 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/base/gantryIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "1033"
+  },
+  "body": null,
+  "cap": 1033,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantryIp-info",
+  "group": "gantryIp",
+  "note": "详情 /{id} 命中 id=1",
+  "method": "GET",
+  "path": "/base/gantryIp/1",
+  "params": {
+   "id": 1
+  },
+  "body": null,
+  "cap": 0,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantryIp-info-miss",
+  "group": "gantryIp",
+  "note": "详情 /{id} 不存在",
+  "method": "GET",
+  "path": "/base/gantryIp/__no_such_id__",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "gantryIp-info-badid",
+  "group": "gantryIp",
+  "note": "详情 非数字 id（Spring 类型转换 400）",
+  "method": "GET",
+  "path": "/base/gantryIp/not-a-number",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "vehicleweight-list-default",
+  "group": "vehicleweight",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/vehicleweight/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "-",
+  "ignore": null
+ },
+ {
+  "id": "vehicleweight-list-page2",
+  "group": "vehicleweight",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/vehicleweight/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "-",
+  "ignore": null
+ },
+ {
+  "id": "vehicleweight-list-noargs",
+  "group": "vehicleweight",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/vehicleweight/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "-",
+  "ignore": null
+ },
+ {
+  "id": "vehicleweight-list-pagesize0",
+  "group": "vehicleweight",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/vehicleweight/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "-",
+  "ignore": null
+ },
+ {
+  "id": "vehicleweight-list-pagesize-1",
+  "group": "vehicleweight",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/vehicleweight/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "-",
+  "ignore": null
+ },
+ {
+  "id": "vehicleweight-list-bigpagesize",
+  "group": "vehicleweight",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/vehicleweight/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "-",
+  "ignore": null
+ },
+ {
+  "id": "vehicleweight-list-farpage",
+  "group": "vehicleweight",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/vehicleweight/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "-",
+  "ignore": null
+ },
+ {
+  "id": "vehicleweight-list-order",
+  "group": "vehicleweight",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/vehicleweight/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "-",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "-",
+  "ignore": null
+ },
+ {
+  "id": "vehicleweight-filter-dataSource",
+  "group": "vehicleweight",
+  "note": "等值过滤 dataSource=ZdTrails:BorderWeighing",
+  "method": "GET",
+  "path": "/base/vehicleweight/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "dataSource": "ZdTrails:BorderWeighing"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "-",
+  "ignore": null
+ },
+ {
+  "id": "vehicleweight-filter-dataType",
+  "group": "vehicleweight",
+  "note": "等值过滤 dataType=weigh",
+  "method": "GET",
+  "path": "/base/vehicleweight/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "dataType": "weigh"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "-",
+  "ignore": null
+ },
+ {
+  "id": "vehicleweight-filter-plateNo",
+  "group": "vehicleweight",
+  "note": "等值过滤 plateNo=车牌图片未匹配",
+  "method": "GET",
+  "path": "/base/vehicleweight/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "plateNo": "车牌图片未匹配"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "-",
+  "ignore": null
+ },
+ {
+  "id": "vehicleweight-filter-siteId",
+  "group": "vehicleweight",
+  "note": "等值过滤 siteId=4",
+  "method": "GET",
+  "path": "/base/vehicleweight/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "siteId": "4"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "-",
+  "ignore": null
+ },
+ {
+  "id": "vehicleweight-full-set",
+  "group": "vehicleweight",
+  "note": "整表集合比对（pageSize=300，按 - 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/base/vehicleweight/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "300"
+  },
+  "body": null,
+  "cap": 300,
+  "pk": "-",
+  "ignore": null
+ },
+ {
+  "id": "vehicleweight-map",
+  "group": "vehicleweight",
+  "note": "写死 uuid 的探针接口",
+  "method": "GET",
+  "path": "/base/vehicleweight/map",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "-",
+  "ignore": null
+ },
+ {
+  "id": "section-list-default",
+  "group": "section",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/section/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "section-list-page2",
+  "group": "section",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/section/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "section-list-noargs",
+  "group": "section",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/section/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "section-list-pagesize0",
+  "group": "section",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/section/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "section-list-pagesize-1",
+  "group": "section",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/section/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "section-list-bigpagesize",
+  "group": "section",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/section/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "section-list-farpage",
+  "group": "section",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/section/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "section-list-order",
+  "group": "section",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/section/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "id",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "section-filter-roadCode",
+  "group": "section",
+  "note": "等值过滤 roadCode=G6021",
+  "method": "GET",
+  "path": "/base/section/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "roadCode": "G6021"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "section-filter-roadName",
+  "group": "section",
+  "note": "等值过滤 roadName=杭长高速",
+  "method": "GET",
+  "path": "/base/section/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "roadName": "杭长高速"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "section-filter-sectionCode",
+  "group": "section",
+  "note": "等值过滤 sectionCode=200R560210671000",
+  "method": "GET",
+  "path": "/base/section/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "sectionCode": "200R560210671000"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "section-filter-sectionName",
+  "group": "section",
+  "note": "等值过滤 sectionName=乐温",
+  "method": "GET",
+  "path": "/base/section/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "sectionName": "乐温"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "section-full-set",
+  "group": "section",
+  "note": "整表集合比对（pageSize=85，按 id 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/base/section/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "85"
+  },
+  "body": null,
+  "cap": 85,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "section-info",
+  "group": "section",
+  "note": "详情 /{id} 命中 id=18",
+  "method": "GET",
+  "path": "/base/section/18",
+  "params": {
+   "id": "18"
+  },
+  "body": null,
+  "cap": 0,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "section-info-miss",
+  "group": "section",
+  "note": "详情 /{id} 不存在",
+  "method": "GET",
+  "path": "/base/section/__no_such_id__",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "section-listAll",
+  "group": "section",
+  "note": "全量列表（裸数组，无信封）",
+  "method": "GET",
+  "path": "/base/section/listAll",
+  "params": null,
+  "body": null,
+  "cap": 200,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "toll-list-default",
+  "group": "toll",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/toll/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "toll-list-page2",
+  "group": "toll",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/toll/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "toll-list-noargs",
+  "group": "toll",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/toll/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "toll-list-pagesize0",
+  "group": "toll",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/toll/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "toll-list-pagesize-1",
+  "group": "toll",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/toll/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "toll-list-bigpagesize",
+  "group": "toll",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/toll/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "toll-list-farpage",
+  "group": "toll",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/toll/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "toll-list-order",
+  "group": "toll",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/toll/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "id",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "toll-filter-roadCode",
+  "group": "toll",
+  "note": "等值过滤 roadCode=S43",
+  "method": "GET",
+  "path": "/base/toll/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "roadCode": "S43"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "toll-filter-idCard",
+  "group": "toll",
+  "note": "等值过滤 idCard=44L4464527980850000",
+  "method": "GET",
+  "path": "/base/toll/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "idCard": "44L4464527980850000"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "toll-filter-tollCode",
+  "group": "toll",
+  "note": "等值过滤 tollCode=S43361002F0020",
+  "method": "GET",
+  "path": "/base/toll/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "tollCode": "S43361002F0020"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "toll-filter-tollName",
+  "group": "toll",
+  "note": "等值过滤 tollName=抚州东收费站",
+  "method": "GET",
+  "path": "/base/toll/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "tollName": "抚州东收费站"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "toll-full-set",
+  "group": "toll",
+  "note": "整表集合比对（pageSize=321，按 id 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/base/toll/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "321"
+  },
+  "body": null,
+  "cap": 321,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "toll-info",
+  "group": "toll",
+  "note": "详情 /{id} 命中 id=1",
+  "method": "GET",
+  "path": "/base/toll/1",
+  "params": {
+   "id": "1"
+  },
+  "body": null,
+  "cap": 0,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "toll-info-miss",
+  "group": "toll",
+  "note": "详情 /{id} 不存在",
+  "method": "GET",
+  "path": "/base/toll/__no_such_id__",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "toll-listAll",
+  "group": "toll",
+  "note": "全量列表（裸数组，无信封）",
+  "method": "GET",
+  "path": "/base/toll/listAll",
+  "params": null,
+  "body": null,
+  "cap": 200,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "tollStationIp-list-default",
+  "group": "tollStationIp",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/tollStationIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "tollStationIp-list-page2",
+  "group": "tollStationIp",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/tollStationIp/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "tollStationIp-list-noargs",
+  "group": "tollStationIp",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/tollStationIp/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "tollStationIp-list-pagesize0",
+  "group": "tollStationIp",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/tollStationIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "tollStationIp-list-pagesize-1",
+  "group": "tollStationIp",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/tollStationIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "tollStationIp-list-bigpagesize",
+  "group": "tollStationIp",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/tollStationIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "tollStationIp-list-farpage",
+  "group": "tollStationIp",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/tollStationIp/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "tollStationIp-list-order",
+  "group": "tollStationIp",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/tollStationIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "id",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "tollStationIp-filter-tollCode",
+  "group": "tollStationIp",
+  "note": "等值过滤 tollCode=S0089360020040",
+  "method": "GET",
+  "path": "/base/tollStationIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "tollCode": "S0089360020040"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "tollStationIp-filter-tollName",
+  "group": "tollStationIp",
+  "note": "等值过滤 tollName=莲花西收费站",
+  "method": "GET",
+  "path": "/base/tollStationIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "tollName": "莲花西收费站"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "tollStationIp-filter-orgCode",
+  "group": "tollStationIp",
+  "note": "等值过滤 orgCode=030000008",
+  "method": "GET",
+  "path": "/base/tollStationIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orgCode": "030000008"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "tollStationIp-filter-ip",
+  "group": "tollStationIp",
+  "note": "等值过滤 ip=36.106.145.9",
+  "method": "GET",
+  "path": "/base/tollStationIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "ip": "36.106.145.9"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "tollStationIp-full-set",
+  "group": "tollStationIp",
+  "note": "整表集合比对（pageSize=302，按 id 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/base/tollStationIp/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "302"
+  },
+  "body": null,
+  "cap": 302,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "tollStationIp-info",
+  "group": "tollStationIp",
+  "note": "详情 /{id} 命中 id=40017",
+  "method": "GET",
+  "path": "/base/tollStationIp/40017",
+  "params": {
+   "id": 40017
+  },
+  "body": null,
+  "cap": 0,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "tollStationIp-info-miss",
+  "group": "tollStationIp",
+  "note": "详情 /{id} 不存在",
+  "method": "GET",
+  "path": "/base/tollStationIp/__no_such_id__",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "tollStationIp-info-badid",
+  "group": "tollStationIp",
+  "note": "详情 非数字 id（Spring 类型转换 400）",
+  "method": "GET",
+  "path": "/base/tollStationIp/not-a-number",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "id",
+  "ignore": null
+ },
+ {
+  "id": "org-list-default",
+  "group": "org",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/org/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "org-list-page2",
+  "group": "org",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/org/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "org-list-noargs",
+  "group": "org",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/org/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "org-list-pagesize0",
+  "group": "org",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/org/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "org-list-pagesize-1",
+  "group": "org",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/org/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "org-list-bigpagesize",
+  "group": "org",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/org/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "org-list-farpage",
+  "group": "org",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/org/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "org-list-order",
+  "group": "org",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/org/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "bigId",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "org-filter-orgCode",
+  "group": "org",
+  "note": "等值过滤 orgCode=000000936",
+  "method": "GET",
+  "path": "/base/org/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orgCode": "000000936"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "org-filter-orgName",
+  "group": "org",
+  "note": "等值过滤 orgName=中心机关",
+  "method": "GET",
+  "path": "/base/org/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orgName": "中心机关"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "org-filter-orgShortName",
+  "group": "org",
+  "note": "等值过滤 orgShortName=中心机关",
+  "method": "GET",
+  "path": "/base/org/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orgShortName": "中心机关"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "org-filter-orgParentId",
+  "group": "org",
+  "note": "等值过滤 orgParentId=030000009",
+  "method": "GET",
+  "path": "/base/org/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orgParentId": "030000009"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "org-full-set",
+  "group": "org",
+  "note": "整表集合比对（pageSize=481，按 bigId 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/base/org/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "481"
+  },
+  "body": null,
+  "cap": 481,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "org-info",
+  "group": "org",
+  "note": "详情 /{bigId} 命中 bigId=24945",
+  "method": "GET",
+  "path": "/base/org/24945",
+  "params": {
+   "bigId": "24945"
+  },
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "org-info-miss",
+  "group": "org",
+  "note": "详情 /{bigId} 不存在",
+  "method": "GET",
+  "path": "/base/org/__no_such_id__",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "org-listAll",
+  "group": "org",
+  "note": "全量列表（裸数组，无信封）",
+  "method": "GET",
+  "path": "/base/org/listAll",
+  "params": null,
+  "body": null,
+  "cap": 200,
+  "pk": "bigId",
+  "ignore": null
+ },
+ {
+  "id": "trailtracks-list-default",
+  "group": "trailtracks",
+  "note": "分页默认",
+  "method": "GET",
+  "path": "/base/trailtracks/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "uuid",
+  "ignore": null
+ },
+ {
+  "id": "trailtracks-list-page2",
+  "group": "trailtracks",
+  "note": "第二页",
+  "method": "GET",
+  "path": "/base/trailtracks/list",
+  "params": {
+   "pageNum": "2",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "uuid",
+  "ignore": null
+ },
+ {
+  "id": "trailtracks-list-noargs",
+  "group": "trailtracks",
+  "note": "不传分页参数（Java 默认 10 / Go 默认待测）",
+  "method": "GET",
+  "path": "/base/trailtracks/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "pk": "uuid",
+  "ignore": null
+ },
+ {
+  "id": "trailtracks-list-pagesize0",
+  "group": "trailtracks",
+  "note": "pageSize=0 边界",
+  "method": "GET",
+  "path": "/base/trailtracks/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "uuid",
+  "ignore": null
+ },
+ {
+  "id": "trailtracks-list-pagesize-1",
+  "group": "trailtracks",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/trailtracks/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "uuid",
+  "ignore": null
+ },
+ {
+  "id": "trailtracks-list-bigpagesize",
+  "group": "trailtracks",
+  "note": "pageSize=5000（Go 侧是否截到 1000）",
+  "method": "GET",
+  "path": "/base/trailtracks/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5000"
+  },
+  "body": null,
+  "cap": 6000,
+  "pk": "uuid",
+  "ignore": null
+ },
+ {
+  "id": "trailtracks-list-farpage",
+  "group": "trailtracks",
+  "note": "翻到超出总页数（Java reasonable=true 会回夹到末页）",
+  "method": "GET",
+  "path": "/base/trailtracks/list",
+  "params": {
+   "pageNum": "99999",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "uuid",
+  "ignore": null
+ },
+ {
+  "id": "trailtracks-list-order",
+  "group": "trailtracks",
+  "note": "orderByColumn/isAsc（Java 生效、Go 忽略）",
+  "method": "GET",
+  "path": "/base/trailtracks/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "uuid",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 100,
+  "pk": "uuid",
+  "ignore": null
+ },
+ {
+  "id": "trailtracks-filter-type",
+  "group": "trailtracks",
+  "note": "等值过滤 type=0",
+  "method": "GET",
+  "path": "/base/trailtracks/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "type": 0
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "uuid",
+  "ignore": null
+ },
+ {
+  "id": "trailtracks-filter-pointCount",
+  "group": "trailtracks",
+  "note": "等值过滤 pointCount=45",
+  "method": "GET",
+  "path": "/base/trailtracks/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "pointCount": 45
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "uuid",
+  "ignore": null
+ },
+ {
+  "id": "trailtracks-filter-plateKey",
+  "group": "trailtracks",
+  "note": "等值过滤 plateKey=赣CEA826",
+  "method": "GET",
+  "path": "/base/trailtracks/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "plateKey": "赣CEA826"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "uuid",
+  "ignore": null
+ },
+ {
+  "id": "trailtracks-filter-enterTime",
+  "group": "trailtracks",
+  "note": "等值过滤 enterTime=2025-09-10 04:39:49",
+  "method": "GET",
+  "path": "/base/trailtracks/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "enterTime": "2025-09-10 04:39:49"
+  },
+  "body": null,
+  "cap": 5,
+  "pk": "uuid",
+  "ignore": null
+ },
+ {
+  "id": "trailtracks-full-set",
+  "group": "trailtracks",
+  "note": "整表集合比对（pageSize=1379，按 uuid 对齐，忽略顺序）",
+  "method": "GET",
+  "path": "/base/trailtracks/list",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "1379"
+  },
+  "body": null,
+  "cap": 1379,
+  "pk": "uuid",
+  "ignore": null
+ },
+ {
+  "id": "trailtracks-info",
+  "group": "trailtracks",
+  "note": "详情 /{uuid} 命中 uuid=e0e22490-fb40-4795-947b-68565d864aa7",
+  "method": "GET",
+  "path": "/base/trailtracks/e0e22490-fb40-4795-947b-68565d864aa7",
+  "params": {
+   "uuid": "e0e22490-fb40-4795-947b-68565d864aa7"
+  },
+  "body": null,
+  "cap": 0,
+  "pk": "uuid",
+  "ignore": null
+ },
+ {
+  "id": "trailtracks-info-miss",
+  "group": "trailtracks",
+  "note": "详情 /{uuid} 不存在",
+  "method": "GET",
+  "path": "/base/trailtracks/__no_such_id__",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "pk": "uuid",
+  "ignore": null
+ },
+ {
+  "id": "large-snapshot",
+  "group": "query",
+  "note": "大表快照分页（DB 路径）",
+  "method": "GET",
+  "path": "/api/v1/large/snapshot",
+  "params": {
+   "startTime": "2025-10-01 00:00:00",
+   "endTime": "2025-10-02 00:00:00",
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "large-fee",
+  "group": "query",
+  "note": "大表收费分页",
+  "method": "GET",
+  "path": "/api/v1/large/fee",
+  "params": {
+   "startTime": "2025-10-01 00:00:00",
+   "endTime": "2025-10-02 00:00:00",
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "large-trail",
+  "group": "query",
+  "note": "大表轨迹分页",
+  "method": "GET",
+  "path": "/api/v1/large/trail",
+  "params": {
+   "startTime": "2025-10-01 00:00:00",
+   "endTime": "2025-10-02 00:00:00",
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "large-cartrack",
+  "group": "query",
+  "note": "按车牌查轨迹（large 版）",
+  "method": "GET",
+  "path": "/api/v1/large/carTrackQueryByCarNo",
+  "params": {
+   "carNo": "赣AF12345",
+   "startTime": "2025-10-01 00:00:00",
+   "endTime": "2025-10-02 00:00:00",
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "large-stats",
+  "group": "query",
+  "note": "分组统计",
+  "method": "GET",
+  "path": "/api/v1/large/stats/group",
+  "params": {
+   "type": "snapshot",
+   "startTime": "2025-10-01 00:00:00",
+   "endTime": "2025-10-02 00:00:00",
+   "groupBy": "gantryName",
+   "topN": "10"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "large-stats-badgroup",
+  "group": "query",
+  "note": "分组统计非法列",
+  "method": "GET",
+  "path": "/api/v1/large/stats/group",
+  "params": {
+   "type": "snapshot",
+   "startTime": "2025-10-01 00:00:00",
+   "endTime": "2025-10-02 00:00:00",
+   "groupBy": "not_a_col;drop",
+   "topN": "10"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "large-window-huge",
+  "group": "query",
+  "note": "跨 30 天窗口（ES 强制路由阈值）",
+  "method": "GET",
+  "path": "/api/v1/large/snapshot",
+  "params": {
+   "startTime": "2025-09-01 00:00:00",
+   "endTime": "2025-10-01 00:00:00",
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "large-badtime",
+  "group": "query",
+  "note": "时间格式非法",
+  "method": "GET",
+  "path": "/api/v1/large/snapshot",
+  "params": {
+   "startTime": "2025-10-01",
+   "endTime": "abc",
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "large-missing-arg",
+  "group": "query",
+  "note": "缺必填 startTime",
+  "method": "GET",
+  "path": "/api/v1/large/snapshot",
+  "params": {
+   "endTime": "2025-10-02 00:00:00"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "large-fuzzy",
+  "group": "query",
+  "note": "fuzzyFields 复合参数",
+  "method": "GET",
+  "path": "/api/v1/large/snapshot",
+  "params": {
+   "startTime": "2025-10-01 00:00:00",
+   "endTime": "2025-10-02 00:00:00",
+   "plateNumber": "赣A",
+   "gantryName": "瑞金",
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "unified-snapshot",
+  "group": "query",
+  "note": "统一查询 snapshot",
+  "method": "GET",
+  "path": "/api/v1/unified/snapshot/list",
+  "params": {
+   "startTime": "2025-10-01 00:00:00",
+   "endTime": "2025-10-02 00:00:00",
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "unified-fee",
+  "group": "query",
+  "note": "统一查询 fee",
+  "method": "GET",
+  "path": "/api/v1/unified/fee/list",
+  "params": {
+   "startTime": "2025-10-01 00:00:00",
+   "endTime": "2025-10-02 00:00:00",
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "unified-trail",
+  "group": "query",
+  "note": "统一查询 trail",
+  "method": "GET",
+  "path": "/api/v1/unified/trail/list",
+  "params": {
+   "startTime": "2025-10-01 00:00:00",
+   "endTime": "2025-10-02 00:00:00",
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "unified-baddb",
+  "group": "query",
+  "note": "统一查询未知 ds",
+  "method": "GET",
+  "path": "/api/v1/unified/__nope__/list",
+  "params": {
+   "startTime": "2025-10-01 00:00:00",
+   "endTime": "2025-10-02 00:00:00"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "prog-snapshotflow",
+  "group": "query",
+  "note": "渐进式快照（游标首页）",
+  "method": "GET",
+  "path": "/progressive/snapshotflow/list",
+  "params": {
+   "startTime": "2025-10-01 00:00:00",
+   "endTime": "2025-10-02 00:00:00",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "prog-feerecords",
+  "group": "query",
+  "note": "渐进式收费",
+  "method": "GET",
+  "path": "/progressive/feerecords/list",
+  "params": {
+   "startTime": "2025-10-01 00:00:00",
+   "endTime": "2025-10-02 00:00:00",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "prog-trailfitting",
+  "group": "query",
+  "note": "渐进式轨迹拟合",
+  "method": "GET",
+  "path": "/progressive/trailfitting/list",
+  "params": {
+   "startTime": "2025-10-01 00:00:00",
+   "endTime": "2025-10-02 00:00:00",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "prog-noargs",
+  "group": "query",
+  "note": "渐进式无参（默认窗口）",
+  "method": "GET",
+  "path": "/progressive/snapshotflow/list",
+  "params": null,
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "prog-scalelevel",
+  "group": "query",
+  "note": "当前分档",
+  "method": "GET",
+  "path": "/progressive/scale-level",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "write": false
+ },
+ {
+  "id": "prog-filter",
+  "group": "query",
+  "note": "渐进式带车牌过滤",
+  "method": "GET",
+  "path": "/progressive/snapshotflow/list",
+  "params": {
+   "startTime": "2025-10-01 00:00:00",
+   "endTime": "2025-10-02 00:00:00",
+   "platenumber": "赣A",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "export-status-unknown",
+  "group": "query",
+  "note": "导出状态：不存在的 taskId",
+  "method": "GET",
+  "path": "/api/v1/large/export/status/nope",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "write": false
+ },
+ {
+  "id": "unified-export-status-unknown",
+  "group": "query",
+  "note": "统一导出状态：不存在的 taskId",
+  "method": "GET",
+  "path": "/api/v1/unified/export/status/nope",
+  "params": null,
+  "body": null,
+  "cap": 0,
+  "write": false
+ },
+ {
+  "id": "cartrack-by-carno",
+  "group": "sysutil",
+  "note": "按车牌查轨迹（Controller 强制 flag=bannian）",
+  "method": "GET",
+  "path": "/base/sysutil/carTrackQueryByCarNo",
+  "params": {
+   "carNo": "粤DZW906",
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 30,
+  "write": false
+ },
+ {
+  "id": "cartrack-blank",
+  "group": "sysutil",
+  "note": "车牌为空",
+  "method": "GET",
+  "path": "/base/sysutil/carTrackQueryByCarNo",
+  "params": {
+   "carNo": "",
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 30,
+  "write": false
+ },
+ {
+  "id": "cartrack-range",
+  "group": "sysutil",
+  "note": "按车牌 + applyTime1/2 区间（绕开 bannian 的相对窗口）",
+  "method": "GET",
+  "path": "/base/sysutil/carTrackQueryByCarNo",
+  "params": {
+   "carNo": "粤DZW906",
+   "applyTime1": "2025-09-30 00:00:00",
+   "applyTime2": "2025-10-02 23:59:59",
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 30,
+  "write": false
+ },
+ {
+  "id": "cartrack-by-time",
+  "group": "sysutil",
+  "note": "按时间查轨迹（读 car_list_jc）",
+  "method": "GET",
+  "path": "/base/sysutil/carTrackQueryByTime",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 6,
+  "write": false
+ },
+ {
+  "id": "cartrack-by-time-size0",
+  "group": "sysutil",
+  "note": "pageSize=0 边界（防止 limit=0 退化成「不加 LIMIT」→ 全表扫描）",
+  "method": "GET",
+  "path": "/base/sysutil/carTrackQueryByTime",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 4,
+  "write": false
+ },
+ {
+  "id": "cartrack-bycarno-size0",
+  "group": "sysutil",
+  "note": "ByCarNo pageSize=0 边界（同上）",
+  "method": "GET",
+  "path": "/base/sysutil/carTrackQueryByCarNo",
+  "params": {
+   "carNo": "粤DZW906",
+   "pageNum": "1",
+   "pageSize": "0"
+  },
+  "body": null,
+  "cap": 4,
+  "write": false
+ },
+ {
+  "id": "cartrack-by-time-size-1",
+  "group": "sysutil",
+  "note": "pageSize=-1 边界",
+  "method": "GET",
+  "path": "/base/sysutil/carTrackQueryByTime",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "-1"
+  },
+  "body": null,
+  "cap": 4,
+  "write": false
+ },
+ {
+  "id": "cartrack-by-time-far",
+  "group": "sysutil",
+  "note": "同接口越界页（Java reasonable 回夹末页）",
+  "method": "GET",
+  "path": "/base/sysutil/carTrackQueryByTime",
+  "params": {
+   "pageNum": "999",
+   "pageSize": "2"
+  },
+  "body": null,
+  "cap": 4,
+  "write": false
+ },
+ {
+  "id": "cartrack-by-time-order",
+  "group": "sysutil",
+  "note": "同接口 + 排序参数",
+  "method": "GET",
+  "path": "/base/sysutil/carTrackQueryByTime",
+  "params": {
+   "pageNum": "1",
+   "pageSize": "5",
+   "orderByColumn": "carNo",
+   "isAsc": "desc"
+  },
+  "body": null,
+  "cap": 6,
+  "write": false
+ },
+ {
+  "id": "getbytrailbo-GantryCapture",
+  "group": "sysutil",
+  "note": "抓拍回源 stateType=GantryCapture",
+  "method": "GET",
+  "path": "/base/sysutil/getByTrailBo",
+  "params": {
+   "stateType": "GantryCapture",
+   "pointUuid": "189727e7-9392-4ae3-82ce-166864e93ddd",
+   "captureTime": "2025-10-01 00:02:36",
+   "plateNumber": "粤DZW906",
+   "devCode": "G601136060000420010"
+  },
+  "body": null,
+  "cap": 0,
+  "write": false
+ },
+ {
+  "id": "getbytrailbo-StationCapture",
+  "group": "sysutil",
+  "note": "抓拍回源 stateType=StationCapture",
+  "method": "GET",
+  "path": "/base/sysutil/getByTrailBo",
+  "params": {
+   "stateType": "StationCapture",
+   "pointUuid": "fdbcfa5a-3966-47cf-b3aa-824372ab7eec",
+   "captureTime": "2025-10-01 00:02:36",
+   "plateNumber": "粤DZW906",
+   "devCode": "G601136060000420010"
+  },
+  "body": null,
+  "cap": 0,
+  "write": false
+ },
+ {
+  "id": "getbytrailbo-BorderWeighingCapture",
+  "group": "sysutil",
+  "note": "抓拍回源 stateType=BorderWeighingCapture",
+  "method": "GET",
+  "path": "/base/sysutil/getByTrailBo",
+  "params": {
+   "stateType": "BorderWeighingCapture",
+   "pointUuid": "7379e7aa-e325-449b-9728-b8f6940c77f1",
+   "captureTime": "2025-10-01 00:02:36",
+   "plateNumber": "粤DZW906",
+   "devCode": "G601136060000420010"
+  },
+  "body": null,
+  "cap": 0,
+  "write": false
+ },
+ {
+  "id": "getbytrailbo-ServiceAreaCapture",
+  "group": "sysutil",
+  "note": "抓拍回源 stateType=ServiceAreaCapture",
+  "method": "GET",
+  "path": "/base/sysutil/getByTrailBo",
+  "params": {
+   "stateType": "ServiceAreaCapture",
+   "pointUuid": "18f8e2af-6ebe-4b33-8f37-a688f441de37",
+   "captureTime": "2025-10-01 00:02:36",
+   "plateNumber": "粤DZW906",
+   "devCode": "G601136060000420010"
+  },
+  "body": null,
+  "cap": 0,
+  "write": false
+ },
+ {
+  "id": "getbytrailbo-FeeRecord",
+  "group": "sysutil",
+  "note": "抓拍回源 stateType=FeeRecord",
+  "method": "GET",
+  "path": "/base/sysutil/getByTrailBo",
+  "params": {
+   "stateType": "FeeRecord",
+   "pointUuid": "cef80c7cb8144961aefd13afedc5278b",
+   "captureTime": "2025-10-01 00:02:36",
+   "plateNumber": "粤DZW906",
+   "devCode": "G601136060000420010"
+  },
+  "body": null,
+  "cap": 0,
+  "write": false
+ },
+ {
+  "id": "getbytrailbo-Bogus",
+  "group": "sysutil",
+  "note": "抓拍回源 stateType=Bogus",
+  "method": "GET",
+  "path": "/base/sysutil/getByTrailBo",
+  "params": {
+   "stateType": "Bogus",
+   "pointUuid": "no-such-uuid",
+   "captureTime": "2025-10-01 00:02:36",
+   "plateNumber": "粤DZW906",
+   "devCode": "G601136060000420010"
+  },
+  "body": null,
+  "cap": 0,
+  "write": false
+ },
+ {
+  "id": "change-post",
+  "group": "sysutil",
+  "note": "对象转换（有 tracks+trailList）",
+  "method": "POST",
+  "path": "/base/sysutil/changeTrailInfo",
+  "params": null,
+  "body": {
+   "tracks": {
+    "plateKey": "赣AF12345",
+    "startLon": "116.1",
+    "stratLat": "26.2",
+    "endLon": "115.0",
+    "endLat": "25.0"
+   },
+   "trailList": [
+    {
+     "type": "1",
+     "plateNo": "赣AF12345"
+    }
+   ]
+  },
+  "cap": 0,
+  "write": false
+ },
+ {
+  "id": "change-post-empty",
+  "group": "sysutil",
+  "note": "对象转换（空对象，走 fall-through）",
+  "method": "POST",
+  "path": "/base/sysutil/changeTrailInfo",
+  "params": null,
+  "body": {},
+  "cap": 0,
+  "write": false
+ },
+ {
+  "id": "change-post-notrail",
+  "group": "sysutil",
+  "note": "对象转换（tracks 有、trailList 空）",
+  "method": "POST",
+  "path": "/base/sysutil/changeTrailInfo",
+  "params": null,
+  "body": {
+   "tracks": {
+    "plateKey": "赣A"
+   },
+   "trailList": []
+  },
+  "cap": 0,
+  "write": false
+ },
+ {
+  "id": "synctrack-commented",
+  "group": "sysutil",
+  "note": "Java 已注释掉的 /syncTrack（应 404）",
+  "method": "POST",
+  "path": "/base/sysutil/syncTrack",
+  "params": null,
+  "body": {},
+  "cap": 0,
+  "write": false
+ },
+ {
+  "id": "syncsuspicious-commented",
+  "group": "sysutil",
+  "note": "Java 已注释掉的 /syncSuspiciousCar（应 404）",
+  "method": "POST",
+  "path": "/base/sysutil/syncSuspiciousCar",
+  "params": null,
+  "body": {},
+  "cap": 0,
+  "write": false
+ },
+ {
+  "id": "404-path",
+  "group": "crosscut",
+  "note": "不存在的路径（Spring /error vs gin NoRoute）",
+  "method": "GET",
+  "path": "/no/such/endpoint",
+  "params": null,
+  "body": null,
+  "cap": 0
+ },
+ {
+  "id": "404-deep",
+  "group": "crosscut",
+  "note": "深路径不存在",
+  "method": "GET",
+  "path": "/base/notatable/list",
+  "params": null,
+  "body": null,
+  "cap": 0
+ },
+ {
+  "id": "405-list-post",
+  "group": "crosscut",
+  "note": "/base/gantry/list 用 POST（方法不匹配）",
+  "method": "POST",
+  "path": "/base/gantry/list",
+  "params": null,
+  "body": {},
+  "cap": 0
+ },
+ {
+  "id": "405-info-delete",
+  "group": "crosscut",
+  "note": "/base/gantry/18 用 DELETE",
+  "method": "DELETE",
+  "path": "/base/gantry/18",
+  "params": null,
+  "body": null,
+  "cap": 0
+ },
+ {
+  "id": "trailing-slash",
+  "group": "crosscut",
+  "note": "结尾斜杠（Spring 与 gin 的重写策略）",
+  "method": "GET",
+  "path": "/base/gantry/list/",
+  "params": {
+   "pageSize": "1"
+  },
+  "body": null,
+  "cap": 0
+ },
+ {
+  "id": "bad-json-post",
+  "group": "crosscut",
+  "note": "POST 非法 JSON 体",
+  "method": "POST",
+  "path": "/base/sysutil/changeTrailInfo",
+  "params": null,
+  "body": "NOT-JSON",
+  "cap": 0
+ },
+ {
+  "id": "empty-post",
+  "group": "crosscut",
+  "note": "POST 空体",
+  "method": "POST",
+  "path": "/base/sysutil/changeTrailInfo",
+  "params": null,
+  "body": null,
+  "cap": 0
+ },
+ {
+  "id": "type-mismatch",
+  "group": "crosscut",
+  "note": "pageSize 非数字",
+  "method": "GET",
+  "path": "/base/gantry/list",
+  "params": {
+   "pageSize": "abc"
+  },
+  "body": null,
+  "cap": 0
+ },
+ {
+  "id": "sql-ish-param",
+  "group": "crosscut",
+  "note": "参数含单引号（过滤参数注入面）",
+  "method": "GET",
+  "path": "/base/gantry/list",
+  "params": {
+   "gantryName": "O'Brien",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 0
+ },
+ {
+  "id": "unicode-param",
+  "group": "crosscut",
+  "note": "参数含中文与空格",
+  "method": "GET",
+  "path": "/base/gantry/list",
+  "params": {
+   "gantryName": "瑞金北 互通",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 0
+ },
+ {
+  "id": "exists_api_v1_large_sync_full",
+  "group": "exists",
+  "note": "405 探针：仅确认路由存在，不触发同步",
+  "method": "POST",
+  "path": "/api/v1/large/sync/full",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_api_v1_large_sync_incremental",
+  "group": "exists",
+  "note": "405 探针：仅确认路由存在，不触发同步",
+  "method": "POST",
+  "path": "/api/v1/large/sync/incremental",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_api_v1_large_sync_repair",
+  "group": "exists",
+  "note": "405 探针：仅确认路由存在，不触发同步",
+  "method": "POST",
+  "path": "/api/v1/large/sync/repair",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_base_sysutil_saveRedis",
+  "group": "exists",
+  "note": "405 探针：仅确认路由存在，不触发同步",
+  "method": "POST",
+  "path": "/base/sysutil/saveRedis",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_base_sysutilTest_separateSnapshotFlowTimeList",
+  "group": "exists",
+  "note": "405 探针：仅确认路由存在，不触发同步",
+  "method": "POST",
+  "path": "/base/sysutilTest/separateSnapshotFlowTimeList",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_base_sysutilTest_syncBaseInfo",
+  "group": "exists",
+  "note": "405 探针：仅确认路由存在，不触发同步",
+  "method": "POST",
+  "path": "/base/sysutilTest/syncBaseInfo",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_base_sysutilTest_syncCurrentTrack",
+  "group": "exists",
+  "note": "405 探针：仅确认路由存在，不触发同步",
+  "method": "POST",
+  "path": "/base/sysutilTest/syncCurrentTrack",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_base_sysutilTest_syncHistroyTrack",
+  "group": "exists",
+  "note": "405 探针：仅确认路由存在，不触发同步",
+  "method": "POST",
+  "path": "/base/sysutilTest/syncHistroyTrack",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_base_sysutilTest_syncOdsSzdnGantry",
+  "group": "exists",
+  "note": "405 探针：仅确认路由存在，不触发同步",
+  "method": "POST",
+  "path": "/base/sysutilTest/syncOdsSzdnGantry",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_base_sysutilTest_syncSuspiciousCar",
+  "group": "exists",
+  "note": "405 探针：仅确认路由存在，不触发同步",
+  "method": "POST",
+  "path": "/base/sysutilTest/syncSuspiciousCar",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_base_sysutilTest_syncSuspiciousCar1",
+  "group": "exists",
+  "note": "405 探针：Go 侧 501 桩 vs Java 真实现",
+  "method": "POST",
+  "path": "/base/sysutilTest/syncSuspiciousCar1",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_base_sysutilTest_syncSuspiciousCar2",
+  "group": "exists",
+  "note": "405 探针：Go 侧 501 桩 vs Java 真实现",
+  "method": "POST",
+  "path": "/base/sysutilTest/syncSuspiciousCar2",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_base_sysutilTest_syncSuspiciousCar3",
+  "group": "exists",
+  "note": "405 探针：Go 侧 501 桩 vs Java 真实现",
+  "method": "POST",
+  "path": "/base/sysutilTest/syncSuspiciousCar3",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_base_sysutilTest_syncSuspiciousCar4",
+  "group": "exists",
+  "note": "405 探针：Go 侧 501 桩 vs Java 真实现",
+  "method": "POST",
+  "path": "/base/sysutilTest/syncSuspiciousCar4",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_base_sysutilTest_syncSuspiciousCar5",
+  "group": "exists",
+  "note": "405 探针：Go 侧 501 桩 vs Java 真实现",
+  "method": "POST",
+  "path": "/base/sysutilTest/syncSuspiciousCar5",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_base_sysutilTest_syncSuspiciousCar6",
+  "group": "exists",
+  "note": "405 探针：Go 侧 501 桩 vs Java 真实现",
+  "method": "POST",
+  "path": "/base/sysutilTest/syncSuspiciousCar6",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_base_sysutilTest_syncSuspiciousCar7",
+  "group": "exists",
+  "note": "405 探针：Go 侧 501 桩 vs Java 真实现",
+  "method": "POST",
+  "path": "/base/sysutilTest/syncSuspiciousCar7",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_base_sysutilTest_syncSuspiciousCar8",
+  "group": "exists",
+  "note": "405 探针：Go 侧 501 桩 vs Java 真实现",
+  "method": "POST",
+  "path": "/base/sysutilTest/syncSuspiciousCar8",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_base_sysutilTest_syncSuspiciousCar9",
+  "group": "exists",
+  "note": "405 探针：Go 侧 501 桩 vs Java 真实现",
+  "method": "POST",
+  "path": "/base/sysutilTest/syncSuspiciousCar9",
+  "cap": 0,
+  "expect": "status-only"
+ },
+ {
+  "id": "exists_base_sysutilTest_syncSuspiciousCar10",
+  "group": "exists",
+  "note": "405 探针：Go 侧 501 桩 vs Java 真实现",
+  "method": "POST",
+  "path": "/base/sysutilTest/syncSuspiciousCar10",
+  "cap": 0,
+  "expect": "status-only"
+ }
+]

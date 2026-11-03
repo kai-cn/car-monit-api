@@ -1,0 +1,27 @@
+HTTP 200  15ms  err=None
+{
+ "total": 1,
+ "rows": [
+  {
+   "agentPk": "363bc7b76e508c55dcb259cf6a3f007e",
+   "yxtzj": "1495673117678645249",
+   "sfzdm": "G56360429F0010",
+   "sfzmc": "均桥收费站",
+   "jd": "116.29458816",
+   "wd": "29.66365882",
+   "sslxbh": "S22",
+   "sslxmc": "都九高速公路",
+   "ssldbh": "200R00223600000611000",
+   "ssldmc": "都九高速九景段",
+   "sczhK": "K24+600",
+   "sczhN": "24.600",
+   "ssglzxbm": "030000254",
+   "ssglzxmc": null,
+   "lyxt": "机电运维管理系统",
+   "loadTime": "2025-08-29 06:11:00",
+   "allColPk": "c1d6f80963f0f971268c957bed9dcc81"
+  }
+ ],
+ "code": 200,
+ "msg": "查询成功"
+}
