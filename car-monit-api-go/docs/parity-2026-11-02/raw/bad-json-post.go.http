@@ -1,8 +1,8 @@
-HTTP 400  19ms  err=None
+HTTP 400  1ms  err=None
 {
  "error": "Bad Request",
  "message": "",
  "path": "/base/sysutil/changeTrailInfo",
  "status": 400,
- "timestamp": "2026-11-03T04:01:18.326+00:00"
+ "timestamp": "2026-11-03T07:52:49.456+00:00"
 }

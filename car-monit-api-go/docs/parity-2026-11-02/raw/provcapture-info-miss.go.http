@@ -4,5 +4,5 @@ HTTP 400  1ms  err=None
  "message": "",
  "path": "/base/provcapture/__no_such_id__",
  "status": 400,
- "timestamp": "2026-11-03T04:01:02.923+00:00"
+ "timestamp": "2026-11-03T07:52:30.415+00:00"
 }

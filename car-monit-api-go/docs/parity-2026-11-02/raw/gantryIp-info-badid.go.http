@@ -1,8 +1,8 @@
-HTTP 400  1ms  err=None
+HTTP 400  12ms  err=None
 {
  "error": "Bad Request",
  "message": "",
  "path": "/base/gantryIp/not-a-number",
  "status": 400,
- "timestamp": "2026-11-03T04:01:05.797+00:00"
+ "timestamp": "2026-11-03T07:52:33.525+00:00"
 }

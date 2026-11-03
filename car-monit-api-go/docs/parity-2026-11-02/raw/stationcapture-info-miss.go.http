@@ -1,8 +1,8 @@
-HTTP 400  1ms  err=None
+HTTP 400  0ms  err=None
 {
  "error": "Bad Request",
  "message": "",
  "path": "/base/stationcapture/__no_such_id__",
  "status": 400,
- "timestamp": "2026-11-03T04:01:03.968+00:00"
+ "timestamp": "2026-11-03T07:52:31.578+00:00"
 }

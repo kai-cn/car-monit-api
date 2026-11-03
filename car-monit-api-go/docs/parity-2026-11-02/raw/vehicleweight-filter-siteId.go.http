@@ -1,4 +1,4 @@
-HTTP 200  2ms  err=None
+HTTP 200  3ms  err=None
 {
  "code": 500,
  "msg": "OdsSzdnProvinceBorderVehicleWeightNewstructureRepo.Count: ERROR: column \"siteid\" does not exist (SQLSTATE 42703)"

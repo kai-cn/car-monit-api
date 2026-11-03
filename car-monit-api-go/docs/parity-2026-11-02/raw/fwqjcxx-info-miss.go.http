@@ -1,4 +1,4 @@
-HTTP 200  9ms  err=None
+HTTP 200  6ms  err=None
 {
  "code": 500,
  "msg": "DwdLcztFwqjcxxRepo.GetByID: ERROR: invalid input syntax for integer: \"__no_such_id__\" (SQLSTATE 22P02)"

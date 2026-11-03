@@ -4,5 +4,5 @@ HTTP 400  1ms  err=None
  "message": "",
  "path": "/base/provcapture/not-a-number",
  "status": 400,
- "timestamp": "2026-11-03T04:01:02.930+00:00"
+ "timestamp": "2026-11-03T07:52:30.424+00:00"
 }

@@ -1,4 +1,4 @@
-HTTP 200  2ms  err=None
+HTTP 200  1ms  err=None
 {
  "pointUuid": "cef80c7cb8144961aefd13afedc5278b",
  "stateType": "FeeRecord",

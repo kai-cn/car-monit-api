@@ -1,4 +1,4 @@
-HTTP 200  2ms  err=None
+HTTP 200  11ms  err=None
 {
  "pointUuid": "no-such-uuid",
  "stateType": "Bogus",

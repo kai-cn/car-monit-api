@@ -1,4 +1,4 @@
-HTTP 405  1ms  err=None
+HTTP 405  0ms  err=None
 {
  "code": 405,
  "msg": "请求方法不支持: POST"
