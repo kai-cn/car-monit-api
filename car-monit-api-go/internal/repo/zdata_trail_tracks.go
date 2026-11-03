@@ -227,40 +227,8 @@ func (r *ZdataTrailTracksRepo) DeleteByID(ctx context.Context, id string) error 
 // 整个 trailList/轨迹点都对不上（实测 carTrackQueryByTime 有 5/94 个车牌受影响）。
 // 因此现在保持与 Java 一致的不加排序；代价也一致 —— 无 ORDER BY 的分页不保证翻页稳定。
 func (r *ZdataTrailTracksRepo) GetHistoryTrail(ctx context.Context, vo *model.CarParaVO, limit int) ([]model.ZdataTrailTracks, error) {
-	tx := r.db.ORM(ctx).Table(ZdataTrailTracksHistoryTable).Select(historyTrailColumns)
-
-	if vo != nil {
-		// 车牌：Java 的 XML:140 与 XML:151 是**两个独立的 <if>**，两者都传时是 AND 关系。
-		// Go 之前写成 if/else if，等于「有 carNoList 就忽略 carNo」，调用方同时传两者时结果会变大。
-		if utils.IsNotBlank(vo.CarNo) {
-			tx = tx.Where("envehicleid = ?", vo.CarNo)
-		}
-		if len(vo.CarNoList) > 0 {
-			tx = tx.Where("envehicleid IN ?", vo.CarNoList)
-		}
-		// 时间区间：Java 直接把这些字符串塞进 to_timestamp，Go 侧不解析，避免时区/精度漂移
-		if utils.IsNotBlank(vo.ApplyTime1) {
-			tx = tx.Where("extime >= to_timestamp(?, 'yyyy-mm-dd HH24:MI:SS')", vo.ApplyTime1)
-		}
-		if utils.IsNotBlank(vo.ApplyTime2) {
-			tx = tx.Where("extime <= to_timestamp(?, 'yyyy-mm-dd HH24:MI:SS')", vo.ApplyTime2)
-		}
-		// 相对时间窗：XML:144-150
-		//
-		// PARITY: Java 这两个分支都是**双边**条件（`extime >= now() - 180 and extime <= now()`）。
-		// Go 之前只有下界，于是 extime 落在未来的行会被多带出来。
-		// `now() - 180` 的字面写法保留（不按天/秒自行换算），理由见方法头 PARITY 注释。
-		switch vo.Flag {
-		case "bannian":
-			tx = tx.Where("extime >= now() - 180").Where("extime <= now()")
-		case "yiyue":
-			tx = tx.Where("extime >= now() - 3").Where("extime <= now()")
-		default:
-			if vo.Flag != "" {
-				slog.Warn("[轨迹查询] flag 不在 XML 的两个分支内，未参与 SQL", "flag", vo.Flag)
-			}
-		}
-	}
+	tx := applyHistoryTrailFilters(r.db.ORM(ctx).Table(ZdataTrailTracksHistoryTable), vo).
+		Select(historyTrailColumns)
 
 	// 排序：XML 的 getHistoryTrail 没有 order by，Java 靠数据库物理扫描顺序选行。
 	// Go 之前补了 Order("cid, extime")，看似更稳，实际会**换行**：同一车牌在
@@ -285,6 +253,64 @@ func (r *ZdataTrailTracksRepo) GetHistoryTrail(ctx context.Context, vo *model.Ca
 		list = append(list, row.toModel())
 	}
 	return list, nil
+}
+
+// CountHistoryTrail 是与 GetHistoryTrail 同谓词的行数，对应 PageHelper 给
+// `new PageInfo(list).getTotal()` 自动生成的 count 查询。
+//
+// PARITY: Java 的两个轨迹接口都先 startPage()，PageHelper 会用同一套 WHERE 跑一次
+// `select count(*)`，所以响应里的 total 是**全量命中数**，不是本页行数。
+// Go 此前用 len(rows) 当 total，实测 /base/sysutil/carTrackQueryByTime?pageNum=1&pageSize=5
+// 两端 total = 112 vs 5；越界页（pageNum=999）也没有 total 可回夹，Java 给末页 2 行、Go 给 0 行。
+//
+// 计数必须与取数共用 applyHistoryTrailFilters：两处谓词各自演化就是 P-FILT-1 的成因
+// （`?type=0` 在 Go 被静默丢掉，返回未过滤全量集）。
+func (r *ZdataTrailTracksRepo) CountHistoryTrail(ctx context.Context, vo *model.CarParaVO) (int64, error) {
+	var n int64
+	tx := applyHistoryTrailFilters(r.db.ORM(ctx).Table(ZdataTrailTracksHistoryTable), vo)
+	if err := tx.Count(&n).Error; err != nil {
+		return 0, fmt.Errorf("ZdataTrailTracksRepo.CountHistoryTrail: %w", err)
+	}
+	return n, nil
+}
+
+// applyHistoryTrailFilters 重建 XML:139-156 的 <where> 块。
+// 为空即不过滤，语义与 MyBatis 的 <if> 一致。
+func applyHistoryTrailFilters(tx *gorm.DB, vo *model.CarParaVO) *gorm.DB {
+	if vo == nil {
+		return tx
+	}
+	// 车牌：Java 的 XML:140 与 XML:151 是**两个独立的 <if>**，两者都传时是 AND 关系。
+	// Go 之前写成 if/else if，等于「有 carNoList 就忽略 carNo」，调用方同时传两者时结果会变大。
+	if utils.IsNotBlank(vo.CarNo) {
+		tx = tx.Where("envehicleid = ?", vo.CarNo)
+	}
+	if len(vo.CarNoList) > 0 {
+		tx = tx.Where("envehicleid IN ?", vo.CarNoList)
+	}
+	// 时间区间：Java 直接把这些字符串塞进 to_timestamp，Go 侧不解析，避免时区/精度漂移
+	if utils.IsNotBlank(vo.ApplyTime1) {
+		tx = tx.Where("extime >= to_timestamp(?, 'yyyy-mm-dd HH24:MI:SS')", vo.ApplyTime1)
+	}
+	if utils.IsNotBlank(vo.ApplyTime2) {
+		tx = tx.Where("extime <= to_timestamp(?, 'yyyy-mm-dd HH24:MI:SS')", vo.ApplyTime2)
+	}
+	// 相对时间窗：XML:144-150
+	//
+	// PARITY: Java 这两个分支都是**双边**条件（`extime >= now() - 180 and extime <= now()`）。
+	// Go 之前只有下界，于是 extime 落在未来的行会被多带出来。
+	// `now() - 180` 的字面写法保留（不按天/秒自行换算），理由见 GetHistoryTrail 的 PARITY 注释。
+	switch vo.Flag {
+	case "bannian":
+		tx = tx.Where("extime >= now() - 180").Where("extime <= now()")
+	case "yiyue":
+		tx = tx.Where("extime >= now() - 3").Where("extime <= now()")
+	default:
+		if vo.Flag != "" {
+			slog.Warn("[轨迹查询] flag 不在 XML 的两个分支内，未参与 SQL", "flag", vo.Flag)
+		}
+	}
+	return tx
 }
 
 // applyZdataTrailTracksFilters 把 Java 侧 XML <if test="..."> 的条件重建为 Go 代码。

@@ -266,16 +266,7 @@ func (s *SysUtilService) CarTrackQuery(ctx context.Context, vo *model.CarParaVO)
 	if vo == nil {
 		return nil, fmt.Errorf("CarTrackQuery: carParaVO 不能为空")
 	}
-	// JAVA L1964-1968：carlist → carNoList
-	if len(vo.Carlist) > 0 {
-		carNoList := make([]string, 0, len(vo.Carlist))
-		for _, c := range vo.Carlist {
-			if utils.IsNotBlank(c.CarNo) {
-				carNoList = append(carNoList, c.CarNo)
-			}
-		}
-		vo.CarNoList = carNoList
-	}
+	flattenCarNoList(vo) // JAVA L1964-1968：carlist → carNoList
 
 	list, err := s.trailRepo.GetHistoryTrail(ctx, vo, 0)
 	if err != nil {

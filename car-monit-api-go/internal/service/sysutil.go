@@ -154,17 +154,35 @@ func (s *SysUtilService) CarTrackQueryNew(ctx context.Context, vo *model.CarPara
 	if vo == nil {
 		return nil, fmt.Errorf("CarTrackQueryNew: carParaVO 不能为空")
 	}
-	// JAVA L1996-2000: carlist.stream().map(CarVO::getCarNo) → carNoList
-	if len(vo.Carlist) > 0 {
-		carNoList := make([]string, 0, len(vo.Carlist))
-		for _, c := range vo.Carlist {
-			if utils.IsNotBlank(c.CarNo) {
-				carNoList = append(carNoList, c.CarNo)
-			}
-		}
-		vo.CarNoList = carNoList
-	}
+	flattenCarNoList(vo) // JAVA L1996-2000: carlist.stream().map(CarVO::getCarNo) → carNoList
 	return s.trailRepo.GetHistoryTrail(ctx, vo, 0)
+}
+
+// CarTrackCountNew 与 CarTrackQueryNew 同谓词地数一遍总行数，对应 PageHelper 为
+// `new PageInfo(list).getTotal()` 生成的 count 查询。
+//
+// PARITY: total 与行集必须出自同一套条件，所以两者共用 flattenCarNoList；
+// 各自演化会让 total 比原来（用 len(rows)）更难察觉地错。
+func (s *SysUtilService) CarTrackCountNew(ctx context.Context, vo *model.CarParaVO) (int64, error) {
+	if vo == nil {
+		return 0, fmt.Errorf("CarTrackCountNew: carParaVO 不能为空")
+	}
+	flattenCarNoList(vo)
+	return s.trailRepo.CountHistoryTrail(ctx, vo)
+}
+
+// flattenCarNoList 把 vo.Carlist 拍平成 vo.CarNoList（就地改，与 Java 一致）。
+func flattenCarNoList(vo *model.CarParaVO) {
+	if len(vo.Carlist) == 0 {
+		return
+	}
+	carNoList := make([]string, 0, len(vo.Carlist))
+	for _, c := range vo.Carlist {
+		if utils.IsNotBlank(c.CarNo) {
+			carNoList = append(carNoList, c.CarNo)
+		}
+	}
+	vo.CarNoList = carNoList
 }
 
 // BuildTrailInfos 把 Controller 里"查流水 → 解析轨迹点 → changeData"的循环收敛成一个方法。

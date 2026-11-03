@@ -29,7 +29,9 @@ func mustSource(t *testing.T, name string) string {
 	if err != nil {
 		t.Fatalf("读不到 %s（本文件的断言依赖同目录源码）: %v", name, err)
 	}
-	return s
+	// 本仓库 core.autocrlf=true，Windows 检出的源码是 CRLF；
+	// 不归一化的话下面按行切的断言会在别人机器上假失败/假通过。
+	return strings.ReplaceAll(s, "\r\n", "\n")
 }
 
 // TestHistoryTrailProjectionMatchesJavaXML 对应 ZdataTrailTracksMapper.xml:117-136。
@@ -99,28 +101,85 @@ func TestRelativeWindowsAreBounded(t *testing.T) {
 
 // TestCarNoAndCarNoListAreIndependentAnds：Go 曾写成 if/else if，
 // 等于"传了 carNoList 就忽略 carNo"，两条件同时给出时结果集会偏大。
+//
+// 断言锁在谓词构建函数体内、且检查两个 if 之间有没有 else：
+// 早先版本只在全文件里 grep 一个固定串 `} else if utils.IsNotBlank(vo.CarNo)`，
+// 而真实的回退写法是 `} else if len(vo.CarNoList) > 0 {`，那种改法 grep 不到，
+// 测试会在 bug 存在的情况下照样通过（本轮复核实测复现过）。
 func TestCarNoAndCarNoListAreIndependentAnds(t *testing.T) {
 	src := mustSource(t, "zdata_trail_tracks.go")
-	if strings.Contains(src, "} else if utils.IsNotBlank(vo.CarNo)") {
-		t.Error("carNo 又退回 if/else 分支了：carNo 与 carNoList 应当是两个独立的 AND 条件")
+	body, ok := substringBetween(src, "func applyHistoryTrailFilters(", "\n}")
+	if !ok {
+		t.Fatal("找不到 applyHistoryTrailFilters（getHistoryTrail 的谓词应集中在这里）")
 	}
+	const carNoIf = `if utils.IsNotBlank(vo.CarNo) {`
+	const carNoListIf = `if len(vo.CarNoList) > 0 {`
 	for _, frag := range []string{
-		`if utils.IsNotBlank(vo.CarNo) {`,
-		`tx.Where("envehicleid = ?", vo.CarNo)`,
-		`if len(vo.CarNoList) > 0 {`,
-		`tx.Where("envehicleid IN ?", vo.CarNoList)`,
+		carNoIf, `tx.Where("envehicleid = ?", vo.CarNo)`,
+		carNoListIf, `tx.Where("envehicleid IN ?", vo.CarNoList)`,
 	} {
-		if !strings.Contains(src, frag) {
-			t.Errorf("缺少 %s", frag)
+		if !strings.Contains(body, frag) {
+			t.Errorf("applyHistoryTrailFilters 缺少 %s", frag)
 		}
+	}
+	i, j := strings.Index(body, carNoIf), strings.Index(body, carNoListIf)
+	if i < 0 || j < 0 {
+		return // 片段缺失已由上面的 Errorf 报过，这里不再做下标运算
+	}
+
+	first, second := carNoIf, carNoListIf
+	if j < i {
+		first, second = carNoListIf, carNoIf
+	}
+	gap := body[strings.Index(body, first):strings.Index(body, second)]
+	if strings.Contains(gap, "else") {
+		t.Errorf("carNo 与 carNoList 被 else 连成了互斥分支，应为两个独立 AND；实得 %q", gap)
+	}
+	// 第二个 if 必须紧跟第一个 if 的收尾 `}`，中间不能夹别的条件。
+	before := strings.TrimRight(body[:strings.Index(body, second)], " \t\n")
+	if !strings.HasSuffix(before, "}") {
+		t.Errorf("第二个过滤条件不是紧跟在 `}` 之后的独立 if 语句，实得结尾 %q",
+			before[max(0, len(before)-60):])
+	}
+}
+
+// TestCountAndRowsSharePredicates：轨迹的 total 与行集必须出自同一套 WHERE。
+//
+// Java 那边这是天然的 —— PageHelper 用原 SQL 生成 count；Go 一旦让 CountHistoryTrail
+// 自己抄一份条件，两边就会各自演化，而 total 与数据"各说各话"比原来的
+// total=页大小（P-PAGE-8）更难被发现。
+func TestCountAndRowsSharePredicates(t *testing.T) {
+	src := mustSource(t, "zdata_trail_tracks.go")
+	for _, fn := range []string{"GetHistoryTrail", "CountHistoryTrail"} {
+		body, ok := substringBetween(src,
+			"func (r *ZdataTrailTracksRepo) "+fn+"(", "\n}")
+		if !ok {
+			t.Fatalf("找不到 %s", fn)
+		}
+		if !strings.Contains(body, "applyHistoryTrailFilters(") {
+			t.Errorf("%s 没有走 applyHistoryTrailFilters，谓词会出现两份", fn)
+		}
+	}
+	countBody, _ := substringBetween(src,
+		"func (r *ZdataTrailTracksRepo) CountHistoryTrail(", "\n}")
+	if strings.Contains(countBody, ".Limit(") {
+		t.Error("CountHistoryTrail 带了 LIMIT —— total 会退化成页大小")
+	}
+	if !strings.Contains(countBody, ".Count(&") {
+		t.Error("CountHistoryTrail 没有走 .Count，拿不到 PageHelper 语义的 total")
 	}
 }
 
 // TestCallerOrderBeatsRepoOrder：gorm 的 Order 追加，先加入的优先级高。
 func TestCallerOrderBeatsRepoOrder(t *testing.T) {
 	src := mustSource(t, "ods_rt_szdn_snapshot_flow_addcode.go")
-	caller := strings.Index(src, "ApplyOrder(ctx, tx)")
-	own := strings.Index(src, `tx.Order("snapshottime desc")`)
+	body, ok := substringBetween(src,
+		"func (r *OdsRtSzdnSnapshotFlowAddcodeRepo) List(", "\n}")
+	if !ok {
+		t.Fatal("找不到 List 函数体（断言依赖同目录源码）")
+	}
+	caller := strings.Index(body, "ApplyOrder(ctx, tx)")
+	own := strings.Index(body, `tx.Order("snapshottime desc")`)
 	if caller < 0 || own < 0 {
 		t.Fatalf("片段缺失：ApplyOrder=%d snapshottime desc=%d", caller, own)
 	}

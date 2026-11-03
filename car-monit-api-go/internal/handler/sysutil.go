@@ -81,21 +81,32 @@ func (d *SysUtilDeps) carTrackQueryByCarNo(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	list := make([]model.ZdataTrailTracks, 0)
-	// PageSize<=0 时绝不能把 limit=0 传下去：Repo 约定 limit<=0 表示「不加 LIMIT」，
-	// 那样会从「返回空页」变成「全表扫描 + 全量富集」（实测 pageSize=0 会返回 1.8MB / 8s）。
-	// Java 侧对应的是 total=112、rows=[]。
-	if utils.IsNotBlank(vo.CarNo) && pp.PageSize > 0 {
+	var total int64
+	if utils.IsNotBlank(vo.CarNo) {
 		vo.Flag = "bannian" // 默认只查半年（L82）
-		// 对应 PageHelper 改写 SQL：LIMIT offset+pageSize，之后在内存里切掉前 offset 行。
-		limit := pp.Offset() + pp.PageSize
-		pageNum, pageSize := pp.PageNum, limit
-		vo.PageNum, vo.PageSize = &pageNum, &pageSize
-		rows, err := d.Service.CarTrackQueryNew(ctx, &vo)
+		// Java 的 startPage() 会先用同一套 WHERE 跑一次 count（PageInfo(list).getTotal()），
+		// 所以 total 是全量命中数而不是本页行数；越界页也靠这个 total 回夹到末页。
+		n, err := d.Service.CarTrackCountNew(ctx, &vo)
 		if err != nil {
 			_ = c.Error(err)
 			return
 		}
-		list = pageSlice(rows, pp)
+		total = n
+		pp.ClampToLastPage(total)
+		// PageSize<=0 时绝不能把 limit=0 传下去：Repo 约定 limit<=0 表示「不加 LIMIT」，
+		// 那样会从「返回空页」变成「全表扫描 + 全量富集」（实测 pageSize=0 会返回 1.8MB / 8s）。
+		if pp.PageSize > 0 {
+			// 对应 PageHelper 改写 SQL：LIMIT offset+pageSize，之后在内存里切掉前 offset 行。
+			limit := pp.Offset() + pp.PageSize
+			pageNum, pageSize := pp.PageNum, limit
+			vo.PageNum, vo.PageSize = &pageNum, &pageSize
+			rows, err := d.Service.CarTrackQueryNew(ctx, &vo)
+			if err != nil {
+				_ = c.Error(err)
+				return
+			}
+			list = pageSlice(rows, pp)
+		}
 	}
 
 	infos, err := d.Service.BuildTrailInfos(ctx, list, true)
@@ -103,7 +114,7 @@ func (d *SysUtilDeps) carTrackQueryByCarNo(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	c.JSON(http.StatusOK, response.Table(infos, int64(len(list))))
+	c.JSON(http.StatusOK, response.Table(infos, total))
 }
 
 // carTrackQueryByTime 对应 L117-157：车牌来自 Redis 里的重点车辆库，而不是入参。
@@ -118,19 +129,30 @@ func (d *SysUtilDeps) carTrackQueryByTime(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	list := make([]model.ZdataTrailTracks, 0)
+	var total int64
 	carlist := d.loadKeyVehicles(ctx) // 对应 L123-126
-	// 同 carTrackQueryByCarNo：PageSize<=0 时给空页，不能让 limit=0 变成「不加 LIMIT」
-	if len(carlist) > 0 && pp.PageSize > 0 {
+	if len(carlist) > 0 {
 		vo.Carlist = carlist
-		limit := pp.Offset() + pp.PageSize
-		pageNum, pageSize := pp.PageNum, limit
-		vo.PageNum, vo.PageSize = &pageNum, &pageSize
-		rows, err := d.Service.CarTrackQueryNew(ctx, &vo)
+		// 与 carTrackQueryByCarNo 同理：total 来自 PageHelper 的 count，不是本页行数。
+		n, err := d.Service.CarTrackCountNew(ctx, &vo)
 		if err != nil {
 			_ = c.Error(err)
 			return
 		}
-		list = pageSlice(rows, pp)
+		total = n
+		pp.ClampToLastPage(total)
+		// 同 carTrackQueryByCarNo：PageSize<=0 时给空页，不能让 limit=0 变成「不加 LIMIT」
+		if pp.PageSize > 0 {
+			limit := pp.Offset() + pp.PageSize
+			pageNum, pageSize := pp.PageNum, limit
+			vo.PageNum, vo.PageSize = &pageNum, &pageSize
+			rows, err := d.Service.CarTrackQueryNew(ctx, &vo)
+			if err != nil {
+				_ = c.Error(err)
+				return
+			}
+			list = pageSlice(rows, pp)
+		}
 	}
 
 	// PARITY: 这里 Java 没有清空 trailPoints（L141 是注释掉的），所以返回体里保留原始轨迹串。
@@ -139,7 +161,7 @@ func (d *SysUtilDeps) carTrackQueryByTime(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	c.JSON(http.StatusOK, response.Table(infos, int64(len(list))))
+	c.JSON(http.StatusOK, response.Table(infos, total))
 }
 
 // loadKeyVehicles 对应 L123-126：`(List<CarVO>) redisCache.getCacheObject(Constants.car_list_jc)`。
