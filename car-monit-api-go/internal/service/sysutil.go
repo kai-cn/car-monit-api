@@ -208,7 +208,7 @@ func (s *SysUtilService) BuildTrailInfos(ctx context.Context, list []model.Zdata
 		if err != nil {
 			return nil, err
 		}
-		info.TrailUuid = utils.IsNull(tracks.PlateKey)
+		info.TrailUuid = model.Str(utils.IsNull(tracks.PlateKey))
 		out = append(out, *info)
 	}
 	return out, nil
@@ -249,17 +249,17 @@ func (s *SysUtilService) GetTrailBoList(paraTrailPoints string) []model.TrailBo 
 		// PARITY: Java 只在含 "T" 时赋值 captureTime（L2054-2059），其余情况保持 null —— 照抄
 		if captureTime := jsonString(obj, "captureTime"); strings.Contains(captureTime, "T") {
 			if t, ok := parseCaptureTime(captureTime); ok {
-				bo.CaptureTime = t.Format(layoutNormalTime)
+				bo.CaptureTime = model.Str(t.Format(layoutNormalTime))
 			}
 		}
-		bo.StateType = jsonString(obj, "stateType")
-		bo.Platenumber = jsonString(obj, "platenumber")
-		bo.LocationId = jsonString(obj, "locationId")
-		bo.LocationCode = jsonString(obj, "locationCode")
-		bo.PointUuid = jsonString(obj, "pointUuid")
-		bo.SectionCode = jsonString(obj, "sectionCode")
-		bo.OrgCode = jsonString(obj, "orgCode")
-		bo.Pileno = jsonString(obj, "pileNo")
+		bo.StateType = jsonStrPtr(obj, "stateType")
+		bo.Platenumber = jsonStrPtr(obj, "platenumber")
+		bo.LocationId = jsonStrPtr(obj, "locationId")
+		bo.LocationCode = jsonStrPtr(obj, "locationCode")
+		bo.PointUuid = jsonStrPtr(obj, "pointUuid")
+		bo.SectionCode = jsonStrPtr(obj, "sectionCode")
+		bo.OrgCode = jsonStrPtr(obj, "orgCode")
+		bo.Pileno = jsonStrPtr(obj, "pileNo")
 		if lon := jsonString(obj, "lon"); utils.IsNotBlank(lon) {
 			bo.Lon = parseFloatPtr(lon)
 		}
@@ -285,14 +285,14 @@ func (s *SysUtilService) mapTrailBoList(trailBoList []model.TrailBo) []model.Tra
 		bo := &model.TrailBo{}
 		*bo = trailBoList[i]
 
-		stateType := utils.IsNull(bo.StateType)
-		locationCode := utils.IsNull(bo.LocationCode)
-		captureTime := utils.IsNull(bo.CaptureTime)
-		imagesArry := utils.DeleteEnd(bo.ImagesArry)
+		stateType := model.Val(bo.StateType)
+		locationCode := model.Val(bo.LocationCode)
+		captureTime := model.Val(bo.CaptureTime)
+		imagesArry := utils.DeleteEnd(model.Val(bo.ImagesArry))
 		mapKey := stateType + locationCode
 
 		if prev, ok := seen[mapKey]; ok {
-			prevCaptureTime := utils.IsNull(prev.CaptureTime)
+			prevCaptureTime := model.Val(prev.CaptureTime)
 			if utils.IsNotBlank(captureTime) && utils.IsNotBlank(prevCaptureTime) {
 				t1, err1 := time.ParseInLocation(layoutNormalTime, captureTime, time.Local)
 				t2, err2 := time.ParseInLocation(layoutNormalTime, prevCaptureTime, time.Local)
@@ -308,10 +308,10 @@ func (s *SysUtilService) mapTrailBoList(trailBoList []model.TrailBo) []model.Tra
 						out = append(out, bo)
 					} else if imagesArry != "" {
 						// 抓拍图片累加（JAVA L2124-2132）
-						if prevImages := utils.DeleteEnd(prev.ImagesArry); prevImages == "" {
-							prev.ImagesArry = imagesArry
+						if prevImages := utils.DeleteEnd(model.Val(prev.ImagesArry)); prevImages == "" {
+							prev.ImagesArry = model.Str(imagesArry)
 						} else {
-							prev.ImagesArry = prevImages + "," + imagesArry
+							prev.ImagesArry = model.Str(prevImages + "," + imagesArry)
 						}
 					}
 				}
@@ -399,7 +399,7 @@ func (s *SysUtilService) ChangeData(ctx context.Context, tracks *model.ZdataTrai
 		if utils.IsNotBlank(sectionCode) {
 			if section, ok := sectionMap[sectionCode]; ok && section != nil {
 				roadCode = utils.IsNull(section.RoadCode)
-				trailBo.RoadCode = roadCode
+				trailBo.RoadCode = model.Str(roadCode)
 			}
 		}
 
@@ -424,8 +424,8 @@ func (s *SysUtilService) ChangeData(ctx context.Context, tracks *model.ZdataTrai
 			// 三级兜底：位置信息 → 设备编码 → 当前位置（JAVA L537-560）
 			station := pickFromMap(stationMap, devLocatCode, devCodeID, locationCode)
 			if station != nil {
-				trailBo.DevCode = station.TollCode
-				trailBo.DevName = station.TollName
+				trailBo.DevCode = model.Str(station.TollCode)
+				trailBo.DevName = model.Str(station.TollName)
 				if toll := station.OdsSzdnToll; toll != nil {
 					if lon == nil && utils.IsNotBlank(model.Val(toll.Longitude)) {
 						trailBo.Lon = parseFloatPtr(model.Val(toll.Longitude))
@@ -434,13 +434,13 @@ func (s *SysUtilService) ChangeData(ctx context.Context, tracks *model.ZdataTrai
 						trailBo.Lat = parseFloatPtr(model.Val(toll.Latitude))
 					}
 					if utils.IsBlank(roadCode) {
-						trailBo.RoadCode = utils.IsNull(toll.RoadCode)
+						trailBo.RoadCode = model.Str(utils.IsNull(toll.RoadCode))
 					}
 					if utils.IsBlank(sectionCode) {
-						trailBo.SectionCode = utils.IsNull(toll.SectionCode)
+						trailBo.SectionCode = model.Str(utils.IsNull(toll.SectionCode))
 					}
 					if utils.IsBlank(pileno) {
-						trailBo.Pileno = utils.IsNull(toll.PileNo)
+						trailBo.Pileno = model.Str(utils.IsNull(toll.PileNo))
 					}
 				}
 			}
@@ -448,8 +448,8 @@ func (s *SysUtilService) ChangeData(ctx context.Context, tracks *model.ZdataTrai
 		case indexTypeGantry:
 			gantry := pickFromMap(gantryMap, devLocatCode, devCodeID, locationCode)
 			if gantry != nil {
-				trailBo.DevCode = gantry.GantryCode
-				trailBo.DevName = gantry.GantryName
+				trailBo.DevCode = model.Str(gantry.GantryCode)
+				trailBo.DevName = model.Str(gantry.GantryName)
 				if g := gantry.OdsSzdnGantry; g != nil {
 					if lon == nil && utils.IsNotBlank(model.Val(g.Lon)) {
 						trailBo.Lon = parseFloatPtr(model.Val(g.Lon))
@@ -458,16 +458,16 @@ func (s *SysUtilService) ChangeData(ctx context.Context, tracks *model.ZdataTrai
 						trailBo.Lat = parseFloatPtr(model.Val(g.Lat))
 					}
 					if utils.IsBlank(roadCode) {
-						trailBo.RoadCode = utils.IsNull(g.RoadCode)
+						trailBo.RoadCode = model.Str(utils.IsNull(g.RoadCode))
 					}
 					if utils.IsBlank(sectionCode) {
-						trailBo.SectionCode = utils.IsNull(g.SectionCode)
+						trailBo.SectionCode = model.Str(utils.IsNull(g.SectionCode))
 					}
 					if utils.IsBlank(pileno) {
-						trailBo.Pileno = utils.IsNull(g.PileNo)
+						trailBo.Pileno = model.Str(utils.IsNull(g.PileNo))
 					}
-					trailBo.Direction = model.Val(g.Direction)
-					trailBo.IsVirtual = model.Val(g.IsVirtual) // 虚拟门架
+					trailBo.Direction = g.Direction
+					trailBo.IsVirtual = g.IsVirtual // 虚拟门架
 				}
 			}
 
@@ -475,24 +475,24 @@ func (s *SysUtilService) ChangeData(ctx context.Context, tracks *model.ZdataTrai
 			// JAVA L683: devip: → serviceip: 后再查位置字典
 			locationCode = strings.ReplaceAll(locationCode, "devip:", "serviceip:")
 			if loc, ok := locationMap[locationCode]; ok && loc != nil {
-				trailBo.DevCode = model.Val(loc.StandardCode)
-				trailBo.DevName = model.Val(loc.Name)
+				trailBo.DevCode = loc.StandardCode
+				trailBo.DevName = loc.Name
 				if loc.Longitude != nil {
 					trailBo.Lon = loc.Longitude
 				}
 				if loc.Latitude != nil {
 					trailBo.Lat = loc.Latitude
 				}
-				trailBo.RoadCode = utils.IsNull(loc.Roadcode)
-				trailBo.SectionCode = utils.IsNull(loc.Sectioncode)
-				trailBo.Pileno = utils.IsNull(loc.PileNo)
-				trailBo.Direction = model.AnyStrVal(loc.Direction)
+				trailBo.RoadCode = model.Str(utils.IsNull(loc.Roadcode))
+				trailBo.SectionCode = model.Str(utils.IsNull(loc.Sectioncode))
+				trailBo.Pileno = model.Str(utils.IsNull(loc.PileNo))
+				trailBo.Direction = model.Str(model.AnyStrVal(loc.Direction))
 			}
 		}
 
 		// 设备名称兜底：用位置 code（JAVA L739-741）
-		if utils.IsBlank(trailBo.DevName) {
-			trailBo.DevName = strings.ReplaceAll(utils.IsNull(locationCode), "serviceip:", "")
+		if utils.IsBlank(model.Val(trailBo.DevName)) {
+			trailBo.DevName = model.Str(strings.ReplaceAll(utils.IsNull(locationCode), "serviceip:", ""))
 		}
 	}
 
@@ -675,25 +675,25 @@ func (s *SysUtilService) GetByTrailBo(ctx context.Context, trailBo *model.TrailB
 
 	switch stateType {
 	case DataTypeBorderWeighing:
-		if item := s.lookupWeight(ctx, pointUuid); item != nil {
+		if item := s.lookupWeight(ctx, model.Val(pointUuid)); item != nil {
 			if imagesStr := utils.IsNull(item.WeighingImagesArry); utils.IsNotBlank(imagesStr) {
 				imgs, err := weighingImages(imagesStr)
 				if err != nil {
 					slog.Warn("[轨迹查询] 省界称重图片 JSON 解析失败", "uuid", pointUuid, "err", err)
 				} else {
-					target.ImagesArry = utils.DeleteEnd(imgs)
+					target.ImagesArry = model.Str(utils.DeleteEnd(imgs))
 				}
 			}
 		}
 
 	case DataTypeGantryCapture:
-		if item := s.lookupGantryCapture(ctx, pointUuid, from, to); item != nil {
-			target.ImagesArry = model.Val(item.Snappicturepath)
-			target.Platecolor = utils.IsNull(item.Platecolor)
+		if item := s.lookupGantryCapture(ctx, model.Val(pointUuid), from, to); item != nil {
+			target.ImagesArry = item.Snappicturepath
+			target.Platecolor = model.Str(utils.IsNull(item.Platecolor))
 		}
 
 	case DataTypeProvCapture:
-		if item := s.lookupProvCapture(ctx, pointUuid); item != nil {
+		if item := s.lookupProvCapture(ctx, model.Val(pointUuid)); item != nil {
 			imagesSrc := ""
 			if utils.IsNotBlank(model.Val(item.Plateimage)) {
 				imagesSrc += model.Val(item.Plateimage) + ","
@@ -704,11 +704,11 @@ func (s *SysUtilService) GetByTrailBo(ctx context.Context, trailBo *model.TrailB
 			if utils.IsNotBlank(model.Val(item.Headimage)) {
 				imagesSrc += model.Val(item.Headimage) + ","
 			}
-			target.ImagesArry = utils.DeleteEnd(imagesSrc)
+			target.ImagesArry = model.Str(utils.DeleteEnd(imagesSrc))
 		}
 
 	case DataTypeServiceAreaCapture:
-		if item := s.lookupFwqclls(ctx, pointUuid); item != nil {
+		if item := s.lookupFwqclls(ctx, model.Val(pointUuid)); item != nil {
 			imagesSrc := ""
 			if utils.IsNotBlank(model.Val(item.Targetpicurl)) {
 				imagesSrc += model.Val(item.Targetpicurl) + ","
@@ -716,33 +716,33 @@ func (s *SysUtilService) GetByTrailBo(ctx context.Context, trailBo *model.TrailB
 			if utils.IsNotBlank(model.Val(item.Platepicurl)) {
 				imagesSrc += model.Val(item.Platepicurl) + ","
 			}
-			target.ImagesArry = utils.DeleteEnd(imagesSrc)
+			target.ImagesArry = model.Str(utils.DeleteEnd(imagesSrc))
 		}
 
 	case DataTypeStationCapture:
-		if item := s.lookupStationCapture(ctx, pointUuid, from, to); item != nil {
-			target.ImagesArry = model.Val(item.Snappicturepath)
+		if item := s.lookupStationCapture(ctx, model.Val(pointUuid), from, to); item != nil {
+			target.ImagesArry = item.Snappicturepath
 		}
 
 	case DataTypeFeeRecord:
-		if item := s.lookupFeeRecord(ctx, pointUuid, from, to); item != nil {
-			target.DevCode = model.Val(item.Gantryid)
-			target.ImagesArry = ""
+		if item := s.lookupFeeRecord(ctx, model.Val(pointUuid), from, to); item != nil {
+			target.DevCode = item.Gantryid
+			target.ImagesArry = model.Str("")
 		}
 
 	case DataTypeFeeStationEnter:
-		if item := s.lookupFeeEnter(ctx, pointUuid); item != nil {
-			target.ImagesArry = ""
+		if item := s.lookupFeeEnter(ctx, model.Val(pointUuid)); item != nil {
+			target.ImagesArry = model.Str("")
 		}
 
 	case DataTypeFeeStationExit:
-		if item := s.lookupFeeExit(ctx, pointUuid); item != nil {
-			target.ImagesArry = ""
+		if item := s.lookupFeeExit(ctx, model.Val(pointUuid)); item != nil {
+			target.ImagesArry = model.Str("")
 		}
 	}
 
 	// JAVA L1218-1220: 收尾逗号 + 内网图片域名替换
-	target.ImagesArry = utils.RepalacePicUrl(utils.DeleteEnd(target.ImagesArry))
+	target.ImagesArry = model.Str(utils.RepalacePicUrl(utils.DeleteEnd(model.Val(target.ImagesArry))))
 	return &target, nil
 }
 
@@ -927,16 +927,28 @@ func pickFromMap[T any](m map[string]*T, keys ...string) *T {
 }
 
 // jsonString 等价于 JSONObject.getString(key)：字符串直接取，数字/布尔退化成原样文本。
-func jsonString(obj map[string]json.RawMessage, key string) string {
+// jsonStrPtr 对应 fastjson 的 `JSONObject.getString(key)`：
+// 键不存在、或值是 JSON null → **null**；值是 "" → ""。
+//
+// PARITY（P-SER-1）：原来返回 string 的 jsonString 把这两种情况都折成 ""，
+// 于是 Java 输出 null 的字段在 Go 里成了 ""（实测 TrailBo 层 3907 处）。
+func jsonStrPtr(obj map[string]json.RawMessage, key string) *string {
 	raw, ok := obj[key]
 	if !ok {
-		return ""
+		return nil
+	}
+	if strings.TrimSpace(string(raw)) == "null" {
+		return nil
 	}
 	var s string
 	if err := json.Unmarshal(raw, &s); err == nil {
-		return s
+		return model.Str(s)
 	}
-	return strings.Trim(string(raw), `"`)
+	return model.Str(strings.Trim(string(raw), `"`))
+}
+
+func jsonString(obj map[string]json.RawMessage, key string) string {
+	return model.Val(jsonStrPtr(obj, key))
 }
 
 // weighingImages 对应 getByTrailBo L1118-1132：解析省界称重的图片数组，拼出逗号串。

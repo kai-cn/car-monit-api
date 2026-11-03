@@ -83,7 +83,7 @@ func (s *TrailAggregationService) PerformTrailFitting(ctx context.Context,
 
 	// 步骤3：按采集时间重排（Java 用 Comparator.comparing(String)，即字典序）
 	sort.SliceStable(fitted, func(i, j int) bool {
-		return fitted[i].CaptureTime < fitted[j].CaptureTime
+		return model.Val(fitted[i].CaptureTime) < model.Val(fitted[j].CaptureTime)
 	})
 
 	// 步骤4：构建新版本
@@ -124,7 +124,7 @@ func (s *TrailAggregationService) enrichLocationInfo(ctx context.Context,
 	result := make([]model.TrailBo, len(points))
 	for i := range points {
 		enriched := points[i] // 浅拷贝，见文件头 DIFF
-		locationCode := enriched.LocationCode
+		locationCode := model.Val(enriched.LocationCode)
 		if utils.IsNotBlank(locationCode) {
 			if location, ok := locationDict[locationCode]; ok && location != nil {
 				enrichFromLocationDict(&enriched, location)
@@ -150,16 +150,16 @@ func enrichFromLocationDict(point *model.TrailBo, location *model.ZdataLocationD
 	if point.Lat == nil {
 		point.Lat = location.Latitude
 	}
-	if utils.IsBlank(point.RoadCode) {
-		point.RoadCode = model.Val(location.Roadcode)
+	if utils.IsBlank(model.Val(point.RoadCode)) {
+		point.RoadCode = location.Roadcode
 	}
-	if utils.IsBlank(point.SectionCode) {
-		point.SectionCode = model.Val(location.Sectioncode)
+	if utils.IsBlank(model.Val(point.SectionCode)) {
+		point.SectionCode = location.Sectioncode
 	}
-	if utils.IsBlank(point.DevName) {
-		point.DevName = model.Val(location.Name)
+	if utils.IsBlank(model.Val(point.DevName)) {
+		point.DevName = location.Name
 	}
-	point.StandardCode = model.Val(location.StandardCode)
+	point.StandardCode = location.StandardCode
 }
 
 // enrichFromGantryIP 对应 enrichFromGantryIp()（L161-189）：
@@ -170,8 +170,8 @@ func enrichFromGantryIP(point *model.TrailBo, gantryIP *model.OdsSzdnGantryIp,
 	sectionMap map[string]*model.OdsSzdnSection) {
 
 	point.GantryIpBO = gantryIP
-	point.DevCode = gantryIP.GantryCode
-	point.DevName = gantryIP.GantryName
+	point.DevCode = model.Str(gantryIP.GantryCode)
+	point.DevName = model.Str(gantryIP.GantryName)
 
 	if gantry := gantryIP.OdsSzdnGantry; gantry != nil {
 		if point.Lon == nil {
@@ -180,26 +180,26 @@ func enrichFromGantryIP(point *model.TrailBo, gantryIP *model.OdsSzdnGantryIp,
 		if point.Lat == nil {
 			point.Lat = parseFloatPtr(model.Val(gantry.Lat))
 		}
-		if utils.IsBlank(point.RoadCode) {
-			point.RoadCode = model.Val(gantry.RoadCode)
+		if utils.IsBlank(model.Val(point.RoadCode)) {
+			point.RoadCode = gantry.RoadCode
 		}
-		if utils.IsBlank(point.SectionCode) {
-			point.SectionCode = model.Val(gantry.SectionCode)
+		if utils.IsBlank(model.Val(point.SectionCode)) {
+			point.SectionCode = gantry.SectionCode
 		}
-		if utils.IsBlank(point.Pileno) {
-			point.Pileno = model.Val(gantry.PileNo)
+		if utils.IsBlank(model.Val(point.Pileno)) {
+			point.Pileno = gantry.PileNo
 		}
-		point.Direction = model.Val(gantry.Direction)
-		point.IsVirtual = model.Val(gantry.IsVirtual)
+		point.Direction = gantry.Direction
+		point.IsVirtual = gantry.IsVirtual
 	}
-	point.LocationFlag = "1"
+	point.LocationFlag = model.Str("1")
 }
 
 // enrichFromStationIP 对应 enrichFromStationIp()（L194-216）
 func enrichFromStationIP(point *model.TrailBo, stationIP *model.OdsSzdnTollStationIp) {
 	point.StationIpBO = stationIP
-	point.DevCode = stationIP.TollCode
-	point.DevName = stationIP.TollName
+	point.DevCode = model.Str(stationIP.TollCode)
+	point.DevName = model.Str(stationIP.TollName)
 
 	if toll := stationIP.OdsSzdnToll; toll != nil {
 		if point.Lon == nil && utils.IsNotBlank(model.Val(toll.Longitude)) {
@@ -208,14 +208,14 @@ func enrichFromStationIP(point *model.TrailBo, stationIP *model.OdsSzdnTollStati
 		if point.Lat == nil && utils.IsNotBlank(model.Val(toll.Latitude)) {
 			point.Lat = parseFloatPtr(model.Val(toll.Latitude))
 		}
-		if utils.IsBlank(point.RoadCode) {
-			point.RoadCode = model.Val(toll.RoadCode)
+		if utils.IsBlank(model.Val(point.RoadCode)) {
+			point.RoadCode = toll.RoadCode
 		}
-		if utils.IsBlank(point.SectionCode) {
-			point.SectionCode = model.Val(toll.SectionCode)
+		if utils.IsBlank(model.Val(point.SectionCode)) {
+			point.SectionCode = toll.SectionCode
 		}
 	}
-	point.LocationFlag = "1"
+	point.LocationFlag = model.Str("1")
 }
 
 // fillMissingPoints 对应 fillMissingPoints()（L228-252）
@@ -244,15 +244,15 @@ func (s *TrailAggregationService) fillMissingPoints(points []model.TrailBo) []mo
 // tryFillBetween 对应 tryFillBetween()（L257-282）
 func (s *TrailAggregationService) tryFillBetween(prev, curr model.TrailBo) []model.TrailBo {
 	// 必须同路段才有"中间漏点"的可能
-	if utils.IsBlank(prev.SectionCode) || utils.IsBlank(curr.SectionCode) {
+	if utils.IsBlank(model.Val(prev.SectionCode)) || utils.IsBlank(model.Val(curr.SectionCode)) {
 		return nil
 	}
-	if prev.SectionCode != curr.SectionCode {
+	if model.Val(prev.SectionCode) != model.Val(curr.SectionCode) {
 		return nil
 	}
 
-	prevTime, prevErr := utils.ParseDate(prev.CaptureTime)
-	currTime, currErr := utils.ParseDate(curr.CaptureTime)
+	prevTime, prevErr := utils.ParseDate(model.Val(prev.CaptureTime))
+	currTime, currErr := utils.ParseDate(model.Val(curr.CaptureTime))
 	if prevErr != nil || currErr != nil {
 		return nil
 	}
@@ -283,8 +283,8 @@ func (s *TrailAggregationService) buildNewTrailVersion(original *model.TrailInfo
 	newTracks.PointCount = &pointCount
 
 	if len(newPoints) > 0 {
-		newTracks.EnterTime = parseDateTimePtr(newPoints[0].CaptureTime)
-		newTracks.ExitTime = parseDateTimePtr(newPoints[len(newPoints)-1].CaptureTime)
+		newTracks.EnterTime = parseDateTimePtr(model.Val(newPoints[0].CaptureTime))
+		newTracks.ExitTime = parseDateTimePtr(model.Val(newPoints[len(newPoints)-1].CaptureTime))
 	}
 	if len(newPoints) >= 5 {
 		full := 1
@@ -319,8 +319,8 @@ func (s *TrailAggregationService) AssessTrailQuality(trail *model.TrailInfo) Tra
 	pointScore := minFloat(1.0, float64(pointCount)/10.0) * 30
 
 	// 时间跨度评分：2 小时封顶
-	firstTime, _ := utils.ParseDate(points[0].CaptureTime)
-	lastTime, _ := utils.ParseDate(points[pointCount-1].CaptureTime)
+	firstTime, _ := utils.ParseDate(model.Val(points[0].CaptureTime))
+	lastTime, _ := utils.ParseDate(model.Val(points[pointCount-1].CaptureTime))
 	durationHours := lastTime.Sub(firstTime).Hours()
 	durationScore := minFloat(1.0, durationHours/2.0) * 30
 
@@ -375,14 +375,14 @@ func (s *TrailAggregationService) MergeTrails(trails []*model.TrailInfo) *model.
 		return nil
 	}
 	sort.SliceStable(allPoints, func(i, j int) bool {
-		return allPoints[i].CaptureTime < allPoints[j].CaptureTime
+		return model.Val(allPoints[i].CaptureTime) < model.Val(allPoints[j].CaptureTime)
 	})
 
 	mergedTracks := model.ZdataTrailTracks{}
 	trailing := int64(len(allPoints))
 	mergedTracks.PointCount = &trailing
-	mergedTracks.EnterTime = parseDateTimePtr(allPoints[0].CaptureTime)
-	mergedTracks.ExitTime = parseDateTimePtr(allPoints[len(allPoints)-1].CaptureTime)
+	mergedTracks.EnterTime = parseDateTimePtr(model.Val(allPoints[0].CaptureTime))
+	mergedTracks.ExitTime = parseDateTimePtr(model.Val(allPoints[len(allPoints)-1].CaptureTime))
 	trailType := 0
 	if len(allPoints) >= 5 {
 		trailType = 1
@@ -399,7 +399,7 @@ func (s *TrailAggregationService) MergeTrails(trails []*model.TrailInfo) *model.
 	}
 
 	merged := &model.TrailInfo{
-		TrailUuid: model.Val(mergedTracks.Uuid),
+		TrailUuid: mergedTracks.Uuid,
 		Tracks:    &mergedTracks,
 		TrailList: allPoints,
 	}

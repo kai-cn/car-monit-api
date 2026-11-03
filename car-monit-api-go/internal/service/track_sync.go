@@ -181,16 +181,16 @@ func (s *SysUtilService) SyncTrack(ctx context.Context) error {
 		points := make([]model.TrailBo, 0, len(raw))
 		for _, p := range raw {
 			bo := model.TrailBo{
-				PointUuid:    p.PointUuid,
-				StateType:    p.StateType,
-				CaptureTime:  p.CaptureTime,
-				LocationCode: p.LocationCode,
-				LocationName: p.LocationName,
-				StandardCode: p.StandardCode,
-				LocationId:   p.LocationID,
-				Platenumber:  p.PlateNumber,
-				DevCode:      p.StandardCode, // JAVA L340
-				DevName:      p.LocationName, // JAVA L341
+				PointUuid:    model.Str(p.PointUuid),
+				StateType:    model.Str(p.StateType),
+				CaptureTime:  model.Str(p.CaptureTime),
+				LocationCode: model.Str(p.LocationCode),
+				LocationName: model.Str(p.LocationName),
+				StandardCode: model.Str(p.StandardCode),
+				LocationId:   model.Str(p.LocationID),
+				Platenumber:  model.Str(p.PlateNumber),
+				DevCode:      model.Str(p.StandardCode), // JAVA L340
+				DevName:      model.Str(p.LocationName), // JAVA L341
 			}
 			if lon := p.Longitude.String(); utils.IsNotBlank(lon) {
 				if v, err := strconv.ParseFloat(lon, 64); err == nil {
@@ -213,10 +213,10 @@ func (s *SysUtilService) SyncTrack(ctx context.Context) error {
 				points = append(points, bo)
 				continue
 			}
-			if utils.IsBlank(bo.CaptureTime) {
+			if utils.IsBlank(model.Val(bo.CaptureTime)) {
 				continue
 			}
-			capTime, err := time.ParseInLocation(layoutNormalTime, bo.CaptureTime, time.Local)
+			capTime, err := time.ParseInLocation(layoutNormalTime, model.Val(bo.CaptureTime), time.Local)
 			if err != nil {
 				// JAVA L356-358：解析失败只记日志，不中断
 				slog.Info("[实时轨迹同步] 实时轨迹日期解析失败", "carNo", carNo, "captureTime", bo.CaptureTime)
@@ -243,7 +243,7 @@ func (s *SysUtilService) SyncTrack(ctx context.Context) error {
 			slog.Error("[实时轨迹同步] 设备富集失败", "carNo", carNo, "err", err)
 			continue
 		}
-		info.TrailUuid = carNo // JAVA L377
+		info.TrailUuid = model.Str(carNo) // JAVA L377
 
 		if err := s.cache.SetJSON(ctx, carCurrentTrailPrefix+carNo, info, 0); err != nil {
 			slog.Error("[实时轨迹同步] 写缓存失败", "carNo", carNo, "err", err)

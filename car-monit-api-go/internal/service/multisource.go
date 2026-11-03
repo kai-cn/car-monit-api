@@ -85,19 +85,19 @@ func (s *MultiSourceDataFlowService) ProcessData(ctx context.Context, data any, 
 	}
 
 	plateKey := event.Platenumber
-	if utils.IsBlank(plateKey) {
+	if utils.IsBlank(model.Val(plateKey)) {
 		slog.Warn("[数据流转] 车牌号为空，跳过处理", "pointUuid", event.PointUuid)
 		return nil
 	}
 
-	appended, err := s.tryAppendToTrail(ctx, plateKey, event)
+	appended, err := s.tryAppendToTrail(ctx, model.Val(plateKey), event)
 	if err != nil {
 		return err
 	}
 	if !appended {
 		slog.Info("[数据流转] 无法直接拼接，加入待处理队列",
 			"plateKey", plateKey, "pointUuid", event.PointUuid)
-		if err := s.addToPendingQueue(ctx, plateKey, *event); err != nil {
+		if err := s.addToPendingQueue(ctx, model.Val(plateKey), *event); err != nil {
 			return err
 		}
 	}
@@ -109,7 +109,7 @@ func (s *MultiSourceDataFlowService) ProcessData(ctx context.Context, data any, 
 // DIFF: Java 在 switch 里直接强转 `(OdsRtSzdnSnapshotFlowAddcode) data`，类型不符时抛
 // ClassCastException 被外层 catch 吞掉；Go 用类型断言 + ok 返回值，类型不符返回明确 error。
 func convertToStandardEvent(data any, dataType string) (*model.TrailBo, error) {
-	trailBo := &model.TrailBo{StateType: dataType}
+	trailBo := &model.TrailBo{StateType: model.Str(dataType)}
 
 	switch dataType {
 	case DataTypeGantryCapture:
@@ -162,17 +162,17 @@ func convertToStandardEvent(data any, dataType string) (*model.TrailBo, error) {
 
 // convertFromGantryCapture 对应 convertFromGantryCapture()（L156-171）
 func convertFromGantryCapture(data *model.OdsRtSzdnSnapshotFlowAddcode, trailBo *model.TrailBo) *model.TrailBo {
-	trailBo.PointUuid = model.Val(data.BigId)
-	trailBo.Platenumber = model.Val(data.Platenumber)
-	trailBo.CaptureTime = formatTimePtr(data.Snapshottime)
-	trailBo.LocationCode = model.Val(data.Deviceip)
-	trailBo.RoadCode = model.Val(data.Roadcode)
-	trailBo.SectionCode = model.Val(data.Sectioncode)
+	trailBo.PointUuid = data.BigId
+	trailBo.Platenumber = data.Platenumber
+	trailBo.CaptureTime = model.Str(formatTimePtr(data.Snapshottime))
+	trailBo.LocationCode = data.Deviceip
+	trailBo.RoadCode = data.Roadcode
+	trailBo.SectionCode = data.Sectioncode
 	trailBo.Lon = data.Lon
 	trailBo.Lat = data.Lat
 	trailBo.GantryCaptureBO = data
-	trailBo.IpType = "gantryip"
-	trailBo.PointJosn = mustJSON(data)
+	trailBo.IpType = model.Str("gantryip")
+	trailBo.PointJosn = model.Str(mustJSON(data))
 	return trailBo
 }
 
@@ -180,12 +180,12 @@ func convertFromGantryCapture(data *model.OdsRtSzdnSnapshotFlowAddcode, trailBo 
 func convertFromBorderWeighing(data *model.OdsSzdnProvinceBorderVehicleWeightNewstructure,
 	trailBo *model.TrailBo) *model.TrailBo {
 
-	trailBo.PointUuid = model.Val(data.Datauuid)
-	trailBo.Platenumber = model.Val(data.PlateNo)
-	trailBo.CaptureTime = formatDayPtr(data.CheckTime)
-	trailBo.LocationCode = model.Val(data.Location)
+	trailBo.PointUuid = data.Datauuid
+	trailBo.Platenumber = data.PlateNo
+	trailBo.CaptureTime = model.Str(formatDayPtr(data.CheckTime))
+	trailBo.LocationCode = data.Location
 	trailBo.BorderWeighingCaptureBO = data
-	trailBo.PointJosn = mustJSON(data)
+	trailBo.PointJosn = model.Str(mustJSON(data))
 	return trailBo
 }
 
@@ -193,49 +193,49 @@ func convertFromBorderWeighing(data *model.OdsSzdnProvinceBorderVehicleWeightNew
 func convertFromStationCapture(data *model.OdsRtSzdnSnapshotFlowStationcaptureAddcode,
 	trailBo *model.TrailBo) *model.TrailBo {
 
-	trailBo.PointUuid = int64PtrToString(data.BigId)
-	trailBo.Platenumber = model.Val(data.Platenumber)
-	trailBo.CaptureTime = formatDayPtr(data.Snapshottime)
-	trailBo.LocationCode = model.Val(data.Deviceip)
+	trailBo.PointUuid = model.Str(int64PtrToString(data.BigId))
+	trailBo.Platenumber = data.Platenumber
+	trailBo.CaptureTime = model.Str(formatDayPtr(data.Snapshottime))
+	trailBo.LocationCode = data.Deviceip
 	trailBo.StationCapture = data
-	trailBo.IpType = "stationip"
-	trailBo.PointJosn = mustJSON(data)
+	trailBo.IpType = model.Str("stationip")
+	trailBo.PointJosn = model.Str(mustJSON(data))
 	return trailBo
 }
 
 // convertFromFeeRecord 对应 convertFromFeeRecord()（L205-212）
 func convertFromFeeRecord(data *model.OdsLwzxsfsjFeeRecords01, trailBo *model.TrailBo) *model.TrailBo {
-	trailBo.PointUuid = data.BigId
-	trailBo.Platenumber = model.Val(data.Vehicleplate)
-	trailBo.CaptureTime = formatDayPtr(data.Transtime)
+	trailBo.PointUuid = model.Str(data.BigId)
+	trailBo.Platenumber = data.Vehicleplate
+	trailBo.CaptureTime = model.Str(formatDayPtr(data.Transtime))
 	trailBo.FeeRecord = data
-	trailBo.PointJosn = mustJSON(data)
+	trailBo.PointJosn = model.Str(mustJSON(data))
 	return trailBo
 }
 
 // convertFromFeeStationEnter 对应 convertFromFeeStationEnter()（L217-226）：directionIn = true
 func convertFromFeeStationEnter(data *model.OdsLwzxsfsjFeeStationEnter01, trailBo *model.TrailBo) *model.TrailBo {
-	trailBo.PointUuid = int64PtrToString(data.BigId)
-	trailBo.Platenumber = model.Val(data.Vehicleid)
-	trailBo.CaptureTime = formatDayPtr(data.Entime)
-	trailBo.LocationCode = model.Val(data.Entolllaneid)
+	trailBo.PointUuid = model.Str(int64PtrToString(data.BigId))
+	trailBo.Platenumber = data.Vehicleid
+	trailBo.CaptureTime = model.Str(formatDayPtr(data.Entime))
+	trailBo.LocationCode = data.Entolllaneid
 	in := true
 	trailBo.DirectionIn = &in
 	trailBo.FeeStationEnter = data
-	trailBo.PointJosn = mustJSON(data)
+	trailBo.PointJosn = model.Str(mustJSON(data))
 	return trailBo
 }
 
 // convertFromFeeStationExit 对应 convertFromFeeStationExit()（L231-240）：directionIn = false
 func convertFromFeeStationExit(data *model.OdsLwzxsfsjFeeStationExit01, trailBo *model.TrailBo) *model.TrailBo {
-	trailBo.PointUuid = data.BigId
-	trailBo.Platenumber = model.Val(data.Exvehicleid)
-	trailBo.CaptureTime = formatDayPtr(data.Extime)
-	trailBo.LocationCode = model.Val(data.Extolllaneid)
+	trailBo.PointUuid = model.Str(data.BigId)
+	trailBo.Platenumber = data.Exvehicleid
+	trailBo.CaptureTime = model.Str(formatDayPtr(data.Extime))
+	trailBo.LocationCode = data.Extolllaneid
 	out := false
 	trailBo.DirectionIn = &out
 	trailBo.FeeStationExit = data
-	trailBo.PointJosn = mustJSON(data)
+	trailBo.PointJosn = model.Str(mustJSON(data))
 	return trailBo
 }
 
@@ -280,7 +280,7 @@ func needSplitTrail(current *model.TrailInfo, newEvent *model.TrailBo) bool {
 	if tracks.EnterTime == nil || tracks.ExitTime == nil {
 		return false
 	}
-	eventTime, err := utils.ParseDate(newEvent.CaptureTime)
+	eventTime, err := utils.ParseDate(model.Val(newEvent.CaptureTime))
 	if err != nil {
 		slog.Warn("[轨迹拼接] 新事件时间无法解析，按不切割处理", "captureTime", newEvent.CaptureTime)
 		return false
@@ -304,7 +304,7 @@ func (s *MultiSourceDataFlowService) createNewTrail(ctx context.Context, plateKe
 	one := int64(1)
 	tracks.PointCount = &one
 
-	eventTime, err := utils.ParseDate(newEvent.CaptureTime)
+	eventTime, err := utils.ParseDate(model.Val(newEvent.CaptureTime))
 	if err != nil {
 		// PARITY: Java 此时会 NPE 并进 catch（拼接失败）；Go 用零值继续，保证这条事件至少进轨迹
 		slog.Warn("[轨迹拼接] 事件时间无法解析，使用零值", "captureTime", newEvent.CaptureTime)
@@ -317,7 +317,7 @@ func (s *MultiSourceDataFlowService) createNewTrail(ctx context.Context, plateKe
 	tracks.TrailPoints = model.Str(mustJSON(trailList))
 
 	newTrail := &model.TrailInfo{
-		TrailUuid: model.Val(tracks.Uuid),
+		TrailUuid: tracks.Uuid,
 		Tracks:    tracks,
 		TrailList: trailList,
 	}
@@ -339,14 +339,14 @@ func appendToExistingTrail(current *model.TrailInfo, newEvent model.TrailBo) {
 	trailList = append(trailList, newEvent)
 
 	sort.SliceStable(trailList, func(i, j int) bool {
-		return trailList[i].CaptureTime < trailList[j].CaptureTime
+		return model.Val(trailList[i].CaptureTime) < model.Val(trailList[j].CaptureTime)
 	})
 
 	count := int64(len(trailList))
 	tracks.PointCount = &count
 
-	firstTime, firstErr := utils.ParseDate(trailList[0].CaptureTime)
-	lastTime, lastErr := utils.ParseDate(trailList[len(trailList)-1].CaptureTime)
+	firstTime, firstErr := utils.ParseDate(model.Val(trailList[0].CaptureTime))
+	lastTime, lastErr := utils.ParseDate(model.Val(trailList[len(trailList)-1].CaptureTime))
 
 	if firstErr == nil && (tracks.EnterTime == nil || firstTime.Before(tracks.EnterTime.Time())) {
 		tracks.EnterTime = model.NewDateTime(firstTime)

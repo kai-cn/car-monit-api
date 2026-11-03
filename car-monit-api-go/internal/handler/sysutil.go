@@ -215,7 +215,7 @@ func (d *SysUtilDeps) changeTrailInfo(c *gin.Context) {
 		return
 	}
 	for i := range req.TrailList {
-		req.TrailList[i].IsQuery = "1" // L181-183：需要回源查抓拍对象
+		req.TrailList[i].IsQuery = model.Str("1") // L181-183：需要回源查抓拍对象
 	}
 
 	changed, err := d.Service.ChangeData(c.Request.Context(), tracks, req.TrailList)
@@ -223,7 +223,9 @@ func (d *SysUtilDeps) changeTrailInfo(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	changed.TrailUuid = utils.IsNull(tracks.PlateKey)
+	// Java L187 是 `setTrailUuid(CommonUtil.isNull(tracks.getPlateKey()))`，
+	// 而 CommonUtil.isNull 空值返回**空串**，所以这里必须装箱成 Str("")，不能留 nil。
+	changed.TrailUuid = model.Str(utils.IsNull(tracks.PlateKey))
 	c.JSON(http.StatusOK, changed)
 }
 

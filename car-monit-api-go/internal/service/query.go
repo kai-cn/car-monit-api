@@ -98,10 +98,13 @@ func decodeSource[T any](raw []byte) (any, error) {
 // 三张表的限定名。
 //
 // PARITY: Java 的 queryFromMysql 走 MyBatis-Plus 的 selectList(qw)，表名取自 @TableName，
-// 而这些注解都没有 schema 前缀（见 OdsRtSzdnSnapshotFlowAddcode.java:25 之外的几个实体都是
-// @TableName("xxx")）。openGauss 的默认 search_path 只有 "$user",public，没有 jl_data01，
-// 所以 Java 的降级路径实际会抛 42P01，再被 query() 的 catch 吃掉，接口表现为“查到 0 条”。
-// Go 侧不复制这个缺陷：表名带上 schema，降级路径真能查出数据。
+// 三个实体里**只有 SNAPSHOT 带 schema**（OdsRtSzdnSnapshotFlowAddcode.java:25
+// `@TableName(value="ods_rt_szdn_snapshot_flow_addcode", schema="jl_data01")`），
+// FEE 与 TRAIL 是裸名（OdsLwzxsfsjFeeRecords01.java:25、ZdataTrailFitting.java:20）。
+// openGauss 的默认 search_path 只有 "$user",public，没有 jl_data01，
+// 所以 Java 的降级路径**只有 FEE/TRAIL 两条**会抛 42P01、再被 query() 的 catch 吃掉，
+// 接口表现为"查到 0 条"（实测差异登记为 P-JAVA-9，共 4 条用例）。
+// Go 侧不复制这个缺陷：三个表名都带上 schema，降级路径真能查出数据。
 //
 // 数组下标与 DataSource 枚举对齐：0=SNAPSHOT 1=FEE 2=TRAIL。
 var metaTables = [...]string{
@@ -190,14 +193,20 @@ func (s *UnifiedQueryService) Query(ctx context.Context, ds DataSource, startTim
 			"costMs", time.Since(start).Milliseconds(), "err", err)
 		if useES {
 			lg.Warn("[统一查询] ES 查询失败，降级到 GaussDB", "ds", ds.String())
-			if fallback, ferr := s.queryFromDB(ctx, ds, startTime, endTime, fuzzy, pageNum, pageSize); ferr == nil {
-				return fallback, nil
-			} else {
+			if fallback, ferr := s.queryFromDB(ctx, ds, startTime, endTime, fuzzy, pageNum, pageSize); ferr != nil {
 				lg.Error("[统一查询] 降级也失败", "ds", ds.String(), "err", ferr)
-				return nil, ferr
+			} else {
+				return fallback, nil
 			}
 		}
-		return nil, err
+		// PARITY: Java 的 query() 永不向上抛（UnifiedQueryService.java:133-150 的两个 catch
+		// 都 `return Collections.emptyList()`），控制器因此恒走成功分支，响应体里
+		// code/message/dataSource/pageNum/pageSize/data 六个键齐全、data 是空数组。
+		// Go 此前把错误上抛，handler 走异常分支提前 return，只剩 code/message 两个键 ——
+		// 实测 `GET /api/v1/large/snapshot?endTime=abc` 两端 body 形状不同（P-QRY-1）。
+		// 错误仍写日志（对应 Java 的 log.error），但对外退化成"查到 0 条"。
+		// 返回空切片而不是 nil：nil 会被编码成 JSON null，Java 是 []。
+		return []any{}, nil
 	}
 	lg.Info("[统一查询] 完成", "ds", ds.String(), "useEs", useES,
 		"costMs", time.Since(start).Milliseconds(), "page", pageNum, "size", pageSize)
