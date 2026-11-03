@@ -554,16 +554,29 @@ r10 是把这条差异修掉后的复跑（2 条 DIFF→OK）；r11 一次关掉
 | Java 端点自身 500（缺 bound statement、别名当列名、`#{id}` 无 getter、`TooManyResults`） | 22 |
 | 404/405 响应体形状（Spring 错误体 vs `AjaxResult`，待决策） | 6 |
 | Java 的 FEE/TRAIL 降级 SQL 因表名缺 schema 恒失败 → Java 空、Go 有值（**Go 正确**，待业务确认） | 4 |
-| 时间格式宽度：Java `Timestamp.valueOf` 只认 `yyyy-MM-dd HH:mm:ss`，纯日期与带 `T` 一律空集，Go 更宽能查出数据（待决策是否复刻） | 3 |
+| 时间格式宽度：Java `Timestamp.valueOf` 只认 `yyyy-MM-dd HH:mm:ss`，纯日期与带 `T` 一律空集，Go 更宽能查出数据 | 3 |
 
 （第五轮之后，`TrailBo` 空串 vs `null` 这一类**残余已归零** —— 原 r10 账上的 11 条全部转 OK，
 且 Java 合法的 19 处 `""`（`imagesArry` 17 + `devName` 2）没有被翻转。）
+
+**第六轮定论**（`docs/parity-2026-11-02/11`）：
+
+- 上面那 3 条时间格式差异**建议不复刻**。读完 `UnifiedQueryService` 后确认 Java 的"空集"
+  不是格式策略，而是两次失败的级联：`:183` 解析失败→"保守走 ES"→`:245` sort 打在 `text` 列抛错
+  →`:137` 降级→`:321` 用同一个严格解析器再抛一次→`:143` 返回空。净效果是对合法输入静默返回空。
+- **导出成功路径首次跑通**（新建 date-mapping 副本索引、两端临时指向；原索引未动）：
+  两端都 `COMPLETED / 300 行 / 1 分片`。产物是 **CSV 不是 xlsx**。
+  内容级对比发现 **Java 的 CSV 用标准解析器读不回来**（列数集合 `{4,39}`，`:406` 把 JSON 包进
+  引号却没把内部的 `"` 翻倍），Go 是合法 RFC4180（列数恒 4）。
+  → 切到 Go 后每个下游读到的列数会从"看起来 39 列"变成规范 4 列，**灰度前必须拿真实消费方验一次**。
+  另有一处 Go 侧多余字段：`es/client.go` 的 `parseHits` 给每条文档塞了 `_id`，
+  Java 的 `getSourceAsMap()` 没有（detail 键数 37 vs 36），建议去掉。
 
 ### 13.3 差分复跑方式
 
 ```bash
 cd car-monit-api-go/docs/parity-2026-11-02/tools
-python parity.py --gen && python parity.py --out final --md ../raw/final.md   # 358 条
+python parity.py --gen && python parity.py --out r12 --md ../raw/r12.md        # 364 条
 python suite2.py                                                              # 29 条补测
 python predicates.py                                                          # 19 张表谓词覆盖度
 ```
