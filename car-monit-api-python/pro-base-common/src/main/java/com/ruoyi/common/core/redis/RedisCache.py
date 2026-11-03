@@ -2,6 +2,24 @@
 """com.ruoyi.common.core.redis.RedisCache
 
 源文件：pro-base-common/src/main/java/com/ruoyi/common/core/redis/RedisCache.java
+
+真实 Redis 只读穿透
+--------------------
+Java 的 RedisTemplate 连的是真实 Redis；本替身最初只有进程内 dict，于是
+``sys_config:data_query`` 这类由 Java（或运维）写进 Redis 的配置在 Python 侧永远
+读不到，业务逻辑就走了降级分支（实测 ``/base/snapshotflow/list`` 返回 251 行，
+Java 是 900 行）。
+
+现在只要设置了环境变量 ``CAR_MONIT_REDIS_URL``（如
+``redis://127.0.0.1:6379/0``），``getCacheObject`` 在进程内未命中时会去真实
+Redis 取值。只放行**标量**（str/int/float/bool）：Java 写进去的对象带 FastJson
+的 ``@type``/``123L`` 等 Python 无法还原的标记，硬转成 dict 反而会让响应体
+与 Java 不一致（缺 null 键、日期格式不同），视为未命中反而与 Java 回源后的
+实体序列化结果完全一致。
+
+写仍然只在内存：两个服务共享同一个 Redis 库，而 Java 写入的 FastJson 值
+Python 回写会直接破坏 Java 侧解析。详见 ``_RespClient.py``。未设置该环境变量时
+行为与之前完全一致（纯内存，单元测试不依赖外部 Redis）。
 """
 from __future__ import annotations
 
@@ -10,6 +28,8 @@ import fnmatch
 import time
 from enum import Enum
 from typing import Any, Collection, Iterable, Optional
+
+from com.ruoyi.common.core.redis._RespClient import RespClient, open_from_env
 
 
 class TimeUnit(Enum):
@@ -55,9 +75,11 @@ class TimeUnit(Enum):
 
 
 class _ValueOperations:
-    def __init__(self, store: dict[str, Any], expiries: dict[str, float]) -> None:
+    def __init__(self, store: dict[str, Any], expiries: dict[str, float],
+                 remote: Optional[RespClient] = None) -> None:
         self._store = store
         self._expiries = expiries
+        self._remote = remote
 
     def set(self, key: str, value: Any, timeout: Optional[int] = None,
             time_unit: Optional[TimeUnit] = None) -> None:
@@ -69,9 +91,14 @@ class _ValueOperations:
 
     def get(self, key: str) -> Any:
         self._check_expire(key)
-        if key not in self._store:
-            return None
-        return copy.deepcopy(self._store[key])
+        if key in self._store:
+            return copy.deepcopy(self._store[key])
+        # 真实 Redis 只读穿透：进程内没写过的键去 Redis 取（sys_config:* 这类
+        # 由 Java / 运维写入的配置只有真实 Redis 里才有）。只放行标量，对象值
+        # 一律视为未命中，理由见 _RespClient.py
+        if self._remote is not None:
+            return self._remote.getScalar(key)
+        return None
 
     def increment(self, key: str, delta: int = 1) -> int:
         """对应 ``increment(K key, long delta)``。
@@ -108,6 +135,8 @@ class _ValueOperations:
 
 class _ListOperations:
     def __init__(self, store: dict[str, Any]) -> None:
+        # 列表/集合/哈希里装的是 Java 对象，无法还原成等价的 Python 类型，
+        # 因此不做真实 Redis 穿透（只读穿透仅限值操作的标量，见 _RespClient.py）
         self._store = store
 
     def rightPushAll(self, key: str, data_list: Iterable[Any]) -> int:
@@ -307,14 +336,18 @@ class _InMemoryRedisTemplate:
     【Java→Python】真实 Redis 里 key/value 都是字节数组，Spring 用序列化器在对象与字节之间
     转换。这里用 dict 存 Python 对象 + deepcopy 模拟“序列化隔离”：
     取出后修改不会影响缓存中的原对象，这正是 Java 侧“改副本再 set 回去”的行为基础。
+
+    ``_remote`` 不为空时，``opsForValue().get`` 对进程内未命中的键做只读穿透
+    （见模块说明）。
     """
 
-    def __init__(self) -> None:
+    def __init__(self, remote: Optional[RespClient] = None) -> None:
         self._store: dict[str, Any] = {}
         self._expiries: dict[str, float] = {}
+        self._remote = remote
 
     def opsForValue(self) -> _ValueOperations:
-        return _ValueOperations(self._store, self._expiries)
+        return _ValueOperations(self._store, self._expiries, self._remote)
 
     def opsForList(self) -> _ListOperations:
         return _ListOperations(self._store)
@@ -370,7 +403,10 @@ class _InMemoryRedisTemplate:
 # Redis 连接池；若 Python 每次 RedisCache() 都新建 _InMemoryRedisTemplate，各 Service 会各持一个
 # 独立内存库，缓存将互不可见（语义与 Java 不符）。因此这里提供一个进程级默认实例，
 # 不传参数时一律复用它；需要隔离（如单元测试）时显式传入自己的 template。
-_SHARED_REDIS_TEMPLATE = _InMemoryRedisTemplate()
+#
+# 进程级实例在导入时尝试按 CAR_MONIT_REDIS_URL 接入真实 Redis（只读穿透）；
+# 未配置或连不上时为 None，行为与纯内存完全一致。
+_SHARED_REDIS_TEMPLATE = _InMemoryRedisTemplate(open_from_env())
 
 
 class RedisCache:

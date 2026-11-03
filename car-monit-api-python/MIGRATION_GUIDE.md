@@ -478,10 +478,11 @@ findstr /s /c:"selectFooById" pro-business-api\src\main\java\*.py
 | 类/方法覆盖 | **完整** | `check_parity.py` Tier B = 0，219/219 文件 |
 | 接口路径 & 字段 | **一致** | 85 条路由；`TableDataInfo` / `AjaxResult` / 裸 `Map` 三种契约逐一断言 |
 | HTTP 状态码 & 错误码 | **一致** | `BasicErrorController` 复刻，`include-message=never` |
-| 业务规则 & 边界 | **一致** | 82 个 pytest + 10 个 smoke 脚本 |
-| 数据表 & 字段类型 | **一致** | 直接解释原 Mapper XML，未重写 SQL |
+| 真实环境接口对等 | **75 / 75 一致** | 双端同时连 openGauss + Redis + ES 逐接口比对，见 `COMPATIBILITY.md` §0 |
+| 业务规则 & 边界 | **一致** | 83 个 pytest + 10 个 smoke 脚本 |
+| 数据表 & 字段类型 | **一致** | 直接解释原 Mapper XML，未重写 SQL；`@TableName(schema=...)` 经 `TABLE_SCHEMAS` 还原 |
 | 已知语义缺口 | **1 处** | `@Transactional`（§4.3），已显式标注，风险低 |
-| 不可运行的 Java 能力 | **2 处** | Flink 拓扑（`base/flink`）、真实 ES/Redis/MQ 集群连接 |
+| 不可运行的 Java 能力 | **2 处** | Flink 拓扑（`base/flink`）、真实 ES/Redis/MQ **写入**（读已打通标量穿透） |
 | 新增物 | **3 类** | `app/`（宿主）、替身层（JDK+三方库）、`/health`+`/docs`（迁移辅助） |
 
 详见 [`COMPATIBILITY.md`](COMPATIBILITY.md)。

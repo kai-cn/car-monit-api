@@ -187,7 +187,7 @@ PACKAGE_ROOTS = (
 | `@Autowired` 字段注入 | 构造器可选参数，缺省 `XxxServiceImpl()` | 保持“单例共享”的装配关系（同一 Bean 只建一次） |
 | `@Value("${k:default}")` | `Environment.value("${k:default}", int)` | 占位符解析器与 Spring 同规则（见 5.1） |
 | `@Data` / `@Accessors(chain)` | `@dataclass` + `JavaBean` | setter 返回 `self` |
-| `@TableName` / `@TableId` | 类属性 `TABLE_NAME` / `field(metadata=...)` | 纯元信息 |
+| `@TableName` / `@TableId` | 类属性 `TABLE_NAME` / `field(metadata=...)` | 纯元信息；`@TableName(schema=...)` 由 `java_meta.TABLE_SCHEMAS` 记录，`getTableName()` 拼回 `schema.table` |
 | 匿名内部类（回调） | 模块级 `_XxxCallback` 类 | 持有外部 `service` + 参数 |
 | `List<T>` / `Map<K,V>` | `list[T]` / `dict[K, V]` | —— |
 | `Long` / `Integer` | `int` | 无装箱/拆箱 |
@@ -442,10 +442,11 @@ orjson.dumps(content, option=orjson.OPT_NON_STR_KEYS)
 
 - **无 `charset=utf-8`**：Spring 的 `MappingJackson2HttpMessageConverter` 对 `application/json` 不加 charset，Python 侧刻意保持一致（`media_type = "application/json"`）。
 - **null 字段照常输出**：Jackson 默认 `Include.ALWAYS`，所以 `"createTime": null` 会出现在响应里；这也是 MyBatis 侧必须 `call-setters-on-nulls: true` 的原因。
-- **字段名是 camelCase**：Python 类里的 `car_no` 输出前由 `snake_to_camel` 转成 `carNo`；`gantryCaptureBO` 这类缩写无法从 snake_case 反推，由 `tools/gen_java_meta.py` 生成映射表 `app/compat/java_meta.py`（1,229 行）。
+- **字段名是 camelCase**：Python 类里的 `car_no` 输出前由 `snake_to_camel` 转成 `carNo`；`gantryCaptureBO` 这类缩写无法从 snake_case 反推，由 `tools/gen_java_meta.py` 生成映射表 `app/compat/java_meta.py`（1,229 行）。查表时用 `app/compat/meta_key.py`——表的键是 Java 全限定类名，而模块路径本身就是那个 FQCN，直接拼 `module + class` 会得到两次类名而永远未命中。
 - **时区偏移是原行为**：`application.yml` 没有 `spring.jackson.time-zone`，Jackson 默认 UTC；而 JDBC 会话是 `serverTimezone=Asia/Shanghai`。因此 GaussDB 读出的 naive `datetime` 会**先当上海时间再转 UTC** 输出（比本地时间少 8 小时）。这看起来像 bug，但 Java 侧一直如此，已原样复刻；可用 `CAR_MONIT_DB_TIMEZONE` / `CAR_MONIT_JSON_TIMEZONE` 覆盖。
 - **`@JsonFormat(pattern=...)`** 由 `java_pattern_to_strftime` 转成 strftime 模板；没有 pattern 的日期输出 ISO-8601（带毫秒与偏移）。
-- **异常体**：项目没有 `@ControllerAdvice`，所有未捕获异常走 Spring Boot `BasicErrorController` → `{"timestamp","status","error","path"}`，且 `server.error.include-message=never` 使 `message` 键**缺失**。`app/web/errors.py` 逐字段复刻（含 `+00:00` 时区写法）。
+- **异常体**：项目没有 `@ControllerAdvice`，所有未捕获异常走 Spring Boot `BasicErrorController` → `{"timestamp","status","error","message","path"}`。注意 `server.error.include-message=never` 只是不写消息**内容**，`message` 键
+  **始终存在**（值为空串）；直接命中 `/error` 时则没有 `path` 键，且 `status` 是占位值 `999` / `error:"None"`。`app/web/errors.py` 逐字段复刻（含 `+00:00` 时区写法）。
 - **HTTP 状态码**：业务错误一律 `200` + `code=500`（RuoYi 惯例），只有未捕获异常才是 5xx。
 
 ### 3.5 被刻意保留的缺陷
@@ -641,7 +642,7 @@ Environment.getProperty(key, default)
 | 绑定失败 | `BindException` → **400** | `BindingError` → 400；同时把 FastAPI 默认的 **422 重写为 400** | 422 是 FastAPI 的语义，Spring 用 400；不改会让前端错误分支走错 |
 | JSON 序列化 | Jackson（`ObjectMapper` 可配） | `JacksonResponse` + orjson | 见 3.4；非字符串 key 转字符串、拒绝 NaN/Infinity |
 | 日期输出 | `@JsonFormat(pattern = "yyyy-MM-dd")` | `app/web/serializer.py` 按字段 metadata 里的 pattern 格式化 | 元信息在 `field(metadata={"format": ...})` |
-| 异常体 | `BasicErrorController` | `app/web/errors.py` | 逐字段复刻，含 `message` 键缺失 |
+| 异常体 | `BasicErrorController` | `app/web/errors.py` | 逐字段复刻（`message` 键恒在、空串；`/error` 直连时为 `999`+`None` 且无 `path`） |
 | 拦截器 | `HandlerInterceptor`（`SecurityInterceptor`） | 业务类保留同名方法；未在 ASGI 层注册全局钩子 | 原拦截器只校验请求头，属于可选链路，见第 8 章 |
 | 静态资源 / 视图 | 无（纯 REST） | 无 | —— |
 

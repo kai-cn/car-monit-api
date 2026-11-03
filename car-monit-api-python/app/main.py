@@ -34,7 +34,7 @@ from app.logging_config import configure_logging
 from app.routes import register_routes
 from app.settings import settings
 from app.web.binding import BindingError
-from app.web.errors import error_response
+from app.web.errors import basic_error_endpoint_response, error_response
 from app.web.responses import JacksonResponse
 
 configure_logging(os.environ.get("CAR_MONIT_LOG_LEVEL", "INFO"))
@@ -130,6 +130,16 @@ def health() -> dict[str, Any]:
 
 _ROUTE_COUNT = register_routes(app)
 log.info("Registered %s controller route(s)", _ROUTE_COUNT)
+
+
+# Java 侧这个路由来自 Spring Boot 自带的 ``BasicErrorController``（不是业务代码），
+# 但 springfox 把它扫进了 api-docs，因此 /error 也属于需要对齐的接口面：
+# 直接访问时不走错误派发，固定回 HTTP 500 + ``status:999 / error:"None"``。
+@app.api_route("/error", methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+               include_in_schema=False)
+def spring_basic_error_controller() -> JacksonResponse:
+    """对应 ``BasicErrorController#error``（直接命中，无错误属性）。"""
+    return basic_error_endpoint_response()
 
 
 # ------------------------------------------------------------------- handlers

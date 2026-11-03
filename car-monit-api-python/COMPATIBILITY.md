@@ -14,6 +14,54 @@
 
 **当前结论：P0 = 0 条，P1 = 3 条（均已标注、均有规避路径），P2 = 6 条，P3 = 4 条。**
 
+**真实环境接口对等校验：75 / 75 一致（0 处差异）**，详见 §0。
+
+---
+
+## 0. 真实环境接口对等校验 / Real-infra parity run
+
+同一份 `pro-business-api-1.0.jar`（:9902）与本 Python 端（:9901）**同时启动**，
+连接**同一套真实依赖**——openGauss 3.0.0（`192.168.56.10:5432/RuoYi`，schema
+`jl_data01`）、Redis 8.10.2（`127.0.0.1:6379`）、Elasticsearch 7.15.2
+（`127.0.0.1:9200`）——用**相同参数**逐接口比对：HTTP 状态码 + 响应体结构
+（键名、值类型、`null` 语义、`total` 行数）。
+
+| 轮次 | 一致 / 总数 | 关键动作 |
+|---|---|---|
+| 基线 | 51 / 75 | 错误响应体缺 `message` 键 |
+| + 错误体对齐 | 56 / 75 | `app/web/errors.py` |
+| + 重启生效 | 65 / 75 | 之前比对的是旧进程 |
+| + ES 异常 / `/error` | 71 / 75 | 见下表 #2 #4 |
+| **最终** | **75 / 75** | 0 处差异 |
+
+### 已修正的 6 类差异
+
+| # | 差异现象 | 根因 | 修正位置 |
+|---|---|---|---|
+| 1 | 404/400/500 响应体 Python 少 `message` 键（15 例） | `server.error.include-message=never` 只是不写**内容**，键始终存在（空串）；Python 直接省了键 | `app/web/errors.py` |
+| 2 | `GET/POST/.../error`：Java 500 + `status:999`，Python 404 | 直接命中 `/error` 不走错误派发，Spring 写入占位值 `999` / `error:"None"`，且**没有 `path` 键** | `app/main.py` → `spring_basic_error_controller` |
+| 3 | `/api/v1/large/snapshot`、`/api/v1/unified/snapshot/list`：Java 10 行、Python 0 行 | `@TableName(value=..., schema="jl_data01")` 的 schema 丢了；连接的 `search_path` 是 `"$user",public`，同名表在 public 下存在但**为空**（0 行 vs 900 行） | `tools/gen_java_meta.py` 新抽 `TABLE_SCHEMAS` → `BaseMapper.getTableName()` |
+| 4 | `/api/v1/large/stats/group`：Java `code:500` + ES 异常文案，Python `code:200` + `data:{}` | ES 替身对不存在的索引静默返回空；真实 ES 7.15.2 返回 404 `index_not_found_exception`，Java 因此进入“降级 MySQL”分支并抛出统计异常 | `org/elasticsearch/ElasticsearchException.py`（新增）+ `RestHighLevelClient._resolveIndices()` |
+| 5 | `/base/sysutil/getByTrailBo`：`borderWeighingCaptureBo` vs `...CaptureBO` | `java_meta.py` 的键是 Java 全限定类名，而 Python 模块路径**本身就是** FQCN，再拼一次类名得到 `...TrailBo.TrailBo`，元数据查询全部静默落空（`@JsonFormat` 也一直没生效） | `app/compat/meta_key.py`（新增）；同时修掉 `gen_java_meta.py` 漏抓包级私有字段 |
+| 6 | `/base/snapshotflow/list`：`total` 900 vs 251 | Python 的 Redis 替身读不到 `sys_config:data_query="queryall"`，于是走了 `flag='JiAnDong'` 降级分支 | `com/ruoyi/common/core/redis/_RespClient.py`（新增，只读穿透，仅标量） |
+
+> 上表 #3 #5 #6 都是**真实的 Java 语义**，不是 Python 的“优化”：我的迁移最初把 schema、
+> 包级私有字段、Redis 配置读丢了，真实环境一跑就暴露了。
+
+### 如何复跑
+
+```bash
+# 1) 拉起双端（Java 用原 jar，Python 用 .venv）
+D:/work/Git/bin/bash.exe _probe/restart_py.sh          # Python :9901
+D:/work/Git/bin/bash.exe _probe/status.sh              # 双端 + Gauss/Redis/ES 存活
+# 2) 逐接口比对（75 个用例，含 5 个 HTTP 方法的 /error）
+D:/work/Git/bin/bash.exe _probe/run_compare.sh
+# 明细落盘在 _probe/compare.txt 与 _probe/diff.json
+```
+
+注意：Python 必须带 `CAR_MONIT_REDIS_URL=redis://127.0.0.1:6379/0` 启动（`restart_py.sh`
+已内置），否则 #6 会重新出现——见 §2.3。
+
 ---
 
 ## 1. 需求假设与 Java 事实的偏差（**先看这一节**）
@@ -31,7 +79,7 @@
 | 存在 Flyway / Liquibase | **0 处**（无迁移脚本目录） | **不引入 Alembic** | P2 |
 | 存在 Swagger / springdoc | **0 处** | FastAPI 自带 `/docs`、`/openapi.json`，标注为迁移辅助 | P3 |
 | 存在 Actuator / Micrometer | **0 处** | `/health`，标注为迁移辅助 | P3 |
-| 存在单元测试 | **无任何 `src/test`** | `tests/` 82 个 pytest 用例（**新增回归网**） | P3 |
+| 存在单元测试 | **无任何 `src/test`** | `tests/` 83 个 pytest 用例（**新增回归网**） | P3 |
 | 存在 Quartz | **无**，只有 `@Scheduled` | 自研 `CronExpression`（Spring 6 段语义） | P2 |
 
 > **错误码常量**：Java 侧没有独立的错误码枚举，`AjaxResult` 直接用
@@ -102,30 +150,45 @@ HTTP 接口全部只读或单表单写，不依赖事务。
 **规避方式**：轨迹拟合作业**必须继续由 Java 侧的 Flink 服务承担**。
 Python 版不提供该能力。若必须用 Python，需要独立引入 `pyflink` 并重写拓扑。
 
-### 2.3 无真实中间件连接 【P1】
+### 2.3 中间件默认用进程内替身 / 写操作不落外部 【P1】
 
-**现象**：Redis / ES / Kafka / Pulsar / RocketMQ 的所有调用都返回**进程内替身**的结果，
-不会访问网络。
+**现象**：Redis / ES / Kafka / Pulsar / RocketMQ 的调用默认返回**进程内替身**的结果，
+不会访问网络。Redis 与 ES 可以按环境变量接到真实实例，但**只接读**（见下文）。
 
-**根因**：迁移目标是"行为等价"，不是"基础设施重建"。替身保证：
+**根因**：迁移目标是“行为等价”，不是“基础设施重建”。替身保证：
 * 方法签名、参数、返回值形状**完全一致**；
 * 调用顺序、日志输出**完全一致**；
 * 但数据是内存态，进程重启即丢失。
+
+**与真实实例的对接入口**：
+
+| 环境变量 | 作用 | 读 | 写 |
+|---|---|---|---|
+| `CAR_MONIT_REDIS_URL`（如 `redis://127.0.0.1:6379/0`） | `RedisCache.getCacheObject` 未命中时向真实 Redis 取值，**仅放行标量** | ✅ | ❌ 仍写内存 |
+| `elasticsearch.host/port`（`application.yml`） | ES 替身按真实索引元数据判定 `index_not_found_exception` | 结构对齐 | ❌ 仍写内存 |
+
+**为什么只接读**：Java 与 Python 连的是同一个 Redis 库，而 Java 用 FastJson 把类型信息一起
+写进去（`{"@type":"com.ruoyi...", "vehicleWeight":52650L}`，后者甚至不是合法 JSON）。
+Python 回写一定破坏 Java 侧解析；把 FastJson 对象直接转 dict 返回又会改变响应结构
+（缺 `null` 键、日期格式不同）。因此：
+* **标量**（`sys_config:data_query` 这类配置）读穿透——与 Java 完全一致；
+* **对象**视为未命中，回源数据库——得到的实体与 Java 序列化结果一致；
+* 写永远在内存——避免污染 Java 正在读的缓存。
 
 **替身清单**：
 
 | 组件 | 替身位置 | 当前行为 |
 |---|---|---|
-| Redis | `com/ruoyi/common/core/redis/RedisCache.py`、`RedisUtil.py` | 进程内 dict + 过期时间（`TimeUnit` 枚举在 `java/util/concurrent/TimeUnit.py`） |
-| Elasticsearch | `org/elasticsearch/**`（`QueryBuilders`、`SearchRequest`、`SearchSourceBuilder`、`SearchResponse`…） | 构造查询 DSL 并返回空/内存命中 |
+| Redis | `com/ruoyi/common/core/redis/RedisCache.py`、`RedisUtil.py`、`_RespClient.py` | 进程内 dict + 过期时间；配了 `CAR_MONIT_REDIS_URL` 后对标量做只读穿透 |
+| Elasticsearch | `org/elasticsearch/**`（`QueryBuilders`、`SearchRequest`、`SearchSourceBuilder`、`SearchResponse`、`ElasticsearchException`…） | 构造查询 DSL 并返回内存命中；索引不存在时抛与真实 ES 一致的 `index_not_found_exception` |
 | Kafka | `org/apache/kafka/**` | `Producer`/`Consumer` 接口可用，不连 broker |
 | Pulsar | `org/apache/pulsar/**` | 同上 |
 | RocketMQ | `org/apache/rocketmq/**` | 同上；Java 侧只有 1 个 consumer |
 | RabbitMQ | **无替身** | Java 侧也只有 `application.yml` 配置、**零代码使用** |
 | Forest HTTP | `com/ruoyi/base/forest/` | 用 `httpx` 直连 |
 
-**规避方式**：需要真实集成测试时，**用 Java 侧对着真实环境验证**；
-Python 侧只做行为回归。见 `tools/check_middleware.py`（替身完整性检查）。
+**规避方式**：需要写入真实中间件时，用 Java 侧承担；Python 侧只做读穿透与行为回归。
+真实环境的接口对等结果见 §0，完整性检查见 `tools/check_middleware.py`。
 
 ---
 
@@ -240,7 +303,7 @@ def _invalid_bound_statement(namespace: str, method_name: str):
 | **内存模式** | 未进入 ASGI lifespan（`TestClient` 不用 `with`） | 返回内存 list（多为空），**不解析 XML** |
 | **真实模式** | `python run.py` 或 `TestClient` 用 `with` | 解析 22 个 XML，绑定 58 个方法，走 GaussDB |
 
-**这是刻意设计**：让 82 个 pytest 用例和 `tools/smoke_all_routes.py` 不依赖任何外部服务。
+**这是刻意设计**：让 83 个 pytest 用例和 `tools/smoke_all_routes.py` 不依赖任何外部服务。
 
 **注意**：内存模式下 `total` 与真实库不同（内存 list 长度 vs `count(0)` 结果）。
 断言 `total` 具体值的测试只能在真实模式下跑。

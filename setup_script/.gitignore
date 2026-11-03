@@ -1,0 +1,6 @@
+# setup.sh 生成的产物 —— 含数据库明文密码，不要提交
+.env.runtime
+start-python.sh
+start-java.sh
+setup.log
+smoke-python.log

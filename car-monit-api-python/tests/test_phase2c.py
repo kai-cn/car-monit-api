@@ -136,7 +136,8 @@ def test_missing_required_parameter_is_400_with_spring_body() -> None:
     assert payload["status"] == 400
     assert payload["error"] == "Bad Request"
     assert payload["path"] == "/demo/1"
-    assert "message" not in payload  # server.error.include-message=never
+    # server.error.include-message=never 不隐藏键本身：实测 Java 仍带 message，值为空串
+    assert payload["message"] == ""
 
 
 def test_first_parameter_value_wins_like_servlet_getParameter() -> None:

@@ -119,13 +119,13 @@ car-monit-api-python/
 | `spring.datasource.dynamic.datasource.master.username` | `gaussdb` | 改 yml | |
 | `spring.datasource.dynamic.datasource.master.password` | *(yml 内)* | 改 yml | **不要**提交真实密码 |
 | `spring.datasource.dynamic.druid.maxActive` | `20` | 改 yml | 连接池上限 |
-| `spring.redis.host` / `port` | `127.0.0.1:6379` | 改 yml | 只影响 `/health` 展示，无真实连接 |
-| `elasticsearch.host` / `port` | `localhost:9200` | 改 yml | 同上 |
-| `spring.kafka.bootstrap-servers` | `localhost:9092` | 改 yml | 同上 |
+| `spring.redis.host` / `port` | `127.0.0.1:6379` | 改 yml | 只影响 `/health` 展示；真实读穿透走 `CAR_MONIT_REDIS_URL` |
+| `elasticsearch.host` / `port` | `localhost:9200` | 改 yml | ES 替身据此判定索引是否存在 |
+| `spring.kafka.bootstrap-servers` | `localhost:9092` | 改 yml | 只影响 `/health` 展示，无真实连接 |
 | `app.scheduler.enabled` | `true` | `set APP_SCHEDULER_ENABLED=false` | **Python 独有**开关，见 4.3 |
 | `isLocalhost` | `local` | 改 yml | `local` / `prod` 部署标记 |
 
-### 4.3 Python 侧新增的环境变量（**仅 4 个**，全部是宿主层行为，不改业务）
+### 4.3 Python 侧新增的环境变量（**仅 5 个**，全部是宿主层行为，不改业务）
 
 | 变量 | 默认 | 作用 |
 |---|---|---|
@@ -133,6 +133,7 @@ car-monit-api-python/
 | `CAR_MONIT_PORT` | `server.port` | uvicorn 端口 |
 | `CAR_MONIT_RELOAD` | `false` | `true` → 热重载（**仅开发用**，等价于 `spring-boot-devtools`） |
 | `CAR_MONIT_LOG_LEVEL` | `INFO` | `DEBUG` / `INFO` / `WARNING` |
+| `CAR_MONIT_REDIS_URL` | *(空)* | 如 `redis://127.0.0.1:6379/0`：`RedisCache` 对**未命中且为标量**的键向真实 Redis 取值。不设置则与之前完全一致（纯内存） |
 | `APP_SCHEDULER_ENABLED` | `true` | `false` → 不启动 10 个定时任务（自检时会用） |
 
 ### 4.4 代码里怎么读配置

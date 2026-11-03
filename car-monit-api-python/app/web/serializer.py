@@ -39,6 +39,7 @@ from decimal import Decimal
 from typing import Any, Optional
 from zoneinfo import ZoneInfo
 
+from app.compat.meta_key import meta_get
 from com.ruoyi.common.core.domain.JavaBean import snake_to_camel
 from com.ruoyi.common.core.page.TableDataInfo import TableDataInfo
 
@@ -91,11 +92,13 @@ def java_pattern_to_strftime(pattern: str) -> str:
 
 def json_formats_for(instance: Any) -> dict[str, str]:
     """``@JsonFormat`` patterns of a domain object, keyed by Python field name."""
-    return JSON_FORMATS.get(type(instance).__module__ + "." + type(instance).__name__, {})
+    # 元数据表用 Java 全限定类名做键，而模块路径本身就是那个 FQCN，
+    # 拼接 module + "." + name 会得到两次类名（见 app/compat/meta_key.py）。
+    return meta_get(JSON_FORMATS, type(instance), {})
 
 
 def _java_names_for(instance: Any) -> dict[str, str]:
-    return JAVA_NAMES.get(type(instance).__module__ + "." + type(instance).__name__, {})
+    return meta_get(JAVA_NAMES, type(instance), {})
 
 
 def _format_datetime(value: _dt.datetime, pattern: Optional[str]) -> str:

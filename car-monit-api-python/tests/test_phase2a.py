@@ -32,10 +32,25 @@ def test_not_found_uses_spring_error_body() -> None:
         response = client.get("/base/does-not-exist")
     assert response.status_code == 404
     body = response.json()
-    assert list(body) == ["timestamp", "status", "error", "path"]
+    # 实测 Java 进程的 404 响应体始终带 message 键（空串），键顺序如下
+    assert list(body) == ["timestamp", "status", "error", "message", "path"]
     assert body["status"] == 404
     assert body["error"] == "Not Found"
+    assert body["message"] == ""
     assert body["path"] == "/base/does-not-exist"
+
+
+def test_error_endpoint_matches_basic_error_controller() -> None:
+    """直接命中 /error：Spring 拿不到错误属性，固定回 HTTP 500 + status=999。"""
+    with TestClient(app) as client:
+        response = client.get("/error")
+    assert response.status_code == 500
+    body = response.json()
+    # 没有 path 键：ERROR_REQUEST_URI 为 null
+    assert list(body) == ["timestamp", "status", "error", "message"]
+    assert body["status"] == 999
+    assert body["error"] == "None"
+    assert body["message"] == ""
 
 
 def test_ajax_result_omits_null_data() -> None:

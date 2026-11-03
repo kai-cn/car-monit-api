@@ -22,6 +22,9 @@ Java 侧来自 elasticsearch jar：``org.elasticsearch.client.RestHighLevelClien
    ``ElasticsearchException``（运行时）；替身统一抛 ``ConnectionError``，
    使 ``EsQueryService.query`` 的 ``catch (Exception e)`` 降级分支可以被触发。
    可用实例/类属性 ``available = False`` 注入“ES 不可用”。
+   **索引不存在**是另一类异常：真实 ES 返回 HTTP 404 ``index_not_found_exception``，
+   客户端抛 ``ElasticsearchStatusException``（见 ``_resolveIndices``），
+   替身同样抛出，不能默默返回空结果。
 4) Java 的 ``index`` / ``search`` 都有多个重载（带 RequestOptions / 不带）；
    替身把 ``options`` 设为可选参数，调用写法不受影响。
 5) ``ping`` 在 Java 里返回 boolean 且**可能抛异常**（连接失败时抛 IOException，
@@ -55,6 +58,7 @@ from org.elasticsearch.action.search.SearchResponse import SearchResponse
 from org.elasticsearch.action.search.SearchScrollRequest import SearchScrollRequest
 from org.elasticsearch.client.RestClient import RestClient, RestClientBuilder
 from org.elasticsearch.client.indices.IndicesClient import IndicesClient
+from org.elasticsearch.ElasticsearchException import index_not_found_exception
 from org.elasticsearch.search.SearchHit import SearchHit
 from org.elasticsearch.search.SearchHits import SearchHits
 from org.elasticsearch.search.aggregations.Aggregations import Aggregations
@@ -173,7 +177,7 @@ class RestHighLevelClient(object):
         skip = builder.getFrom() if builder is not None else 0
         size = builder.getSize() if builder is not None else SearchSourceBuilder.DEFAULT_SIZE
 
-        index_names: List[str] = request.indices() or list(self._INDICES.keys())
+        index_names: List[str] = self._resolveIndices(request.indices())
         matched: List[SearchHit] = []
         documents: List[Dict[str, Any]] = []
         for index_name in index_names:
@@ -210,6 +214,34 @@ class RestHighLevelClient(object):
         # ES 语义：from 是偏移量、size 是返回条数（size=0 时只返回聚合）
         page = matched[skip:skip + max(size, 0)] if size is not None else matched[skip:]
         return SearchResponse(SearchHits(page, total), aggregations=aggregations)
+
+    # ------------------------------------------------------------------ 索引解析
+    def _resolveIndices(self, names: List[str]) -> List[str]:
+        """把请求里的索引名/别名解析成实际索引名。
+
+        【Java→Python】真实 ES 由服务端解析：不存在的索引直接返回 HTTP 404
+        ``index_not_found_exception``，客户端抛异常。替身必须复刻这个行为，
+        否则 ``UnifiedQueryService.query`` 的 “ES 失败降级 MySQL” 分支永远不会触发
+        （实测：``/api/v1/large/snapshot`` Java 10 条 / Python 0 条）。
+
+        未指定索引（``request.indices()`` 为空）时搜全部，与 ES 一致，不报错。
+        """
+        if not names:
+            return list(self._INDICES.keys())
+        resolved: List[str] = []
+        for name in names:
+            if name in self._INDICES or name in self._INDEX_METADATA:
+                resolved.append(name)
+                continue
+            # 别名 -> 真实索引（真实 ES 在服务端展开别名）
+            aliased = [index_name for index_name, entry
+                       in self._INDEX_METADATA.items()
+                       if name in (entry or {}).get("aliases", [])]
+            if aliased:
+                resolved.extend(aliased)
+                continue
+            raise index_not_found_exception(name)
+        return resolved
 
     def scroll(self, request: SearchScrollRequest,
                options: Any = None) -> SearchResponse:
