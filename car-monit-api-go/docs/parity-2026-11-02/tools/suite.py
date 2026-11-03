@@ -173,6 +173,16 @@ def build_query():
        "pageNum": "1", "pageSize": "5"})
     C("large-badtime", "时间格式非法", "/api/v1/large/snapshot",
       {"startTime": "2025-10-01", "endTime": "abc", "pageNum": "1", "pageSize": "5"})
+    # 第五轮新增：Java 的降级路径用 java.sql.Timestamp.valueOf，只认
+    # "yyyy-MM-dd HH:mm:ss"；纯日期与带 T 的 ISO 串都会抛 → query() 吞掉 → data=[]。
+    # Go 的解析更宽，同样请求能查出数据。原用例只测了完整格式，这条差异一直没被覆盖。
+    C("large-plaindate", "纯日期时间（Java Timestamp.valueOf 不接受）", "/api/v1/large/snapshot",
+      {"startTime": "2025-10-01", "endTime": "2025-10-02", "pageNum": "1", "pageSize": "5"})
+    C("large-tformattime", "ISO 带 T 的时间（同上）", "/api/v1/large/snapshot",
+      {"startTime": "2025-10-01T00:00:00", "endTime": "2025-10-02T00:00:00",
+       "pageNum": "1", "pageSize": "5"})
+    C("unified-plaindate", "统一查询纯日期时间", "/api/v1/unified/snapshot/list",
+      {"startTime": "2025-10-01", "endTime": "2025-10-02", "pageNum": "1", "pageSize": "5"})
     C("large-missing-arg", "缺必填 startTime", "/api/v1/large/snapshot",
       {"endTime": W2})
     C("large-fuzzy", "fuzzyFields 复合参数", "/api/v1/large/snapshot",

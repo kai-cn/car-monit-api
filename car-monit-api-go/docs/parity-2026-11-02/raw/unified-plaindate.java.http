@@ -1,0 +1,9 @@
+HTTP 200  16ms  err=None
+{
+ "code": 200,
+ "message": "ok",
+ "dataSource": "snapshot",
+ "pageNum": 1,
+ "pageSize": 5,
+ "data": []
+}

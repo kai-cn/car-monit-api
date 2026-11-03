@@ -4,5 +4,5 @@ HTTP 400  1ms  err=None
  "message": "",
  "path": "/base/stationcapture/not-a-number",
  "status": 400,
- "timestamp": "2026-11-03T07:52:31.584+00:00"
+ "timestamp": "2026-11-03T09:07:54.124+00:00"
 }

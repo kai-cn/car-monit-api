@@ -1,4 +1,4 @@
-HTTP 200  1ms  err=None
+HTTP 200  13ms  err=None
 {
  "pointUuid": "fdbcfa5a-3966-47cf-b3aa-824372ab7eec",
  "stateType": "StationCapture",

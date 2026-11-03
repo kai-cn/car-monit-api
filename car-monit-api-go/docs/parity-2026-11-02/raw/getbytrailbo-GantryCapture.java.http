@@ -1,4 +1,4 @@
-HTTP 200  2ms  err=None
+HTTP 200  13ms  err=None
 {
  "pointUuid": "189727e7-9392-4ae3-82ce-166864e93ddd",
  "stateType": "GantryCapture",

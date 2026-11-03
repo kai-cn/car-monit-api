@@ -1,5 +1,9 @@
-HTTP 200  9ms  err=None
+HTTP 200  19ms  err=None
 {
- "code": 500,
- "message": "ERROR: invalid input syntax for type timestamp: \"abc\" (SQLSTATE 22007)"
+ "code": 200,
+ "data": [],
+ "dataSource": "SNAPSHOT",
+ "message": "ok",
+ "pageNum": 1,
+ "pageSize": 5
 }

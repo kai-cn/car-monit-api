@@ -1,6 +1,6 @@
-HTTP 200  12ms  err=None
+HTTP 200  11ms  err=None
 {
- "trailUuid": "",
+ "trailUuid": null,
  "enterTime": null,
  "tracks": null,
  "trailList": null

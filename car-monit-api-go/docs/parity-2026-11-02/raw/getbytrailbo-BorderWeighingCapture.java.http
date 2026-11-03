@@ -1,4 +1,4 @@
-HTTP 200  1ms  err=None
+HTTP 200  13ms  err=None
 {
  "pointUuid": "7379e7aa-e325-449b-9728-b8f6940c77f1",
  "stateType": "BorderWeighingCapture",

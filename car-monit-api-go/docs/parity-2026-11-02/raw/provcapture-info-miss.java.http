@@ -1,6 +1,6 @@
-HTTP 400  4ms  err=None
+HTTP 400  2ms  err=None
 {
- "timestamp": "2026-11-03T07:52:30.412+00:00",
+ "timestamp": "2026-11-03T09:07:52.961+00:00",
  "status": 400,
  "error": "Bad Request",
  "message": "",

@@ -1,8 +1,8 @@
-HTTP 400  1ms  err=None
+HTTP 400  0ms  err=None
 {
  "error": "Bad Request",
  "message": "",
  "path": "/base/provcapture/__no_such_id__",
  "status": 400,
- "timestamp": "2026-11-03T07:52:30.415+00:00"
+ "timestamp": "2026-11-03T09:07:52.963+00:00"
 }

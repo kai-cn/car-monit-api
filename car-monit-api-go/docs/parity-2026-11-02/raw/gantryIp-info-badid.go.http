@@ -4,5 +4,5 @@ HTTP 400  12ms  err=None
  "message": "",
  "path": "/base/gantryIp/not-a-number",
  "status": 400,
- "timestamp": "2026-11-03T07:52:33.525+00:00"
+ "timestamp": "2026-11-03T09:07:56.306+00:00"
 }

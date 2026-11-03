@@ -4468,6 +4468,54 @@
   "write": false
  },
  {
+  "id": "large-plaindate",
+  "group": "query",
+  "note": "纯日期时间（Java Timestamp.valueOf 不接受）",
+  "method": "GET",
+  "path": "/api/v1/large/snapshot",
+  "params": {
+   "startTime": "2025-10-01",
+   "endTime": "2025-10-02",
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "large-tformattime",
+  "group": "query",
+  "note": "ISO 带 T 的时间（同上）",
+  "method": "GET",
+  "path": "/api/v1/large/snapshot",
+  "params": {
+   "startTime": "2025-10-01T00:00:00",
+   "endTime": "2025-10-02T00:00:00",
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
+  "id": "unified-plaindate",
+  "group": "query",
+  "note": "统一查询纯日期时间",
+  "method": "GET",
+  "path": "/api/v1/unified/snapshot/list",
+  "params": {
+   "startTime": "2025-10-01",
+   "endTime": "2025-10-02",
+   "pageNum": "1",
+   "pageSize": "5"
+  },
+  "body": null,
+  "cap": 50,
+  "write": false
+ },
+ {
   "id": "large-missing-arg",
   "group": "query",
   "note": "缺必填 startTime",

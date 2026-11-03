@@ -1,8 +1,8 @@
-HTTP 400  2ms  err=None
+HTTP 400  0ms  err=None
 {
  "error": "Bad Request",
  "message": "",
  "path": "/base/feeStationEnter/not-a-number",
  "status": 400,
- "timestamp": "2026-11-03T07:52:27.563+00:00"
+ "timestamp": "2026-11-03T09:07:50.599+00:00"
 }
