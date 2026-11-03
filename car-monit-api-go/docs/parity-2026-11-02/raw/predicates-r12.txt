@@ -1,0 +1,31 @@
+表                Java列                                        Go有    Go另有                          
+--------------------------------------------------------------------------------------------------------------
+fwqjcxx          33列/33参                                      缺28 多1   orderJava=[-] orderGo=[-]
+                 Java 有而 Go 未实现: agent_pk, all_col_pk, cdzs, cws, fxdm, fxmc, jd, load_time, lyxt, mj, sczhkgs, sczhszgs, sfcyfw, sfszlkk, sftgcsfw, sftgcshfw, sftgjyfw, sftgqxfw, sftgzsfw, ssglzxbm, ssglzxmc, sslxmc, synx, wd, xzqhdm, xzqhmc, yxtzj, yyrq
+                 Go 自行新增: id
+sfsjcxx          17列/17参                                      缺0  多0   orderJava=[-] orderGo=[-]
+sfzjcxx          17列/17参                                      缺0  多0   orderJava=[-] orderGo=[-]
+fwqclls          18列/19参                                      缺0  多0   orderJava=[-] orderGo=[-]
+feeGantry        72列/76参                                      缺0  多1   orderJava=[-] orderGo=[-]
+                 Go 自行新增: params
+feerecords       1列/2参                                        缺1  多13  orderJava=[t.transtime ASC, t.big_id ASC
+        ] orderGo=[-]
+                 Java 有而 Go 未实现: transtime
+                 Go 自行新增: antennaid, big_id, cpucardid, cpuissueid, cpunetid, entolllaneid, gantryid, obuissueid, passid, tollintervalid, tradeid, vehicleplate, verifycode
+feeStationEnter  33列/34参                                      缺0  多1   orderJava=[-] orderGo=[-]
+                 Go 自行新增: params
+feestationexit   65列/66参                                      缺0  多1   orderJava=[-] orderGo=[-]
+                 Go 自行新增: params
+snapshotflow     43列/48参                                      缺0  多0   orderJava=[t.platenumber,t.snapshottime | t.snaps] orderGo=[snapshottime desc]
+provcapture      82列/82参                                      缺0  多0   orderJava=[-] orderGo=[-]
+stationcapture   34列/36参                                      缺0  多0   orderJava=[-] orderGo=[-]
+gantry           21列/21参                                      缺0  多0   orderJava=[-] orderGo=[-]
+gantryIp         7列/7参                                        缺0  多0   orderJava=[-] orderGo=[-]
+vehicleweight    32列/32参                                      缺0  多0   orderJava=[-] orderGo=[-]
+section          13列/13参                                      缺0  多0   orderJava=[-] orderGo=[-]
+toll             24列/24参                                      缺0  多0   orderJava=[-] orderGo=[-]
+tollStationIp    5列/5参                                        缺0  多1   orderJava=[-] orderGo=[-]
+                 Go 自行新增: id
+org              17列/17参                                      缺0  多0   orderJava=[-] orderGo=[-]
+trailtracks      7列/7参                                        缺0  多4   orderJava=[t.extime, t.cid | t.cid,t.extime | t.c] orderGo=[-]
+                 Go 自行新增: enter_locationcode, envehicleid, exit_locationcode, extime

@@ -144,3 +144,25 @@ python parity.py --out r12 --md ../raw/r12.md                   # 364 条
 
 > 踩坑记录：只改 `suite.py` 不跑 `--gen`，`parity.py` 会读缓存的 `cases.json`，
 > 新用例**静默不生效**（我第一次跑 r12 就是 361 条）。凡加用例，`--gen` 在前。
+
+## 10. 覆盖率与证据链复核（本轮收尾做的三件机械核对）
+
+改完 `TrailBo` 这类底层类型后，光看差分通过不够，把之前几轮"引用过但没重算"的
+机械结论也一并重跑了一遍：
+
+| 核对项 | 怎么做的 | 结果 |
+|---|---|---|
+| **端点覆盖率** | 拿 `routes.py` 的 Java 端点清单逐条匹配 `cases.json` 的路径（`{var}` 转正则） | 85 个端点里**主表直接命中 83**；剩 2 个是 `POST /api/v1/large/export/submit` 与 `POST /api/v1/unified/{ds}/export/submit`，由导出探针覆盖 → **实际 85/85** |
+| **谓词覆盖** | 重跑 `predicates.py`（结果存 `raw/predicates-r12.txt`） | 19 张表**缺 0 的仍 17 张**；两张有缺的都不是 Go 问题（`feerecords` 缺 1 = Java XML 没有 list 语句、`fwqjcxx` 缺 28 = Java 把 SELECT 别名当列名，实测 500）。`trailtracks` 在新增 `CountHistoryTrail` 之后仍是 **缺0/多4** —— 共用谓词没有让计数与取数各报一份 |
+| **导出证据链** | 复查 `raw/export-probe*.json` | **发现一处引用错误**：被当作"导出实测"引用的 `export-probe.json`，其实是两个服务都没监听时的一次非运行（两端都 `WinError 10061`）。真正有结果的是 `export-probe-livedata.json`：两端 submit 200、`RUNNING→FAILED`、失败原因同为 ES `all shards failed`，**状态体键集合两端一致**（`large` 两边都无 `errorMessage`，`unified` 两边都有）。`05` §4 的引用已更正 |
+
+> 换句话说：导出的**提交与状态查询**两端等价，但**成功产出 xlsx 的路径两端都没跑到**
+> ——卡在同一个 ES mapping 上（`10` §4）。这条仍是灰度前要确认的事，不是 Go 的差异。
+
+### 本轮结束时环境发生变化
+
+Java `:9902`（PID 92588）与 Go `:9903` 在本轮收尾阶段**都已退出**（`netstat` 无监听、
+两个 PID 不存在），所以"用当前构建复跑导出探针"没能完成。
+**r11 / r12 两轮跑批是在两端都在线时完成的，已提交的数据不受影响。**
+Go 那份是我起的进程，随时可以按 `configs/config.verify.yaml` 重启；
+Java 是基准端，重启前要确认（`08` §环境事件里也记过它硬退出过一次）。
