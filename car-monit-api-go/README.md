@@ -504,6 +504,7 @@ toolchain go1.26.0
 | 数据库 | **共用**同一个 GaussDB `192.168.56.10:5432/RuoYi` |
 | Redis | 同实例 **不同库**：Java `db0` / Go `db1` |
 | ES | 共用，索引确实存在（7.15.2：`snapshot_flow` 300 / `fee_records` 369 / `trail_fitting` 1 篇）。第五轮实测更正：**`range` 不报错**（时间列 `snapshottime`/`transtime`/`extime` 是 `text`，于是按**词项字典序**比日期 —— 静默给错数据，比报错更危险）；真正失败的是 **`sort`**（`all shards failed`，`Text fields are not optimised for sorting`）。两端都无条件附加该 sort，**路由决策与失败点逐字等价**，故这不是 Go 的差异；要修 mapping 属独立排期（会同时改变两端行为） |
+| **磁盘（红线）** | 11-04 实测 **C: 98%、D: 95%**，`D:\pagefile.sys` 22.2 GB 与 ES 数据同卷 → ES 反复进 flood stage 并给索引挂 `read_only_allow_delete` 锁（**磁盘回落后不会自动清**），Java/ES 因此在 18:07 与次日先后停摆。**在释放约 14 GB 之前：不要重启 ES、不要清锁、不要在降级状态下跑差分**。详见 `docs/parity-2026-11-02/11` §1.1 |
 
 > **端口与库号别踩**：`configs/config.yaml`（默认那份）仍是 `port: 9901` + `redis.database: 0`。
 > 9901 上是另一个 Python 版迁移；而 db0 是 Java 的缓存库 —— 误用这份配置会用 Go 的 JSON 格式
