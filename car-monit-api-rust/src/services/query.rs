@@ -50,7 +50,9 @@ impl DataSource {
 
 /// 对应 UnifiedQueryController.parseDataSource：非法值报 400。
 pub fn parse_data_source(s: &str) -> AppResult<DataSource> {
-    match s.trim().to_lowercase().as_str() {
+    // PARITY: Java 的 resolve 只忽略大小写、不 trim（实测 `/api/v1/unified/snapshot /list`
+    // 会走「未知数据源」分支），所以这里不能 strip。
+    match s.to_lowercase().as_str() {
         "snapshot" => Ok(DataSource::Snapshot),
         "fee" => Ok(DataSource::Fee),
         "trail" => Ok(DataSource::Trail),
@@ -329,7 +331,7 @@ impl QueryService {
             if v.trim().is_empty() {
                 return Ok(true);
             }
-            match utils::parse_time(v) {
+            match utils::java_timestamp_value_of(v) {
                 Ok(t) => {
                     args.push(utils::format_datetime(&t));
                     where_clauses.push(format!(

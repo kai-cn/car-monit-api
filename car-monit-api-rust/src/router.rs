@@ -35,10 +35,18 @@ pub fn build(state: Arc<AppState>) -> Router {
     } else {
         Router::new().nest(&state.cfg.server.context_path, r)
     };
+    // axum 的 Router::layer 只包住「此前已注册」的路由与兜底，所以兜底要先挂上
+    let r = r
+        .fallback(not_found)
+        .method_not_allowed_fallback(method_not_allowed);
+    // axum 的 Router::layer 只包住「此前已注册」的路由与兜底，所以兜底要先挂上。
+    // 注意：路径归一化必须发生在路由匹配之前，因此 spring_negotiation 由 main.rs
+    // 用 ServiceBuilder 套在整个 Router 外面，不在这里。
+    let r = r
+        .fallback(not_found)
+        .method_not_allowed_fallback(method_not_allowed);
     r.layer(axum::middleware::from_fn(middleware::request_id_and_log))
         .layer(CatchPanicLayer::custom(handle_panic))
-        .fallback(not_found)
-        .method_not_allowed_fallback(method_not_allowed)
         .with_state(state)
 }
 
@@ -67,7 +75,7 @@ fn routes() -> Router<Arc<AppState>> {
             "/base/feerecords/listToExport",
             get(base::fee_records_export),
         )
-        .route("/base/feerecords/{id}", get(crud::fee_records_flat))
+        .route("/base/feerecords/{id}", get(base::fee_records_detail_500))
         .route("/base/feeStationEnter/list", get(crud::fee_enter_list))
         .route("/base/feeStationEnter/{id}", get(crud::fee_enter_ajax))
         .route("/base/feestationexit/list", get(crud::fee_exit_list))
@@ -291,7 +299,7 @@ pub fn spring_error(status: StatusCode, error: &str, path: &str) -> serde_json::
 }
 
 async fn not_found(req: axum::extract::Request) -> Response {
-    let path = req.uri().path().to_string();
+    let path = crate::middleware::error_path_of(&req);
     (
         StatusCode::NOT_FOUND,
         Json(spring_error(StatusCode::NOT_FOUND, "Not Found", &path)),
@@ -300,7 +308,7 @@ async fn not_found(req: axum::extract::Request) -> Response {
 }
 
 async fn method_not_allowed(req: axum::extract::Request) -> Response {
-    let path = req.uri().path().to_string();
+    let path = crate::middleware::error_path_of(&req);
     (
         StatusCode::METHOD_NOT_ALLOWED,
         Json(spring_error(

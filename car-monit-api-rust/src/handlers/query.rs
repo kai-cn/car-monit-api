@@ -21,7 +21,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use axum::extract::{Json, OriginalUri, Path, Query, State};
+use axum::extract::{OriginalUri, Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::Response;
 use serde_json::{json, Value};
@@ -33,12 +33,28 @@ use crate::state::AppState;
 
 type RawQuery = HashMap<String, String>;
 
+/// 对应 `@RequestParam String startTime/endTime`：Spring 只判断参数「有没有出现」。
+/// 传空串时会正常进入方法体，Mapper 的 `<if test="x != null and x != ''">` 再把条件跳过，
+/// 所以 `?startTime=&endTime=` 在 Java 是 200（实测 /api/v1/unified/snapshot/list），
+/// 不能按「空 == 缺失」处理成 400。
 fn time_range(c: &RawQuery, path: &str) -> Result<(String, String), Response> {
-    let start = c.get("startTime").cloned().unwrap_or_default();
-    let end = c.get("endTime").cloned().unwrap_or_default();
-    match require_time_range(&start, &end) {
-        Ok(()) => Ok((start, end)),
-        Err(_) => Err(spring_bad_request(path)),
+    if !c.contains_key("startTime") || !c.contains_key("endTime") {
+        return Err(spring_bad_request(path));
+    }
+    Ok((
+        c.get("startTime").cloned().unwrap_or_default(),
+        c.get("endTime").cloned().unwrap_or_default(),
+    ))
+}
+
+/// Java 侧 `/api/v1/large/snapshot|fee|trail` 是三个 @GetMapping 字面量，
+/// 大小写或拼写不同就是 404；`/api/v1/unified/{ds}/list` 则是路径变量绑定失败 → 400。
+fn parse_ds_exact(s: &str) -> Option<DataSource> {
+    match s {
+        "snapshot" => Some(DataSource::Snapshot),
+        "fee" => Some(DataSource::Fee),
+        "trail" => Some(DataSource::Trail),
+        _ => None,
     }
 }
 
@@ -74,10 +90,10 @@ pub async fn large_query(
     Path(ds): Path<String>,
     Query(c): Query<RawQuery>,
 ) -> Response {
-    // Java 只有 /snapshot /fee /trail 三个映射；其余路径是 Spring 404。
-    let ds = match parse_data_source(&ds) {
-        Ok(v) => v,
-        Err(_) => {
+    // Java 只有 /snapshot /fee /trail 三个映射；其余路径（含 SNAPSHOT）是 Spring 404。
+    let ds = match parse_ds_exact(&ds) {
+        Some(v) => v,
+        None => {
             return json_status(
                 StatusCode::NOT_FOUND,
                 crate::router::spring_error(StatusCode::NOT_FOUND, "Not Found", uri.path()),
@@ -151,7 +167,8 @@ pub async fn group_stats(
     Query(c): Query<RawQuery>,
 ) -> Response {
     let typ = c.get("type").cloned().unwrap_or_else(|| "snapshot".into());
-    if c.get("groupBy").map(|v| v.is_empty()).unwrap_or(true) {
+    // @RequestParam String groupBy：缺失才 400，空串会进方法体（后续 SQL 自己报错）
+    if !c.contains_key("groupBy") {
         return spring_bad_request(uri.path());
     }
     let (start, end) = match time_range(&c, uri.path()) {
@@ -160,6 +177,18 @@ pub async fn group_stats(
     };
     let group_by = c.get("groupBy").cloned().unwrap_or_default();
     let top_n = c.get("topN").and_then(|v| v.parse().ok()).unwrap_or(100);
+    // PARITY: Java 的 groupBy 为空串时不做聚合，直接返回 {"code":200,…,"data":{}}，
+    // 而不是「groupBy 不能为空」的业务 500。
+    if group_by.is_empty() {
+        return map_response(vec![
+            ("code", json!(200)),
+            ("message", json!("ok")),
+            ("type", json!(typ)),
+            ("groupBy", json!(group_by)),
+            ("topN", json!(top_n)),
+            ("data", json!({})),
+        ]);
+    }
     let ds = match parse_type_lenient(&typ) {
         Ok(v) => v,
         Err(e) => return biz_map_error(e.message()),
@@ -185,14 +214,13 @@ pub async fn large_export_submit(
     State(state): State<Arc<AppState>>,
     OriginalUri(uri): OriginalUri,
     Query(c): Query<RawQuery>,
-    body: Option<Json<HashMap<String, String>>>,
+    SpringStringMap(raw): SpringStringMap,
 ) -> Response {
     let typ = c.get("type").cloned().unwrap_or_else(|| "snapshot".into());
     let (start, end) = match time_range(&c, uri.path()) {
         Ok(v) => v,
         Err(r) => return r,
     };
-    let raw = body.map(|Json(b)| b).unwrap_or_default();
     let fields = prefixed_fields(&raw);
     let ds = match parse_type_lenient(&typ) {
         Ok(v) => v,
@@ -279,13 +307,16 @@ pub async fn unified_list(
     Path(ds): Path<String>,
     Query(c): Query<RawQuery>,
 ) -> Response {
-    let source = match parse_data_source(&ds) {
-        Ok(v) => v,
-        Err(e) => return json_ok(json!({ "code": 400, "message": e.message() })),
-    };
+    // PARITY: Spring 先解析方法参数（@RequestParam 缺失 → 400），再进方法体；
+    // 方法体里 parseDataSource 抛 IllegalArgumentException 才变成业务信封 code=400（HTTP 仍 200）。
+    // 所以顺序必须是「先必填校验，再 ds 业务校验」。
     let (start, end) = match time_range(&c, uri.path()) {
         Ok(v) => v,
         Err(r) => return r,
+    };
+    let source = match parse_data_source(&ds) {
+        Ok(v) => v,
+        Err(e) => return json_ok(json!({ "code": 400, "message": e.message() })),
     };
     let (page_num, page_size) = page_args(&c, 20);
     match state
@@ -310,17 +341,19 @@ pub async fn unified_export_submit(
     OriginalUri(uri): OriginalUri,
     Path(ds): Path<String>,
     Query(c): Query<RawQuery>,
-    body: Option<Json<HashMap<String, String>>>,
+    SpringStringMap(raw): SpringStringMap,
 ) -> Response {
-    let source = match parse_data_source(&ds) {
-        Ok(v) => v,
-        Err(e) => return json_ok(json!({ "code": 400, "message": e.message() })),
-    };
+    // PARITY: Spring 先解析方法参数（@RequestParam 缺失 → 400），再进方法体；
+    // 方法体里 parseDataSource 抛 IllegalArgumentException 才变成业务信封 code=400（HTTP 仍 200）。
+    // 所以顺序必须是「先必填校验，再 ds 业务校验」。
     let (start, end) = match time_range(&c, uri.path()) {
         Ok(v) => v,
         Err(r) => return r,
     };
-    let raw = body.map(|Json(b)| b).unwrap_or_default();
+    let source = match parse_data_source(&ds) {
+        Ok(v) => v,
+        Err(e) => return json_ok(json!({ "code": 400, "message": e.message() })),
+    };
     match state
         .export
         .submit_export_task(source, &start, &end, raw)
@@ -388,7 +421,10 @@ fn progressive_request(c: &RawQuery) -> crate::services::progressive::QueryReque
         gantryname: c.get("gantryname").cloned().unwrap_or_default(),
         tollname: c.get("tollname").cloned().unwrap_or_default(),
         cursor: c.get("cursor").cloned().unwrap_or_default(),
-        page_size: c.get("pageSize").and_then(|v| v.parse().ok()).unwrap_or(20),
+        page_size: c
+            .get("pageSize")
+            .and_then(|v| v.trim().parse().ok())
+            .unwrap_or(20),
     };
     if req.page_size <= 0 {
         req.page_size = 20;
@@ -401,6 +437,14 @@ pub async fn progressive_list(
     Path(table): Path<String>,
     Query(c): Query<RawQuery>,
 ) -> crate::error::AppResult<Response> {
+    // `@RequestParam(defaultValue = "20") int pageSize`：Spring 绑不上 int 就是 400
+    // （实测 pageSize=abc / 3.5 → 400；空串走 defaultValue 分支 → 200）。
+    if let Some(v) = c.get("pageSize") {
+        let t = v.trim();
+        if !t.is_empty() && t.parse::<i32>().is_err() {
+            return Err(crate::error::AppError::bad_request("Failed to convert pageSize"));
+        }
+    }
     let req = progressive_request(&c);
     let result = match table.as_str() {
         "snapshotflow" => state.progressive.query_snapshot_flow(req).await?,

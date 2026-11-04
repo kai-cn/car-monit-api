@@ -50,9 +50,9 @@ pub struct ZdataLocationDict {
     #[serde(rename = "updatedAt")]
     pub updated_at: Day,
     #[sqlx(default)]
-    pub latitude: JFloat,
+    pub latitude: JDecimal,
     #[sqlx(default)]
-    pub longitude: JFloat,
+    pub longitude: JDecimal,
     #[sqlx(default)]
     #[serde(rename = "pileNoK")]
     pub pile_no_k: JString,

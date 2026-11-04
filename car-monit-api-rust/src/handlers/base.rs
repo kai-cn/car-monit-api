@@ -16,7 +16,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use axum::extract::{Path, Query, State};
+use axum::extract::{OriginalUri, Path, Query, State};
 use axum::response::{IntoResponse, Response};
 use serde_json::Value;
 
@@ -55,23 +55,16 @@ fn split_csv(s: &str) -> Vec<String> {
 // 收费流水（list / listToExport / {bigId}）
 // ============================================================
 
-pub async fn fee_records_list(
-    State(_state): State<Arc<AppState>>,
-    Query(_q): Query<OdsLwzxsfsjFeeRecords01>,
-    Query(_page): Query<PageQuery>,
-) -> AppResult<Response> {
-    // PARITY: Java `selectOdsLwzxsfsjFeeRecords01List` 无 Mapper XML，MyBatis 抛
-    // Invalid bound statement → Spring 默认 500。Rust 复刻同一 HTTP 行为。
-    Ok(spring_internal_error("/base/feerecords/list"))
+/// PARITY: Java `selectOdsLwzxsfsjFeeRecords01List` 无 Mapper XML，MyBatis 抛
+/// Invalid bound statement → Spring 默认 500。这里**故意不绑定查询参数**：
+/// Spring 的 PropertyEditor 永不报错（解析失败只是把条件丢掉），所以无论传什么，
+/// Java 都会走到同一个 500；Rust 若先反序列化实体，就会在非法日期上返回 400。
+pub async fn fee_records_list() -> Response {
+    spring_internal_error("/base/feerecords/list")
 }
 
-pub async fn fee_records_export(
-    State(_state): State<Arc<AppState>>,
-    Query(_q): Query<OdsLwzxsfsjFeeRecords01>,
-    Query(_page): Query<PageQuery>,
-) -> AppResult<Response> {
-    // PARITY: 与 list 同因（缺失 Mapper XML），Java 返回 500。
-    Ok(spring_internal_error("/base/feerecords/listToExport"))
+pub async fn fee_records_export() -> Response {
+    spring_internal_error("/base/feerecords/listToExport")
 }
 
 /// Spring Boot 默认 500 响应体（用于复刻 Java 侧因缺失 Mapper XML 抛出的错误）。
@@ -151,13 +144,14 @@ pub async fn fee_gantry_list(
     Query(page): Query<PageQuery>,
 ) -> AppResult<Response> {
     let p = page_params(&page);
+    let order = order_by_clause(&page)?;
     let total = state.fee_gantry.count(&q).await?;
     let mut rows = if p.empty {
         Vec::new()
     } else {
         state
             .fee_gantry
-            .list(&q, p.page_size, p.offset_for(total))
+            .list_ordered(&q, p.page_size, p.offset_for(total), order.as_deref())
             .await?
     };
     for r in &mut rows {
@@ -180,13 +174,14 @@ pub async fn snapshot_flow_list(
 ) -> AppResult<Response> {
     prepare_snapshot(&state, &mut q).await;
     let p = page_params(&page);
+    let order = order_by_clause(&page)?;
     let total = state.snapshot_flow.count(&q).await?;
     let mut rows = if p.empty {
         Vec::new()
     } else {
         state
             .snapshot_flow
-            .list(&q, p.page_size, p.offset_for(total))
+            .list_ordered(&q, p.page_size, p.offset_for(total), order.as_deref())
             .await?
     };
     decorate_snapshot(&mut rows, true);
@@ -203,13 +198,14 @@ pub async fn snapshot_flow_export(
 ) -> AppResult<Response> {
     prepare_snapshot(&state, &mut q).await;
     let p = page_params(&page);
+    let order = order_by_clause(&page)?;
     let total = state.snapshot_flow.count(&q).await?;
     let mut rows = if p.empty {
         Vec::new()
     } else {
         state
             .snapshot_flow
-            .list(&q, p.page_size, p.offset_for(total))
+            .list_ordered(&q, p.page_size, p.offset_for(total), order.as_deref())
             .await?
     };
     // PARITY: listToExport 不做图片域名替换（Java 只做 id + 时间格式化）
@@ -256,12 +252,20 @@ pub fn empty_array() -> Value {
 }
 
 /// Java 侧 select...ById 在本环境抛异常（Mapper 映射/数组列），HTTP 500。
-pub async fn vehicle_weight_detail_500(Path(id): Path<String>) -> Response {
-    spring_internal_error(&format!("/base/vehicleweight/{}", id))
+/// Java 侧这些 `{id}` 端点因 Mapper XML 缺失直接 500，Rust 复刻同一状态。
+/// 注意路径要取 **原始 requestURI**：`axum::extract::Path` 会给解码后的值，
+/// 而 Spring 的 /error 体里 `path` 是未解码的原始 URI（实测 `/base/vehicleweight/%27`）。
+pub async fn vehicle_weight_detail_500(OriginalUri(uri): OriginalUri) -> Response {
+    spring_internal_error(uri.path())
 }
 
-pub async fn trail_tracks_detail_500(Path(id): Path<String>) -> Response {
-    spring_internal_error(&format!("/base/trailtracks/{}", id))
+pub async fn trail_tracks_detail_500(OriginalUri(uri): OriginalUri) -> Response {
+    spring_internal_error(uri.path())
+}
+
+/// `/base/feerecords/{bigId}`：与 list / listToExport 同因（无 Mapper XML）→ Spring 500。
+pub async fn fee_records_detail_500(OriginalUri(uri): OriginalUri) -> Response {
+    spring_internal_error(uri.path())
 }
 
 /// 对应 `ZdataTrailTracksController.getInfo(@PathVariable("uuid") String)`。

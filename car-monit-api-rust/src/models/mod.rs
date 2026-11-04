@@ -4,6 +4,7 @@ pub mod dwd_lczt_fwqjcxx;
 pub mod dwd_lczt_sfsjcxx;
 pub mod dwd_lczt_sfzjcxx;
 pub mod java_date_fields;
+pub mod java_indexed_fields;
 pub mod kafka_message_record;
 pub mod ods_cxzt_fwqclls;
 pub mod ods_lwzxsfsj_fee_gantry_fusion01;
@@ -39,6 +40,16 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 /// 只有 `JavaQuery` 提取器会据此丢弃无法解析的日期参数，行为与 Java 一致。
 pub trait JavaDateFields {
     const JAVA_DATE_FIELDS: &'static [&'static str] = &[];
+}
+
+/// Java 侧「下标形式」查询参数（`params[beginTime]=...`）的可绑定属性名。
+///
+/// Spring 的 BeanWrapper 只在根属性存在且类型是 Map/List/数组时才接受 `x[y]=v`；
+/// 这几个收费实体的 `params` 是普通标量属性，Java 直接抛 InvalidPropertyException
+/// 变成 HTTP 500（实测 `/base/feeGantry/list?params[beginTime]=2025-09-01` → 500），
+/// 而其它没有 `params` 属性的实体则是「未知属性」，Spring 会静默忽略 → 200。
+pub trait JavaIndexedFields {
+    const JAVA_INDEXED_FIELDS: &'static [&'static str] = &[];
 }
 
 // ---------------------------------------------------------------------------
@@ -197,6 +208,16 @@ impl<'q> sqlx::Encode<'q, sqlx::Postgres> for JString {
     }
 }
 
+/// 查询参数里的 `java.util.Date`：先走 Java 的 `DateUtils.parseDate`（12 模式 + 宽松进位 +
+/// 不 trim + 整串消费），失败再回退 `utils::parse_time`（ISO、epoch 毫秒等 Java 走不到的写法
+/// 在 Rust 里此前已能解析，保留以免 regress 其他调用方）。
+fn bind_query_date(s: &str) -> Result<DateTime<Utc>, String> {
+    if let Some(t) = crate::java_date::parse_date(s) {
+        return Ok(t);
+    }
+    crate::utils::parse_time(s)
+}
+
 // 对应 @JsonFormat(pattern = "yyyy-MM-dd")
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Day(pub Option<DateTime<Utc>>);
@@ -229,7 +250,7 @@ impl<'de> Deserialize<'de> for Day {
         let v = Option::<String>::deserialize(d)?;
         match v {
             None => Ok(Day(None)),
-            Some(s) => crate::utils::parse_time(&s)
+            Some(s) => bind_query_date(&s)
                 .map(|t| Day(Some(t)))
                 .map_err(serde::de::Error::custom),
         }
@@ -308,7 +329,7 @@ impl<'de> Deserialize<'de> for JDateTime {
         let v = Option::<String>::deserialize(d)?;
         match v {
             None => Ok(JDateTime(None)),
-            Some(s) => crate::utils::parse_time(&s)
+            Some(s) => bind_query_date(&s)
                 .map(|t| JDateTime(Some(t)))
                 .map_err(serde::de::Error::custom),
         }
@@ -382,7 +403,52 @@ impl Serialize for JInt {
 }
 impl<'de> Deserialize<'de> for JInt {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        Ok(JInt(Option::<i32>::deserialize(d)?))
+        struct V;
+        impl<'de> serde::de::Visitor<'de> for V {
+            type Value = JInt;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("i32 或数字字符串")
+            }
+            fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<JInt, E> {
+                if empty_to_none(v) {
+                    return Ok(JInt(None));
+                }
+                v.trim()
+                    .parse::<i32>()
+                    .map(|n| JInt(Some(n)))
+                    .map_err(serde::de::Error::custom)
+            }
+            fn visit_i64<E: serde::de::Error>(self, v: i64) -> Result<JInt, E> {
+                Ok(JInt(Some(v as i32)))
+            }
+            fn visit_u64<E: serde::de::Error>(self, v: u64) -> Result<JInt, E> {
+                Ok(JInt(Some(v as i32)))
+            }
+            fn visit_f64<E: serde::de::Error>(self, v: f64) -> Result<JInt, E> {
+                Ok(JInt(Some(v as i32)))
+            }
+            fn visit_bool<E: serde::de::Error>(self, _v: bool) -> Result<JInt, E> {
+                Err(serde::de::Error::custom("布尔值不能绑定到数字字段"))
+            }
+                        fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> Result<JInt, A::Error> {
+                // arbitrary_precision 下 JSON 数字是单键 map（见 RAW_NUMBER_KEY 注释），
+                // 取出原文后交给同一个 visitor 的字符串分支处理。
+                match map.next_key::<String>()? {
+                    Some(k) if k == RAW_NUMBER_KEY => {
+                        let text: String = map.next_value()?;
+                        self.visit_str(&text)
+                    }
+                    _ => Err(serde::de::Error::invalid_type(serde::de::Unexpected::Map, &self)),
+                }
+            }
+fn visit_none<E: serde::de::Error>(self) -> Result<JInt, E> {
+                Ok(JInt(None))
+            }
+            fn visit_unit<E: serde::de::Error>(self) -> Result<JInt, E> {
+                Ok(JInt(None))
+            }
+        }
+        d.deserialize_any(V)
     }
 }
 impl sqlx::Type<sqlx::Postgres> for JInt {
@@ -474,7 +540,52 @@ impl Serialize for JLong {
 }
 impl<'de> Deserialize<'de> for JLong {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        Ok(JLong(Option::<i64>::deserialize(d)?))
+        struct V;
+        impl<'de> serde::de::Visitor<'de> for V {
+            type Value = JLong;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("i64 或数字字符串")
+            }
+            fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<JLong, E> {
+                if empty_to_none(v) {
+                    return Ok(JLong(None));
+                }
+                v.trim()
+                    .parse::<i64>()
+                    .map(|n| JLong(Some(n)))
+                    .map_err(serde::de::Error::custom)
+            }
+            fn visit_i64<E: serde::de::Error>(self, v: i64) -> Result<JLong, E> {
+                Ok(JLong(Some(v as i64)))
+            }
+            fn visit_u64<E: serde::de::Error>(self, v: u64) -> Result<JLong, E> {
+                Ok(JLong(Some(v as i64)))
+            }
+            fn visit_f64<E: serde::de::Error>(self, v: f64) -> Result<JLong, E> {
+                Ok(JLong(Some(v as i64)))
+            }
+            fn visit_bool<E: serde::de::Error>(self, _v: bool) -> Result<JLong, E> {
+                Err(serde::de::Error::custom("布尔值不能绑定到数字字段"))
+            }
+                        fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> Result<JLong, A::Error> {
+                // arbitrary_precision 下 JSON 数字是单键 map（见 RAW_NUMBER_KEY 注释），
+                // 取出原文后交给同一个 visitor 的字符串分支处理。
+                match map.next_key::<String>()? {
+                    Some(k) if k == RAW_NUMBER_KEY => {
+                        let text: String = map.next_value()?;
+                        self.visit_str(&text)
+                    }
+                    _ => Err(serde::de::Error::invalid_type(serde::de::Unexpected::Map, &self)),
+                }
+            }
+fn visit_none<E: serde::de::Error>(self) -> Result<JLong, E> {
+                Ok(JLong(None))
+            }
+            fn visit_unit<E: serde::de::Error>(self) -> Result<JLong, E> {
+                Ok(JLong(None))
+            }
+        }
+        d.deserialize_any(V)
     }
 }
 impl sqlx::Type<sqlx::Postgres> for JLong {
@@ -566,7 +677,52 @@ impl Serialize for JFloat {
 }
 impl<'de> Deserialize<'de> for JFloat {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        Ok(JFloat(Option::<f64>::deserialize(d)?))
+        struct V;
+        impl<'de> serde::de::Visitor<'de> for V {
+            type Value = JFloat;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("f64 或数字字符串")
+            }
+            fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<JFloat, E> {
+                if empty_to_none(v) {
+                    return Ok(JFloat(None));
+                }
+                v.trim()
+                    .parse::<f64>()
+                    .map(|n| JFloat(Some(n)))
+                    .map_err(serde::de::Error::custom)
+            }
+            fn visit_i64<E: serde::de::Error>(self, v: i64) -> Result<JFloat, E> {
+                Ok(JFloat(Some(v as f64)))
+            }
+            fn visit_u64<E: serde::de::Error>(self, v: u64) -> Result<JFloat, E> {
+                Ok(JFloat(Some(v as f64)))
+            }
+            fn visit_f64<E: serde::de::Error>(self, v: f64) -> Result<JFloat, E> {
+                Ok(JFloat(Some(v as f64)))
+            }
+            fn visit_bool<E: serde::de::Error>(self, _v: bool) -> Result<JFloat, E> {
+                Err(serde::de::Error::custom("布尔值不能绑定到数字字段"))
+            }
+                        fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> Result<JFloat, A::Error> {
+                // arbitrary_precision 下 JSON 数字是单键 map（见 RAW_NUMBER_KEY 注释），
+                // 取出原文后交给同一个 visitor 的字符串分支处理。
+                match map.next_key::<String>()? {
+                    Some(k) if k == RAW_NUMBER_KEY => {
+                        let text: String = map.next_value()?;
+                        self.visit_str(&text)
+                    }
+                    _ => Err(serde::de::Error::invalid_type(serde::de::Unexpected::Map, &self)),
+                }
+            }
+fn visit_none<E: serde::de::Error>(self) -> Result<JFloat, E> {
+                Ok(JFloat(None))
+            }
+            fn visit_unit<E: serde::de::Error>(self) -> Result<JFloat, E> {
+                Ok(JFloat(None))
+            }
+        }
+        d.deserialize_any(V)
     }
 }
 impl sqlx::Type<sqlx::Postgres> for JFloat {
@@ -619,6 +775,322 @@ impl<'q> sqlx::Encode<'q, sqlx::Postgres> for JFloat {
         buf: &mut sqlx::postgres::PgArgumentBuffer,
     ) -> Result<sqlx::encode::IsNull, Box<dyn std::error::Error + Send + Sync + 'static>> {
         <Option<f64> as sqlx::Encode<sqlx::Postgres>>::encode(self.0, buf)
+    }
+}
+
+/// 直接按 PostgreSQL 的 numeric 二进制格式解码，保留线格式的 `dscale`。
+///
+/// 不能走 `sqlx::decode::<BigDecimal>`：它按「有效数字」重建数值，会把 numeric(20,2)
+/// 的 1500.00 变成 1500（scale 丢失），而 Java 侧 `ResultSet#getBigDecimal` 保留 scale，
+/// Jackson 输出的就是 `1500.00`。
+///
+/// 线格式：`i16 ndigits | i16 weight | u16 sign | i16 dscale | i16[ndigits] digits(base-10000)`
+/// 值 = Σ digits[i] * 10000^(weight-i)。
+fn decimal_pair(d: bigdecimal::BigDecimal) -> (bigdecimal::BigDecimal, String) {
+    let t = d.to_string();
+    (d, t)
+}
+
+fn decode_pg_numeric(
+    v: &sqlx::postgres::PgValueRef<'_>,
+) -> Result<(bigdecimal::BigDecimal, String), Box<dyn std::error::Error + Send + Sync + 'static>> {
+    use bigdecimal::{BigDecimal, Zero};
+    use std::str::FromStr;
+    let b = v.as_bytes()?;
+    if b.len() < 8 {
+        return Err("numeric 二进制长度不足 8 字节".into());
+    }
+    let ndigits = i16::from_be_bytes([b[0], b[1]]) as usize;
+    let weight = i16::from_be_bytes([b[2], b[3]]) as i32;
+    let sign = u16::from_be_bytes([b[4], b[5]]);
+    let dscale = i16::from_be_bytes([b[6], b[7]]).max(0) as i32;
+    let expect = 8 + ndigits * 2;
+    if b.len() < expect {
+        return Err(format!("numeric 二进制长度不足：期望 {} 实际 {}", expect, b.len()).into());
+    }
+    let negative = match sign {
+        0x0000 => false,
+        0x4000 => true,
+        other => return Err(format!("numeric 符号位非法 {:#06x}", other).into()),
+    };
+    let mut digits = String::new();
+    for i in 0..ndigits {
+        let d = i16::from_be_bytes([b[8 + i * 2], b[9 + i * 2]]) as u32;
+        if d > 9999 {
+            return Err(format!("numeric 非法数位 {}", d).into());
+        }
+        if i == 0 {
+            digits.push_str(&d.to_string());
+        } else {
+            digits.push_str(&format!("{:04}", d));
+        }
+    }
+    if digits.is_empty() {
+        digits.push('0');
+    }
+    // 值 = digits * 10^exp
+    let exp = 4 * (weight - ndigits as i32 + 1);
+    let text = if exp >= 0 {
+        format!("{}{}", digits, "0".repeat(exp as usize))
+    } else {
+        let frac = (-exp) as usize;
+        let frac_part = digits.len().saturating_sub(frac);
+        let int_part = &digits[..frac_part];
+        let frac_bits = &digits[frac_part..];
+        let lead = "0".repeat(frac - frac_bits.len());
+        if int_part.is_empty() {
+            format!("0.{}{}", lead, frac_bits)
+        } else {
+            format!("{}.{}{}", int_part, lead, frac_bits)
+        }
+    };
+    let text = if negative {
+        format!("-{}", text)
+    } else {
+        text
+    };
+    let value = BigDecimal::from_str(&text)?.with_scale(dscale as i64);
+    // 零值：BigDecimal 会把它归一化成 "0"，但 Java 侧按 dscale 输出 0.00
+    let display = if value.is_zero() && dscale > 0 {
+        format!(
+            "{}0.{}",
+            if negative { "-" } else { "" },
+            "0".repeat(dscale as usize)
+        )
+    } else {
+        value.to_string()
+    };
+    Ok((value, display))
+}
+
+/// Spring 的 `WebDataBinder` 对 `Integer/Long/Double/Boolean` 属性绑定空字符串时，
+/// `CustomNumberEditor`/`StringToEndwardConverter` 会把 "" 视作 null（属性保持不赋值），
+/// 因此 `?enweight=` 不会报错、条件也不生效。Rust 侧 serde 默认会因 "" 解析失败返回 400，
+/// 这里统一成 Java 的语义：空串→None，其它非法值仍然报错（Java 也是 400）。
+fn empty_to_none(raw: &str) -> bool {
+    raw.trim().is_empty()
+}
+
+/// `serde_json` 开了 `arbitrary_precision` 之后，JSON 数字不再通过 `visit_f64/visit_u64`
+/// 交给 visitor，而是包成一个单键 map：key 是这个私有名字，value 是数字原文字符串。
+/// 数值型的 JInt/JLong/JFloat/JDecimal 都要接住它，否则 Rust 自己写进 Redis 的字典 blob
+/// 会读不回来（实测 `dev_post` 每次都是「反序列化缓存失败，回源重建」，等于白读一遍全表）。
+const RAW_NUMBER_KEY: &str = "$serde_json::private::Number";
+
+/// 对应 Java 实体里的 `BigDecimal` 字段。
+///
+/// 为什么不能复用 JFloat：Jackson 是直接把 `BigDecimal#toString()` 当 JSON 数字写出的，
+/// 因此 DB 列的小数位会原样进入响应体（numeric(20,2) 的 1500 → `1500.00`，
+/// numeric(10,4) 的 0 → `0.0000`）。JFloat 走 f64 会写成 `1500.0` / `0.0`，
+/// 前端按字符串比较金额/重量时不一致。这里保留 BigDecimal 的 scale，并用 RawValue
+/// 把原文当数字（不是字符串）写进 JSON。
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct JDecimal {
+    pub value: Option<bigdecimal::BigDecimal>,
+    /// 线格式原文：保留 numeric 的 dscale（Java 侧 numeric(10,2) 的 0 是 `0.00`，
+    /// BigDecimal 自己会把零归一化成 `0`，所以这里单独存一份输出文本）。
+    pub display: Option<String>,
+}
+
+impl JDecimal {
+    /// 与 JFloat 保持同样的取数语义：调用方（过滤条件、轨迹算距离等）仍按 f64 使用。
+    pub fn get(&self) -> Option<f64> {
+        use bigdecimal::ToPrimitive;
+        self.value.as_ref().and_then(|d| d.to_f64())
+    }
+
+    pub fn dec(&self) -> Option<&bigdecimal::BigDecimal> {
+        self.value.as_ref()
+    }
+
+    pub fn text(&self) -> Option<&str> {
+        self.display.as_deref()
+    }
+}
+
+impl From<bigdecimal::BigDecimal> for JDecimal {
+    fn from(v: bigdecimal::BigDecimal) -> Self {
+        let display = v.to_string();
+        JDecimal {
+            value: Some(v),
+            display: Some(display),
+        }
+    }
+}
+
+impl From<Option<f64>> for JDecimal {
+    fn from(v: Option<f64>) -> Self {
+        JDecimal::from(v.and_then(decimal_from_f64))
+    }
+}
+
+/// `f64 → BigDecimal` 必须走「最短可回环十进制」，不能用 `BigDecimal::from_f64`：
+/// 后者给出二进制精确展开（28.178358147972094 → 28.1783581479720943718…），
+/// 而 Java 侧是 Jackson 按 JSON 原文读成 BigDecimal，输出 `28.178358147972094`。
+fn decimal_from_f64(v: f64) -> Option<bigdecimal::BigDecimal> {
+    use std::str::FromStr;
+    if v.is_nan() || v.is_infinite() {
+        return None;
+    }
+    bigdecimal::BigDecimal::from_str(&v.to_string()).ok()
+}
+
+impl From<f64> for JDecimal {
+    fn from(v: f64) -> Self {
+        JDecimal::from(Some(v))
+    }
+}
+
+impl From<Option<&bigdecimal::BigDecimal>> for JDecimal {
+    fn from(v: Option<&bigdecimal::BigDecimal>) -> Self {
+        JDecimal::from(v.cloned())
+    }
+}
+
+impl From<Option<bigdecimal::BigDecimal>> for JDecimal {
+    fn from(v: Option<bigdecimal::BigDecimal>) -> Self {
+        let display = v.as_ref().map(|d| d.to_string());
+        JDecimal { value: v, display }
+    }
+}
+
+impl Serialize for JDecimal {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        let text = match (&self.value, &self.display) {
+            (None, _) => return s.serialize_none(),
+            (Some(_), Some(t)) => t.clone(),
+            (Some(d), None) => d.to_string(),
+        };
+        let raw = serde_json::value::RawValue::from_string(text)
+            .map_err(<S::Error as serde::ser::Error>::custom)?;
+        s.serialize_some(&raw)
+    }
+}
+
+impl<'de> Deserialize<'de> for JDecimal {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct V;
+        impl<'de> serde::de::Visitor<'de> for V {
+            type Value = JDecimal;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("BigDecimal 数字或数字字符串")
+            }
+            fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<JDecimal, E> {
+                if empty_to_none(v) {
+                    return Ok(JDecimal::default());
+                }
+                let v = v.trim();
+                // PARITY: Java 的 `new BigDecimal(text)` 只接受有限十进制数，NaN/Infinity 抛
+                // NumberFormatException（→ Spring 400）。bigdecimal 会接受它们，这里显式拒绝，
+                // 否则后续 numeric 绑定会打到数据库报 500。
+                // Java `BigDecimal(String)` 的语法只允许 数字 / 正负号 / 小数点 / e 指数，
+                // NaN、Infinity 都会抛 NumberFormatException（→ Spring 400）。
+                if !v.chars().all(|c| c.is_ascii_digit() || matches!(c, '+' | '-' | '.' | 'e' | 'E')) {
+                    return Err(serde::de::Error::custom(format!("非法 BigDecimal: {}", v)));
+                }
+                v.parse::<bigdecimal::BigDecimal>()
+                    .map(|b| JDecimal::from(Some(b)))
+                    .map_err(serde::de::Error::custom)
+            }
+            fn visit_f64<E: serde::de::Error>(self, v: f64) -> Result<JDecimal, E> {
+                Ok(JDecimal::from(Some(v)))
+            }
+            fn visit_i64<E: serde::de::Error>(self, v: i64) -> Result<JDecimal, E> {
+                Ok(JDecimal::from(Some(bigdecimal::BigDecimal::from(v))))
+            }
+            fn visit_u64<E: serde::de::Error>(self, v: u64) -> Result<JDecimal, E> {
+                Ok(JDecimal::from(Some(bigdecimal::BigDecimal::from(v))))
+            }
+                        fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> Result<JDecimal, A::Error> {
+                // arbitrary_precision 下 JSON 数字是单键 map（见 RAW_NUMBER_KEY 注释），
+                // 取出原文后交给同一个 visitor 的字符串分支处理。
+                match map.next_key::<String>()? {
+                    Some(k) if k == RAW_NUMBER_KEY => {
+                        let text: String = map.next_value()?;
+                        self.visit_str(&text)
+                    }
+                    _ => Err(serde::de::Error::invalid_type(serde::de::Unexpected::Map, &self)),
+                }
+            }
+fn visit_none<E: serde::de::Error>(self) -> Result<JDecimal, E> {
+                Ok(JDecimal::default())
+            }
+            fn visit_unit<E: serde::de::Error>(self) -> Result<JDecimal, E> {
+                Ok(JDecimal::default())
+            }
+        }
+        d.deserialize_any(V)
+    }
+}
+
+impl sqlx::Type<sqlx::Postgres> for JDecimal {
+    fn type_info() -> sqlx::postgres::PgTypeInfo {
+        <bigdecimal::BigDecimal as sqlx::Type<sqlx::Postgres>>::type_info()
+    }
+    fn compatible(ty: &sqlx::postgres::PgTypeInfo) -> bool {
+        matches!(
+            sqlx::TypeInfo::name(ty),
+            "NUMERIC" | "FLOAT4" | "FLOAT8" | "INT2" | "INT4" | "INT8" | "VARCHAR" | "TEXT" | "BPCHAR"
+        )
+    }
+}
+
+impl<'r> sqlx::Decode<'r, sqlx::Postgres> for JDecimal {
+    fn decode(
+        v: sqlx::postgres::PgValueRef<'r>,
+    ) -> Result<Self, Box<dyn std::error::Error + Send + Sync + 'static>> {
+        use sqlx::TypeInfo;
+        if sqlx::ValueRef::is_null(&v) {
+            return Ok(JDecimal::default());
+        }
+        let d: Option<(bigdecimal::BigDecimal, String)> =
+            match TypeInfo::name(sqlx::ValueRef::type_info(&v).as_ref()) {
+            "NUMERIC" => Some(decode_pg_numeric(&v)?),
+            "FLOAT4" => decimal_from_f64(
+                <f32 as sqlx::Decode<sqlx::Postgres>>::decode(v)? as f64,
+            )
+            .map(decimal_pair),
+            "FLOAT8" => {
+                decimal_from_f64(<f64 as sqlx::Decode<sqlx::Postgres>>::decode(v)?)
+                    .map(decimal_pair)
+            }
+            "INT2" | "TINYINT" | "SMALLINT" | "tinyint" | "smallint" => Some(decimal_pair(
+                bigdecimal::BigDecimal::from(<i16 as sqlx::Decode<sqlx::Postgres>>::decode(v)? as i64),
+            )),
+            "INT4" => Some(decimal_pair(bigdecimal::BigDecimal::from(
+                <i32 as sqlx::Decode<sqlx::Postgres>>::decode(v)? as i64,
+            ))),
+            "INT8" => Some(decimal_pair(bigdecimal::BigDecimal::from(
+                <i64 as sqlx::Decode<sqlx::Postgres>>::decode(v)?,
+            ))),
+            "VARCHAR" | "TEXT" | "BPCHAR" => {
+                let t = <String as sqlx::Decode<sqlx::Postgres>>::decode(v)?;
+                if t.trim().is_empty() {
+                    return Ok(JDecimal::default());
+                }
+                Some(decimal_pair(t.trim().parse::<bigdecimal::BigDecimal>()?))
+            }
+            other => return Err(format!("JDecimal 不支持的类型 {}", other).into()),
+        };
+        Ok(match d {
+            None => JDecimal::default(),
+            Some((value, display)) => JDecimal {
+                value: Some(value),
+                display: Some(display),
+            },
+        })
+    }
+}
+
+impl<'q> sqlx::Encode<'q, sqlx::Postgres> for JDecimal {
+    fn encode_by_ref(
+        &self,
+        buf: &mut sqlx::postgres::PgArgumentBuffer,
+    ) -> Result<sqlx::encode::IsNull, Box<dyn std::error::Error + Send + Sync + 'static>> {
+        <Option<bigdecimal::BigDecimal> as sqlx::Encode<sqlx::Postgres>>::encode(
+            self.value.clone(),
+            buf,
+        )
     }
 }
 
@@ -675,13 +1147,52 @@ impl<T: Serialize> Serialize for JList<T> {
 }
 impl<'de, T: Deserialize<'de>> Deserialize<'de> for JList<T> {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        match Option::<Vec<T>>::deserialize(d)? {
-            None => Ok(JList::default()),
-            Some(v) => Ok(JList {
-                value: v,
-                present: true,
-            }),
+        struct V<U>(std::marker::PhantomData<U>);
+        impl<'de, U: Deserialize<'de>> serde::de::Visitor<'de> for V<U> {
+            type Value = JList<U>;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("数组或逗号分隔字符串")
+            }
+            fn visit_seq<A: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: A,
+            ) -> Result<JList<U>, A::Error> {
+                let mut out = Vec::new();
+                while let Some(x) = seq.next_element::<U>()? {
+                    out.push(x);
+                }
+                Ok(JList {
+                    value: out,
+                    present: true,
+                })
+            }
+            /// Java 侧 `?cidList=a,b` 由 Spring 的 `ObjectToObjectConverter.stringToObjectArray`
+            /// 调 `StringUtils.commaDelimitedListToStringArray` 切分：只有**空串**得到空数组，
+            /// 其余按逗号切且**不 trim、不丢空元素**（`" "` → `[" "]`、`"a,"` → `["a", ""]`）。
+            /// 实测 `cidList=%20` 在 Java 走 `IN (' ')` → 0 行；若按 trim 处理会退化成
+            /// 「条件不生效」→ 全量数据，正好差一整页。
+            fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<JList<U>, E> {
+                if v.is_empty() {
+                    return Ok(JList::default());
+                }
+                let mut out = Vec::new();
+                for piece in v.split(',') {
+                    let de = serde::de::value::StrDeserializer::<E>::new(piece);
+                    out.push(U::deserialize(de).map_err(serde::de::Error::custom)?);
+                }
+                Ok(JList {
+                    value: out,
+                    present: true,
+                })
+            }
+            fn visit_none<E: serde::de::Error>(self) -> Result<JList<U>, E> {
+                Ok(JList::default())
+            }
+            fn visit_unit<E: serde::de::Error>(self) -> Result<JList<U>, E> {
+                Ok(JList::default())
+            }
         }
+        d.deserialize_any(V(std::marker::PhantomData))
     }
 }
 
@@ -707,7 +1218,33 @@ impl Serialize for JBool {
 }
 impl<'de> Deserialize<'de> for JBool {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        Ok(JBool(Option::<bool>::deserialize(d)?))
+        struct V;
+        impl<'de> serde::de::Visitor<'de> for V {
+            type Value = JBool;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("bool")
+            }
+            fn visit_bool<E: serde::de::Error>(self, v: bool) -> Result<JBool, E> {
+                Ok(JBool(Some(v)))
+            }
+            fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<JBool, E> {
+                if empty_to_none(v) {
+                    return Ok(JBool(None));
+                }
+                match v.trim().to_ascii_lowercase().as_str() {
+                    "true" | "1" | "on" | "yes" | "y" => Ok(JBool(Some(true))),
+                    "false" | "0" | "off" | "no" | "n" => Ok(JBool(Some(false))),
+                    other => Err(serde::de::Error::custom(format!("非法布尔值 {}", other))),
+                }
+            }
+            fn visit_none<E: serde::de::Error>(self) -> Result<JBool, E> {
+                Ok(JBool(None))
+            }
+            fn visit_unit<E: serde::de::Error>(self) -> Result<JBool, E> {
+                Ok(JBool(None))
+            }
+        }
+        d.deserialize_any(V)
     }
 }
 impl sqlx::Type<sqlx::Postgres> for JBool {
@@ -769,7 +1306,7 @@ impl<'de> Deserialize<'de> for JIsoDateTime {
         let v = Option::<String>::deserialize(d)?;
         match v {
             None => Ok(JIsoDateTime(None)),
-            Some(s) => crate::utils::parse_time(&s)
+            Some(s) => bind_query_date(&s)
                 .map(|t| JIsoDateTime(Some(t)))
                 .map_err(serde::de::Error::custom),
         }

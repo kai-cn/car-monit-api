@@ -334,6 +334,13 @@ async fn main() {
     }
 
     let router = car_monit_api_rust::router::build(state.clone());
+    // Spring 的 AntPathMatcher 在「匹配路由之前」就合并连续斜杠、忽略结尾斜杠；
+    // axum 的 Router::layer 只能包住已匹配的路由，所以这层必须套在整个 Router 外面。
+    let app = tower::ServiceBuilder::new()
+        .layer(axum::middleware::from_fn(
+            car_monit_api_rust::middleware::spring_negotiation,
+        ))
+        .service(router);
     let addr = format!("0.0.0.0:{}", cfg.server.port);
     let listener = match tokio::net::TcpListener::bind(&addr).await {
         Ok(l) => l,
@@ -352,7 +359,7 @@ async fn main() {
         let _ = stop_tx.send(true);
     };
 
-    if let Err(e) = axum::serve(listener, router)
+    if let Err(e) = axum::serve(listener, tower::make::Shared::new(app))
         .with_graceful_shutdown(shutdown)
         .await
     {

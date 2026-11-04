@@ -43,36 +43,36 @@ pub struct ZdataTrailTracks {
     #[sqlx(skip)]
     #[serde(rename = "trackJosn")]
     pub track_josn: JString,
-    #[sqlx(skip)]
+    #[sqlx(default)]
     pub enaxlecount: JInt,
-    #[sqlx(skip)]
+    #[sqlx(default)]
     pub entolllaneid: JString,
-    #[sqlx(skip)]
+    #[sqlx(default)]
     pub entollstationid: JString,
-    #[sqlx(skip)]
+    #[sqlx(default)]
     pub entollstationname: JString,
-    #[sqlx(skip)]
+    #[sqlx(default)]
     pub envehicleclass: JString,
-    #[sqlx(skip)]
+    #[sqlx(default)]
     pub envehicleid: JString,
-    #[sqlx(skip)]
+    #[sqlx(default)]
     pub envehicletype: JString,
-    #[sqlx(skip)]
-    pub enweight: JFloat,
-    #[sqlx(skip)]
+    #[sqlx(default)]
+    pub enweight: JDecimal,
+    #[sqlx(default)]
     pub extolllaneid: JString,
-    #[sqlx(skip)]
+    #[sqlx(default)]
     pub extollstationid: JString,
-    #[sqlx(skip)]
+    #[sqlx(default)]
     pub extollstationname: JString,
-    #[sqlx(skip)]
+    #[sqlx(default)]
     pub exvehicleclass: JString,
-    #[sqlx(skip)]
+    #[sqlx(default)]
     pub exvehicleid: JString,
-    #[sqlx(skip)]
+    #[sqlx(default)]
     pub exvehicletype: JString,
-    #[sqlx(skip)]
-    pub exweight: JFloat,
+    #[sqlx(default)]
+    pub exweight: JDecimal,
     #[sqlx(skip)]
     #[serde(rename = "startLon")]
     pub start_lon: JString,

@@ -6,6 +6,7 @@ pub mod db;
 pub mod error;
 pub mod es;
 pub mod handlers;
+pub mod java_date;
 pub mod middleware;
 pub mod models;
 pub mod mq;

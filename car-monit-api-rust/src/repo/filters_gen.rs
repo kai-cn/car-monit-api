@@ -66,11 +66,14 @@ pub fn snapshot_filters(q: &OdsRtSzdnSnapshotFlowAddcode) -> Vec<Cond> {
     if !q.pileno.is_empty() {
         v.push(Cond::Eq("pileno", q.pileno.clone().into()));
     }
-    if let Some(x) = q.lon.get() {
-        v.push(Cond::EqF64("lon", x));
+    // PARITY: MyBatis 对 BigDecimal 属性用 setBigDecimal，PG 走 `numeric = numeric` 精确比较。
+    // 之前这里把值降成 double（Cond::EqF64），PG 会把 numeric 隐式转成 float8 再比：
+    // 实测 `enweight=1e-400` 在 Rust 侧下溢成 0.0，命中了 Java 不命中的 10 行（错结果）。
+    if let Some(x) = q.lon.dec() {
+        v.push(Cond::EqDecimal("lon", x.clone()));
     }
-    if let Some(x) = q.lat.get() {
-        v.push(Cond::EqF64("lat", x));
+    if let Some(x) = q.lat.dec() {
+        v.push(Cond::EqDecimal("lat", x.clone()));
     }
     if !q.deviceip.is_empty() {
         v.push(Cond::Eq("deviceip", q.deviceip.clone().into()));
@@ -754,8 +757,8 @@ pub fn fee_enter_filters(q: &OdsLwzxsfsjFeeStationEnter01) -> Vec<Cond> {
             q.entollstationid.clone().into(),
         ));
     }
-    if let Some(x) = q.enweight.get() {
-        v.push(Cond::EqF64("enweight", x));
+    if let Some(x) = q.enweight.dec() {
+        v.push(Cond::EqDecimal("enweight", x.clone()));
     }
     if !q.identifyvehicleid.is_empty() {
         v.push(Cond::Eq(
@@ -805,8 +808,8 @@ pub fn fee_enter_filters(q: &OdsLwzxsfsjFeeStationEnter01) -> Vec<Cond> {
             q.terminaltransno.clone().into(),
         ));
     }
-    if let Some(x) = q.transfee.get() {
-        v.push(Cond::EqF64("transfee", x));
+    if let Some(x) = q.transfee.dec() {
+        v.push(Cond::EqDecimal("transfee", x.clone()));
     }
     if !q.transtype.is_empty() {
         v.push(Cond::Eq("transtype", q.transtype.clone().into()));
@@ -948,8 +951,8 @@ pub fn fee_exit_filters(q: &OdsLwzxsfsjFeeStationExit01) -> Vec<Cond> {
     if !q.identification.is_empty() {
         v.push(Cond::Eq("identification", q.identification.clone().into()));
     }
-    if let Some(x) = q.feerate.get() {
-        v.push(Cond::EqF64("feerate", x));
+    if let Some(x) = q.feerate.dec() {
+        v.push(Cond::EqDecimal("feerate", x.clone()));
     }
     if !q.identifyvehicleid.is_empty() {
         v.push(Cond::Like(
@@ -1908,7 +1911,7 @@ pub fn org_filters(q: &OdsYhglVBaseOrg) -> Vec<Cond> {
     if !q.org_is_deleted.is_empty() {
         v.push(Cond::Eq("org_is_deleted", q.org_is_deleted.clone().into()));
     }
-    if !q.org_category.is_empty() {
+    if !q.org_category.is_null() {
         v.push(Cond::Eq("org_category", q.org_category.clone().into()));
     }
     if !q.org_is_authorized.is_empty() {

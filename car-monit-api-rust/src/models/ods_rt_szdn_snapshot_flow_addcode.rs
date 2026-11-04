@@ -49,9 +49,9 @@ pub struct OdsRtSzdnSnapshotFlowAddcode {
     #[sqlx(default)]
     pub pileno: JString,
     #[sqlx(default)]
-    pub lon: JFloat,
+    pub lon: JDecimal,
     #[sqlx(default)]
-    pub lat: JFloat,
+    pub lat: JDecimal,
     #[sqlx(default)]
     pub deviceip: JString,
     #[sqlx(default)]

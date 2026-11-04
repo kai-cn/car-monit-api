@@ -14,7 +14,7 @@
 
 use std::sync::Arc;
 
-use axum::extract::{Json, Query, State};
+use axum::extract::{Query, State};
 use axum::response::Response;
 
 use crate::error::{AppError, AppResult};
@@ -37,24 +37,36 @@ pub async fn car_track_by_car_no(
 ) -> AppResult<Response> {
     let p = page_params(&page);
     let mut list = Vec::new();
-    if !p.empty && !vo.car_no.trim().is_empty() {
+    let mut total = 0i64;
+    if !vo.car_no.trim().is_empty() {
         vo.flag = "bannian".into();
-        vo.page_num = JInt::from(p.page_num as i32);
-        vo.page_size = JInt::from((p.offset() + p.page_size) as i32);
-        list = state.sysutil.car_track_query_new(&mut vo).await?;
-        // 与 Go 版一致：先取 offset+pageSize 行，再切掉前 offset 行
-        let off = p.offset() as usize;
-        list = if off < list.len() {
-            list.split_off(off)
-        } else {
-            vec![]
-        };
+        total = page_query(&state, &mut vo, &p, &mut list).await?;
     }
     let infos = state.sysutil.build_trail_infos(list.clone(), true).await?;
     Ok(json_ok(TableDataInfo::new(
         serde_json::to_value(infos)?,
-        list.len() as i64,
+        total,
     )))
+}
+
+/// 对应 `startPage()` + `carTrackQueryNew()`：先按同一份 WHERE 数出 total，
+/// 再按 reasonable 钳位算 offset 并把 LIMIT/OFFSET 下推；pageSize<=0 只出 total 不出行。
+async fn page_query(
+    state: &Arc<AppState>,
+    vo: &mut CarParaVO,
+    p: &PageParams,
+    out: &mut Vec<ZdataTrailTracks>,
+) -> AppResult<i64> {
+    let total = state.sysutil.car_track_query_count(vo).await?;
+    if p.empty || p.page_size <= 0 {
+        return Ok(total);
+    }
+    let off = p.offset_for(total).max(0);
+    *out = state
+        .sysutil
+        .car_track_query_page(vo, p.page_size, off)
+        .await?;
+    Ok(total)
 }
 
 pub async fn car_track_by_time(
@@ -64,6 +76,7 @@ pub async fn car_track_by_time(
 ) -> AppResult<Response> {
     let p = page_params(&page);
     let mut list = Vec::new();
+    let mut total = 0i64;
     let carlist: Vec<CarVO> = match &state.cache {
         Some(c) => c
             .get_json::<Vec<CarVO>>(CAR_LIST_JC)
@@ -71,29 +84,21 @@ pub async fn car_track_by_time(
             .unwrap_or_default(),
         None => vec![],
     };
-    if !p.empty && !carlist.is_empty() {
+    if !carlist.is_empty() {
         vo.carlist = carlist.into();
-        vo.page_num = JInt::from(p.page_num as i32);
-        vo.page_size = JInt::from((p.offset() + p.page_size) as i32);
-        list = state.sysutil.car_track_query_new(&mut vo).await?;
-        let off = p.offset() as usize;
-        list = if off < list.len() {
-            list.split_off(off)
-        } else {
-            vec![]
-        };
+        total = page_query(&state, &mut vo, &p, &mut list).await?;
     }
     // PARITY: Java 的 setTrailPoints("") 在这一分支是注释掉的，因此保留原始轨迹串。
     let infos = state.sysutil.build_trail_infos(list.clone(), false).await?;
     Ok(json_ok(TableDataInfo::new(
         serde_json::to_value(infos)?,
-        list.len() as i64,
+        total,
     )))
 }
 
 pub async fn change_trail_info(
     State(state): State<Arc<AppState>>,
-    Json(req): Json<TrailInfo>,
+    SpringJson(req): SpringJson<TrailInfo>,
 ) -> AppResult<Response> {
     let Some(mut tracks) = req.tracks.as_deref().cloned() else {
         return Ok(json_ok(req));

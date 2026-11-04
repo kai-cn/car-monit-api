@@ -71,7 +71,7 @@ pub struct OdsLwzxsfsjFeeStationExit01 {
     #[sqlx(default)]
     pub identification: JString,
     #[sqlx(default)]
-    pub feerate: JFloat,
+    pub feerate: JDecimal,
     #[sqlx(default)]
     pub identifyvehicleid: JString,
     #[sqlx(default)]

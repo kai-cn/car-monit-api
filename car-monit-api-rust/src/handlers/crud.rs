@@ -30,12 +30,14 @@ where
     R: ReadRepo<T>,
 {
     let p = page_params(page);
+    let order = order_by_clause(page)?;
     // PARITY: PageHelper 先 count 再取数，reasonable 钳位依赖总数
     let total = repo.count(&q).await?;
     let rows = if p.empty {
         Vec::new()
     } else {
-        repo.list(&q, p.page_size, p.offset_for(total)).await?
+        repo.list_ordered(&q, p.page_size, p.offset_for(total), order.as_deref())
+            .await?
     };
     Ok(json_ok(TableDataInfo::new(
         serde_json::to_value(rows)?,
@@ -49,12 +51,14 @@ where
     R: ReadRepo<T>,
 {
     let p = page_params(page);
+    let order = order_by_clause(page)?;
     // listToExport 同样经过 startPage()，需要 count 才能复刻 reasonable 钳位
     let total = repo.count(&q).await?;
     let rows = if p.empty {
         Vec::new()
     } else {
-        repo.list(&q, p.page_size, p.offset_for(total)).await?
+        repo.list_ordered(&q, p.page_size, p.offset_for(total), order.as_deref())
+            .await?
     };
     Ok(json_ok(serde_json::to_value(rows)?))
 }

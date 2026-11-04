@@ -70,6 +70,22 @@ pub fn uuid_simple() -> String {
 
 /// 对应 DateUtils.parseDate：多格式容忍解析。
 /// DIFF: Java SimpleDateFormat 每次 new 一个 pattern；Rust 用 chrono 的显式格式列表。
+/// 对应 `java.sql.Timestamp.valueOf(String)`：只接受
+/// `yyyy-MM-dd [HH:mm:ss[.fffffffff]]` 的完整形态（缺少时分秒会抛
+/// "Timestamp format must be yyyy-mm-dd hh:mm:ss[.fffffffff]"）。
+/// UnifiedQueryService#parseToMillis 走的就是它，所以 ES 降级到 DB 时，
+/// `startTime=2025-09-01` 这种「只有日期」的值在 Java 侧会让整次查询异常 → 返回空列表。
+pub fn java_timestamp_value_of(s: &str) -> Result<DateTime<Utc>, String> {
+    use chrono::{NaiveDateTime, TimeZone, Utc};
+    let body = s.strip_prefix(' ').unwrap_or(s);
+    let dt = NaiveDateTime::parse_from_str(body, "%Y-%m-%d %H:%M:%S")
+        .or_else(|_| NaiveDateTime::parse_from_str(body, "%Y-%m-%d %H:%M:%S%.f"))
+        .map_err(|_| {
+            "Timestamp format must be yyyy-mm-dd hh:mm:ss[.fffffffff]".to_string()
+        })?;
+    Ok(Utc.from_utc_datetime(&dt))
+}
+
 pub fn parse_time(s: &str) -> Result<DateTime<Utc>, String> {
     let s = s.trim();
     if s.is_empty() {

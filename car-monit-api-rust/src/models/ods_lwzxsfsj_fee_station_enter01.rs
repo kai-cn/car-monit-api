@@ -31,7 +31,7 @@ pub struct OdsLwzxsfsjFeeStationEnter01 {
     #[sqlx(default)]
     pub entollstationid: JString,
     #[sqlx(default)]
-    pub enweight: JFloat,
+    pub enweight: JDecimal,
     #[sqlx(default)]
     pub identifyvehicleid: JString,
     #[sqlx(default)]
@@ -61,7 +61,7 @@ pub struct OdsLwzxsfsjFeeStationEnter01 {
     #[sqlx(default)]
     pub terminaltransno: JString,
     #[sqlx(default)]
-    pub transfee: JFloat,
+    pub transfee: JDecimal,
     #[sqlx(default)]
     pub transtype: JString,
     #[sqlx(default)]

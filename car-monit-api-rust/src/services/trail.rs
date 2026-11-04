@@ -343,6 +343,40 @@ fn enrich_from_station_ip(point: &mut TrailBo, ip: &OdsSzdnTollStationIp) {
     point.location_flag = "1".into();
 }
 
+/// 取出第一个括号平衡的 JSON 数组（对应 FastJSON parseArray「读到一个数组就停」）。
+fn json_array_prefix(s: &str) -> Option<&str> {
+    let bytes = s.as_bytes();
+    let start = bytes.iter().position(|b| *b == b'[')?;
+    let mut depth = 0usize;
+    let mut in_str = false;
+    let mut escaped = false;
+    for i in start..bytes.len() {
+        let b = bytes[i];
+        if in_str {
+            if escaped {
+                escaped = false;
+            } else if b == b'\\' {
+                escaped = true;
+            } else if b == b'"' {
+                in_str = false;
+            }
+            continue;
+        }
+        match b {
+            b'"' => in_str = true,
+            b'[' | b'{' => depth += 1,
+            b']' | b'}' => {
+                depth -= 1;
+                if depth == 0 && b == b']' {
+                    return Some(&s[start..=i]);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 /// 供 SysUtilService 复用：按字段白名单提取轨迹点。
 pub fn parse_trail_points(raw: &str) -> Vec<TrailBo> {
     let mut s = raw.trim().to_string();
@@ -356,24 +390,39 @@ pub fn parse_trail_points(raw: &str) -> Vec<TrailBo> {
     s = s.replace("ZdTrails:", "");
     let arr: Vec<serde_json::Value> = match serde_json::from_str(&s) {
         Ok(v) => v,
-        Err(e) => {
-            warn!(err = %e, raw = %s, "[轨迹查询] 轨迹点 JSON 解析失败");
-            return vec![];
-        }
+        // PARITY: 历史轨迹的 trailpoints 是 jsonb 里塞了一段被转义过的数组文本，
+        // Java 侧 replace 之后尾部仍残留引号/花括号等脏字符；FastJSON 的 parseArray
+        // 只要求前缀是一个完整数组就返回，serde 严格解析会整体失败 → trailList 空，
+        // 起终点经纬度也随之丢失。这里补一次「取平衡数组前缀」的重试。
+        Err(e) => match json_array_prefix(&s) {
+            Some(prefix) => match serde_json::from_str(prefix) {
+                Ok(v) => v,
+                Err(_) => {
+                    warn!(err = %e, raw = %s, "[轨迹查询] 轨迹点 JSON 解析失败");
+                    return vec![];
+                }
+            },
+            None => {
+                warn!(err = %e, raw = %s, "[轨迹查询] 轨迹点 JSON 解析失败");
+                return vec![];
+            }
+        },
     };
     let mut out = Vec::with_capacity(arr.len());
     for obj in arr {
-        let get = |k: &str| -> String {
-            obj.get(k)
-                .map(|v| match v {
-                    serde_json::Value::String(s) => s.clone(),
-                    other => other.to_string().trim_matches('"').to_string(),
-                })
-                .unwrap_or_default()
+        // PARITY: FastJSON 的 `JSONObject.getString(key)` 在 key 不存在时返回 **null**，
+        // 于是 Java 侧对应字段保持 null；之前 Rust 统一给成空串，响应里就多了
+        // `"orgCode": ""` 这种 Java 没有的值。这里改成 Option，缺键即 None。
+        let get = |k: &str| -> Option<String> {
+            obj.get(k).and_then(|v| match v {
+                serde_json::Value::Null => None,
+                serde_json::Value::String(s) => Some(s.clone()),
+                other => Some(other.to_string().trim_matches('"').to_string()),
+            })
         };
         let mut bo = TrailBo::default();
         // PARITY: Java 只在含 "T" 时赋值 captureTime，其余保持空串。
-        let capture = get("captureTime");
+        let capture = get("captureTime").unwrap_or_default();
         if capture.contains('T') {
             if let Ok(t) = utils::parse_time(&capture) {
                 bo.capture_time = utils::format_datetime(&t).into();
@@ -387,11 +436,16 @@ pub fn parse_trail_points(raw: &str) -> Vec<TrailBo> {
         bo.section_code = get("sectionCode").into();
         bo.org_code = get("orgCode").into();
         bo.pileno = get("pileNo").into();
-        if !get("lon").trim().is_empty() {
-            bo.lon = parse_f64(&get("lon")).into();
+        // Java: CommonUtil.isNotBlank(lon) → new BigDecimal(lon)
+        if let Some(lon) = get("lon") {
+            if !lon.trim().is_empty() {
+                bo.lon = parse_f64(&lon).into();
+            }
         }
-        if !get("lat").trim().is_empty() {
-            bo.lat = parse_f64(&get("lat")).into();
+        if let Some(lat) = get("lat") {
+            if !lat.trim().is_empty() {
+                bo.lat = parse_f64(&lat).into();
+            }
         }
         out.push(bo);
     }

@@ -32,6 +32,8 @@ pub enum Cond {
     Eq(&'static str, JString),
     EqI64(&'static str, i64),
     EqF64(&'static str, f64),
+    /// 对应 MyBatis 把 BigDecimal 参数绑进 numeric 列（不是先转 double 再比）。
+    EqDecimal(&'static str, bigdecimal::BigDecimal),
     Like(&'static str, JString),
     In(&'static str, Vec<String>),
     Gte(&'static str, JString),
@@ -56,6 +58,9 @@ pub fn push_where(qb: &mut QueryBuilder<'_, Postgres>, conds: &[Cond]) {
             }
             Cond::EqF64(col, v) => {
                 qb.push(*col).push(" = ").push_bind(*v);
+            }
+            Cond::EqDecimal(col, v) => {
+                qb.push(*col).push(" = ").push_bind(v.clone());
             }
             Cond::Like(col, v) => {
                 // PARITY: MyBatis `like concat('%', x, '%')` 大小写敏感。
@@ -120,12 +125,22 @@ where
     }
 
     pub async fn list(&self, conds: Vec<Cond>, limit: i64, offset: i64) -> AppResult<Vec<T>> {
+        self.list_ordered(conds, limit, offset, None).await
+    }
+
+    /// `extra_order` 对应 PageHelper 的 orderBy（`orderByColumn` + `isAsc`）。
+    /// Java 侧是「Mapper 里原有的 ORDER BY」之后再追加列，这里用逗号拼在同一条 ORDER BY 上。
+    pub async fn list_ordered(
+        &self,
+        conds: Vec<Cond>,
+        limit: i64,
+        offset: i64,
+        extra_order: Option<&str>,
+    ) -> AppResult<Vec<T>> {
         let mut qb =
-            QueryBuilder::<Postgres>::new(format!("SELECT {} FROM {}", self.select, self.table));
+            QueryBuilder::<Postgres>::new(format!("SELECT {} FROM {} t", self.select, self.table));
         push_where(&mut qb, &conds);
-        if !self.order.is_empty() {
-            qb.push(" ").push(self.order);
-        }
+        push_order(&mut qb, self.order, extra_order);
         // 对应 PageHelper 的 LIMIT/OFFSET（Rust 直接下推，无需内存切片）
         qb.push(" LIMIT ").push_bind(limit.max(1));
         qb.push(" OFFSET ").push_bind(offset.max(0));
@@ -134,7 +149,7 @@ where
 
     pub async fn list_unbounded(&self, conds: Vec<Cond>) -> AppResult<Vec<T>> {
         let mut qb =
-            QueryBuilder::<Postgres>::new(format!("SELECT {} FROM {}", self.select, self.table));
+            QueryBuilder::<Postgres>::new(format!("SELECT {} FROM {} t", self.select, self.table));
         push_where(&mut qb, &conds);
         if !self.order.is_empty() {
             qb.push(" ").push(self.order);
@@ -143,7 +158,7 @@ where
     }
 
     pub async fn count(&self, conds: Vec<Cond>) -> AppResult<i64> {
-        let mut qb = QueryBuilder::<Postgres>::new(format!("SELECT COUNT(*) FROM {}", self.table));
+        let mut qb = QueryBuilder::<Postgres>::new(format!("SELECT COUNT(*) FROM {} t", self.table));
         push_where(&mut qb, &conds);
         let row = qb.build().fetch_one(&self.db.pool).await?;
         Ok(row.try_get::<i64, _>(0).unwrap_or(0))
@@ -151,7 +166,7 @@ where
 
     pub async fn get_by_id(&self, id: &str) -> AppResult<Option<T>> {
         let mut qb =
-            QueryBuilder::<Postgres>::new(format!("SELECT {} FROM {}", self.select, self.table));
+            QueryBuilder::<Postgres>::new(format!("SELECT {} FROM {} t", self.select, self.table));
         qb.push(" WHERE ")
             .push(self.pk)
             .push(" = ")
@@ -165,7 +180,7 @@ where
 
     pub async fn get_by_id_i64(&self, id: i64) -> AppResult<Option<T>> {
         let mut qb =
-            QueryBuilder::<Postgres>::new(format!("SELECT {} FROM {}", self.select, self.table));
+            QueryBuilder::<Postgres>::new(format!("SELECT {} FROM {} t", self.select, self.table));
         qb.push(" WHERE ").push(self.pk).push(" = ").push_bind(id);
         qb.push(" LIMIT 1");
         Ok(qb
@@ -176,7 +191,7 @@ where
 
     pub async fn list_all(&self) -> AppResult<Vec<T>> {
         let mut qb =
-            QueryBuilder::<Postgres>::new(format!("SELECT {} FROM {}", self.select, self.table));
+            QueryBuilder::<Postgres>::new(format!("SELECT {} FROM {} t", self.select, self.table));
         if !self.order.is_empty() {
             qb.push(" ").push(self.order);
         }
@@ -202,10 +217,36 @@ where
     }
 }
 
+/// Java 的 Mapper 在 selectList 里统一把表别名写成 `t`
+/// （`FROM jl_data01.ods_szdn_gantry t`），所以 `orderByColumn=t.id` 这类带前缀的排序列在 Java 合法。
+/// Rust 侧同样加别名，否则 PG 报 missing FROM-entry → 双端 200/500 不一致。
+fn push_order(qb: &mut QueryBuilder<Postgres>, base: &str, extra: Option<&str>) {
+    match (base.is_empty(), extra) {
+        (true, None) => {}
+        (true, Some(e)) => {
+            qb.push(" ORDER BY ").push(e);
+        }
+        (false, None) => {
+            qb.push(" ").push(base);
+        }
+        (false, Some(e)) => {
+            qb.push(" ").push(base);
+            qb.push(", ").push(e);
+        }
+    }
+}
+
 /// 只读仓库契约：让 handler 可以泛型处理 19 张基础表（对应 MyBatis-Plus BaseMapper<T> 的默认方法）。
 #[async_trait::async_trait]
 pub trait ReadRepo<T>: Send + Sync {
     async fn list(&self, q: &T, limit: i64, offset: i64) -> AppResult<Vec<T>>;
+    async fn list_ordered(
+        &self,
+        q: &T,
+        limit: i64,
+        offset: i64,
+        extra_order: Option<&str>,
+    ) -> AppResult<Vec<T>>;
     async fn count(&self, q: &T) -> AppResult<i64>;
     async fn get_by_id(&self, id: &str) -> AppResult<Option<T>>;
     async fn list_all(&self) -> AppResult<Vec<T>>;
@@ -235,6 +276,18 @@ macro_rules! entity_repo {
                 self.repo.list($filters(q), limit, offset).await
             }
 
+            pub async fn list_ordered(
+                &self,
+                q: &$model,
+                limit: i64,
+                offset: i64,
+                extra_order: Option<&str>,
+            ) -> AppResult<Vec<$model>> {
+                self.repo
+                    .list_ordered($filters(q), limit, offset, extra_order)
+                    .await
+            }
+
             pub async fn count(&self, q: &$model) -> AppResult<i64> {
                 self.repo.count($filters(q)).await
             }
@@ -252,6 +305,16 @@ macro_rules! entity_repo {
         impl ReadRepo<$model> for $repo {
             async fn list(&self, q: &$model, limit: i64, offset: i64) -> AppResult<Vec<$model>> {
                 $repo::list(self, q, limit, offset).await
+            }
+
+            async fn list_ordered(
+                &self,
+                q: &$model,
+                limit: i64,
+                offset: i64,
+                extra_order: Option<&str>,
+            ) -> AppResult<Vec<$model>> {
+                $repo::list_ordered(self, q, limit, offset, extra_order).await
             }
             async fn count(&self, q: &$model) -> AppResult<i64> {
                 $repo::count(self, q).await
@@ -290,6 +353,18 @@ macro_rules! entity_repo_numeric {
                 self.repo.list($filters(q), limit, offset).await
             }
 
+            pub async fn list_ordered(
+                &self,
+                q: &$model,
+                limit: i64,
+                offset: i64,
+                extra_order: Option<&str>,
+            ) -> AppResult<Vec<$model>> {
+                self.repo
+                    .list_ordered($filters(q), limit, offset, extra_order)
+                    .await
+            }
+
             pub async fn count(&self, q: &$model) -> AppResult<i64> {
                 self.repo.count($filters(q)).await
             }
@@ -308,6 +383,16 @@ macro_rules! entity_repo_numeric {
         impl ReadRepo<$model> for $repo {
             async fn list(&self, q: &$model, limit: i64, offset: i64) -> AppResult<Vec<$model>> {
                 $repo::list(self, q, limit, offset).await
+            }
+
+            async fn list_ordered(
+                &self,
+                q: &$model,
+                limit: i64,
+                offset: i64,
+                extra_order: Option<&str>,
+            ) -> AppResult<Vec<$model>> {
+                $repo::list_ordered(self, q, limit, offset, extra_order).await
             }
             async fn count(&self, q: &$model) -> AppResult<i64> {
                 $repo::count(self, q).await
@@ -761,7 +846,7 @@ $27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43)",
         .bind(&m.gantrycode).bind(&m.gantryname).bind(&m.roadcode).bind(&m.roadname)
         .bind(&m.sectioncode).bind(&m.sectionname).bind(&m.tollcode).bind(&m.tollname)
         .bind(&m.orgcode).bind(&m.orgname).bind(m.direction).bind(&m.hexcode)
-        .bind(&m.pileno).bind(m.lon).bind(m.lat).bind(&m.deviceip)
+        .bind(&m.pileno).bind(&m.lon).bind(&m.lat).bind(&m.deviceip)
         .bind(m.siteid).bind(m.laneid).bind(m.snapshottimeunix).bind(m.snapshottime)
         .bind(m.receivedtimeunix).bind(m.receivedtime).bind(&m.platenumber).bind(&m.platecolor)
         .bind(m.platecolorcode).bind(&m.platetype).bind(m.platetypecode).bind(m.plateconfidence)
@@ -801,8 +886,8 @@ gradelevel=$41,datauuid=$42,reserve3=$43 WHERE big_id=$1",
         .bind(m.direction)
         .bind(&m.hexcode)
         .bind(&m.pileno)
-        .bind(m.lon)
-        .bind(m.lat)
+        .bind(&m.lon)
+        .bind(&m.lat)
         .bind(&m.deviceip)
         .bind(m.siteid)
         .bind(m.laneid)
@@ -1010,46 +1095,101 @@ impl FeeRecordsRepo {
 
 impl TrailTracksRepo {
     /// ZdataTrailTracksMapper.xml:116-158 getHistoryTrail（读 zdata_trail_fitting）。
+    /// 组装 getHistoryTrail 的 WHERE 片段与绑定参数（分页版与计数版共用，保证 total 与 rows 同源）。
+    fn history_trail_where(vo: &CarParaVO) -> (String, Vec<String>) {
+        let mut where_sql = String::new();
+        let mut args: Vec<String> = vec![];
+        if !vo.car_no_list.is_empty() {
+            where_sql.push_str(&format!(
+                " AND envehicleid IN ({})",
+                placeholders(vo.car_no_list.len())
+            ));
+            args.extend(vo.car_no_list.iter().cloned());
+        } else if !vo.car_no.is_empty() {
+            where_sql.push_str(" AND envehicleid = ?");
+            args.push(vo.car_no.as_str().to_string());
+        }
+        if !vo.apply_time1.is_empty() {
+            where_sql.push_str(" AND extime >= to_timestamp(?, 'yyyy-mm-dd HH24:MI:SS')");
+            args.push(vo.apply_time1.as_str().to_string());
+        }
+        if !vo.apply_time2.is_empty() {
+            where_sql.push_str(" AND extime <= to_timestamp(?, 'yyyy-mm-dd HH24:MI:SS')");
+            args.push(vo.apply_time2.as_str().to_string());
+        }
+        // PARITY: ZdataTrailTracksMapper.xml 的两个 flag 分支都带 `and t.extime <= now()`，
+        // 之前 Rust 只写了下界，会把「将来」的轨迹也算进来。
+        match vo.flag.as_str() {
+            "bannian" => where_sql.push_str(" AND extime >= now() - 180 AND extime <= now()"),
+            "yiyue" => where_sql.push_str(" AND extime >= now() - 3 AND extime <= now()"),
+            _ => {}
+        }
+        (where_sql, args)
+    }
+
+    const HISTORY_TRAIL_COLS: &'static str =
+        "SELECT t.cid AS uuid, t.envehicleid AS plate_key, t.enaxlecount, t.entime AS enter_time, t.entolllaneid, t.entollstationid, t.entollstationname, t.envehicleclass, t.envehicleid, t.envehicletype, t.enweight, t.extime AS exit_time, t.extolllaneid, t.extollstationid, t.extollstationname, t.exvehicleclass, t.exvehicleid, t.exvehicletype, t.exweight, t.trailpoints::text AS trail_points FROM jl_data01.zdata_trail_fitting t WHERE 1=1";
+
+    /// 对应 Java 的 `startPage()` + `getHistoryTrail`：LIMIT/OFFSET 下推到数据库，
+    /// total 由同一份 WHERE 的 COUNT 给出（PageHelper 就是这么做的）。
+    pub async fn history_trail_page(
+        &self,
+        vo: &CarParaVO,
+        limit: i64,
+        offset: i64,
+    ) -> AppResult<Vec<ZdataTrailTracks>> {
+        let (where_sql, args) = Self::history_trail_where(vo);
+        let mut sql = String::from(Self::HISTORY_TRAIL_COLS);
+        sql.push_str(&where_sql);
+        sql.push_str(" LIMIT ? OFFSET ?");
+        let sql = pg_placeholders(&sql, args.len() + 2);
+        let mut q = sqlx::query_as::<_, ZdataTrailTracks>(&sql);
+        for a in args {
+            q = q.bind(a);
+        }
+        q.bind(limit.max(0)).bind(offset.max(0)).fetch_all(&self.repo.db().pool).await.map_err(Into::into)
+    }
+
+    pub async fn history_trail_count(&self, vo: &CarParaVO) -> AppResult<i64> {
+        let (where_sql, args) = Self::history_trail_where(vo);
+        let mut sql = String::from("SELECT COUNT(*) FROM jl_data01.zdata_trail_fitting t WHERE 1=1");
+        sql.push_str(&where_sql);
+        let sql = pg_placeholders(&sql, args.len());
+        let mut q = sqlx::query_scalar::<_, i64>(&sql);
+        for a in args {
+            q = q.bind(a);
+        }
+        Ok(q.fetch_one(&self.repo.db().pool).await?)
+    }
+
     pub async fn get_history_trail(
         &self,
         vo: &CarParaVO,
         limit: i64,
     ) -> AppResult<Vec<ZdataTrailTracks>> {
         let mut sql = String::from(
-            "SELECT cid AS uuid, envehicleid AS plate_key, entime AS enter_time, extime AS exit_time, \
-trailpoints AS trail_points FROM jl_data01.zdata_trail_fitting WHERE 1=1",
+            "SELECT t.cid AS uuid, t.envehicleid AS plate_key, t.enaxlecount, t.entime AS enter_time, \
+t.entolllaneid, t.entollstationid, t.entollstationname, t.envehicleclass, t.envehicleid, \
+t.envehicletype, t.enweight, t.extime AS exit_time, t.extolllaneid, t.extollstationid, \
+t.extollstationname, t.exvehicleclass, t.exvehicleid, t.exvehicletype, t.exweight, \
+t.trailpoints::text AS trail_points \
+FROM jl_data01.zdata_trail_fitting t WHERE 1=1",
         );
-        let mut args: Vec<String> = vec![];
-        if !vo.car_no_list.is_empty() {
-            sql.push_str(&format!(
-                " AND envehicleid IN ({})",
-                placeholders(vo.car_no_list.len())
-            ));
-            args.extend(vo.car_no_list.iter().cloned());
-        } else if !vo.car_no.is_empty() {
-            sql.push_str(" AND envehicleid = ?");
-            args.push(vo.car_no.as_str().to_string());
+        // PARITY: XML 的 getHistoryTrail 没有 ORDER BY，这里也不能加排序，
+        // 否则同输入下双端「第 1 页」不是同一批行。limit<=0 表示不分页、取全量。
+        let (where_sql, args) = Self::history_trail_where(vo);
+        sql.push_str(&where_sql);
+        if limit > 0 {
+            sql.push_str(" LIMIT ?");
         }
-        if !vo.apply_time1.is_empty() {
-            sql.push_str(" AND extime >= to_timestamp(?, 'yyyy-mm-dd HH24:MI:SS')");
-            args.push(vo.apply_time1.as_str().to_string());
-        }
-        if !vo.apply_time2.is_empty() {
-            sql.push_str(" AND extime <= to_timestamp(?, 'yyyy-mm-dd HH24:MI:SS')");
-            args.push(vo.apply_time2.as_str().to_string());
-        }
-        match vo.flag.as_str() {
-            "bannian" => sql.push_str(" AND extime >= now() - 180"),
-            "yiyue" => sql.push_str(" AND extime >= now() - 3"),
-            _ => {}
-        }
-        sql.push_str(" ORDER BY cid, extime LIMIT ?");
         let sql = pg_placeholders(&sql, args.len() + 1);
         let mut q = sqlx::query_as::<_, ZdataTrailTracks>(&sql);
         for a in args {
             q = q.bind(a);
         }
-        q = q.bind(limit.max(1));
+        if limit > 0 {
+            q = q.bind(limit);
+        }
         Ok(q.fetch_all(&self.repo.db().pool).await?)
     }
 }
@@ -1145,11 +1285,12 @@ fn pg_placeholders(sql: &str, _bind_count: usize) -> String {
     out
 }
 
+/// IN 列表的占位符。这里必须给 `?` 而不是 `$1..$n`：同一条 SQL 后面还有
+/// `LIMIT ?`，统一交给 `pg_placeholders` 从左到右编号，否则 `LIMIT` 会复用 `$1`
+/// 并把第一个绑定参数（车牌字符串）当数字用 —— 实测报
+/// `invalid input syntax for type bigint: "赣AK7388"`。
 fn placeholders(n: usize) -> String {
-    (1..=n)
-        .map(|i| format!("${}", i))
-        .collect::<Vec<_>>()
-        .join(",")
+    vec!["?"; n].join(",")
 }
 
 async fn cursor_query<T>(
