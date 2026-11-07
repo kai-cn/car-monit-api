@@ -364,3 +364,211 @@ def test_jdbc_current_schema_passthrough() -> None:
     ignored = jdbc_to_sqlalchemy_url(
         "jdbc:postgresql://db-host:5432/monit?ssl=false", "u", "p")
     assert ignored == "postgresql+psycopg://u:p@db-host:5432/monit"
+
+
+# ============================================================== Kafka 适配（P2-4）
+def test_kafka_fallback_policy_env_and_runtime_default(monkeypatch) -> None:
+    from app.middleware.real_kafka import kafka_fallback_policy
+
+    monkeypatch.delenv("CAR_MONIT_KAFKA_FALLBACK", raising=False)
+    monkeypatch.delenv("CAR_MONIT_RUNTIME", raising=False)
+    assert kafka_fallback_policy() == "memory"  # shim 默认降级
+    monkeypatch.setenv("CAR_MONIT_RUNTIME", "prod")
+    assert kafka_fallback_policy() == "error"  # prod 默认抛错（Java 宕机语义）
+    monkeypatch.setenv("CAR_MONIT_KAFKA_FALLBACK", "memory")
+    assert kafka_fallback_policy() == "memory"  # 显式覆盖
+
+
+def test_kafka_consumer_conf_from_props(monkeypatch) -> None:
+    from app.middleware.real_kafka import consumer_conf_from_props
+
+    monkeypatch.setenv("CAR_MONIT_KAFKA_URL", "127.0.0.1:9092")
+    conf = consumer_conf_from_props({
+        "bootstrap.servers": "prod-kafka:9092",  # env 覆盖（真实集群唯一事实源）
+        "group.id": "flink-cdc-consumer",
+        "auto.offset.reset": "latest",
+        "enable.auto.commit": "false",
+    })
+    assert conf == {
+        "bootstrap.servers": "127.0.0.1:9092",
+        "group.id": "flink-cdc-consumer",
+        "auto.offset.reset": "latest",
+        "enable.auto.commit": False,
+    }
+
+
+def test_simple_string_schema_replaces_invalid_utf8() -> None:
+    """Java new String(bytes, UTF_8) 语义：非法序列替换为 U+FFFD，不抛错。"""
+    from org.apache.flink.api.common.serialization.SimpleStringSchema import (
+        SimpleStringSchema,
+    )
+
+    schema = SimpleStringSchema()
+    assert schema.deserialize(b"\xff\xfe\xfa") == "\ufffd\ufffd\ufffd"
+    assert schema.deserialize("正常".encode()) == "正常"
+
+
+class _SyncFailProducer:
+    """produce() 同步抛 KafkaException 的假客户端。"""
+
+    def __init__(self, error_code: int) -> None:
+        self._error_code = error_code
+
+    def produce(self, **kwargs):
+        from confluent_kafka import KafkaError, KafkaException
+
+        raise KafkaException(KafkaError(self._error_code, "test failure"))
+
+    def flush(self, timeout=None):
+        return 0
+
+
+class _DeliveryFailProducer:
+    """送达回调报错的假客户端（同步触发 on_delivery）。"""
+
+    def __init__(self, error_code: int) -> None:
+        self._error_code = error_code
+
+    def produce(self, topic, key, value, on_delivery):
+        from confluent_kafka import KafkaError
+
+        on_delivery(KafkaError(self._error_code, "test failure"), None)
+
+    def flush(self, timeout=None):
+        return 0
+
+
+def test_kafka_sync_failure_trips_memory() -> None:
+    from confluent_kafka import KafkaError
+
+    from app.middleware.real_kafka import RealKafkaProducer
+
+    backend = RealKafkaProducer(
+        "127.0.0.1:1", fallback="memory",
+        client=_SyncFailProducer(KafkaError._ALL_BROKERS_DOWN))
+    assert backend.degraded is False
+    result = backend.send("t", "k", "v", memory=lambda: "memory-ok")
+    assert result == "memory-ok"
+    assert backend.degraded is True
+
+
+def test_kafka_sync_failure_error_policy_raises() -> None:
+    from confluent_kafka import KafkaError, KafkaException
+
+    from app.middleware.real_kafka import RealKafkaProducer
+
+    backend = RealKafkaProducer(
+        "127.0.0.1:1", fallback="error",
+        client=_SyncFailProducer(KafkaError._ALL_BROKERS_DOWN))
+    with pytest.raises(KafkaException):
+        backend.send("t", "k", "v", memory=lambda: "memory-ok")
+
+
+def test_kafka_sync_deterministic_failure_no_trip() -> None:
+    """produce() 的同步确定性错误（消息超限的客户端侧拦截）：只失败该条，不熔断。"""
+    from confluent_kafka import KafkaError
+
+    from app.middleware.real_kafka import RealKafkaProducer
+
+    backend = RealKafkaProducer(
+        "127.0.0.1:1", fallback="memory",
+        client=_SyncFailProducer(KafkaError.MSG_SIZE_TOO_LARGE))
+    errors: list = []
+    backend.send("t", "k", "v",
+                 memory=lambda: pytest.fail("确定性错误不应降级")).addCallback(
+        lambda _r: None, lambda e: errors.append(str(e)))
+    assert backend.degraded is False
+    assert len(errors) == 1 and "MSG_SIZE_TOO_LARGE" in errors[0]
+
+
+def test_kafka_delivery_outage_trips_but_deterministic_does_not() -> None:
+    from confluent_kafka import KafkaError
+
+    from app.middleware.real_kafka import RealKafkaProducer
+
+    # 疑似不可用（broker 全不可达）→ 熔断 + 该条进失败 future
+    outage = RealKafkaProducer(
+        "127.0.0.1:1", fallback="memory",
+        client=_DeliveryFailProducer(KafkaError._ALL_BROKERS_DOWN))
+    errors: list = []
+    outage.send("t", "k", "v", memory=lambda: "m").addCallback(
+        lambda _r: None, lambda e: errors.append(str(e)))
+    assert outage.degraded is True
+    assert len(errors) == 1 and "ALL_BROKERS_DOWN" in errors[0]
+
+    # 确定性错误（消息超限）→ 只失败该条，不熔断
+    deterministic = RealKafkaProducer(
+        "127.0.0.1:1", fallback="memory",
+        client=_DeliveryFailProducer(KafkaError.MSG_SIZE_TOO_LARGE))
+    errors2: list = []
+    deterministic.send("t", "k", "v", memory=lambda: "m").addCallback(
+        lambda _r: None, lambda e: errors2.append(str(e)))
+    assert deterministic.degraded is False
+    assert len(errors2) == 1 and "MSG_SIZE_TOO_LARGE" in errors2[0]
+
+
+def test_kafka_send_success_future_completes() -> None:
+    from org.springframework.kafka.support.SendResult import SendResult
+
+    from app.middleware.real_kafka import RealKafkaProducer
+
+    class _FakeMsg:
+        def topic(self):
+            return "topic-x"
+
+        def partition(self):
+            return 0
+
+        def offset(self):
+            return 7
+
+    class _OkProducer:
+        def produce(self, topic, key, value, on_delivery):
+            on_delivery(None, _FakeMsg())
+
+        def flush(self, timeout=None):
+            return 0
+
+    backend = RealKafkaProducer("127.0.0.1:9092", fallback="error",
+                                client=_OkProducer())
+    got: list = []
+    backend.send("topic-x", "k", {"a": 1}, memory=lambda: None).addCallback(
+        lambda r: got.append(r), lambda e: pytest.fail(str(e)))
+    assert len(got) == 1
+    result = got[0]
+    assert isinstance(result, SendResult)
+    assert result.getRecordMetadata().offset() == 7
+    assert result.getProducerRecord() == ("topic-x", "k", {"a": 1})
+
+
+def test_kafka_mount_factory(monkeypatch) -> None:
+    from app.middleware.real_kafka import RealKafkaProducer
+    from org.springframework.kafka.core.KafkaTemplate import KafkaTemplate
+
+    monkeypatch.delenv("CAR_MONIT_KAFKA_URL", raising=False)
+    assert KafkaTemplate()._real is None  # 未设 URL：纯替身
+
+    monkeypatch.setenv("CAR_MONIT_KAFKA_URL", "127.0.0.1:9092")
+    template = KafkaTemplate()
+    assert isinstance(template._real, RealKafkaProducer)
+    assert KafkaTemplate()._real is template._real  # 进程级共享（等价单例 Bean）
+
+    monkeypatch.delenv("CAR_MONIT_KAFKA_URL", raising=False)
+    assert KafkaTemplate()._real is None  # URL 变化重建
+
+
+def test_kafka_real_backend_bypasses_p0_guard(monkeypatch) -> None:
+    """prod 模式 + 真实后端挂载：send 不再触发 P0-2 拒绝（不再是假操作）。"""
+    monkeypatch.setenv("CAR_MONIT_RUNTIME", "prod")
+    monkeypatch.setenv("CAR_MONIT_KAFKA_URL", "127.0.0.1:9092")
+
+    from org.springframework.kafka.core.KafkaTemplate import KafkaTemplate
+
+    template = KafkaTemplate()
+
+    class _StubBackend:
+        def send(self, topic, key, value, memory):
+            return "real-ok"
+
+    template._real = _StubBackend()
+    assert template.send("topic", "key", "value") == "real-ok"

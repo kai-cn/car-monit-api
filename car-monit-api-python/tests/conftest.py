@@ -12,7 +12,7 @@ import os
 
 import pytest
 
-_ISOLATED_KEYS = ("CAR_MONIT_REDIS_URL", "CAR_MONIT_ES_URL")
+_ISOLATED_KEYS = ("CAR_MONIT_REDIS_URL", "CAR_MONIT_ES_URL", "CAR_MONIT_KAFKA_URL")
 
 
 @pytest.fixture(autouse=True)

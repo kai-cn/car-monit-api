@@ -28,6 +28,7 @@ REQUIRED = [
     ("orjson", "orjson"),
     ("redis", "redis"),                  # P2：真实 Redis 适配
     ("elasticsearch", "elasticsearch"),  # P2：真实 ES 适配（7.x 客户端）
+    ("confluent_kafka", "confluent-kafka"),  # P2-4：真实 Kafka 适配
 ]
 
 #: 开发机可能装了、但**不**是运行时依赖的包（仅提示，不计入缺失）
