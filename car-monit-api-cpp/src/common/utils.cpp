@@ -3,10 +3,27 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <cstdlib>
 #include <random>
 #include <sstream>
 
 namespace cm::utils {
+
+std::optional<std::string> get_env(const char* name) {
+#ifdef _MSC_VER
+  char* buf = nullptr;
+  size_t len = 0;
+  if (_dupenv_s(&buf, &len, name) != 0 || buf == nullptr) return std::nullopt;
+  std::string v(buf);
+  std::free(buf);
+  if (v.empty()) return std::nullopt;
+  return v;
+#else
+  const char* v = std::getenv(name);
+  if (v == nullptr || *v == '\0') return std::nullopt;
+  return std::string(v);
+#endif
+}
 
 std::string trim(std::string_view s) {
   size_t b = 0, e = s.size();

@@ -9,10 +9,41 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
+# ---------------------------------------------------------------------------
+# 告警与静态检查相关选项（P0）
+#
+# - 告警只施加于本工程三个目标（carmonit_core / car-monit-api / carmonit_tests），
+#   不使用目录级 add_compile_options：librdkafka 由 FetchContent 作为子目录加入，
+#   目录级选项会被其继承，导致第三方 C 代码在 /WX 下构建失败。
+# - 第三方头文件（httplib/json）通过 SYSTEM 包含隔离，避免其告警被计入。
+# - CM_WERROR 默认 ON：本工程代码零告警可维持；Linux 上若出现平台特有告警导致
+#   构建失败，可 -DCM_WERROR=OFF 快速解锁，再按告警修复后恢复。
+# - CM_SANITIZE 仅在 GCC/Clang 生效（MSVC 无对应 -fsanitize 语义）；取值
+#   address / undefined / address,undefined。ASan 与 UBSan 已在 CI 的 Linux
+#   job 中验证；本机无 Clang/GCC，Windows 下不支持该选项。
+# ---------------------------------------------------------------------------
+option(CM_WERROR "把本工程编译告警视为错误" ON)
+set(CM_SANITIZE "" CACHE STRING "启用 ASan/UBSan（仅 GCC/Clang，如 address,undefined）")
+set_property(CACHE CM_SANITIZE PROPERTY STRINGS "" address undefined "address,undefined")
+
 if(MSVC)
-  add_compile_options(/W3 /utf-8 /bigobj)
+  set(CM_WARN_OPTIONS /W4 /utf-8 /bigobj)
+  if(CM_WERROR)
+    list(APPEND CM_WARN_OPTIONS /WX)
+  endif()
 else()
-  add_compile_options(-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers)
+  set(CM_WARN_OPTIONS -Wall -Wextra -Wpedantic -Wno-unused-parameter -Wno-missing-field-initializers)
+  if(CM_WERROR)
+    list(APPEND CM_WARN_OPTIONS -Werror)
+  endif()
+endif()
+
+if(CM_SANITIZE)
+  if(MSVC)
+    message(FATAL_ERROR "CM_SANITIZE 仅支持 GCC/Clang；MSVC 请使用 -DCM_SANITIZE=OFF")
+  endif()
+  add_compile_options(-fsanitize=${CM_SANITIZE} -fno-omit-frame-pointer -g)
+  add_link_options(-fsanitize=${CM_SANITIZE})
 endif()
 
 find_package(Threads REQUIRED)
@@ -66,10 +97,14 @@ file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
 add_library(carmonit_core STATIC ${CORE_SOURCES})
 target_include_directories(carmonit_core PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+# 第三方头文件用 SYSTEM 包含：其告警不计入本工程 /W4、-Werror 判定。
+target_include_directories(carmonit_core SYSTEM PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}/third_party"
   "${CMAKE_CURRENT_SOURCE_DIR}/third_party/httplib"
   "${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann"
 )
+target_compile_options(carmonit_core PRIVATE ${CM_WARN_OPTIONS})
 target_compile_definitions(carmonit_core PUBLIC
   CPPHTTPLIB_THREAD_POOL_COUNT=16
   WIN32_LEAN_AND_MEAN
@@ -86,9 +121,11 @@ if(TARGET rdkafka)
 endif()
 
 add_executable(car-monit-api "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
+target_compile_options(car-monit-api PRIVATE ${CM_WARN_OPTIONS})
 target_link_libraries(car-monit-api PRIVATE carmonit_core)
 
 enable_testing()
 add_executable(carmonit_tests "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_main.cpp")
+target_compile_options(carmonit_tests PRIVATE ${CM_WARN_OPTIONS})
 target_link_libraries(carmonit_tests PRIVATE carmonit_core)
 add_test(NAME carmonit_tests COMMAND carmonit_tests)
