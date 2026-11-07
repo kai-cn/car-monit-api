@@ -228,3 +228,62 @@ def test_app_boots_and_degrades_in_prod_mode() -> None:
     assert result.returncode == 0, (
         "prod 模式子进程失败:\nSTDOUT:\n%s\nSTDERR:\n%s" % (result.stdout, result.stderr))
     assert "PROD-BOOT-OK" in result.stdout
+
+
+# ---------------------------------------------------------------- P0-3 Bean 生命周期
+def test_beans_disabled_by_default(monkeypatch) -> None:
+    from app import beans
+
+    monkeypatch.delenv("APP_BEANS_ENABLED", raising=False)
+    beans.shutdown_beans()
+    assert beans.beans_enabled() is False
+    note = beans.start_beans()
+    assert "disabled" in note
+    assert beans.is_started() is False
+
+
+def test_beans_lifecycle_with_stubs(monkeypatch) -> None:
+    from app import beans
+
+    monkeypatch.setenv("APP_BEANS_ENABLED", "true")
+    calls: list[str] = []
+
+    class _Stub:
+        def __init__(self) -> None:
+            calls.append("init:" + type(self).__name__)
+
+        def destroy(self) -> None:
+            calls.append("destroy:" + type(self).__name__)
+
+    class _BeanA(_Stub):
+        pass
+
+    class _BeanB(_Stub):
+        pass
+
+    beans.shutdown_beans()
+    note = beans.start_beans((_BeanA, _BeanB))
+    assert beans.is_started() is True
+    assert "2 bean(s)" in note
+    assert calls == ["init:_BeanA", "init:_BeanB"]
+    assert beans.start_beans((_BeanA,)) == note  # 幂等
+    beans.shutdown_beans()
+    assert "destroy:_BeanA" in calls and "destroy:_BeanB" in calls
+    assert beans.is_started() is False
+
+
+def test_beans_real_classes_construct_and_destroy(monkeypatch) -> None:
+    """shim + 内存 Mapper：fullSync 空表立即完成、重试线程首查为空后睡眠（daemon）。"""
+    from app import beans
+
+    monkeypatch.setenv("APP_BEANS_ENABLED", "true")
+    beans.shutdown_beans()
+    note = beans.start_beans()
+    try:
+        assert beans.is_started() is True
+        names = beans.started_beans()
+        assert any("SnapshotFlowSyncService" in n for n in names), names
+        assert any("KafkaProducerService" in n for n in names), names
+        assert any("ElasticsearchQueryService" in n for n in names), names
+    finally:
+        beans.shutdown_beans()

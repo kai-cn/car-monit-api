@@ -93,6 +93,11 @@ async def lifespan(_: FastAPI):
         except Exception as error:  # noqa: BLE001 - 与 Spring 一致：Bean 起不来就启动失败
             scheduler_note = f"failed: {error}"
 
+    # P0-3：@Service#@PostConstruct 的后台 Bean（默认关闭，TODO 决策②③，见 app/beans.py）
+    from app.beans import start_beans
+
+    beans_note = start_beans()
+
     elapsed = time.perf_counter() - started
     log.info("Starting %s v%s (Python %s)", APP_NAME, __version__, os.sys.version.split()[0])
     log.info("Runtime mode: %s (CAR_MONIT_RUNTIME)", runtime_mode())
@@ -100,9 +105,16 @@ async def lifespan(_: FastAPI):
              os.environ.get("CAR_MONIT_PORT", settings.server_port), settings.context_path)
     log.info("MyBatis: %s", mapper_note)
     log.info("Scheduler: %s", scheduler_note)
+    log.info("Beans: %s", beans_note)
     log.info("Started %s in %.2f seconds", APP_NAME, elapsed)
     yield
     log.info("Shutting down %s", APP_NAME)
+    try:
+        from app.beans import shutdown_beans
+
+        shutdown_beans()
+    except Exception:  # noqa: BLE001 - best effort, like a Spring destroy callback
+        pass
     try:
         from app.scheduler import shutdown_scheduler
 
