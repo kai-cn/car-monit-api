@@ -4,6 +4,7 @@
 #include "common/crypto.h"
 #include "common/datetime.h"
 #include "common/error.h"
+#include "common/logging.h"
 #include "common/result.h"
 #include "common/utils.h"
 #include "common/worker_pool.h"
@@ -17,6 +18,7 @@
 #include "router/routes.h"
 #include "scheduler/cron.h"
 #include "service/optimization.h"
+#include "service/snapshot_flow_sync.h"
 
 #include <atomic>
 #include <cassert>
@@ -175,7 +177,11 @@ static void test_router() {
   cm::http::Response res;
   CHECK(router.dispatch(req, res));
   CHECK(res.status == 200);
-  CHECK(res.json.contains("status") && res.json["status"] == "UP");
+  // /health 现在汇总依赖连接状态（不再恒 UP）：测试环境无 Redis/Kafka 时为
+  // DEGRADED，全部组件可用时为 UP；components 结构必须完整。
+  CHECK(res.json.contains("status"));
+  CHECK(res.json["status"] == "UP" || res.json["status"] == "DEGRADED");
+  CHECK(res.json.contains("components") && res.json["components"].contains("database"));
 
   // 未注册的路径必须返回 false（由 server 层转成 Spring 风格 404 错误体）。
   cm::http::Request missing;
@@ -812,6 +818,62 @@ static void test_server_security() {
   CHECK(cfg.server_security().write_timeout_ms == 30000);
 }
 
+static void test_health_and_metrics() {
+  // /health 汇总各依赖连接状态（不主动建连/认证——探活不得变成失败登录）。
+  auto router = cm::router::build_routes();
+  cm::http::Request req;
+  req.method = "GET";
+  req.path = "/health";
+  cm::http::Response res;
+  CHECK(router.dispatch(req, res));
+  CHECK(res.json.contains("status"));
+  CHECK(res.json["status"] == "UP" || res.json["status"] == "DEGRADED");
+  CHECK(res.json.contains("components"));
+  for (const char* comp : {"database", "redis", "kafka", "elasticsearch"}) {
+    if (!res.json["components"].contains(comp)) {
+      std::cerr << "FAIL /health 缺少组件: " << comp << std::endl;
+      ++g_fail;
+    }
+  }
+  // /metrics 指标快照结构。
+  req.path = "/metrics";
+  res = cm::http::Response();
+  CHECK(router.dispatch(req, res));
+  for (const char* key : {"requestsTotal", "errorsTotal", "inFlight", "avgLatencyMs"}) {
+    if (!res.json.contains(key)) {
+      std::cerr << "FAIL /metrics 缺少字段: " << key << std::endl;
+      ++g_fail;
+    }
+  }
+  CHECK(cm::http::metrics_snapshot()["requestsTotal"].is_number());
+
+  // 优雅停机接口幂等：未启动时调用不崩溃。
+  cm::router::stop_schedulers();
+  cm::router::stop_schedulers();
+  cm::service::stop_snapshot_flow_sync();
+}
+
+static void test_log_rotation() {
+  // 按大小轮转（审阅 §4.1：原实现文件无限增长）。
+  namespace fs = std::filesystem;
+  fs::path dir = fs::temp_directory_path() / "cm_log_rotate_test";
+  fs::remove_all(dir);
+  fs::create_directories(dir);
+  const fs::path log = dir / "app.log";
+  cm::log::set_file(log.string());
+  cm::log::set_rotation(512, 3); // 512 字节轮转，保留 3 个历史文件
+  for (int i = 0; i < 60; ++i) {
+    cm::log::write(cm::log::Level::Info, "rotate-test",
+                   "这是一行用于触发轮转的日志 " + std::to_string(i));
+  }
+  CHECK(fs::exists(log));
+  CHECK(fs::exists(dir / "app.log.1"));
+  // 恢复：关闭轮转并停写文件（后续测试日志只上 stdout）。
+  cm::log::set_rotation(0, 1);
+  cm::log::set_file("");
+  fs::remove_all(dir);
+}
+
 int main() {
   test_utils();
   test_datetime();
@@ -832,6 +894,8 @@ int main() {
   test_info_envelope_contract();
   test_cron_spring_semantics();
   test_server_security();
+  test_health_and_metrics();
+  test_log_rotation();
   test_db_optional();
   if (g_fail == 0) {
     std::cout << "ALL TESTS PASSED" << std::endl;

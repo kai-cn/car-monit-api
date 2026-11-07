@@ -672,6 +672,15 @@ void PgPool::shutdown() {
 
 bool PgPool::available() { return inited_; }
 
+int PgPool::live_connections() {
+  std::lock_guard<std::mutex> guard(mu_);
+  int live = 0;
+  for (const auto& slot : slots_) {
+    if (slot.conn && slot.conn->alive()) ++live;
+  }
+  return live;
+}
+
 void PgPool::note_connect_result_locked(bool ok) {
   if (ok) {
     consecutive_connect_failures_ = 0;

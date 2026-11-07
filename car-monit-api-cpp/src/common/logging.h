@@ -12,6 +12,8 @@ enum class Level { Trace = 0, Debug = 1, Info = 2, Warn = 3, Error = 4 };
 void set_level(Level level);
 Level level();
 void set_file(const std::string& path);
+// 按大小轮转：max_bytes=0 关闭；keep_files 为保留的历史文件数（log.1 ... log.N）。
+void set_rotation(long long max_bytes, int keep_files);
 void write(Level level, const std::string& logger, const std::string& msg);
 
 std::string thread_name();

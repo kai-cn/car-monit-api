@@ -133,6 +133,8 @@ public:
   // 多语句事务（含查询），按顺序执行；任何一条失败回滚并抛出 DbError。
   std::vector<PgResult> transaction(const std::vector<std::pair<std::string, bool>>& stmts);
   bool available();
+  // 健康检查用：当前池内处于可用状态的物理连接数（锁内统计，不主动建连）。
+  int live_connections();
 
 private:
   PgPool() = default;

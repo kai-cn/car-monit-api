@@ -10,10 +10,12 @@
 #include "meta/entities_generated.h"
 #include "mq/kafka_producer.h"
 
+#include <atomic>
 #include <cctype>
 #include <chrono>
 #include <cstdio>
 #include <ctime>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <thread>
@@ -156,6 +158,19 @@ std::string big_id_of(const db::PgResult& r, std::size_t row) {
   return v ? *v : std::string();
 }
 
+// 优雅停机（审阅 §5.1 #11）：两条同步线程可停止、可 join，不再 detach。
+std::atomic<bool> g_sync_running{true};
+std::mutex g_threads_mu;
+std::vector<std::thread> g_threads;
+
+// 分片睡眠：停机请求最迟 100ms 内可见。
+bool sleep_while_running(long long ms) {
+  for (long long t = 0; t < ms && g_sync_running.load(); t += 100) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+  return g_sync_running.load();
+}
+
 // Java: fullSync()（63-111 行）。
 void full_sync(const meta::EntityMeta& m, int batch_size, const std::string& topic) {
   CM_LOG_INFO("sync") << "开始全量同步数据";
@@ -165,7 +180,7 @@ void full_sync(const meta::EntityMeta& m, int batch_size, const std::string& top
     if (auto v = redis.get(kLastSyncIdKey)) last_sync_id = decode_json_string(*v);
 
     const std::string cols = columns_of(m);
-    while (true) {
+    while (g_sync_running.load()) {
       std::string sql = "SELECT " + cols + " FROM " + m.table;
       if (!last_sync_id.empty()) sql += " WHERE big_id > " + repo::quote(last_sync_id);
       sql += " ORDER BY big_id ASC LIMIT " + std::to_string(batch_size);
@@ -186,7 +201,7 @@ void full_sync(const meta::EntityMeta& m, int batch_size, const std::string& top
       CM_LOG_INFO("sync") << "已同步 " << result.size() << " 条数据，当前进度: " << last_sync_id;
 
       // Java 106 行固定 sleep(100ms)。
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      if (!sleep_while_running(100)) break;
     }
   } catch (const std::exception& e) {
     // Java 108-110 行：异常只记录，不重试，线程退出。
@@ -200,7 +215,7 @@ void incremental_sync(const meta::EntityMeta& m, int batch_size, long long inter
   CM_LOG_INFO("sync") << "开始增量同步数据";
   auto& redis = cache::Redis::instance();
   const std::string cols = columns_of(m);
-  while (true) {
+  while (g_sync_running.load()) {
     try {
       std::optional<long long> last_sync_ms;
       if (auto v = redis.get(kLastSyncTimeKey)) last_sync_ms = decode_json_date(*v);
@@ -229,11 +244,11 @@ void incremental_sync(const meta::EntityMeta& m, int batch_size, long long inter
       }
 
       // Java 164 行：每轮结束等待 interval。
-      std::this_thread::sleep_for(std::chrono::milliseconds(interval_ms));
+      if (!sleep_while_running(interval_ms)) break;
     } catch (const std::exception& e) {
       // Java 165-173 行：异常后同样等待 interval 再继续。
       CM_LOG_ERROR("sync") << "增量同步异常: " << e.what();
-      std::this_thread::sleep_for(std::chrono::milliseconds(interval_ms));
+      if (!sleep_while_running(interval_ms)) break;
     }
   }
 }
@@ -247,17 +262,30 @@ void start_snapshot_flow_sync() {
   const long long interval_ms = cfg.sync.incremental_sync_interval;
   const std::string topic = cfg.kafka.snapshot_flow_topic;
 
-  if (cfg.sync.full_sync_enabled) {
-    std::thread([m, batch_size, topic] { full_sync(m, batch_size, topic); }).detach();
-  } else {
-    CM_LOG_INFO("sync") << "全量同步已关闭（sync.full-sync-enabled=false）";
+  g_sync_running.store(true);
+  {
+    std::lock_guard<std::mutex> lock(g_threads_mu);
+    if (cfg.sync.full_sync_enabled) {
+      g_threads.emplace_back([m, batch_size, topic] { full_sync(m, batch_size, topic); });
+    } else {
+      CM_LOG_INFO("sync") << "全量同步已关闭（sync.full-sync-enabled=false）";
+    }
+    g_threads.emplace_back(
+        [m, batch_size, interval_ms, topic] { incremental_sync(m, batch_size, interval_ms, topic); });
   }
-  std::thread([m, batch_size, interval_ms, topic] {
-    incremental_sync(m, batch_size, interval_ms, topic);
-  }).detach();
   CM_LOG_INFO("sync") << "SnapshotFlowSyncService 已启动: batch-size=" << batch_size
                       << ", interval-ms=" << interval_ms
                       << ", full-sync=" << (cfg.sync.full_sync_enabled ? "true" : "false");
+}
+
+void stop_snapshot_flow_sync() {
+  g_sync_running.store(false);
+  std::lock_guard<std::mutex> lock(g_threads_mu);
+  for (auto& t : g_threads) {
+    if (t.joinable()) t.join();
+  }
+  g_threads.clear();
+  CM_LOG_INFO("sync") << "SnapshotFlowSyncService 已停止";
 }
 
 } // namespace cm::service

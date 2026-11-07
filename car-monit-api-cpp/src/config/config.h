@@ -99,6 +99,9 @@ public:
   int server_port() const { return server_port_; }
 
   const ServerSecurityOptions& server_security() const { return server_security_; }
+  // 日志轮转：logging.max-file-mb（默认 50，0=不轮转）/ logging.max-files（默认 5）。
+  int log_max_file_mb() const { return log_max_file_mb_; }
+  int log_max_files() const { return log_max_files_; }
   std::string context_path() const { return context_path_; }
 
   const PgOptions& pg() const { return pg_; }
@@ -229,6 +232,8 @@ private:
   std::string local_override_path_;
   int server_port_ = 9901;
   ServerSecurityOptions server_security_;
+  int log_max_file_mb_ = 50;
+  int log_max_files_ = 5;
   std::string context_path_ = "/";
   PgOptions pg_;
   RedisOptions redis_;

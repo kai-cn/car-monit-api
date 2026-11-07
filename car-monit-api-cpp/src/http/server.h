@@ -65,4 +65,8 @@ private:
 
 int run_server(int port, const Router& router, int thread_count);
 
+// 运行期指标快照（/metrics 端点使用；进程内计数器）。
+// 字段：requestsTotal、errorsTotal（HTTP>=500）、inFlight、avgLatencyMs。
+Json metrics_snapshot();
+
 } // namespace cm::http
