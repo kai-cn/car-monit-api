@@ -3,28 +3,27 @@
 
 源文件：pro-base-common/src/main/java/com/ruoyi/common/core/redis/RedisCache.java
 
-真实 Redis 只读穿透
---------------------
-Java 的 RedisTemplate 连的是真实 Redis；本替身最初只有进程内 dict，于是
-``sys_config:data_query`` 这类由 Java（或运维）写进 Redis 的配置在 Python 侧永远
-读不到，业务逻辑就走了降级分支（实测 ``/base/snapshotflow/list`` 返回 251 行，
-Java 是 900 行）。
+真实 Redis 读写适配（P2-2）
+---------------------------
+Java 的 RedisTemplate 连的是真实 Redis。Python 侧分两档：
 
-现在只要设置了环境变量 ``CAR_MONIT_REDIS_URL``（如
-``redis://127.0.0.1:6379/0``），``getCacheObject`` 在进程内未命中时会去真实
-Redis 取值。只放行**标量**（str/int/float/bool）：Java 写进去的对象带 FastJson
-的 ``@type``/``123L`` 等 Python 无法还原的标记，硬转成 dict 反而会让响应体
-与 Java 不一致（缺 null 键、日期格式不同），视为未命中反而与 Java 回源后的
-实体序列化结果完全一致。
+* **未设置** ``CAR_MONIT_REDIS_URL``：纯进程内内存（本文件的
+  ``_InMemoryRedisTemplate``）——单元测试/CI 无服务时的确定性后端；
+* **设置了** ``CAR_MONIT_REDIS_URL``（如 ``redis://127.0.0.1:6379/0``）：
+  ``shared_redis_template()`` 返回 app.middleware.real_redis.RealRedisTemplate
+  ——完整读写适配（值编码对标 Java FastJson2JsonRedisSerializer，含 ``@type``
+  实体重建；连接失败按 prod=抛错 / shim=熔断降级内存，详见该模块 docstring）。
 
-写仍然只在内存：两个服务共享同一个 Redis 库，而 Java 写入的 FastJson 值
-Python 回写会直接破坏 Java 侧解析。详见 ``_RespClient.py``。未设置该环境变量时
-行为与之前完全一致（纯内存，单元测试不依赖外部 Redis）。
+历史上这里曾是"未命中且标量走真实 Redis"的只读穿透（_RespClient.py），P2-2 起
+被完整适配取代：设置 URL 即全量真实读写。``_RespClient`` 保留给显式构造
+``_InMemoryRedisTemplate(open_from_env())`` 的旧用法。prod 模式下内存写仍被
+P0-2 守卫拒绝；真实适配器的写不经守卫（它真的写进 Redis）。
 """
 from __future__ import annotations
 
 import copy
 import fnmatch
+import os
 import time
 from enum import Enum
 from typing import Any, Collection, Iterable, Optional
@@ -432,14 +431,29 @@ class _InMemoryRedisTemplate:
         return {key for key in list(self._store.keys()) if fnmatch.fnmatchcase(key, pattern)}
 
 
-# 【Java→Python】Spring 中 RedisTemplate 是**单例 Bean**，所有 @Autowired RedisCache 共享同一个
-# Redis 连接池；若 Python 每次 RedisCache() 都新建 _InMemoryRedisTemplate，各 Service 会各持一个
-# 独立内存库，缓存将互不可见（语义与 Java 不符）。因此这里提供一个进程级默认实例，
-# 不传参数时一律复用它；需要隔离（如单元测试）时显式传入自己的 template。
-#
-# 进程级实例在导入时尝试按 CAR_MONIT_REDIS_URL 接入真实 Redis（只读穿透）；
-# 未配置或连不上时为 None，行为与纯内存完全一致。
-_SHARED_REDIS_TEMPLATE = _InMemoryRedisTemplate(open_from_env())
+# 【Java→Python】Spring 中 RedisTemplate 是**单例 Bean**，所有 @Autowired RedisCache /
+# RedisTemplate / StringRedisTemplate 共享同一个连接池。Python 侧由
+# shared_redis_template() 提供进程级共享实例（URL 配置时为真实读写适配，P2-2）；
+# 需要隔离（如单元测试）时显式传入自己的 template。URL 变化时重建（便于工具切换）。
+_SHARED_STATE: dict[str, Any] = {"url": None, "template": None}
+
+
+def shared_redis_template() -> Any:
+    """Spring 单例 RedisTemplate Bean 的等价物。
+
+    * ``CAR_MONIT_REDIS_URL`` 已设置 → :class:`RealRedisTemplate`（真实读写）；
+    * 未设置 → ``_InMemoryRedisTemplate``（纯内存，测试/CI 的确定性后端）。
+    """
+    url = os.environ.get("CAR_MONIT_REDIS_URL") or ""
+    if _SHARED_STATE["template"] is None or _SHARED_STATE["url"] != url:
+        if url:
+            from app.middleware.real_redis import RealRedisTemplate
+
+            _SHARED_STATE["template"] = RealRedisTemplate(url)
+        else:
+            _SHARED_STATE["template"] = _InMemoryRedisTemplate()
+        _SHARED_STATE["url"] = url
+    return _SHARED_STATE["template"]
 
 
 class RedisCache:
@@ -453,8 +467,8 @@ class RedisCache:
     4) 返回 Collection<String> 的 keys() → set[str]（Redis KEYS 的返回类型是 Set）。
     """
 
-    def __init__(self, redis_template: Optional["_InMemoryRedisTemplate"] = None) -> None:
-        self.redisTemplate = redis_template or _SHARED_REDIS_TEMPLATE
+    def __init__(self, redis_template: Optional[Any] = None) -> None:
+        self.redisTemplate = redis_template or shared_redis_template()
 
     def setCacheObject(self, key: str, value: Any,
                        timeout: Optional[int] = None,
