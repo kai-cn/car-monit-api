@@ -48,6 +48,10 @@ __all__ = [
     "install_gaussdb_version_shim",
 ]
 
+#: 线程本地的事务上下文（P0-4，@Transactional 等价物）。
+#: FastAPI 的同步 handler 跑在 worker 线程里，每个线程至多一个未决事务。
+_TX_LOCAL = threading.local()
+
 _JDBC_PREFIXES = ("jdbc:postgresql://", "jdbc:opengauss://", "jdbc:gaussdb://")
 
 # openGauss 3.0 is wire/feature compatible with PostgreSQL 9.2; pgjdbc 42.2.x
@@ -174,10 +178,33 @@ class Database:
             self._engine = None
 
     # ------------------------------------------------------------------ queries
+    @staticmethod
+    def _ambient_connection() -> Optional[Connection]:
+        """当前线程是否存在未决事务（P0-4）。"""
+        return getattr(_TX_LOCAL, "connection", None)
+
     @contextmanager
-    def connection(self) -> Iterator[Connection]:
-        with self.engine.connect() as connection:
-            yield connection
+    def transaction(self) -> Iterator[Connection]:
+        """事务上下文（P0-4，Spring ``@Transactional`` 的 REQUIRED 传播等价物）。
+
+        * 上下文内的 :meth:`query` / :meth:`query_scalars` / :meth:`execute`
+          自动复用同一连接并加入本事务（未提交的写对同事务内的读可见）；
+        * 正常退出提交、异常回滚（含 ``rollbackFor = Exception.class`` 语义）；
+        * 嵌套调用复用外层事务（不设 savepoint，等价 REQUIRED 平铺）。
+
+        目前唯一的使用方是 ``DataProcessService.process``（Java 侧全工程唯一的
+        ``@Transactional`` 方法：MySQL 插入 + ES 写入同事务，ES 失败回滚 MySQL）。
+        """
+        existing = self._ambient_connection()
+        if existing is not None:
+            yield existing  # REQUIRED：加入外层事务
+            return
+        with self.engine.begin() as connection:
+            _TX_LOCAL.connection = connection
+            try:
+                yield connection
+            finally:
+                _TX_LOCAL.connection = None
 
     def query(self, sql: str, params: Optional[dict[str, Any]] = None) -> list[dict[str, Any]]:
         """Run a SELECT and return rows as ordered dicts (column label -> value).
@@ -186,18 +213,37 @@ class Database:
         doubled by SQLAlchemy itself when building the ``pyformat`` statement,
         exactly like MyBatis hands the raw SQL to pgjdbc.
         """
+        connection = self._ambient_connection()
+        if connection is not None:
+            return self._query_rows(connection, sql, params)
         with self.engine.connect() as connection:
-            result = connection.execute(text(sql), params or {})
-            return [dict(row) for row in result.mappings().all()]
+            return self._query_rows(connection, sql, params)
+
+    @staticmethod
+    def _query_rows(connection: Connection, sql: str,
+                    params: Optional[dict[str, Any]]) -> list[dict[str, Any]]:
+        result = connection.execute(text(sql), params or {})
+        return [dict(row) for row in result.mappings().all()]
 
     def query_scalars(self, sql: str, params: Optional[dict[str, Any]] = None) -> list[Any]:
         """Run a SELECT returning a single column (MyBatis ``List<String>``)."""
+        connection = self._ambient_connection()
+        if connection is not None:
+            result = connection.execute(text(sql), params or {})
+            return [row[0] for row in result.fetchall()]
         with self.engine.connect() as connection:
             result = connection.execute(text(sql), params or {})
             return [row[0] for row in result.fetchall()]
 
     def execute(self, sql: str, params: Optional[dict[str, Any]] = None) -> int:
-        """Run INSERT/UPDATE/DELETE and return the affected row count."""
+        """Run INSERT/UPDATE/DELETE and return the affected row count.
+
+        在 :meth:`transaction` 上下文内不自行提交（由外层统一提交/回滚）。
+        """
+        connection = self._ambient_connection()
+        if connection is not None:
+            result = connection.execute(text(sql), params or {})
+            return result.rowcount if result.rowcount is not None else 0
         with self.engine.begin() as connection:
             result = connection.execute(text(sql), params or {})
             return result.rowcount if result.rowcount is not None else 0

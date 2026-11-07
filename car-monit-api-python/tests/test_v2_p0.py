@@ -287,3 +287,116 @@ def test_beans_real_classes_construct_and_destroy(monkeypatch) -> None:
         assert any("ElasticsearchQueryService" in n for n in names), names
     finally:
         beans.shutdown_beans()
+
+
+# ---------------------------------------------------------------- P0-4 事务
+class _SqliteConfig:
+    """Database 的鸭子类型配置（绕开 application.yml / GaussDB 依赖）。"""
+
+    jdbc_url = "jdbc:postgresql://localhost/x"
+    db_username = ""
+    db_password = ""
+    pool_min_idle = 1
+    pool_initial_size = 1
+    pool_max_active = 2
+    pool_max_wait_ms = 5000
+
+
+def _sqlite_database(tmp_path):
+    from sqlalchemy import create_engine
+
+    from app.db.engine import Database
+
+    database = Database(_SqliteConfig())
+    database._engine = create_engine("sqlite:///" + str(tmp_path / "tx.db"))
+    return database
+
+
+def test_transaction_commit_rollback_and_visibility(tmp_path) -> None:
+    database = _sqlite_database(tmp_path)
+    database.execute("CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT)")
+
+    with database.transaction():
+        database.execute("INSERT INTO t (v) VALUES ('a')")
+        rows = database.query("SELECT count(*) AS c FROM t")
+        assert rows[0]["c"] == 1  # 事务内读可见未提交写（同连接语义）
+    assert database.query("SELECT count(*) AS c FROM t")[0]["c"] == 1
+
+    with pytest.raises(RuntimeError):
+        with database.transaction():
+            database.execute("INSERT INTO t (v) VALUES ('b')")
+            raise RuntimeError("boom")
+    assert [r["v"] for r in database.query("SELECT v FROM t")] == ["a"]
+
+    # 嵌套 = REQUIRED 平铺：内层不提交，外层异常整体回滚
+    with pytest.raises(RuntimeError):
+        with database.transaction():
+            with database.transaction():
+                database.execute("INSERT INTO t (v) VALUES ('c')")
+            raise RuntimeError("outer")
+    assert database.query("SELECT count(*) AS c FROM t")[0]["c"] == 1
+
+
+def test_dataprocess_service_rolls_back_on_es_failure(monkeypatch) -> None:
+    """Java ``@Transactional(rollbackFor=Exception.class)``：ES 失败 -> 整体回滚。"""
+    import contextlib
+
+    import app.db.engine as engine_mod
+    from com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowAddcode import (
+        OdsRtSzdnSnapshotFlowAddcode,
+    )
+    from com.ruoyi.mq.service.DataProcessService import DataProcessService
+
+    events: list[str] = []
+
+    class _FakeDatabase:
+        @contextlib.contextmanager
+        def transaction(self):
+            events.append("begin")
+            try:
+                yield
+                events.append("commit")
+            except BaseException:
+                events.append("rollback")
+                raise
+
+    monkeypatch.setattr(engine_mod, "get_database", lambda: _FakeDatabase())
+
+    service = DataProcessService()
+    service.esClient.available = False  # 模拟 ES 集群不可用
+    data = OdsRtSzdnSnapshotFlowAddcode()
+    data.setId("tx-1")
+    with pytest.raises(RuntimeError, match="插入ES失败"):
+        service.process(data)
+    assert events == ["begin", "rollback"]
+
+
+def test_dataprocess_service_commits_when_es_succeeds(monkeypatch) -> None:
+    import contextlib
+
+    import app.db.engine as engine_mod
+    from com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowAddcode import (
+        OdsRtSzdnSnapshotFlowAddcode,
+    )
+    from com.ruoyi.mq.service.DataProcessService import DataProcessService
+
+    events: list[str] = []
+
+    class _FakeDatabase:
+        @contextlib.contextmanager
+        def transaction(self):
+            events.append("begin")
+            try:
+                yield
+                events.append("commit")
+            except BaseException:
+                events.append("rollback")
+                raise
+
+    monkeypatch.setattr(engine_mod, "get_database", lambda: _FakeDatabase())
+
+    service = DataProcessService()
+    data = OdsRtSzdnSnapshotFlowAddcode()
+    data.setId("tx-2")
+    service.process(data)  # shim 模式：内存 Mapper + 内存 ES 均成功
+    assert events == ["begin", "commit"]
