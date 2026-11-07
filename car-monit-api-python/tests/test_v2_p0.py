@@ -471,3 +471,80 @@ def test_install_persistence_whitelisted_missing_only_warns(monkeypatch, caplog)
         lambda: _FakeMapperReport(
             ["com.ruoyi.base.mapper.ZdataTrailFittingMapper#selectZdataTrailFittingList"]))
     assert _install_persistence() == "fake report"  # 白名单内：仅告警不抛错
+
+
+# ---------------------------------------------------------------- P0-6 密钥与端点收敛
+def test_environment_resolves_value_placeholders(tmp_path, monkeypatch) -> None:
+    from org.springframework.core.env.Environment import Environment
+
+    config = tmp_path / "application.yml"
+    config.write_text(
+        "db:\n  password: ${MY_DB_PASSWORD:}\n  user: ${MY_DB_USER:admin}\n",
+        encoding="utf-8")
+    monkeypatch.delenv("MY_DB_PASSWORD", raising=False)
+    monkeypatch.delenv("MY_DB_USER", raising=False)
+    env = Environment([str(config)])
+    assert env.getProperty("db.password") == ""  # 默认值为空串
+    assert env.getProperty("db.user") == "admin"  # 默认值
+    monkeypatch.setenv("MY_DB_PASSWORD", "s3cret")
+    assert env.getProperty("db.password") == "s3cret"  # 环境变量最高优先
+
+
+def test_environment_local_overlay(tmp_path) -> None:
+    from org.springframework.core.env.Environment import Environment
+
+    config = tmp_path / "application.yml"
+    config.write_text("db:\n  password: ${DB_PASSWORD:}\n", encoding="utf-8")
+    (tmp_path / "application-local.yml").write_text(
+        "db:\n  password: from-local\n", encoding="utf-8")
+    env = Environment([str(config)])  # 显式传文件时不叠加 local（保持可测性）
+    assert env.getProperty("db.password") == ""
+
+    # 默认构造（config_files=None）才会叠加 local；用同目录文件模拟
+    import org.springframework.core.env.Environment as env_mod
+
+    original = env_mod._DEFAULT_CONFIG_FILES
+    try:
+        env_mod._DEFAULT_CONFIG_FILES = [str(config)]
+        env2 = env_mod.Environment()
+        assert env2.getProperty("db.password") == "from-local"
+    finally:
+        env_mod._DEFAULT_CONFIG_FILES = original
+
+
+def test_packaged_yml_contains_no_literal_secrets() -> None:
+    yml = ROOT / "pro-business-api" / "src" / "main" / "resources" / "application.yml"
+    text = yml.read_text(encoding="utf-8")
+    assert "OpenGauss@123" not in text
+    assert "${SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD:}" in text
+    assert "${ELASTICSEARCH_PASSWORD:}" in text
+
+
+def test_docs_enabled_gating(monkeypatch) -> None:
+    from app.runtime import docs_enabled
+
+    monkeypatch.delenv("CAR_MONIT_DOCS_ENABLED", raising=False)
+    monkeypatch.delenv("CAR_MONIT_RUNTIME", raising=False)
+    assert docs_enabled() is True  # shim 默认开
+    monkeypatch.setenv("CAR_MONIT_RUNTIME", "prod")
+    assert docs_enabled() is False  # prod 默认关
+    monkeypatch.setenv("CAR_MONIT_DOCS_ENABLED", "true")
+    assert docs_enabled() is True  # 显式开优先
+
+
+def test_health_endpoints_and_config_gating(monkeypatch) -> None:
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    client = TestClient(app, raise_server_exceptions=False)
+    assert client.get("/health/live").status_code == 200
+    assert client.get("/health/ready").status_code == 200  # in-process 无组件 → UP
+
+    monkeypatch.setenv("CAR_MONIT_RUNTIME", "prod")
+    monkeypatch.delenv("CAR_MONIT_HEALTH_VERBOSE", raising=False)
+    body = client.get("/health").json()
+    assert "config" not in body  # prod 默认不泄露中间件地址
+    assert body.get("runtime") == "prod"
+    monkeypatch.setenv("CAR_MONIT_HEALTH_VERBOSE", "true")
+    assert "config" in client.get("/health").json()  # 显式 verbose 可见

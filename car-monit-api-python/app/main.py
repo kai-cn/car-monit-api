@@ -32,7 +32,7 @@ from app import __version__
 from app.health import health_payload
 from app.logging_config import configure_logging
 from app.routes import register_routes
-from app.runtime import runtime_mode, startup_fail_fast
+from app.runtime import docs_enabled, runtime_mode, startup_fail_fast
 from app.settings import settings
 from app.web.binding import BindingError
 from app.web.errors import basic_error_endpoint_response, error_response
@@ -149,17 +149,42 @@ app = FastAPI(
     version=__version__,
     lifespan=lifespan,
     default_response_class=JacksonResponse,
-    docs_url="/docs",
+    # P0-6：/docs 与 /openapi.json 默认 shim 开 / prod 关（CAR_MONIT_DOCS_ENABLED 可覆盖）
+    docs_url="/docs" if docs_enabled() else None,
     redoc_url=None,
-    openapi_url="/openapi.json",
+    openapi_url="/openapi.json" if docs_enabled() else None,
 )
 
 
 # --------------------------------------------------------------------- routes
 @app.get("/health", tags=["migration"], summary="Liveness/readiness (migration-only)")
 def health() -> dict[str, Any]:
-    """No Java counterpart: added to verify the migration without business calls."""
-    return health_payload({"config": settings.describe()})
+    """No Java counterpart: added to verify the migration without business calls.
+
+    P0-6：``config`` 细节（中间件地址）仅在 verbose/shim 模式返回；
+    liveness/readiness 的细分端点见 ``/health/live`` 与 ``/health/ready``。
+    """
+    from app.health import health_verbose
+
+    payload = health_payload()
+    if health_verbose():
+        payload["config"] = settings.describe()
+    return payload
+
+
+@app.get("/health/live", tags=["migration"], summary="Liveness (always 200)")
+def health_live() -> dict[str, Any]:
+    """进程存活探针：容器只要活着就 200（不检查任何依赖）。"""
+    return {"status": "UP"}
+
+
+@app.get("/health/ready", tags=["migration"], summary="Readiness (503 when degraded)")
+def health_ready() -> Any:
+    """就绪探针：任一组件 DOWN → HTTP 503（负载均衡应摘除流量）。"""
+    payload = health_payload()
+    if payload.get("status") != "UP":
+        return JacksonResponse(status_code=503, content=payload)
+    return payload
 
 
 _ROUTE_COUNT = register_routes(app)

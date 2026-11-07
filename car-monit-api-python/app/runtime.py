@@ -38,6 +38,12 @@ FAIL_FAST_ENV = "CAR_MONIT_STARTUP_FAIL_FAST"
 #: prod 的别名（宽松解析，避免拼写踩坑）
 _STRICT_ALIASES = {"prod", "production", "strict"}
 
+#: 布尔真值集合
+_TRUTHY = {"1", "true", "yes", "on"}
+
+#: ``/docs`` 与 ``/openapi.json`` 开关（P0-6）
+DOCS_ENV = "CAR_MONIT_DOCS_ENABLED"
+
 
 class ShimOperationError(RuntimeError):
     """替身在 prod 模式下拒绝执行"假成功"操作。"""
@@ -67,6 +73,18 @@ def startup_fail_fast() -> bool:
     """
     value = (os.environ.get(FAIL_FAST_ENV) or "").strip().lower()
     return value not in {"false", "0", "no", "off"}
+
+
+def docs_enabled() -> bool:
+    """``/docs`` 与 ``/openapi.json`` 是否开放（P0-6）。
+
+    显式 ``CAR_MONIT_DOCS_ENABLED=true/false`` 优先；未设置时默认
+    shim 开 / prod 关（Java 侧没有这两个端点，属生产收敛而非契约变更）。
+    """
+    value = (os.environ.get(DOCS_ENV) or "").strip().lower()
+    if value:
+        return value in _TRUTHY
+    return runtime_mode() != "prod"
 
 
 def reject_shim_operation(operation: str, remedy: str = "") -> None:
