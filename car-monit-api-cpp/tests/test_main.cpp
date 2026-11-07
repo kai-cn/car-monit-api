@@ -9,6 +9,7 @@
 #include "config/config.h"
 #include "db/auth_guard.h"
 #include "db/pg.h"
+#include "handler/handlers.h"
 #include "http/cors.h"
 #include "http/server.h"
 #include "mq/kafka_producer.h"
@@ -517,6 +518,45 @@ static void test_query_field_whitelist() {
   CHECK(throws_bind_400(DataSource::Snapshot, "(SELECT pg_sleep(10))", false));
 }
 
+static void test_info_envelope_contract() {
+  // Java 19 个实体控制器的 getInfo 返回形态（审阅报告 §3.3 R1）：
+  // 仅 feeGantry/feerecords/snapshotflow 直接返回实体，其余 16 个为
+  // AjaxResult.success(entity) 信封；信封查不到时返回 {"msg","code"}（data 省略），
+  // 不能是空 body。
+  using cm::handler::info_returns_raw_entity;
+  CHECK(info_returns_raw_entity("/base/feeGantry"));
+  CHECK(info_returns_raw_entity("/base/feerecords"));
+  CHECK(info_returns_raw_entity("/base/snapshotflow"));
+  const char* envelope_paths[] = {
+      "/base/fwqjcxx",   "/base/sfsjcxx",
+      "/base/sfzjcxx",   "/manager/fwqclls",
+      "/base/feeStationEnter", "/base/feestationexit",
+      "/base/provcapture",     "/base/stationcapture",
+      "/base/gantry",   "/base/gantryIp",
+      "/base/vehicleweight",   "/base/section",
+      "/base/toll",     "/base/tollStationIp",
+      "/base/org",      "/base/trailtracks"};
+  for (const char* p : envelope_paths) {
+    if (info_returns_raw_entity(p)) {
+      std::cerr << "FAIL /{id} 信封端点被误判为裸实体: " << p << std::endl;
+      ++g_fail;
+    }
+  }
+  CHECK(!info_returns_raw_entity("/base/unknown"));
+  CHECK(!info_returns_raw_entity("/base/sysutil"));
+  // 信封语义：查不到 -> ajax_ok()（无 data 键、code=200、msg=操作成功）；
+  // 查到 -> ajax_ok_data(row)（data 为实体）。
+  cm::Json notfound = cm::ajax_ok();
+  CHECK(!notfound.contains("data"));
+  CHECK(notfound["code"] == 200);
+  CHECK(notfound["msg"] == "操作成功");
+  cm::Json entity = cm::Json::object();
+  entity["id"] = "x1";
+  cm::Json found = cm::ajax_ok_data(entity);
+  CHECK(found.contains("data") && found["data"]["id"] == "x1");
+  CHECK(found["code"] == 200);
+}
+
 int main() {
   test_utils();
   test_datetime();
@@ -530,6 +570,7 @@ int main() {
   test_auth_guard();
   test_local_config_override();
   test_query_field_whitelist();
+  test_info_envelope_contract();
   test_db_optional();
   if (g_fail == 0) {
     std::cout << "ALL TESTS PASSED" << std::endl;
