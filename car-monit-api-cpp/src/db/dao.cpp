@@ -260,29 +260,34 @@ long long count_rows(const std::string& from_and_where, const db::PgParams& para
 
 Json select_list(const meta::EntityMeta& meta, const http::Request& req,
                  const SqlFragment& extra, const std::optional<std::string>& columns_override) {
-  std::string columns = columns_override ? *columns_override : meta.select_sql;
+  std::string columns = columns_override ? *columns_override : meta::select_columns(meta);
   std::string sql = "SELECT " + columns + " FROM " + meta.table + " WHERE 1=1";
   SqlFragment where = where_from_filters(meta, req);
   append_fragment(where, extra);
   sql += where.sql;
-  if (!meta.order_sql.empty()) sql += " ORDER BY " + meta.order_sql;
 
   PageInfo page = resolve_page(req);
   long long total = 0;
+  std::string order_clause;
+  if (!meta.order_sql.empty()) order_clause = " ORDER BY " + meta.order_sql;
   if (page.paged) {
+    // count 查询不含 ORDER BY：子查询排序对计数无意义，大表上是纯开销。
     total = count_rows(sql, where.params);
     long long pages = page.page_size > 0 ? (total + page.page_size - 1) / page.page_size : 0;
     if (page.page_num < 1) page.page_num = 1;
     if (page.page_num > pages && pages > 0) page.page_num = int(pages);
     if (!page.order_by.empty()) {
       // 覆盖 mapper 的默认排序（PageHelper 的 orderBy 会追加，这里保持追加语义）
-      sql += ", " + page.order_by;
+      order_clause += (order_clause.empty() ? " ORDER BY " : ", ") + page.order_by;
     }
     long long offset = static_cast<long long>(page.page_num - 1) * page.page_size;
+    sql += order_clause;
     sql += " LIMIT " + std::to_string(page.page_size) + " OFFSET " + std::to_string(offset);
-  } else if (!page.order_by.empty()) {
-    if (meta.order_sql.empty()) sql += " ORDER BY " + page.order_by;
-    else sql += ", " + page.order_by;
+  } else {
+    if (!page.order_by.empty()) {
+      order_clause += (order_clause.empty() ? " ORDER BY " : ", ") + page.order_by;
+    }
+    sql += order_clause;
   }
 
   CM_LOG_DEBUG("db.dao") << "SQL: " << sql;
@@ -312,8 +317,8 @@ Json select_by_id(const meta::EntityMeta& meta, const std::string& id) {
   std::string pk_column = physical_pk_column(meta);
   if (pk_column.empty()) return Json(nullptr);
   db::PgParams params;
-  std::string sql = "SELECT " + meta.select_sql + " FROM " + meta.table + " WHERE " + pk_column +
-                    " = " + bind_param(params, id);
+  std::string sql = "SELECT " + meta::select_columns(meta) + " FROM " + meta.table +
+                    " WHERE " + pk_column + " = " + bind_param(params, id);
   CM_LOG_DEBUG("db.dao") << "SQL: " << sql;
   auto result = db::PgPool::instance().query(sql, params);
   if (result.rows.empty()) return Json(nullptr);
@@ -327,8 +332,8 @@ Json select_by_ids(const meta::EntityMeta& meta, const std::string& ids) {
   auto values = utils::split_csv(ids);
   if (values.empty()) return rows;
   db::PgParams params;
-  std::string sql = "SELECT " + meta.select_sql + " FROM " + meta.table + " WHERE " + pk_column +
-                    " IN " + bind_in(params, values);
+  std::string sql = "SELECT " + meta::select_columns(meta) + " FROM " + meta.table +
+                    " WHERE " + pk_column + " IN " + bind_in(params, values);
   CM_LOG_DEBUG("db.dao") << "SQL: " << sql;
   auto result = db::PgPool::instance().query(sql, params);
   for (std::size_t i = 0; i < result.rows.size(); ++i)

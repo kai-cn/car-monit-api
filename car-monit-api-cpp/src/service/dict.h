@@ -29,6 +29,9 @@ inline constexpr const char* kBorderWeighingCapture = "DATE_BorderWeighingCaptur
 // 读缓存（JSON 数组），未命中则全表查询并写回。
 Json dict_list_cached(const std::string& key, const meta::EntityMeta& m);
 
+// 清空进程内字典缓存（TTL 之外的显式失效入口；测试/运维重载使用）。
+void invalidate_dict_cache();
+
 std::map<std::string, Json> gantry_map();        // key = gantryCode
 std::map<std::string, Json> toll_map();          // key = tollCode / stateCodeMerge
 std::map<std::string, Json> section_map();       // key = sectionCode

@@ -16,13 +16,16 @@
 #include "http/cors.h"
 #include "http/server.h"
 #include "mq/kafka_producer.h"
+#include "meta/entities_generated.h"
 #include "router/routes.h"
 #include "scheduler/cron.h"
+#include "service/dict.h"
 #include "service/optimization.h"
 #include "service/snapshot_flow_sync.h"
 
 #include <atomic>
 #include <cassert>
+#include <cctype>
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
@@ -818,6 +821,66 @@ static void test_dao_param_binding() {
   CHECK(cm::repo::bind_in(empty, {}) == "(NULL)");
 }
 
+static bool contains_column_token(const std::string& list, const std::string& col) {
+  std::size_t pos = 0;
+  while ((pos = list.find(col, pos)) != std::string::npos) {
+    const bool left_ok =
+        pos == 0 || !(std::isalnum(static_cast<unsigned char>(list[pos - 1])) || list[pos - 1] == '_');
+    const std::size_t end = pos + col.size();
+    const bool right_ok = end >= list.size() ||
+                          !(std::isalnum(static_cast<unsigned char>(list[end])) || list[end] == '_');
+    if (left_ok && right_ok) return true;
+    pos = end;
+  }
+  return false;
+}
+
+static void test_entity_select_columns() {
+  // P4：20 个 * 的实体必须展开为显式列清单，且包含 resultMap 的全部物理列。
+  using namespace cm::meta;
+  const std::vector<const EntityMeta*> all = {
+      &dwdLcztFwqjcxx,
+      &dwdLcztSfsjcxx,
+      &dwdLcztSfzjcxx,
+      &odsCxztFwqclls,
+      &odsLwzxsfsjFeeGantryFusion01,
+      &odsLwzxsfsjFeeRecords01,
+      &odsLwzxsfsjFeeStationEnter01,
+      &odsLwzxsfsjFeeStationExit01,
+      &odsRtSzdnSnapshotFlowAddcode,
+      &odsRtSzdnSnapshotFlowProvcaptureAddcode,
+      &odsRtSzdnSnapshotFlowStationcaptureAddcode,
+      &odsSzdnGantry,
+      &odsSzdnGantryIp,
+      &odsSzdnProvinceBorderVehicleWeightNewstructure,
+      &odsSzdnSection,
+      &odsSzdnToll,
+      &odsSzdnTollStationIp,
+      &odsYhglVBaseOrg,
+      &zdataTrailTracks,
+      &zdataTrailFitting,
+      &zdataLocationDict,
+      &kafkaMessageRecord,
+  };
+  int wildcard = 0;
+  for (const auto* m : all) {
+    if (m->select_sql != "*") continue;
+    ++wildcard;
+    const std::string cols = select_columns(*m);
+    CHECK(cols != "*");
+    CHECK(cols.find("SELECT") == std::string::npos);
+    for (const auto& f : m->fields) {
+      if (f.column.empty()) continue;
+      if (!contains_column_token(cols, f.column)) {
+        std::cerr << "FAIL 实体 " << m->name << " 漏列: " << f.column << std::endl;
+        ++g_fail;
+      }
+    }
+  }
+  CHECK(wildcard == 20);
+  cm::service::invalidate_dict_cache();
+}
+
 static void test_redis_reconnect_no_deadlock() {
   // Redis 重连路径（审阅 §3.3 R7 + 代码复查，改用 hiredis 后保持覆盖）：
   // 1) 连接失败后不得泄漏 fd（hiredis redisFree 负责关闭）；
@@ -952,6 +1015,7 @@ int main() {
   test_worker_pool();
   test_pg_pool_config_bounds();
   test_dao_param_binding();
+  test_entity_select_columns();
   test_pg_pool_connect_breaker();
   test_redis_reconnect_no_deadlock();
   test_auth_guard();
