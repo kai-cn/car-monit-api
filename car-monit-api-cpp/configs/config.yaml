@@ -17,10 +17,14 @@ server:
   rate-limit:
     enabled: false             # true 时按客户端 IP 固定窗口限流（429）
     requests-per-minute: 600
+  # 优雅停机：收到 SIGINT/SIGTERM 后等待在途请求的最长时间；超时强制退出。
+  shutdown-timeout-ms: 30000
 # 日志轮转：按大小滚动，保留 N 个历史文件（log.1 ... log.N）；max-file-mb=0 关闭。
 logging:
   max-file-mb: 50
   max-files: 5
+  # 结构化日志（每行 JSON，含 requestId）；等价环境变量 CM_LOG_JSON。
+  json: false
 spring:
   datasource:
     dynamic:

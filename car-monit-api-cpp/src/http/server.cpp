@@ -1,18 +1,26 @@
 #include "http/server.h"
 
+#include "cache/redis.h"
 #include "common/datetime.h"
 #include "common/error.h"
 #include "common/logging.h"
 #include "common/utils.h"
+#include "common/worker_pool.h"
 #include "config/config.h"
+#include "db/pg.h"
 #include "http/cors.h"
+#include "mq/kafka_producer.h"
+#include "service/optimization.h"
 
 #include "httplib.h"
 
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <csignal>
+#include <cstdlib>
+#include <mutex>
 #include <sstream>
 
 namespace cm::http {
@@ -22,27 +30,158 @@ namespace {
 // 放在文件作用域：static 局部变量不能被 lambda 简单捕获（C3495）。
 RateLimiter g_rate_limiter;
 
-// 运行期指标（审阅 §5.1 #10）：请求计数 / 错误计数 / 在途数 / 累计时延。
+// 运行期指标（审阅 §5.1 #10）：请求计数 / 错误计数 / 在途数 / 时延直方图。
 std::atomic<long long> g_requests_total{0};
 std::atomic<long long> g_errors_total{0};
 std::atomic<long long> g_in_flight{0};
 std::atomic<long long> g_total_latency_ms{0};
+std::atomic<long long> g_max_latency_ms{0};
+std::atomic<long long> g_status_2xx{0};
+std::atomic<long long> g_status_4xx{0};
+std::atomic<long long> g_status_5xx{0};
+// 时延分位（近似）：累积桶计数，边界单位毫秒。最后一桶是溢出桶（>10000ms）。
+constexpr std::size_t kLatencyBuckets = 11;
+const long long kLatencyBounds[kLatencyBuckets] = {1,   5,   10,  25,  50,  100,
+                                                   250, 500, 1000, 2500, 5000};
+std::atomic<long long> g_latency_buckets[kLatencyBuckets] = {};
+std::atomic<long long> g_latency_overflow{0};
 // 优雅停机：信号处理器只置位（async-signal-safe），监视线程负责调 svr.stop()。
 std::atomic<bool> g_shutdown_requested{false};
+
+void record_latency(long long ms) {
+  g_total_latency_ms.fetch_add(ms);
+  long long prev = g_max_latency_ms.load();
+  while (ms > prev && !g_max_latency_ms.compare_exchange_weak(prev, ms)) {
+  }
+  for (std::size_t i = 0; i < kLatencyBuckets; ++i) {
+    if (ms <= kLatencyBounds[i]) {
+      g_latency_buckets[i].fetch_add(1);
+      return;
+    }
+  }
+  g_latency_overflow.fetch_add(1);
+}
+
+long long percentile_ms(double p, long long total) {
+  if (total <= 0) return 0;
+  const long long target = static_cast<long long>(std::ceil(p * static_cast<double>(total)));
+  long long cumulative = 0;
+  for (std::size_t i = 0; i < kLatencyBuckets; ++i) {
+    cumulative += g_latency_buckets[i].load();
+    if (cumulative >= target) return kLatencyBounds[i];
+  }
+  if (g_latency_overflow.load() > 0) return g_max_latency_ms.load();
+  return g_max_latency_ms.load();
+}
+
+// 依赖探活（5s 缓存）：DB/Redis 只在已有连接上做轻量探测，绝不新建连接
+// （避免 /metrics 被频繁抓取时变成反复登录/建连）。ES 为被动状态（不主动请求）。
+Json probe_dependencies() {
+  static std::mutex mu;
+  static Json cached = Json::object();
+  static long long cached_at = 0;
+  const long long now = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::steady_clock::now().time_since_epoch())
+                            .count();
+  std::lock_guard<std::mutex> lock(mu);
+  if (now - cached_at < 5000 && !cached.empty()) return cached;
+
+  Json deps = Json::object();
+  auto elapsed = [](std::chrono::steady_clock::time_point t0) {
+    return static_cast<long long>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - t0)
+            .count());
+  };
+
+  // DB
+  Json db = Json::object();
+  auto& pool = cm::db::PgPool::instance();
+  db["liveConnections"] = pool.live_connections();
+  db["maxConnections"] = pool.max_connections();
+  if (!pool.available()) {
+    db["status"] = "UNKNOWN";
+    db["latencyMs"] = 0;
+  } else if (pool.live_connections() > 0) {
+    const auto t0 = std::chrono::steady_clock::now();
+    try {
+      pool.query("SELECT 1");
+      db["status"] = "UP";
+    } catch (...) {
+      db["status"] = "DOWN";
+    }
+    db["latencyMs"] = elapsed(t0);
+  } else {
+    // 有池但当前无物理连接：只报告 DOWN/UNKNOWN，不主动建连。
+    db["status"] = "DOWN";
+    db["latencyMs"] = 0;
+  }
+  deps["db"] = db;
+
+  // Redis
+  Json redis = Json::object();
+  auto& rc = cm::cache::Redis::instance();
+  if (rc.connected()) {
+    const auto t0 = std::chrono::steady_clock::now();
+    try {
+      auto v = rc.cmd({"PING"});
+      redis["status"] = (v && !v->empty()) ? "UP" : "DOWN";
+    } catch (...) {
+      redis["status"] = "DOWN";
+    }
+    redis["latencyMs"] = elapsed(t0);
+  } else {
+    redis["status"] = "DOWN";
+    redis["latencyMs"] = 0;
+  }
+  deps["redis"] = redis;
+
+  // ES（被动状态：不主动发起 HTTP 探测，避免慢请求拖垮 /metrics）
+  Json es = Json::object();
+  es["status"] = cm::service::es_health_status();
+  es["latencyMs"] = 0;
+  deps["es"] = es;
+
+  // Kafka（生产者是否已启动；无同步探测接口，延迟不适用）
+  Json kafka = Json::object();
+  kafka["status"] = cm::mq::KafkaProducer::instance().started() ? "UP" : "DOWN";
+  kafka["latencyMs"] = 0;
+  deps["kafka"] = kafka;
+
+  Json worker_pool = Json::object();
+  worker_pool["pending"] = cm::background_pool().pending();
+  worker_pool["active"] = cm::background_pool().active();
+  worker_pool["capacity"] = cm::background_pool().capacity();
+  deps["workerPool"] = worker_pool;
+
+  cached = deps;
+  cached_at = now;
+  return deps;
+}
 
 } // namespace
 
 Json metrics_snapshot() {
   Json j = Json::object();
-  long long total = g_requests_total.load();
-  long long latency = g_total_latency_ms.load();
+  const long long total = g_requests_total.load();
+  const long long latency = g_total_latency_ms.load();
+  const long long errors = g_errors_total.load();
   j["requestsTotal"] = total;
-  j["errorsTotal"] = g_errors_total.load();
+  j["errorsTotal"] = errors;
+  j["errorRate"] = total > 0 ? static_cast<double>(errors) / static_cast<double>(total) : 0.0;
   j["inFlight"] = g_in_flight.load();
   j["avgLatencyMs"] = total > 0 ? (latency / total) : 0;
+  j["maxLatencyMs"] = g_max_latency_ms.load();
+  j["p50LatencyMs"] = percentile_ms(0.50, total);
+  j["p95LatencyMs"] = percentile_ms(0.95, total);
+  j["p99LatencyMs"] = percentile_ms(0.99, total);
+  j["status2xx"] = g_status_2xx.load();
+  j["status4xx"] = g_status_4xx.load();
+  j["status5xx"] = g_status_5xx.load();
   j["uptimeSeconds"] = std::chrono::duration_cast<std::chrono::seconds>(
                            std::chrono::steady_clock::now().time_since_epoch())
                            .count();
+  j["dependencies"] = probe_dependencies();
   return j;
 }
 
@@ -235,7 +374,7 @@ bool RateLimiter::allow(const std::string& ip, int limit_per_minute) {
   return true;
 }
 
-int run_server(int port, const Router& router, int /*thread_count*/) {
+int run_server(int port, const Router& router, int /*thread_count*/, int shutdown_timeout_ms) {
   httplib::Server svr;
   const auto& sec = config::Config::instance().server_security();
   // 安全加固（审阅 §5.1 #6）：请求体上限（原 64MB）与读写超时（原无超时）。
@@ -261,6 +400,11 @@ int run_server(int port, const Router& router, int /*thread_count*/) {
 
   auto handler = [&router, &sec](const httplib::Request& raw, httplib::Response& res) {
     const auto t0 = std::chrono::steady_clock::now();
+    // requestId 贯穿：优先复用上游 X-Request-Id，否则生成新值；响应头回写，
+    // 日志（尤其 JSON 模式）自动携带该值。RAII 保证线程池复用线程时不串号。
+    std::string request_id = raw.get_header_value("X-Request-Id");
+    if (request_id.empty()) request_id = utils::uuid32();
+    cm::log::RequestIdScope request_scope(request_id);
     g_in_flight.fetch_add(1);
     struct FlightGuard {
       ~FlightGuard() { g_in_flight.fetch_sub(1); }
@@ -381,14 +525,20 @@ int run_server(int port, const Router& router, int /*thread_count*/) {
         res.set_header("Content-Disposition", "attachment");
     }
     for (const auto& kv : out.headers) res.set_header(kv.first, utils::join(kv.second, ","));
+    res.set_header("X-Request-Id", request_id);
 
     // 指标累计（审阅 §5.1 #10）。
     g_requests_total.fetch_add(1);
     if (out.status >= 500) g_errors_total.fetch_add(1);
-    g_total_latency_ms.fetch_add(
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - t0)
-            .count());
+    if (out.status >= 500)
+      g_status_5xx.fetch_add(1);
+    else if (out.status >= 400)
+      g_status_4xx.fetch_add(1);
+    else if (out.status >= 200 && out.status < 300)
+      g_status_2xx.fetch_add(1);
+    record_latency(std::chrono::duration_cast<std::chrono::milliseconds>(
+                       std::chrono::steady_clock::now() - t0)
+                       .count());
   };
 
   svr.Get(R"(.*)", handler);
@@ -403,11 +553,22 @@ int run_server(int port, const Router& router, int /*thread_count*/) {
   g_shutdown_requested.store(false);
   std::signal(SIGINT, [](int) { g_shutdown_requested.store(true); });
   std::signal(SIGTERM, [](int) { g_shutdown_requested.store(true); });
-  std::thread shutdown_watcher([&svr] {
+  std::thread shutdown_watcher([&svr, shutdown_timeout_ms] {
     while (!g_shutdown_requested.load()) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    CM_LOG_INFO("http") << "收到停机信号，停止接受新请求";
+    CM_LOG_INFO("http") << "收到停机信号，停止接受新请求（在途请求最多等待 "
+                        << shutdown_timeout_ms << "ms）";
+    if (shutdown_timeout_ms > 0) {
+      // 硬超时：httplib 的 stop() 会等待线程池任务排空；若慢请求超过该时限，
+      // 强制退出（日志为逐行 flush，不会丢失已写内容）。
+      std::thread([shutdown_timeout_ms] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(shutdown_timeout_ms));
+        CM_LOG_WARN("http") << "优雅停机超时（" << shutdown_timeout_ms
+                            << "ms），强制退出（在途请求未完成）";
+        std::_Exit(1);
+      }).detach();
+    }
     svr.stop();
   });
 

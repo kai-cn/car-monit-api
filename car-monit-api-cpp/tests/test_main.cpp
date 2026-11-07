@@ -1040,18 +1040,65 @@ static void test_health_and_metrics() {
   req.path = "/metrics";
   res = cm::http::Response();
   CHECK(router.dispatch(req, res));
-  for (const char* key : {"requestsTotal", "errorsTotal", "inFlight", "avgLatencyMs"}) {
+  for (const char* key : {"requestsTotal", "errorsTotal", "inFlight", "avgLatencyMs",
+                          "p50LatencyMs", "p95LatencyMs", "p99LatencyMs", "errorRate",
+                          "status2xx", "status5xx", "dependencies"}) {
     if (!res.json.contains(key)) {
       std::cerr << "FAIL /metrics 缺少字段: " << key << std::endl;
       ++g_fail;
     }
   }
+  CHECK(res.json["dependencies"].contains("db"));
+  CHECK(res.json["dependencies"].contains("redis"));
+  CHECK(res.json["dependencies"].contains("workerPool"));
   CHECK(cm::http::metrics_snapshot()["requestsTotal"].is_number());
+
+  // Prometheus 文本格式（?format=prometheus）。
+  req.params_all["format"] = {"prometheus"};
+  res = cm::http::Response();
+  CHECK(router.dispatch(req, res));
+  CHECK(res.use_raw);
+  CHECK(res.content_type.find("text/plain") != std::string::npos);
+  CHECK(res.raw_body.find("carmonit_requests_total") != std::string::npos);
+  CHECK(res.raw_body.find("carmonit_dependency_up{component=\"db\"}") != std::string::npos);
+  CHECK(res.raw_body.find("carmonit_worker_pool_pending") != std::string::npos);
 
   // 优雅停机接口幂等：未启动时调用不崩溃。
   cm::router::stop_schedulers();
   cm::router::stop_schedulers();
   cm::service::stop_snapshot_flow_sync();
+}
+
+static void test_log_json_and_request_id() {
+  // 结构化日志（JSON）+ requestId 贯穿：每行都是合法 JSON，且包含 requestId。
+  namespace fs = std::filesystem;
+  const fs::path dir = fs::temp_directory_path() / "cm_log_json_test";
+  fs::remove_all(dir);
+  fs::create_directories(dir);
+  const std::string file = (dir / "json.log").string();
+  cm::log::set_file(file);
+  cm::log::set_level(cm::log::Level::Info);
+  cm::log::set_json(true);
+  {
+    cm::log::RequestIdScope scope("req-abc-123");
+    CM_LOG_INFO("json-test") << "hello \"quoted\"\nline2";
+  }
+  cm::log::set_json(false);
+  std::ifstream in(file);
+  std::string line;
+  std::getline(in, line);
+  try {
+    auto j = cm::Json::parse(line);
+    CHECK(j["level"] == "INFO");
+    CHECK(j["logger"] == "json-test");
+    CHECK(j["requestId"] == "req-abc-123");
+    CHECK(j["msg"].get<std::string>().find("\"quoted\"") != std::string::npos);
+  } catch (...) {
+    std::cerr << "FAIL JSON 日志行无法解析: " << line << std::endl;
+    ++g_fail;
+  }
+  // 关闭日志文件；不删除临时目录（Windows 上杀软/索引可能短暂占用，保留在 temp 无害）。
+  cm::log::set_file("");
 }
 
 static void test_log_rotation() {
@@ -1100,6 +1147,7 @@ int main() {
   test_cron_spring_semantics();
   test_server_security();
   test_health_and_metrics();
+  test_log_json_and_request_id();
   test_log_rotation();
   test_db_optional();
   if (g_fail == 0) {

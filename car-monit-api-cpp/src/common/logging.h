@@ -16,6 +16,25 @@ void set_file(const std::string& path);
 void set_rotation(long long max_bytes, int keep_files);
 void write(Level level, const std::string& logger, const std::string& msg);
 
+// 结构化日志（JSON）开关：logging.json=true 或 CM_LOG_JSON=true 时生效。
+void set_json(bool enabled);
+bool json_enabled();
+// 当前线程的 requestId（由 HTTP 层每个请求设置，日志行自动携带）。
+void set_request_id(const std::string& id);
+const std::string& request_id();
+
+// RAII：设置当前线程 requestId，析构时恢复上一个值（线程池复用线程时避免串号）。
+class RequestIdScope {
+public:
+  explicit RequestIdScope(std::string id);
+  ~RequestIdScope();
+  RequestIdScope(const RequestIdScope&) = delete;
+  RequestIdScope& operator=(const RequestIdScope&) = delete;
+
+private:
+  std::string previous_;
+};
+
 std::string thread_name();
 
 class Line {

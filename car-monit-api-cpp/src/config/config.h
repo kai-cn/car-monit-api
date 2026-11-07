@@ -112,6 +112,10 @@ public:
   // 日志轮转：logging.max-file-mb（默认 50，0=不轮转）/ logging.max-files（默认 5）。
   int log_max_file_mb() const { return log_max_file_mb_; }
   int log_max_files() const { return log_max_files_; }
+  // 结构化日志（JSON）开关：logging.json。
+  bool log_json() const { return log_json_; }
+  // 优雅停机超时（毫秒）：超过该时间仍有在途请求则强制退出。
+  int shutdown_timeout_ms() const { return shutdown_timeout_ms_; }
   std::string context_path() const { return context_path_; }
 
   const PgOptions& pg() const { return pg_; }
@@ -244,6 +248,8 @@ private:
   ServerSecurityOptions server_security_;
   int log_max_file_mb_ = 50;
   int log_max_files_ = 5;
+  bool log_json_ = false;
+  int shutdown_timeout_ms_ = 30000;
   std::string context_path_ = "/";
   PgOptions pg_;
   RedisOptions redis_;

@@ -20,6 +20,11 @@ public:
   // 队列已满或已 shutdown 时返回 false。
   bool submit(std::function<void()> task);
 
+  // 运行指标（/metrics）：待执行队列深度、正在执行的任务数、队列容量。
+  std::size_t pending() const;
+  int active() const;
+  int capacity() const;
+
   // 停止接收新任务，等待队列中与正在执行的任务全部结束后 join 全部 worker。
   void shutdown();
 

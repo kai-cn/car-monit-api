@@ -111,6 +111,10 @@ ctest --test-dir build --output-on-failure
 | `...master.username` / `...master.password` | 数据库账号 | 用户名 `gaussdb`；口令**不写进仓库**：配置文件里放 `${CM_PG_PASSWORD}` 占位，运行时从环境变量展开（见 4.2） |
 | `spring.redis.host` / `port` / `database` | Redis | `127.0.0.1` / `6379` / `0` |
 | `spring.redis.ssl` / `ssl-cacert` / `ssl-cert` / `ssl-key` | Redis TLS（默认关闭） | 可选 |
+| `server.auth.enabled` / `api-key` | API-Key 鉴权（新增，默认关闭） | 可选 |
+| `server.rate-limit.enabled` / `requests-per-minute` | IP 限流（新增，默认关闭） | 可选 |
+| `server.shutdown-timeout-ms` | 优雅停机等待在途请求的上限（默认 30000） | 超时强制退出 |
+| `logging.json` | 结构化日志开关（每行 JSON，含 requestId） | `false` |
 | `elasticsearch.host` / `port` | ES（不可达时查询自动降级到 DB） | `localhost` / `9200` |
 
 ### 4.2 环境变量覆盖（优先级高于配置文件）
@@ -124,6 +128,8 @@ ctest --test-dir build --output-on-failure
 | `CM_REDIS_HOST` / `CM_REDIS_PORT` / `CM_REDIS_PASSWORD` | Redis |
 | `CM_REDIS_TLS` / `CM_REDIS_TLS_CACERT` / `CM_REDIS_TLS_CERT` / `CM_REDIS_TLS_KEY` | Redis TLS |
 | `CM_ES_HOST` / `CM_ES_PORT` | Elasticsearch |
+| `CM_LOG_JSON` | 结构化日志（JSON）开关 |
+| `CM_SHUTDOWN_TIMEOUT_MS` | 优雅停机超时 |
 | `CM_KAFKA_ENABLED` | `kafka.enabled`（`false` 时退回 Redis 降级队列） |
 | `CM_KAFKA_BOOTSTRAP` | `kafka.bootstrap-servers` |
 | `CM_KAFKA_FALLBACK_REDIS` | `kafka.fallback-redis`（写入 `mq:pending:<topic>`） |
@@ -232,6 +238,10 @@ $env:CM_SERVER_PORT="9910"; $env:CM_LOG_LEVEL="debug"; .\build\car-monit-api.exe
 
 ```powershell
 curl.exe -s http://127.0.0.1:9901/health
+# 指标（JSON）：请求量/错误率/延迟分位/依赖状态/后台池队列深度
+curl.exe -s http://127.0.0.1:9901/metrics
+# Prometheus 文本格式（可直接被 scrape）
+curl.exe -s "http://127.0.0.1:9901/metrics?format=prometheus"
 # {"status":"UP"}
 
 curl.exe -s "http://127.0.0.1:9901/base/fwqjcxx/list?pageNum=1&pageSize=1"
