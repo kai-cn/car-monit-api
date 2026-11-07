@@ -14,12 +14,14 @@
 //	Druid 连接池参数          → sql.DB 的 SetMaxOpenConns / SetMaxIdleConns / SetConnMaxLifetime
 //	p6spy 打印完整 SQL        → gorm logger 的 Info + SlowThreshold
 //	@Transactional           → db.Transaction(ctx, func(tx *gorm.DB) error)
-//	JdbcTemplate.queryForObject（大表流式扫描） → db.Stream(ctx, sql, fn)（底层 sql.Rows，逐行回调）
+//	JdbcTemplate.queryForObject（大表流式扫描） → 目前用 Raw(...).Scan 分批读取（游标分页，批 2000）；
+//	                                           如需逐行回调的 Stream，请先补实现再改本行说明
 package db
 
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -64,12 +66,11 @@ func Open(ctx context.Context, cfg Config) (*Client, error) {
 	if cfg.LogSQL {
 		logLevel = gormlogger.Info
 	}
-	gl := gormlogger.New(slogWriter{}, gormlogger.Config{
-		SlowThreshold:             cfg.SlowThreshold,
-		LogLevel:                  logLevel,
-		IgnoreRecordNotFoundError: true,
-		Colorful:                  false,
-	})
+	// DIFF（R1）: 不再用 gormlogger.New + 单一 writer。gorm 的 Writer 接口只收一段
+	// 已格式化的文本，无法区分"慢 SQL / SQL 错误 / 普通 SQL"；旧实现统一 slog.Debug，
+	// 导致 slow-threshold: 5s 在生产 info 级别下完全静默。这里直接实现
+	// gormlogger.Interface，在 Trace 里按 gorm 原始语义分流到 Error/Warn/Debug。
+	gl := &gormSlogLogger{level: logLevel, slowThreshold: cfg.SlowThreshold}
 
 	gdb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: gl,
@@ -211,9 +212,65 @@ func newSchemaNamer() schemaNamer {
 	}}
 }
 
-// slogWriter 把 GORM 的日志转到 slog，避免两套日志格式混在一起。
-type slogWriter struct{}
+// gormSlogLogger 把 GORM 的日志按级别转发到 slog（实现 gormlogger.Interface）。
+//
+// 行为对齐 gorm 默认 logger 的三条分支，只改输出目标与级别：
+//   - 执行出错（ErrRecordNotFound 除外，与 IgnoreRecordNotFoundError=true 一致）→ slog.Error
+//   - 超过 SlowThreshold → slog.Warn（生产 info 级别可见，作为大表慢查询的第一道防线）
+//   - 其余 SQL → slog.Debug（LogSQL=true 时 level=Info，但仍只落 Debug，避免刷爆生产日志）
+type gormSlogLogger struct {
+	level         gormlogger.LogLevel
+	slowThreshold time.Duration
+}
 
-func (slogWriter) Printf(format string, args ...any) {
-	slog.Debug(strings.TrimRight(fmt.Sprintf(format, args...), "\n"), "component", "gorm")
+// LogMode 对应 gorm 的日志级别切换（gorm 的 Session 可能调用）。
+func (l *gormSlogLogger) LogMode(level gormlogger.LogLevel) gormlogger.Interface {
+	cp := *l
+	cp.level = level
+	return &cp
+}
+
+// Info 对应 gorm 的通用 info 日志。
+func (l *gormSlogLogger) Info(_ context.Context, msg string, data ...any) {
+	if l.level >= gormlogger.Info {
+		slog.Info(fmt.Sprintf(msg, data...), "component", "gorm")
+	}
+}
+
+// Warn 对应 gorm 的通用 warn 日志。
+func (l *gormSlogLogger) Warn(_ context.Context, msg string, data ...any) {
+	if l.level >= gormlogger.Warn {
+		slog.Warn(fmt.Sprintf(msg, data...), "component", "gorm")
+	}
+}
+
+// Error 对应 gorm 的通用 error 日志。
+func (l *gormSlogLogger) Error(_ context.Context, msg string, data ...any) {
+	if l.level >= gormlogger.Error {
+		slog.Error(fmt.Sprintf(msg, data...), "component", "gorm")
+	}
+}
+
+// Trace 复刻 gormlogger.Trace 的分支顺序（错误 → 慢 SQL → 普通 SQL）。
+//
+// 注意 fc() 只能调用一次：它内部会做参数插值，重复调用是纯浪费。
+func (l *gormSlogLogger) Trace(_ context.Context, begin time.Time, fc func() (string, int64), err error) {
+	if l.level <= gormlogger.Silent {
+		return
+	}
+	elapsed := time.Since(begin)
+	costMs := float64(elapsed.Microseconds()) / 1000.0
+
+	switch {
+	case err != nil && !errors.Is(err, gormlogger.ErrRecordNotFound):
+		sql, rows := fc()
+		slog.Error("SQL 执行失败", "err", err, "costMs", costMs, "rows", rows, "sql", sql, "component", "gorm")
+	case l.slowThreshold > 0 && elapsed > l.slowThreshold:
+		sql, rows := fc()
+		slog.Warn("慢 SQL", "threshold", l.slowThreshold.String(), "costMs", costMs,
+			"rows", rows, "sql", sql, "component", "gorm")
+	case l.level >= gormlogger.Info:
+		sql, rows := fc()
+		slog.Debug("SQL", "costMs", costMs, "rows", rows, "sql", sql, "component", "gorm")
+	}
 }
