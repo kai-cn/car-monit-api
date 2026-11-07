@@ -7,6 +7,10 @@ server:
   port: 9903                 # application.yml:2
   context-path: /            # application.yml:4
   mode: release              # Go 侧新增：gin 运行模式（debug/release）
+  # 差分/灰度校验副本：pprof 关闭、metrics 打开、consumer 不阻断 readiness（与默认配置一致）
+  pprof-enabled: false
+  metrics-enabled: true
+  consumer-required-for-ready: false
 
 spring:
   datasource:
@@ -152,3 +156,4 @@ logging:
 app:
   env: local                                      # application.yml:141（isLocalhost: local）
   sysbase-url: http://223.84.150.189:26066/prod-api  # application.yml:142
+  timezone: Asia/Shanghai                         # Go 侧新增（报告 01 Q7）

@@ -7,6 +7,15 @@ server:
   port: 9901                 # application.yml:2
   context-path: /            # application.yml:4
   mode: release              # Go 侧新增：gin 运行模式（debug/release）
+  # Go 侧新增（报告 02 P0-5）：/debug/pprof/* 默认关闭。排查问题时临时改为 true，
+  # 生产公网部署应保持 false（与业务同端口，无鉴权）。
+  pprof-enabled: false
+  # Go 侧新增（报告 02 P0-7）：/metrics（Prometheus）默认开启；不需要监控采集时改 false。
+  metrics-enabled: true
+  # Go 侧新增（报告 02 R2）：mqConsumer 心跳不健康时 /readyz 是否返回 503。
+  # 默认 false = 保持 Java 侧「MQ 非强依赖」语义（只体现在响应 body）；
+  # 以 MQ 为关键链路的部署可置 true，让 K8s readiness 直接摘流量。
+  consumer-required-for-ready: false
 
 spring:
   datasource:
@@ -146,3 +155,7 @@ logging:
 app:
   env: local                                      # application.yml:141（isLocalhost: local）
   sysbase-url: http://223.84.150.189:26066/prod-api  # application.yml:142
+  # Go 侧新增（报告 01 Q7）：进程级时区。启动时赋值给 time.Local，使 HTTP 参数绑定、
+  # JSON/缓存时间解析、cron 触发与 DB 路径的 +08:00 锚定保持一致。
+  # 精简镜像缺 tzdata 时，Asia/Shanghai 会退化为固定 +08:00；其他时区名缺 tzdata 则启动失败。
+  timezone: Asia/Shanghai

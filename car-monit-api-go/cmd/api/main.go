@@ -41,6 +41,7 @@ import (
 	"github.com/ruoyi/car-monit-api-go/internal/es"
 	"github.com/ruoyi/car-monit-api-go/internal/handler"
 	"github.com/ruoyi/car-monit-api-go/internal/logging"
+	"github.com/ruoyi/car-monit-api-go/internal/metrics"
 	"github.com/ruoyi/car-monit-api-go/internal/mq"
 	"github.com/ruoyi/car-monit-api-go/internal/repo"
 	"github.com/ruoyi/car-monit-api-go/internal/router"
@@ -80,7 +81,18 @@ func run(configPath string) error {
 	// ---- 2. 日志（logback-spring.xml 的等价物）----
 	lg := logging.Init(cfg.Logging.Level, cfg.Logging.Format)
 	slog.SetDefault(lg)
-	slog.Info("开始装配应用", "version", version, "config", configPath, "env", cfg.App.Env)
+
+	// ---- 2.1 时区（报告 01 Q7）----
+	// Java 由 JVM 默认时区决定（部署基线 Asia/Shanghai）；Go 必须显式固定 time.Local，
+	// 否则 HTTP 参数绑定、JSON/缓存时间解析、cron 触发会跟随宿主机 TZ，
+	// 与 DB 路径固定 +08:00 的 javaZone 形成双轨（日期过滤窗口会整体偏移）。
+	loc, err := cfg.ResolveTimezone()
+	if err != nil {
+		return err
+	}
+	time.Local = loc
+	slog.Info("开始装配应用", "version", version, "config", configPath, "env", cfg.App.Env,
+		"timezone", loc.String())
 
 	// ctx 在收到 Ctrl+C / SIGTERM 时取消，向下传递到消费者、调度器与 HTTP Server。
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -157,10 +169,20 @@ func run(configPath string) error {
 	selfTestDeps := &handler.SelfTestDeps{Dict: dict, SysUtil: sysUtil}
 
 	// ---- 7. Router ----
+	// 指标（报告 02 P0-7）：HTTP RED + 依赖健康 + 消费心跳/处理耗时 + 同步与连接池。
+	metricsSvc := metrics.New()
+	if raw, rerr := dbClient.Raw(); rerr == nil {
+		metricsSvc.RegisterDBPool(raw)
+	}
+	metricsSvc.RegisterRedisPool(cacheClient.Raw())
+	metricsSvc.RegisterSyncStats(syncSvc.Stats)
+	dataConsumer.SetObserver(metricsSvc.ObserveConsumerMessage)
+
 	// R2 修复：consumerUp 由"启动过一次"改为"读消费循环的真实心跳"（见 mq.Heartbeat）。
 	// 未配置 Kafka 时 dataConsumer.Healthy() 恒为 false，/readyz 会显示 mqConsumer=DOWN。
 	engine := router.New(router.Options{
 		Config: cfg, Base: baseDeps, Query: queryDeps, SysUtil: sysUtilDeps, SelfTest: selfTestDeps,
+		Metrics: metricsSvc,
 		Health: &router.Health{
 			DB:       func(c context.Context) error { return pingDB(c, dbClient) },
 			Cache:    func(c context.Context) error { return cacheClient.Raw().Ping(c).Err() },
@@ -168,6 +190,15 @@ func run(configPath string) error {
 			Consumer: dataConsumer.Healthy,
 		},
 	})
+
+	// 依赖健康采样（15s）：Prometheus 抓取读缓存值，不在抓取路径上 ping 依赖。
+	metricsSvc.StartSampler(ctx, 15*time.Second, map[string]func(context.Context) error{
+		"gaussdb": func(c context.Context) error { return pingDB(c, dbClient) },
+		"redis":   func(c context.Context) error { return cacheClient.Raw().Ping(c).Err() },
+		"elasticsearch": func(c context.Context) error {
+			return pingES(c, esClient)
+		},
+	}, dataConsumer.HealthSnapshot)
 
 	// ---- 8. 后台任务（@PostConstruct 的等价物）----
 	tasks := startBackground(ctx, startDeps{

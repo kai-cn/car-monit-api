@@ -15,6 +15,7 @@ package config
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -46,10 +47,19 @@ type Config struct {
 }
 
 // ServerConfig 对应 application.yml:1-4
+//
+// Go 侧新增项（Java 无对应，均带默认值以保持既有行为）：
+//   - PprofEnabled：/debug/pprof/* 默认关闭（报告 02 P0-5，避免与业务同端口裸暴露）；
+//   - MetricsEnabled：/metrics（Prometheus）默认开启（报告 02 P0-7）；
+//   - ConsumerRequiredForReady：mqConsumer 不健康时 /readyz 是否返回 503，默认 false
+//     （保持既有『MQ 非强依赖』语义，需要强约束的部署可打开）。
 type ServerConfig struct {
-	Port        int    `mapstructure:"port"`
-	ContextPath string `mapstructure:"context-path"`
-	Mode        string `mapstructure:"mode"` // gin 模式：debug/release
+	Port                     int    `mapstructure:"port"`
+	ContextPath              string `mapstructure:"context-path"`
+	Mode                     string `mapstructure:"mode"` // gin 模式：debug/release
+	PprofEnabled             bool   `mapstructure:"pprof-enabled"`
+	MetricsEnabled           bool   `mapstructure:"metrics-enabled"`
+	ConsumerRequiredForReady bool   `mapstructure:"consumer-required-for-ready"`
 }
 
 // DatasourceConfig 对应 application.yml 的 spring: 节点（本项目的 spring 下只有 datasource）。
@@ -279,9 +289,14 @@ type LoggingConfig struct {
 }
 
 // AppConfig 对应 application.yml:141-142（isLocalhost / sysbaseUrl）
+//
+// Timezone 是 Go 侧新增：Java 由 JVM 默认时区决定（部署基线 Asia/Shanghai），
+// Go 若依赖宿主机 TZ 会出现『DB 路径固定 +08:00、绑定/JSON 路径跟随 Local』的双轨
+// （报告 01 Q7）。进程启动时按此项显式固定 time.Local，非法值在 Validate 阶段拒绝。
 type AppConfig struct {
 	Env        string `mapstructure:"env"`         // local | prod（原 isLocalhost）
 	SysBaseURL string `mapstructure:"sysbase-url"` // 原 sysbaseUrl
+	Timezone   string `mapstructure:"timezone"`    // 默认 Asia/Shanghai
 }
 
 // Load 读取配置文件并叠加环境变量。
@@ -298,6 +313,11 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("server.port", 9901)
 	v.SetDefault("server.context-path", "/")
 	v.SetDefault("server.mode", "release")
+	// Go 侧新增开关：pprof 默认关（安全），metrics 默认开（可观测性），consumer 不阻断 readiness
+	v.SetDefault("server.pprof-enabled", false)
+	v.SetDefault("server.metrics-enabled", true)
+	v.SetDefault("server.consumer-required-for-ready", false)
+	v.SetDefault("app.timezone", "Asia/Shanghai")
 	v.SetDefault("redis.host", "127.0.0.1")
 	v.SetDefault("redis.port", 6379)
 	v.SetDefault("redis.database", 0)
@@ -325,6 +345,10 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("pulsar.max-retry-times", 3)
 
 	// 环境变量：APP_SERVER_PORT 覆盖 server.port（对应 Spring 的 relaxed binding）
+	//
+	// 已知约束（报告 02 §3.3）：Viper 的 AutomaticEnv 只在 Unmarshal 时对
+	// 『已出现在 yaml 或 defaults 中的键』生效。新增配置项必须同时写入 defaults
+	// （或 yaml），否则 APP_XXX 注入会被静默丢弃 —— 加配置时请先看这一行。
 	v.SetEnvPrefix("APP")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 	v.AutomaticEnv()
@@ -360,8 +384,40 @@ func (c *Config) Validate() error {
 	if c.Redis.Host == "" {
 		problems = append(problems, "redis.host 不能为空")
 	}
+	// 时区：非法值必须在启动阶段拒绝（报告 01 Q7：time.Local 是绑定/JSON/cron 的共同输入）
+	if _, err := c.ResolveTimezone(); err != nil {
+		problems = append(problems, err.Error())
+	}
+	// 导出目录：非 local 环境必须是绝对路径（报告 02 P1-8：Linux 上相对路径语义随 cwd 变化）
+	if !strings.EqualFold(strings.TrimSpace(c.App.Env), "local") && c.App.Env != "" {
+		if dir := strings.TrimSpace(c.Optimization.Export.Dir); dir != "" && !filepath.IsAbs(dir) {
+			problems = append(problems, "optimization.export.dir 在非 local 环境必须为绝对路径，当前为 "+dir)
+		}
+	}
 	if len(problems) > 0 {
 		return fmt.Errorf("配置校验失败: %s", strings.Join(problems, "; "))
 	}
 	return nil
+}
+
+// ResolveTimezone 解析 app.timezone。
+//
+// PARITY: Java 侧时区由 JVM 默认时区（部署基线 Asia/Shanghai）决定，代码里没有显式设置；
+// Go 侧必须显式固定 time.Local，否则绑定解析、JSON 反序列化、cron 触发会跟随宿主机 TZ，
+// 与 DB 路径的 javaZone（固定 +08:00）形成双轨。
+//
+// 精简镜像可能没有 tzdata：Asia/Shanghai 退化为固定 +08:00（中国 1991 年后无夏令时，
+// 与 model.javaZone 的兜底策略保持一致）；其他时区名缺 tzdata 则报错，避免静默用错时区。
+func (c *Config) ResolveTimezone() (*time.Location, error) {
+	name := strings.TrimSpace(c.App.Timezone)
+	if name == "" {
+		name = "Asia/Shanghai"
+	}
+	if loc, err := time.LoadLocation(name); err == nil {
+		return loc, nil
+	}
+	if name == "Asia/Shanghai" || name == "PRC" {
+		return time.FixedZone("Asia/Shanghai", 8*3600), nil
+	}
+	return nil, fmt.Errorf("app.timezone 非法或缺少 tzdata: %q", name)
 }

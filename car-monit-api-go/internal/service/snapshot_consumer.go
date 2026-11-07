@@ -68,6 +68,13 @@ type SnapshotFlowConsumer struct {
 	consumerT string
 	// wg 追踪消费循环，供 Close() 等待退出（ctx 取消后 FetchMessage 最多 1s 感知）。
 	wg sync.WaitGroup
+	// observer 是可选指标回调（result=ok/error + 单条耗时），由 main 注入 metrics。
+	observer func(result string, cost time.Duration)
+}
+
+// SetObserver 注入消息处理观测回调（可为 nil）。
+func (s *SnapshotFlowConsumer) SetObserver(obs func(result string, cost time.Duration)) {
+	s.observer = obs
 }
 
 // NewSnapshotFlowConsumer 构造。
@@ -188,9 +195,21 @@ func (s *SnapshotFlowConsumer) retryAfterDelay(ctx context.Context) bool {
 //
 //	nil   → ack（Java 的 return true，含"确认丢弃"的格式错误/重复消息）
 //	error → nack（Java 的 return false，触发 Broker 重投）
-func (s *SnapshotFlowConsumer) Handle(ctx context.Context, msg mq.Message) error {
+//
+// 指标：通过 SetObserver 注入回调（metrics 包），记录处理结果与耗时；
+// 不直接依赖 prometheus，保持 service 层可单测。
+func (s *SnapshotFlowConsumer) Handle(ctx context.Context, msg mq.Message) (err error) {
 	startTime := time.Now()
 	dataID := msg.Key
+	if s.observer != nil {
+		defer func() {
+			result := "ok"
+			if err != nil {
+				result = "error"
+			}
+			s.observer(result, time.Since(startTime))
+		}()
+	}
 
 	// 1. 解析消息信封
 	var envelope SnapshotFlowMessage

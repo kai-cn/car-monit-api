@@ -1,0 +1,113 @@
+# car-monit-api-go 部署基线（单副本）
+#
+# 报告 02 P0-4：调度器与 GaussDB→ES 同步**没有分布式锁**，多副本会重复执行
+# syncCurrentTrack / syncHistroyTrack / 增量同步（写 Redis 水位线、重复推 ES）。
+# 因此当前部署形态明确为「单副本」，并用 Recreate 策略保证滚动发布期间不会同时存在两个 Pod。
+#
+# 使用前替换：镜像地址、Secret 名、导出目录的 PVC。
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: car-monit-api-go
+  labels:
+    app: car-monit-api-go
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: car-monit-api-go
+  template:
+    metadata:
+      labels:
+        app: car-monit-api-go
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9901"
+        prometheus.io/path: "/metrics"
+    spec:
+      # 关闭时 HTTP 20s + 后台组件总预算 60s，再留 10s 余量
+      terminationGracePeriodSeconds: 90
+      containers:
+        - name: api
+          image: registry.example.com/car-monit-api-go:1.0.0
+          args: ["-config", "/etc/car-monit/config.yaml"]
+          ports:
+            - name: http
+              containerPort: 9901
+          env:
+            # 真实密码不进镜像/配置模板（报告 02 P0-3）
+            - name: APP_SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: car-monit-secrets
+                  key: gaussdb-password
+            - name: APP_ELASTICSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: car-monit-secrets
+                  key: es-password
+            - name: APP_SERVER_MODE
+              value: release
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 6
+          readinessProbe:
+            # /readyz 深度检查 DB/Redis/ES；mqConsumer 是否拉低状态码由
+            # server.consumer-required-for-ready 决定（默认 false，仅体现在 body）
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          lifecycle:
+            preStop:
+              exec:
+                # 给 Service/Ingress 摘除 endpoint 留时间，避免新请求打到正在关闭的进程
+                command: ["sh", "-c", "sleep 5"]
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "256Mi"
+            limits:
+              cpu: "2"
+              memory: "1Gi"
+          volumeMounts:
+            - name: config
+              mountPath: /etc/car-monit
+              readOnly: true
+            - name: export
+              mountPath: /data/export
+      volumes:
+        - name: config
+          configMap:
+            name: car-monit-config
+        - name: export
+          persistentVolumeClaim:
+            claimName: car-monit-export
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: car-monit-api-go
+  labels:
+    app: car-monit-api-go
+spec:
+  selector:
+    app: car-monit-api-go
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

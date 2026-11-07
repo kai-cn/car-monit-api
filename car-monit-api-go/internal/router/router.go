@@ -34,6 +34,7 @@ import (
 
 	"github.com/ruoyi/car-monit-api-go/internal/config"
 	"github.com/ruoyi/car-monit-api-go/internal/handler"
+	"github.com/ruoyi/car-monit-api-go/internal/metrics"
 	"github.com/ruoyi/car-monit-api-go/internal/middleware"
 	"github.com/ruoyi/car-monit-api-go/internal/response"
 )
@@ -61,6 +62,8 @@ type Options struct {
 	SysUtil  *handler.SysUtilDeps
 	SelfTest *handler.SelfTestDeps
 	Health   *Health
+	// Metrics 为 nil 时不挂 /metrics（等价于 server.metrics-enabled=false）
+	Metrics *metrics.Metrics
 }
 
 // New 构造 gin.Engine。
@@ -78,8 +81,18 @@ func New(opts Options) *gin.Engine {
 	// 与 Java 的 200 仍有差别（状态码不同），但不再是"能不能访问"的差别。
 	engine.RedirectTrailingSlash = true
 
-	registerHealth(engine, opts.Health)
-	registerPprof(engine)
+	// 指标（报告 02 P0-7）：默认开启，server.metrics-enabled=false 可关。
+	// 放在业务中间件之后注册，保证 RED 指标覆盖全部业务路由（/metrics 自身在中间件里排除）。
+	if opts.Config.Server.MetricsEnabled && opts.Metrics != nil {
+		engine.Use(opts.Metrics.GinMiddleware())
+		engine.GET("/metrics", gin.WrapH(opts.Metrics.Handler()))
+	}
+
+	registerHealth(engine, opts.Health, opts.Config.Server.ConsumerRequiredForReady)
+	// pprof（报告 02 P0-5）：默认关闭，server.pprof-enabled=true 才挂载。
+	if opts.Config.Server.PprofEnabled {
+		registerPprof(engine)
+	}
 
 	// server.servlet.context-path（默认 "/"）。gin 的 Group("/") 不会给路径加前缀。
 	root := engine.Group(opts.Config.Server.ContextPath)
@@ -125,7 +138,7 @@ func ginMode(mode string) string {
 //
 // PARITY: Java 侧并未引入 spring-boot-starter-actuator（application.yml 全文无 management.*），
 // 因此这两个端点是 Go 侧新增；只读、无副作用，对灰度脚本与 K8s 探针都安全。
-func registerHealth(engine *gin.Engine, h *Health) {
+func registerHealth(engine *gin.Engine, h *Health, consumerRequired bool) {
 	probe := func(c *gin.Context, deep bool) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
 		defer cancel()
@@ -154,8 +167,14 @@ func registerHealth(engine *gin.Engine, h *Health) {
 				if h.Consumer() {
 					body["mqConsumer"] = "UP"
 				} else {
-					// 消费端未启动只降级为 WARN：Java 侧消费者启动失败也不会让应用退出。
+					// 默认：消费端不健康只体现在 body 里（Java 侧消费者启动失败也不会让应用退出）。
+					// server.consumer-required-for-ready=true 时升级为 503，供 K8s readiness
+					// 直接摘流量（报告 02 R2：消费端假死必须能被探针发现）。
 					body["mqConsumer"] = "DOWN"
+					if consumerRequired {
+						body["status"] = "DOWN"
+						status = http.StatusServiceUnavailable
+					}
 				}
 			}
 		}
