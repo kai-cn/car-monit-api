@@ -8,10 +8,10 @@
 - Java 惯用法翻译成 Go 惯用法处标 `// DIFF:`；行为与 Java 完全一致但有坑处标 `// PARITY:`；
 - `Java 独有概念 → Go 等价物` 的决策理由写在对应文件头部注释里，也在本文件第 4、9 节汇总。
 
-**规模**：121 个 Go 文件（107 个源码 + 14 个测试）/ 21,552 行（含注释）；共 **101 条 HTTP 路由** —— 85 条业务路由与 Java 的
+**规模**：123 个 Go 文件（107 个源码 + 16 个测试）/ 21,710 行（含注释）；共 **101 条 HTTP 路由** —— 85 条业务路由与 Java 的
 85 个端点**一一对应**，另有 16 条 Go 侧探针/运维端点（`/healthz` `/readyz` `/health` `/metrics`
 + 12 条 `/debug/pprof/*`，后两组按配置开关决定是否挂载）；
-21 个定时任务（默认配置下 9 个在跑）；53 个单元测试函数（14 个测试文件，零外部依赖）。
+21 个定时任务（默认配置下 9 个在跑）；59 个单元测试函数（16 个测试文件，零外部依赖）。
 
 ---
 
@@ -470,8 +470,8 @@ toolchain go1.26.0
 | 编译 | `go build ./...` | 通过 |
 | 静态检查 | `go vet ./...` | 通过 |
 | 格式 | `gofmt -l cmd internal` | 无输出 |
-| 单元测试 | `go test ./...` | config / db / handler / mq / repo / router / scheduler / service / utils **9 个包全绿**（53 个测试函数，零外部依赖） |
-| 路由完整性 | `go test ./internal/router/ -run TestRoutesRegistered` | 100 条路由，50 条关键路径逐条断言 + 总数下限 60 |
+| 单元测试 | `go test ./...` | config / db / handler / metrics / middleware / mq / repo / router / scheduler / service / utils **11 个包全绿**（59 个测试函数，零外部依赖） |
+| 路由完整性 | `go test ./internal/router/ -run TestRoutesRegistered` | 101 条路由，50 条关键路径逐条断言 + 总数下限 60 |
 | 自测端点行为 | `go test ./internal/router/ -run TestSelfTestEndpoints` | 3 个已实现返回 200；4 个抽样 501 带 `javaRef` / `reason` |
 | cron 降级 | `go test ./internal/scheduler/` | 21 个 Quartz 表达式全部可算下次触发时间 |
 | 定时任务登记 | `go test ./internal/scheduler/ -run TestRegisterAllTrackJobs` | 15 条（全依赖为 nil 时）：TrackTask 2 条在跑、CarTask 11 条 Disabled |
@@ -621,5 +621,5 @@ python predicates.py                                                          # 
   切换前需由下游消费方确认，不在本轮擅自改动；
 - gorm / gin / go-redis 的功能性升级：需要独立回归窗口，本轮只升安全相关的 x/*。
 
-**验证**：`go build ./...`、`go vet ./...`、`go test ./...`（9 个包 / 53 个测试函数）全部通过；
+**验证**：`go build ./...`、`go vet ./...`、`go test ./...`（11 个包 / 59 个测试函数）全部通过；
 `gofmt -l cmd internal` 在 LF 检出下无输出。
