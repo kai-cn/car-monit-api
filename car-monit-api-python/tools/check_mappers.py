@@ -45,7 +45,19 @@ def main() -> int:
         print(f"orphan statements: {len(report.orphan_statements)}")
         for item in report.orphan_statements:
             print(f"    {item}")
-    return 0
+
+    # P0-1：随包 XML（pro-business-api/src/main/resources）必须与 Java 源逐字节
+    # 一致，防止两树漂移；漂移/缺失时本工具 exit 1（CI 门禁）。
+    import subprocess
+
+    sync_script = Path(__file__).resolve().parent / "sync_mapper_xml.py"
+    result = subprocess.run([sys.executable, str(sync_script), "--check"],
+                            capture_output=True, text=True, encoding="utf-8")
+    if result.stdout:
+        print(result.stdout.rstrip())
+    if result.stderr:
+        print(result.stderr.rstrip(), file=sys.stderr)
+    return int(result.returncode)
 
 
 if __name__ == "__main__":

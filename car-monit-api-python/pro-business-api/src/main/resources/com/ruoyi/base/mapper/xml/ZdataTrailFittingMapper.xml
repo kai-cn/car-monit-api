@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.base.mapper.ZdataTrailFittingMapper">
+
+    <!--
+        游标分页（Keyset Pagination）查询：用于车辆轨迹大规模同步到 ES
+        Keyset pagination for trail-fitting large-scale sync to ES.
+
+        设计要点 / Design notes:
+        1) 强依赖 (extime, cid) 联合索引（GaussDB/PostgreSQL）
+           Relies on a composite index on (extime, cid)
+        2) 首次调用 cursorTime/cursorUuid 为 null；后续用上一批最后一条推进
+           First call passes null cursors; subsequent batches advance by last row
+        3) 使用 ORDER BY + LIMIT，复杂度 O(total)，避免 OFFSET 深翻页
+           ORDER BY + LIMIT, O(total), avoids O(offset) deep pagination
+        4) SELECT t.* 配合 mapUnderscoreToCamelCase 自动映射到领域对象
+           SELECT t.* with auto-mapping populates the domain object
+    -->
+    <select id="selectByCursorShard" resultType="com.ruoyi.base.domain.ZdataTrailFitting">
+        SELECT t.*
+        FROM jl_data01.zdata_trail_fitting t
+        <where>
+            and t.extime >= to_timestamp(#{startTime},'yyyy-mm-dd HH24:MI:SS')
+            and t.extime <![CDATA[<]]> to_timestamp(#{endTime},'yyyy-mm-dd HH24:MI:SS')
+            <if test="cursorTime != null and cursorTime != ''">
+                and (
+                     t.extime > to_timestamp(#{cursorTime},'yyyy-mm-dd HH24:MI:SS')
+                     or (
+                         t.extime = to_timestamp(#{cursorTime},'yyyy-mm-dd HH24:MI:SS')
+                         <if test="cursorUuid != null and cursorUuid != ''">
+                             and t.cid > #{cursorUuid}
+                         </if>
+                     )
+                )
+            </if>
+        </where>
+        ORDER BY t.extime ASC, t.cid ASC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

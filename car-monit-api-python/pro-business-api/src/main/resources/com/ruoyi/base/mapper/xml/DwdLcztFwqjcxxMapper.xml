@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.base.mapper.DwdLcztFwqjcxxMapper">
+
+    <resultMap type="com.ruoyi.base.domain.DwdLcztFwqjcxx" id="DwdLcztFwqjcxxResult">
+        <result property="agentPk"    column="agent_pk"    />
+        <result property="yxtzj"    column="yxtzj"    />
+        <result property="fwqbm"    column="fwqbm"    />
+        <result property="fwqmc"    column="fwqmc"    />
+        <result property="wd"    column="wd"    />
+        <result property="fxmc"    column="fxmc"    />
+        <result property="fxdm"    column="fxdm"    />
+        <result property="jd"    column="jd"    />
+        <result property="sslxbh"    column="sslxbh"    />
+        <result property="sslxmc"    column="sslxmc"    />
+        <result property="ssldbh"    column="ssldbh"    />
+        <result property="ssldmc"    column="ssldmc"    />
+        <result property="sczhkgs"    column="sczhkgs"    />
+        <result property="sczhszgs"    column="sczhszgs"    />
+        <result property="ssglzxbm"    column="ssglzxbm"    />
+        <result property="ssglzxmc"    column="ssglzxmc"    />
+        <result property="xzqhmc"    column="xzqhmc"    />
+        <result property="yyrq"    column="yyrq"    />
+        <result property="cws"    column="cws"    />
+        <result property="sfszlkk"    column="sfszlkk"    />
+        <result property="cdzs"    column="cdzs"    />
+        <result property="sfcyfw"    column="sfcyfw"    />
+        <result property="sftgzsfw"    column="sftgzsfw"    />
+        <result property="sftgqxfw"    column="sftgqxfw"    />
+        <result property="sftgcsfw"    column="sftgcsfw"    />
+        <result property="sftgjyfw"    column="sftgjyfw"    />
+        <result property="mj"    column="mj"    />
+        <result property="sftgcshfw"    column="sftgcshfw"    />
+        <result property="xzqhdm"    column="xzqhdm"    />
+        <result property="synx"    column="synx"    />
+        <result property="lyxt"    column="lyxt"    />
+        <result property="loadTime"    column="load_time"    />
+        <result property="allColPk"    column="all_col_pk"    />
+
+    </resultMap>
+
+    <sql id="selectDwdLcztFwqjcxxVo">
+        t.id agent_pk,
+        t.id_card yxtzj,
+        t.service_code fwqbm,
+        t.service_name fwqmc,
+        t.direction fxdm,
+        t.longitude jd,
+        t.latitude wd,
+        t.road_code sslxbh,
+        t.section_code ssldbh,
+        t.section_name ssldmc,
+        t.pile_no sczhkgs,
+        t.org_code ssglzxbm,
+        t.org_name ssglzxmc,
+        t.city_code xzqhmc,
+        t.district_name xzqhdm,
+        t.business_date yyrq,
+        t.parking_num cws,
+        t.has_cross sfszlkk,
+        t.charge_num cdzs,
+        t.food_service sfcyfw,
+        t.stay_service sftgzsfw,
+        t.automobile_service sftgqxfw,
+        t.supermarket_service sftgcsfw,
+        t.gas_service sftgjyfw,
+        t.service_alias_name lyxt
+    </sql>
+
+
+    <select id="selectDwdLcztFwqjcxxList" parameterType="com.ruoyi.base.domain.DwdLcztFwqjcxx" resultMap="DwdLcztFwqjcxxResult">
+        SELECT
+        <include refid="selectDwdLcztFwqjcxxVo"/>
+        FROM jl_data01.ods_szdn_service t
+        WHERE 1=1
+        <if test="agentPk != null  and agentPk != ''"> and t.agent_pk = #{agentPk}</if>
+        <if test="yxtzj != null  and yxtzj != ''"> and t.yxtzj = #{yxtzj}</if>
+        <if test="fwqbm != null  and fwqbm != ''"> and t.service_code = #{fwqbm}</if>
+        <if test="fwqmc != null  and fwqmc != ''"> and t.service_name = #{fwqmc}</if>
+        <if test="wd != null  and wd != ''"> and t.wd = #{wd}</if>
+        <if test="fxmc != null  and fxmc != ''"> and t.fxmc = #{fxmc}</if>
+        <if test="fxdm != null  and fxdm != ''"> and t.fxdm = #{fxdm}</if>
+        <if test="jd != null  and jd != ''"> and t.jd = #{jd}</if>
+        <if test="sslxbh != null  and sslxbh != ''"> and t.road_code = #{sslxbh}</if>
+        <if test="sslxmc != null  and sslxmc != ''"> and t.sslxmc = #{sslxmc}</if>
+        <if test="ssldbh != null  and ssldbh != ''"> and t.section_code = #{ssldbh}</if>
+        <if test="ssldmc != null  and ssldmc != ''"> and t.section_name = #{ssldmc}</if>
+        <if test="sczhkgs != null  and sczhkgs != ''"> and t.sczhkgs = #{sczhkgs}</if>
+        <if test="sczhszgs != null  and sczhszgs != ''"> and t.sczhszgs = #{sczhszgs}</if>
+        <if test="ssglzxbm != null  and ssglzxbm != ''"> and t.ssglzxbm = #{ssglzxbm}</if>
+        <if test="ssglzxmc != null  and ssglzxmc != ''"> and t.ssglzxmc = #{ssglzxmc}</if>
+        <if test="xzqhmc != null  and xzqhmc != ''"> and t.xzqhmc = #{xzqhmc}</if>
+        <if test="yyrq != null  and yyrq != ''"> and t.yyrq = #{yyrq}</if>
+        <if test="cws != null  and cws != ''"> and t.cws = #{cws}</if>
+        <if test="sfszlkk != null  and sfszlkk != ''"> and t.sfszlkk = #{sfszlkk}</if>
+        <if test="cdzs != null  and cdzs != ''"> and t.cdzs = #{cdzs}</if>
+        <if test="sfcyfw != null  and sfcyfw != ''"> and t.sfcyfw = #{sfcyfw}</if>
+        <if test="sftgzsfw != null  and sftgzsfw != ''"> and t.sftgzsfw = #{sftgzsfw}</if>
+        <if test="sftgqxfw != null  and sftgqxfw != ''"> and t.sftgqxfw = #{sftgqxfw}</if>
+        <if test="sftgcsfw != null  and sftgcsfw != ''"> and t.sftgcsfw = #{sftgcsfw}</if>
+        <if test="sftgjyfw != null  and sftgjyfw != ''"> and t.sftgjyfw = #{sftgjyfw}</if>
+        <if test="mj != null  and mj != ''"> and t.mj = #{mj}</if>
+        <if test="sftgcshfw != null  and sftgcshfw != ''"> and t.sftgcshfw = #{sftgcshfw}</if>
+        <if test="xzqhdm != null  and xzqhdm != ''"> and t.xzqhdm = #{xzqhdm}</if>
+        <if test="synx != null  and synx != ''"> and t.synx = #{synx}</if>
+        <if test="lyxt != null  and lyxt != ''"> and t.lyxt = #{lyxt}</if>
+        <if test="loadTime != null  and loadTime != ''"> and t.load_time = #{loadTime}</if>
+        <if test="allColPk != null  and allColPk != ''"> and t.all_col_pk = #{allColPk}</if>
+    </select>
+
+    <select id="selectDwdLcztFwqjcxxById" parameterType="String" resultMap="DwdLcztFwqjcxxResult">
+         select
+         <include refid="selectDwdLcztFwqjcxxVo"/>
+         from jl_data01.ods_szdn_service t
+         where t.id = #{agentPk}
+    </select>
+</mapper>
