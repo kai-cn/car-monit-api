@@ -1,7 +1,7 @@
 # car-monit-api（C++）上手指南
 
 > 面向 Java 开发者。原工程：`../pro-business-api`（Spring Boot 2.4.5 / RuoYi）+ `../pro-base-common`。
-> 本工程是它的 C++20 一比一移植：**85 个 HTTP 端点 + 10 个定时任务 + 19 张业务表的 DAO**，另加 1 个 `/health`。
+> 本工程是它的 C++20 一比一移植：**85 个 HTTP 端点 + 10 个定时任务 + 19 张业务表的 DAO**，另加 2 个本工程新增端点：`/health`（依赖连接状态汇总）与 `/metrics`（请求计数/错误/时延）。
 
 ---
 
