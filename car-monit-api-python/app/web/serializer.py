@@ -39,6 +39,8 @@ from decimal import Decimal
 from typing import Any, Optional
 from zoneinfo import ZoneInfo
 
+import orjson
+
 from app.compat.meta_key import meta_get
 from com.ruoyi.common.core.domain.JavaBean import snake_to_camel
 from com.ruoyi.common.core.page.TableDataInfo import TableDataInfo
@@ -125,8 +127,10 @@ def to_jsonable(value: Any) -> Any:
     if isinstance(value, float):
         return value
     if isinstance(value, Decimal):
-        # Jackson writes BigDecimal as a JSON number
-        return float(value)
+        # P1-1：Jackson 对 BigDecimal 输出精确十进制文本（保留 scale，如 1.50），
+        # 不能走 float（会把 12345678901234567890.12 变成 1.2345678901234567e+19）。
+        # orjson.Fragment 把 str(Decimal) 原样嵌入为 JSON number，逐字节对齐 Jackson。
+        return orjson.Fragment(str(value))
     if isinstance(value, enum.Enum):
         return value.name
     if isinstance(value, (bytes, bytearray)):

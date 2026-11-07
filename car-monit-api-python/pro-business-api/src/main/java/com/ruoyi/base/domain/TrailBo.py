@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+from decimal import Decimal
+
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -80,9 +82,9 @@ class TrailBo(JavaBean):
 
     images_arry: Optional[str] = None  # Java: private String imagesArry; // 抓拍图片
 
-    lon: Optional[float] = None  # Java: private BigDecimal lon; // 经度
+    lon: Optional[Decimal] = None  # Java: private BigDecimal lon; // 经度
 
-    lat: Optional[float] = None  # Java: private BigDecimal lat; // 维度
+    lat: Optional[Decimal] = None  # Java: private BigDecimal lat; // 维度
 
     road_code: Optional[str] = None  # Java: private String roadCode; // 路线编号
 

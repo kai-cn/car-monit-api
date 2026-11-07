@@ -30,6 +30,9 @@ from __future__ import annotations
 
 import dataclasses
 import json as _json
+from decimal import Decimal
+
+import orjson
 import re
 import types
 import typing
@@ -63,8 +66,10 @@ class JSON(object):
     @staticmethod
     def toJSONString(value: Any) -> str:
         # 【Java→Python】fastjson 输出紧凑 JSON（无空格）；ensure_ascii=False 保留中文，
-        # 与 fastjson 的“不转义非 ASCII”一致。
-        return _json.dumps(_serialize(value), ensure_ascii=False, separators=(",", ":"))
+        # 与 fastjson 的“不转义非 ASCII”一致。P1-1 起用 orjson：唯一目的是原生支持
+        # ``orjson.Fragment``（Decimal 的精确十进制文本，见 _serialize 的 Decimal 分支；
+        # stdlib json.dumps 无法把 Decimal 输出为 JSON number）。
+        return orjson.dumps(_serialize(value)).decode("utf-8")
 
     # ------------------------------------------------------------------ 反序列化
     @staticmethod
@@ -125,6 +130,10 @@ def _serialize(value: Any) -> Any:
     """把 Java 对象图转成可 JSON 化的 Python 原生结构。"""
     if value is None or isinstance(value, (bool, int, float, str)):
         return value
+    if isinstance(value, Decimal):
+        # P1-1：Java fastjson 把 BigDecimal 输出为 JSON number（toString 文本）；
+        # Fragment 由 orjson.dumps 原样嵌入，保留 scale 与大数精度。
+        return orjson.Fragment(str(value))
     if isinstance(value, datetime):
         # 【Java→Python】fastjson 默认是毫秒数；这里用可读时间串（见模块注释第 3 条）
         return value.strftime("%Y-%m-%d %H:%M:%S")

@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+from decimal import Decimal
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
@@ -112,7 +114,7 @@ class OdsLwzxsfsjFeeStationExit01(JavaBean, Custom):
     identification: Optional[str] = None  # Java: private String identification; // 开票标识
 
     # @Excel(name = "交易金额占比")
-    feerate: Optional[float] = None  # Java: private BigDecimal feerate; // 交易金额占比
+    feerate: Optional[Decimal] = None  # Java: private BigDecimal feerate; // 交易金额占比
 
     # @Excel(name = "车牌号+车牌类型")
     identifyvehicleid: Optional[str] = None  # Java: private String identifyvehicleid; // 车牌号+车牌类型

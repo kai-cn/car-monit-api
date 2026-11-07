@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+from decimal import Decimal
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
@@ -52,7 +54,7 @@ class OdsLwzxsfsjFeeStationEnter01(JavaBean, Custom):
     entollstationid: Optional[str] = None  # Java: private String entollstationid; // 入口收费站编码
 
     # @Excel(name = "入口称重")
-    enweight: Optional[float] = None  # Java: private BigDecimal enweight; // 入口称重
+    enweight: Optional[Decimal] = None  # Java: private BigDecimal enweight; // 入口称重
 
     # @Excel(name = "车牌号+车牌类型")
     identifyvehicleid: Optional[str] = None  # Java: private String identifyvehicleid; // 车牌号+车牌类型
@@ -97,7 +99,7 @@ class OdsLwzxsfsjFeeStationEnter01(JavaBean, Custom):
     terminaltransno: Optional[str] = None  # Java: private String terminaltransno; // PSAM卡脱机交易序列号
 
     # @Excel(name = "交易金额")
-    transfee: Optional[float] = None  # Java: private BigDecimal transfee; // 交易金额
+    transfee: Optional[Decimal] = None  # Java: private BigDecimal transfee; // 交易金额
 
     # @Excel(name = "交易类型")
     transtype: Optional[str] = None  # Java: private String transtype; // 交易类型

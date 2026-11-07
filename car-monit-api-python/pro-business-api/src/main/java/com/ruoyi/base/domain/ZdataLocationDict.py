@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+from decimal import Decimal
+
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
@@ -71,9 +73,9 @@ class ZdataLocationDict(JavaBean, Custom):
     # @JsonFormat(pattern = "yyyy-MM-dd") @Excel(name = "修改时间", width = 30, dateFormat = "yyyy-MM-dd")
     updated_at: Optional[datetime] = None  # Java: private Date updatedAt; // 修改时间
 
-    latitude: Optional[float] = None  # Java: private BigDecimal latitude; // 维度
+    latitude: Optional[Decimal] = None  # Java: private BigDecimal latitude; // 维度
 
-    longitude: Optional[float] = None  # Java: private BigDecimal longitude; // 经度
+    longitude: Optional[Decimal] = None  # Java: private BigDecimal longitude; // 经度
 
     pile_no_k: Optional[str] = None  # Java: private String pileNoK; // 桩号K
 

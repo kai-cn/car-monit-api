@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+from decimal import Decimal
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
@@ -79,7 +81,7 @@ class ZdataTrailTracks(JavaBean, Custom):
     envehicletype: Optional[str] = field(default=None, metadata={"exist": False})  # Java: private String envehicletype; // 入口车辆类型代码
 
     # @Excel(name = "入口称重", readConverterExp = "k=g") @TableField(exist = false)
-    enweight: Optional[float] = field(default=None, metadata={"exist": False})  # Java: private BigDecimal enweight; // 入口称重（kg）
+    enweight: Optional[Decimal] = field(default=None, metadata={"exist": False})  # Java: private BigDecimal enweight; // 入口称重（kg）
 
     # @Excel(name = "出口车道编号") @TableField(exist = false)
     extolllaneid: Optional[str] = field(default=None, metadata={"exist": False})  # Java: private String extolllaneid; // 出口车道编号
@@ -100,7 +102,7 @@ class ZdataTrailTracks(JavaBean, Custom):
     exvehicletype: Optional[str] = field(default=None, metadata={"exist": False})  # Java: private String exvehicletype; // 出口车辆类型代码
 
     # @Excel(name = "出口称重", readConverterExp = "k=g") @TableField(exist = false)
-    exweight: Optional[float] = field(default=None, metadata={"exist": False})  # Java: private BigDecimal exweight; // 出口称重（kg）
+    exweight: Optional[Decimal] = field(default=None, metadata={"exist": False})  # Java: private BigDecimal exweight; // 出口称重（kg）
 
     # @Excel(name = "入口收费站经度") @TableField(exist = false)
     start_lon: Optional[str] = field(default=None, metadata={"exist": False})  # Java: private String startLon; // 入口收费站经度
@@ -157,16 +159,16 @@ class ZdataTrailTracks(JavaBean, Custom):
     flag: Optional[str] = field(default=None, metadata={"exist": False})  # Java: private String flag; // 标识
 
     # @Excel(name = "入口收费站经度") @TableField(exist = false)
-    start_lon_dec: Optional[float] = field(default=None, metadata={"exist": False})  # Java: private BigDecimal startLonDec; // 入口收费站经度
+    start_lon_dec: Optional[Decimal] = field(default=None, metadata={"exist": False})  # Java: private BigDecimal startLonDec; // 入口收费站经度
 
     # @Excel(name = "入口收费站维度") @TableField(exist = false)
-    strat_lat_dec: Optional[float] = field(default=None, metadata={"exist": False})  # Java: private BigDecimal stratLatDec; // 入口收费站维度 /*
+    strat_lat_dec: Optional[Decimal] = field(default=None, metadata={"exist": False})  # Java: private BigDecimal stratLatDec; // 入口收费站维度 /*
 
     # @Excel(name = "出口收费站经度") @TableField(exist = false)
-    end_lon_dec: Optional[float] = field(default=None, metadata={"exist": False})  # Java: private BigDecimal endLonDec; // 出口收费站经度 /*
+    end_lon_dec: Optional[Decimal] = field(default=None, metadata={"exist": False})  # Java: private BigDecimal endLonDec; // 出口收费站经度 /*
 
     # @Excel(name = "出口收费站维度") @TableField(exist = false)
-    end_lat_dec: Optional[float] = field(default=None, metadata={"exist": False})  # Java: private BigDecimal endLatDec; // 出口收费站维度 /*
+    end_lat_dec: Optional[Decimal] = field(default=None, metadata={"exist": False})  # Java: private BigDecimal endLatDec; // 出口收费站维度 /*
 
     # @TableField(exist = false)
     escaped_tfcj: Optional[str] = field(default=None, metadata={"exist": False})  # Java: private String escapedTfcj; // 逃费场景

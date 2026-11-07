@@ -92,7 +92,14 @@ install_gaussdb_version_shim()
 
 
 def jdbc_to_sqlalchemy_url(jdbc_url: str, username: str, password: str) -> str:
-    """``jdbc:postgresql://h:p/db?...`` -> ``postgresql+psycopg://u:p@h:p/db``."""
+    """``jdbc:postgresql://h:p/db?...`` -> ``postgresql+psycopg://u:p@h:p/db``。
+
+    TODO(V2/决策④)：JDBC URL query 串（含 ``currentSchema``）当前被整体丢弃——
+    若生产 GaussDB 依赖 ``currentSchema`` 定位业务表（而非每条 SQL 写全限定名/
+    ``TABLE_SCHEMAS``），需要在这里解析并传给 psycopg（``options=-csearch_path=..``）。
+    生产 ``search_path`` 到底是什么属 docs/迁移审阅报告.md §6.2 D5 待业主确认项，
+    确认后若需支持请补解析 + 单测。
+    """
     raw = jdbc_url.strip()
     for prefix in _JDBC_PREFIXES:
         if raw.startswith(prefix):
