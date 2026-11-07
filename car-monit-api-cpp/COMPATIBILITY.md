@@ -41,7 +41,8 @@
 |---|---|---|
 | 驱动 | 自实现 PG v3：启动包、MD5 认证、SASL 认证、简单查询协议、错误字段解析 | ✅ 协议层等价；**不支持** SSL、`COPY`、游标、预处理语句（`Parse/Bind/Execute`） |
 | 认证 | MD5：`md5(md5(password+user)+salt)`；SASL 支持两种派生：**openGauss** `SHA256(SHA256(password)‖salt)` 与 PostgreSQL `PBKDF2-HMAC-SHA256` | ✅ 两种均已用独立计算的向量校验（见 `tests/test_main.cpp::test_pg_auth`）；`db.auth-mode`（`CM_PG_AUTH_MODE`）可选 `auto`/`md5`/`opengauss-sha256`/`scram-sha-256`。`auto` = 按 openGauss 派生；**认证失败不再换算法重试**（重试本身也是一次失败登录，会消耗 `failed_login_attempts`） |
-| 连接池 | Druid `initial-size 5 / min-idle 5 / maxActive 20 / maxWait 60000` | ✅ `PgPool` 同参数语义（惰性建连、空闲复用、超时） |
+| 连接池 | Druid `initial-size 5 / min-idle 5 / maxActive 20 / maxWait 60000` | ✅ `PgPool` 同参数语义（惰性建连、空闲复用、超时）。**修复（审阅 §3.3 R8）**：`maxWait`（借出等待）与 `connect-timeout-ms`（建连超时，默认 10s）分开解析；建连在锁外进行（锁内只取空闲/预留槽位），DB 抖动不再把全部 HTTP 线程串行阻塞在池锁上；满载等待用条件变量而非 10ms 轮询；非 DbError 异常也归还槽位 |
+| 网络故障熔断 | Java 无此机制（Druid 网络失败时持续重试） | ✅ 新增：连续 3 次建连失败进入 30s 冷却，冷却期内快速失败（`08001`），避免每次请求都等满建连超时；认证失败仍由 AuthGuard 单独熔断 |
 | 凭据守卫 | Java 侧由外部注入口令；C++ 口令走 `${CM_PG_PASSWORD}` 或 `configs/config.local.yaml` | ✅ 启动阶段校验：为空/未展开占位即退出（退出码 1），**不建 socket、不发认证**（`src/db/auth_guard.cpp`、`src/main.cpp`） |
 | 认证失败熔断 | Java 无此机制（Druid 会反复重建连接，连续失败会把账号锁死） | ✅ 认证类错误（`28P01`/`28000`）后进程内停止重建连接，日志「已停止重试，避免触发账号锁定」；`druid.reconnect-after-auth-failure` 默认 `0`（关闭），可显式放宽 |
 | SQL 拼装 | MyBatis XML `<if test>`、`<foreach>`、`resultMap`、`select_sql/order_sql` | ✅ 固化在 `src/meta/entities_generated.h` 的 `filters/select_sql/order_sql` |
@@ -56,7 +57,7 @@
 
 | 项 | 差异 | 结论 |
 |---|---|---|
-| 连接 | Lettuce 连接池 → 单连接 + 互斥 | ⚠️ 并发吞吐低于 Lettuce 池；语义一致（RESP2、`SELECT db`、`AUTH`） |
+| 连接 | Lettuce 连接池 → 单连接 + 互斥 | ⚠️ 并发吞吐低于 Lettuce 池；语义一致（RESP2、`SELECT db`、`AUTH`）。**修复（审阅 §3.3 R7）**：重连不再泄漏旧 socket fd；`ensure()` 改走 `connect_locked`（原实现在 `cmd` 持锁下调 `connect` 会二次加锁自锁死锁）；bulk 读循环读满（Windows 半包不再失败）；`keys` 由阻塞的 `KEYS` 改为 `SCAN` 增量遍历 |
 | 值编码 | Java 侧 `RedisTemplate` 默认 JDK 序列化，部分键用 FastJson | ⚠️ C++ 统一按 **JSON 文本**读写；与 Java 进程**共用同一 Redis 时**，JDK 序列化的键无法互相解析（本项目自建的 `car_*`/`sys_config:*` 键均为 JSON，一致） |
 | 键名 | `Constants.java` 常量 | ✅ 全部按原常量（`car_list_jc`、`js_car_snapshot`、`DATE_BorderWeighingCapture:` 等） |
 | 过期 | `setex`/`expire` 语义 | ✅ |

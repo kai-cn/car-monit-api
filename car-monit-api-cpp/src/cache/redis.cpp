@@ -74,6 +74,11 @@ bool Redis::connected() {
 bool Redis::connect(const std::string& host, int port, const std::string& password,
                     int database, int timeout_ms) {
   std::lock_guard<std::mutex> lock(mu_);
+  return connect_locked(host, port, password, database, timeout_ms);
+}
+
+bool Redis::connect_locked(const std::string& host, int port, const std::string& password,
+                           int database, int timeout_ms) {
   ensure_wsa();
   close_unlocked();
   host_ = host;
@@ -144,13 +149,16 @@ bool Redis::connect(const std::string& host, int port, const std::string& passwo
 }
 
 bool Redis::ensure() {
+  // mu_ 已由调用方（cmd）持有。
   if (ready_ && sock_ != kInvalid) return true;
   if (host_.empty()) return false;
-  intptr_t old = sock_;
-  sock_ = -1;
-  ready_ = false;
-  (void)old;
-  return connect(host_, port_, password_, database_, timeout_ms_);
+  // 修复两处缺陷（审阅 §3.3 R7 及代码复查）：
+  // 1) fd 泄漏：此前先把 sock_ 置 -1 再调 connect()，connect 内的
+  //    close_unlocked() 看到 -1 不会关闭旧 fd，每次"读失败→重连"泄漏一个 socket；
+  // 2) 自锁死锁：ensure() 在 cmd() 持有 mu_ 时被调用，再调 connect()（内部
+  //    再次 lock mu_，非递归 mutex）会死锁；改走 connect_locked。
+  // connect_locked 内部先 close_unlocked()，旧 fd 会被正确关闭。
+  return connect_locked(host_, port_, password_, database_, timeout_ms_);
 }
 
 bool Redis::send_command(const std::vector<std::string>& args) {
@@ -207,19 +215,21 @@ bool Redis::read_reply(std::string& out, char& type) {
         return true;
       }
       out.assign(std::size_t(len), '\0');
-#ifdef _WIN32
-      int got = ::recv(sock_t(sock_), out.data(), len, 0);
-      if (got != len) return false;
-#else
+      // 循环读满：单次 recv 对大 value 可能半包返回（Windows 尤其明显，
+      // 此前 Windows 分支 got != len 直接失败，审阅 §3.3 R7）。
       std::size_t left = std::size_t(len);
       char* p = out.data();
       while (left > 0) {
+#ifdef _WIN32
+        int chunk = int(std::min<std::size_t>(left, 1u << 30));
+        int got = ::recv(sock_t(sock_), p, chunk, 0);
+#else
         ssize_t got = ::recv(int(sock_), p, left, 0);
+#endif
         if (got <= 0) return false;
         p += got;
         left -= std::size_t(got);
       }
-#endif
       std::string crlf;
       read_line(crlf);
       return true;
@@ -332,12 +342,20 @@ long long Redis::decr(const std::string& key) {
 }
 
 std::vector<std::string> Redis::keys(const std::string& pattern) {
+  // KEYS 是 O(整个键空间) 的阻塞命令（审阅 §4.2 #6），改用 SCAN 增量遍历。
+  // SCAN 可能对存活整个扫描期的键返回重复，调用方按需去重（当前调用方
+  // 只做遍历检查，重复无害）。
   std::vector<std::string> out;
   try {
-    auto r = cmd({"KEYS", pattern});
-    if (!r) return out;
-    auto j = Json::parse(*r);
-    for (const auto& v : j) out.push_back(v.get<std::string>());
+    long long cursor = 0;
+    do {
+      auto r = cmd({"SCAN", std::to_string(cursor), "MATCH", pattern, "COUNT", "200"});
+      if (!r) return out;
+      auto j = Json::parse(*r); // [cursor, [key...]]
+      if (!j.is_array() || j.size() < 2 || !j[1].is_array()) return out;
+      cursor = std::stoll(j[0].get<std::string>());
+      for (const auto& v : j[1]) out.push_back(v.get<std::string>());
+    } while (cursor != 0);
   } catch (...) {
   }
   return out;

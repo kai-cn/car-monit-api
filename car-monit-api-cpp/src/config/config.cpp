@@ -209,8 +209,11 @@ void Config::refresh_business() {
       yaml_.get_str("spring.datasource.dynamic.datasource.master.password", pg_.password);
   pg_.max_conns = yaml_.get_int("spring.datasource.dynamic.druid.maxActive", pg_.max_conns);
   pg_.min_idle = yaml_.get_int("spring.datasource.dynamic.druid.min-idle", pg_.min_idle);
-  pg_.connect_timeout_ms =
-      yaml_.get_int("spring.datasource.dynamic.druid.maxWait", pg_.connect_timeout_ms);
+  // Druid maxWait 是"借出连接的等待超时"；TCP 建连超时是另一个参数
+  // （pgjdbc connectTimeout，默认 10s）。此前两者混用同一个值。
+  pg_.max_wait_ms = yaml_.get_int("spring.datasource.dynamic.druid.maxWait", pg_.max_wait_ms);
+  pg_.connect_timeout_ms = yaml_.get_int("spring.datasource.dynamic.druid.connect-timeout-ms",
+                                         pg_.connect_timeout_ms);
   pg_.auth_mode =
       yaml_.get_str("spring.datasource.dynamic.datasource.master.auth-mode", pg_.auth_mode);
   pg_.reconnect_after_auth_failure = yaml_.get_int(

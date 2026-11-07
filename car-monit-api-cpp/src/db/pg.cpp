@@ -634,7 +634,8 @@ PgPool& PgPool::instance() {
 
 void PgPool::init(const std::string& host, int port, const std::string& user,
                   const std::string& password, const std::string& database, int max_conns,
-                  int min_idle, int timeout_ms, const std::string& auth_mode) {
+                  int min_idle, int connect_timeout_ms, const std::string& auth_mode,
+                  int max_wait_ms) {
   std::lock_guard<std::mutex> lock(mu_);
   // 二次防线：即便调用方没做启动校验，口令不合法时也不初始化连接池（不发起连接）。
   auto check = check_password(password);
@@ -651,8 +652,12 @@ void PgPool::init(const std::string& host, int port, const std::string& user,
   auth_mode_ = auth_mode;
   max_ = max_conns > 0 ? max_conns : 20;
   min_ = min_idle > 0 ? min_idle : 5;
-  timeout_ms_ = timeout_ms > 0 ? timeout_ms : 10000;
+  timeout_ms_ = connect_timeout_ms > 0 ? connect_timeout_ms : 10000;
+  wait_ms_ = max_wait_ms > 0 ? max_wait_ms : 60000;
   slots_.clear();
+  ++generation_;
+  consecutive_connect_failures_ = 0;
+  breaker_until_epoch_ms_ = 0;
   inited_ = true;
 }
 
@@ -660,116 +665,156 @@ void PgPool::shutdown() {
   std::lock_guard<std::mutex> lock(mu_);
   for (auto& slot : slots_) slot.conn.reset();
   slots_.clear();
+  ++generation_;
   inited_ = false;
+  cv_.notify_all();
 }
 
 bool PgPool::available() { return inited_; }
 
-PgResult PgPool::query(const std::string& sql) {
-  std::unique_ptr<PgConn> conn;
-  std::size_t slot_index = std::string::npos;
-  {
-    std::unique_lock<std::mutex> lock(mu_);
-    if (!inited_) throw DbError("08003", "数据库连接池未初始化");
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms_);
-    while (true) {
-      for (std::size_t i = 0; i < slots_.size(); ++i) {
-        if (!slots_[i].in_use && slots_[i].conn && slots_[i].conn->alive()) {
-          slots_[i].in_use = true;
-          slot_index = i;
-          break;
-        }
+void PgPool::note_connect_result_locked(bool ok) {
+  if (ok) {
+    consecutive_connect_failures_ = 0;
+    breaker_until_epoch_ms_ = 0;
+    return;
+  }
+  if (++consecutive_connect_failures_ >= kConnectFailureThreshold) {
+    breaker_until_epoch_ms_ =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count() +
+        kConnectCooldownMs;
+    consecutive_connect_failures_ = 0;
+    CM_LOG_ERROR("db.pg") << "连续 " << kConnectFailureThreshold
+                          << " 次建连失败，进入 " << kConnectCooldownMs / 1000
+                          << "s 熔断冷却（认证失败由 AuthGuard 单独熔断）";
+  }
+}
+
+PgPool::Borrowed PgPool::acquire() {
+  std::unique_lock<std::mutex> lock(mu_);
+  if (!inited_) throw DbError("08003", "数据库连接池未初始化");
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(wait_ms_);
+  while (true) {
+    // 网络故障熔断：冷却期内快速失败，不再每次请求都等满建连超时。
+    if (breaker_until_epoch_ms_ > 0) {
+      long long now = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          std::chrono::system_clock::now().time_since_epoch())
+                          .count();
+      if (now < breaker_until_epoch_ms_) {
+        throw DbError("08001", "数据库连接连续失败，熔断冷却中（约 " +
+                                   std::to_string((breaker_until_epoch_ms_ - now + 999) / 1000) +
+                                   "s 后允许重试）");
       }
-      if (slot_index != std::string::npos) break;
-      if (slots_.size() < std::size_t(max_)) {
-        ConnSlot slot;
-        slot.in_use = true;
-        slot.conn = std::make_unique<PgConn>();
-        if (!slot.conn->connect(host_, port_, user_, password_, database_, timeout_ms_,
-                                auth_mode_)) {
-          throw DbError("08001", "无法连接数据库 " + host_ + ":" + std::to_string(port_));
-        }
-        slots_.push_back(std::move(slot));
-        slot_index = slots_.size() - 1;
+      breaker_until_epoch_ms_ = 0; // 冷却结束，放行一次探测
+    }
+    // 1) 锁内取空闲健康连接。
+    for (std::size_t i = 0; i < slots_.size(); ++i) {
+      if (!slots_[i].in_use && !slots_[i].reserved && slots_[i].conn && slots_[i].conn->alive()) {
+        slots_[i].in_use = true;
+        return Borrowed{i, slots_[i].conn.get()};
+      }
+    }
+    // 2) 未达上限：优先复用空槽，否则追加新槽做预留，然后锁外建连。
+    //    修复（审阅 §3.3 R8）：原实现在持锁状态下 connect（最长等满建连超时），
+    //    DB 抖动时 16 个 HTTP 线程全部串行阻塞在池锁上形成级联雪崩。
+    std::size_t reserved_index = std::string::npos;
+    for (std::size_t i = 0; i < slots_.size(); ++i) {
+      if (!slots_[i].in_use && !slots_[i].reserved && !slots_[i].conn) {
+        slots_[i].reserved = true;
+        slots_[i].reserve_gen = generation_;
+        reserved_index = i;
         break;
       }
-      if (std::chrono::steady_clock::now() >= deadline)
-        throw DbError("08001", "等待数据库连接超时");
+    }
+    if (reserved_index == std::string::npos && slots_.size() < std::size_t(max_)) {
+      ConnSlot slot;
+      slot.reserved = true;
+      slot.reserve_gen = generation_;
+      slots_.push_back(std::move(slot));
+      reserved_index = slots_.size() - 1;
+    }
+    if (reserved_index != std::string::npos) {
+      const long long gen = generation_;
+      // 锁外建连：连接参数先拷贝到栈上，避免与 init()/shutdown() 竞争。
+      const std::string host = host_, user = user_, password = password_;
+      const std::string database = database_, auth_mode = auth_mode_;
+      const int port = port_, connect_timeout = timeout_ms_;
       lock.unlock();
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      auto conn = std::make_unique<PgConn>();
+      const bool ok = conn->connect(host, port, user, password, database, connect_timeout, auth_mode);
       lock.lock();
+      // 池在锁外建连期间被 shutdown/re-init：丢弃本连接（gen 不匹配）。
+      if (!inited_ || reserved_index >= slots_.size() ||
+          !slots_[reserved_index].reserved || slots_[reserved_index].reserve_gen != gen) {
+        cv_.notify_all();
+        throw DbError("08003", "数据库连接池已关闭");
+      }
+      note_connect_result_locked(ok);
+      if (!ok) {
+        // 回收占位（保留空槽供下次复用，槽位总数不增长）。
+        slots_[reserved_index].reserved = false;
+        cv_.notify_all();
+        throw DbError("08001", "无法连接数据库 " + host_ + ":" + std::to_string(port_));
+      }
+      slots_[reserved_index].conn = std::move(conn);
+      slots_[reserved_index].reserved = false;
+      slots_[reserved_index].in_use = true;
+      return Borrowed{reserved_index, slots_[reserved_index].conn.get()};
+    }
+    // 3) 达到上限：条件变量等待空闲（maxWait 超时），替代原 10ms 轮询。
+    if (cv_.wait_until(lock, deadline) == std::cv_status::timeout) {
+      for (std::size_t i = 0; i < slots_.size(); ++i) {
+        if (!slots_[i].in_use && !slots_[i].reserved && slots_[i].conn && slots_[i].conn->alive()) {
+          slots_[i].in_use = true;
+          return Borrowed{i, slots_[i].conn.get()};
+        }
+      }
+      throw DbError("08001", "等待数据库连接超时（maxWait=" + std::to_string(wait_ms_) + "ms）");
     }
   }
-  // 直接使用槽位中的连接（锁外使用，槽位已标记 in_use）。
-  PgConn* raw = nullptr;
+}
+
+void PgPool::release(std::size_t index, bool broken) {
   {
-    std::lock_guard<std::mutex> lock(mu_);
-    raw = slots_[slot_index].conn.get();
+    std::lock_guard<std::mutex> guard(mu_);
+    if (index < slots_.size()) {
+      if (broken) slots_[index].conn.reset(); // 空槽保留复用
+      slots_[index].in_use = false;
+    }
   }
-  bool broken = false;
+  cv_.notify_all();
+}
+
+PgResult PgPool::query(const std::string& sql) {
+  Borrowed b = acquire();
   try {
-    auto result = raw->query(sql);
-    std::lock_guard<std::mutex> lock(mu_);
-    slots_[slot_index].in_use = false;
+    PgResult result = b.raw->query(sql);
+    release(b.index, false);
     return result;
   } catch (const DbError& e) {
-    std::lock_guard<std::mutex> lock(mu_);
-    if (e.sqlstate().rfind("08", 0) == 0) {
-      slots_[slot_index].conn.reset();
-      broken = true;
-    }
-    slots_[slot_index].in_use = false;
+    release(b.index, e.sqlstate().rfind("08", 0) == 0);
+    throw;
+  } catch (...) {
+    // 修复（审阅 §4.2 #5）：非 DbError 异常此前不会归还槽位，连接被永久占用。
+    release(b.index, true);
     throw;
   }
-  (void)broken;
 }
 
 long long PgPool::execute(const std::string& sql) {
-  std::unique_lock<std::mutex> lock(mu_);
-  if (!inited_) throw DbError("08003", "数据库连接池未初始化");
-  std::size_t slot_index = std::string::npos;
-  auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms_);
-  while (true) {
-    for (std::size_t i = 0; i < slots_.size(); ++i) {
-      if (!slots_[i].in_use && slots_[i].conn && slots_[i].conn->alive()) {
-        slots_[i].in_use = true;
-        slot_index = i;
-        break;
-      }
-    }
-    if (slot_index != std::string::npos) break;
-    if (slots_.size() < std::size_t(max_)) {
-      ConnSlot slot;
-      slot.in_use = true;
-      slot.conn = std::make_unique<PgConn>();
-      if (!slot.conn->connect(host_, port_, user_, password_, database_, timeout_ms_, auth_mode_))
-        throw DbError("08001", "无法连接数据库 " + host_ + ":" + std::to_string(port_));
-      slots_.push_back(std::move(slot));
-      slot_index = slots_.size() - 1;
-      break;
-    }
-    if (std::chrono::steady_clock::now() >= deadline)
-      throw DbError("08001", "等待数据库连接超时");
-    lock.unlock();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    lock.lock();
-  }
-  PgConn* raw = slots_[slot_index].conn.get();
-  lock.unlock();
-  long long affected = 0;
+  Borrowed b = acquire();
   try {
-    affected = raw->execute(sql);
+    long long affected = b.raw->execute(sql);
+    release(b.index, false);
+    return affected;
   } catch (const DbError& e) {
-    std::lock_guard<std::mutex> guard(mu_);
-    if (e.sqlstate().rfind("08", 0) == 0) slots_[slot_index].conn.reset();
-    slots_[slot_index].in_use = false;
+    release(b.index, e.sqlstate().rfind("08", 0) == 0);
+    throw;
+  } catch (...) {
+    release(b.index, true);
     throw;
   }
-  {
-    std::lock_guard<std::mutex> guard(mu_);
-    slots_[slot_index].in_use = false;
-  }
-  return affected;
 }
 
 long long PgPool::execute_in_tx(const std::vector<std::string>& sqls) {
@@ -784,60 +829,39 @@ long long PgPool::execute_in_tx(const std::vector<std::string>& sqls) {
 
 std::vector<PgResult> PgPool::transaction(
     const std::vector<std::pair<std::string, bool>>& stmts) {
-  std::unique_lock<std::mutex> lock(mu_);
-  if (!inited_) throw DbError("08003", "数据库连接池未初始化");
-  std::size_t slot_index = std::string::npos;
-  for (std::size_t i = 0; i < slots_.size(); ++i) {
-    if (!slots_[i].in_use && slots_[i].conn && slots_[i].conn->alive()) {
-      slots_[i].in_use = true;
-      slot_index = i;
-      break;
-    }
-  }
-  if (slot_index == std::string::npos) {
-    if (slots_.size() < std::size_t(max_)) {
-      ConnSlot slot;
-      slot.in_use = true;
-      slot.conn = std::make_unique<PgConn>();
-      if (!slot.conn->connect(host_, port_, user_, password_, database_, timeout_ms_, auth_mode_))
-        throw DbError("08001", "无法连接数据库 " + host_ + ":" + std::to_string(port_));
-      slots_.push_back(std::move(slot));
-      slot_index = slots_.size() - 1;
-    } else {
-      throw DbError("08001", "等待数据库连接超时");
-    }
-  }
-  PgConn* raw = slots_[slot_index].conn.get();
-  lock.unlock();
-
-  std::vector<PgResult> out;
+  Borrowed b = acquire();
   bool broken = false;
+  std::vector<PgResult> out;
   try {
-    raw->execute("BEGIN");
+    b.raw->execute("BEGIN");
     for (const auto& st : stmts) {
       if (st.second) {
-        auto r = raw->query(st.first);
-        out.push_back(std::move(r));
+        out.push_back(b.raw->query(st.first));
       } else {
-        raw->execute(st.first);
+        b.raw->execute(st.first);
         out.emplace_back();
       }
     }
-    raw->execute("COMMIT");
+    b.raw->execute("COMMIT");
+    release(b.index, false);
+    return out;
   } catch (const DbError& e) {
+    broken = e.sqlstate().rfind("08", 0) == 0;
     try {
-      raw->execute("ROLLBACK");
+      b.raw->execute("ROLLBACK");
+    } catch (...) {
+      broken = true; // 回滚也失败，连接状态不可信
+    }
+    release(b.index, broken);
+    throw;
+  } catch (...) {
+    try {
+      b.raw->execute("ROLLBACK");
     } catch (...) {
     }
-    if (e.sqlstate().rfind("08", 0) == 0) broken = true;
-    std::lock_guard<std::mutex> guard(mu_);
-    slots_[slot_index].in_use = false;
-    if (broken) slots_[slot_index].conn.reset();
+    release(b.index, true);
     throw;
   }
-  std::lock_guard<std::mutex> guard(mu_);
-  slots_[slot_index].in_use = false;
-  return out;
 }
 
 } // namespace cm::db

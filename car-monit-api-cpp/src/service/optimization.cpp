@@ -5,6 +5,7 @@
 #include "common/error.h"
 #include "common/logging.h"
 #include "common/utils.h"
+#include "common/worker_pool.h"
 #include "config/config.h"
 #include "db/dao.h"
 #include "db/pg.h"
@@ -1275,7 +1276,10 @@ std::string LargeScaleQueryService::submit_export_task(const std::string& type,
   task->end_time = end_time;
   task->fuzzy = fuzzy;
   task->unified = false;
-  std::thread([task] { run_large_export(task); }).detach();
+  // 受控线程池（审阅 §4.2 #15）：队列满则任务立即失败，可经 export_status 查询原因。
+  if (!background_pool().submit([task] { run_large_export(task); })) {
+    task_set_status(task, "FAILED", "后台任务队列已满，请稍后重试");
+  }
   return task_id;
 }
 
@@ -1315,7 +1319,9 @@ std::string UnifiedExportService::submit_export_task(DataSource ds, const std::s
   task->end_time = end_time;
   task->fuzzy = fuzzy;
   task->unified = true;
-  std::thread([task] { run_unified_export(task); }).detach();
+  if (!background_pool().submit([task] { run_unified_export(task); })) {
+    task_set_status(task, "FAILED", "后台任务队列已满，请稍后重试");
+  }
   return task_id;
 }
 
