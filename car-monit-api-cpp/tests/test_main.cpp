@@ -451,7 +451,7 @@ static void test_local_config_override() {
 }
 
 static void test_db_optional() {
-  if (!std::getenv("CM_TEST_DB")) return;
+  if (!cm::utils::get_env("CM_TEST_DB")) return;
   auto& cfg = cm::config::Config::instance();
   cfg.load("configs/config.yaml");
   cfg.apply_env_overrides();

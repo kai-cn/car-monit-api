@@ -54,9 +54,9 @@ std::string expand_env(const std::string& s) {
           def = name.substr(sep + 2);
           name = name.substr(0, sep);
         }
-        const char* v = std::getenv(name.c_str());
-        if (v && *v) {
-          out += v;
+        const auto v = cm::utils::get_env(name.c_str());
+        if (v) {
+          out += *v;
         } else if (!def.empty()) {
           out += def;
         } else {
@@ -375,11 +375,7 @@ void Config::refresh_business() {
 }
 
 void Config::apply_env_overrides() {
-  auto env = [](const char* name) -> std::optional<std::string> {
-    const char* v = std::getenv(name);
-    if (!v || !*v) return std::nullopt;
-    return std::string(v);
-  };
+  auto env = [](const char* name) { return cm::utils::get_env(name); };
   if (auto v = env("CM_SERVER_PORT")) server_port_ = std::stoi(*v);
   if (auto v = env("CM_PG_HOST")) pg_.host = *v;
   if (auto v = env("CM_PG_PORT")) pg_.port = std::stoi(*v);

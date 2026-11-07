@@ -38,6 +38,8 @@ std::string to_under_score(std::string_view s);
 std::string uuid4();
 // RuoYi StringUtils.getUUID(): UUID.randomUUID().toString().replaceAll("-", "")
 std::string uuid32();
+// 读取环境变量：未设置或为空返回 nullopt。MSVC 下走 _dupenv_s，避免 C4996。
+std::optional<std::string> get_env(const char* name);
 std::string url_decode(std::string_view s);
 std::string url_encode(std::string_view s);
 std::string base64_encode(const std::string& in);
