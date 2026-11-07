@@ -1,0 +1,34 @@
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: car-monit-api-python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: pytest
+        run: python -m pytest -q
+      - name: check_routes
+        run: python tools/check_routes.py
+      - name: check_mappers (mapper XML sync)
+        run: python tools/check_mappers.py
+      - name: check_parity
+        run: python tools/check_parity.py
+      - name: check_env
+        run: python tools/check_env.py
+      - name: smoke_test
+        run: python scripts/smoke_test.py
+      - name: smoke_all_routes
+        run: python tools/smoke_all_routes.py

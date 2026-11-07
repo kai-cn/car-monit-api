@@ -19,8 +19,8 @@
        ``{code, message, dataSource, pageNum, pageSize, data}``
        （Java 返回 ``Map<String, Object>``，**不是** ``TableDataInfo``，没有 rows）
     6. 统一查询 + 异步导出（submit → poll → COMPLETED）
-    7. 错误体契约：``{timestamp, status, error, path}`` 且 **无 message 键**
-       （Spring ``server.error.include-message=never`` 的原样复刻）
+    7. 错误体契约：``{timestamp, status, error, path}`` 且 ``message`` 为空串
+       （实测 Java 进程始终输出该键、值为 ""，见 app/web/errors.py 的实测修正注记）
 
 两种模式的探针差异（刻意设计，不是缺陷）：
     IN-PROCESS 不进入 ASGI lifespan，Mapper 保持内存实现、调度器不启动，
@@ -44,6 +44,32 @@ if str(_ROOT) not in sys.path:
 
 # P0-2：自检固定 shim 模式（替身可用）；prod 模式守卫由 tests/test_v2_p0.py 覆盖。
 os.environ.setdefault("CAR_MONIT_RUNTIME", "shim")
+
+# P1-4：导出用例的前置条件——
+# 1) 导出目录指向临时目录（默认 /data/export 在 CI/开发机常不可写）；
+# 2) 内存 ES 里预置目标索引与一条样例文档（否则 index_not_found -> 任务 FAILED）。
+import tempfile as _tempfile
+
+os.environ.setdefault("OPTIMIZATION_EXPORT_DIR",
+                      _tempfile.mkdtemp(prefix="car-monit-export-"))
+
+
+def _seed_in_memory_es() -> None:
+    import json as _json
+
+    from org.elasticsearch.client.RestHighLevelClient import RestHighLevelClient
+
+    indices = RestHighLevelClient._INDICES
+    indices.setdefault("fee_records", {})
+    indices.setdefault("trail_fitting", {})
+    snapshot = indices.setdefault("snapshot_flow", {})
+    snapshot.setdefault("smoke-1", _json.dumps({
+        "big_id": "smoke-1", "snapshottime": "2025-06-01 12:00:00",
+        "platenumber": "赣A12345", "gantrycode": "G1",
+    }))
+
+
+_seed_in_memory_es()
 
 START = "2025-06-01 00:00:00"
 END = "2025-06-02 00:00:00"
@@ -254,8 +280,8 @@ def check_error_contract(client, reporter: Reporter) -> None:
     reporter.check("错误体字段 = %s" % sorted(expected),
                    isinstance(body, dict) and expected <= set(body),
                    body if not isinstance(body, dict) else sorted(body))
-    reporter.check("错误体 **不含** message（include-message=never）",
-                   isinstance(body, dict) and "message" not in body, body)
+    reporter.check("错误体 message 为空串（实测 Java 始终输出该键）",
+                   isinstance(body, dict) and body.get("message") == "", body)
     reporter.check("status 字段 = 404", str((body or {}).get("status")) == "404",
                    (body or {}).get("status"))
 

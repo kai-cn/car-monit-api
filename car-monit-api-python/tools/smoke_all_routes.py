@@ -39,6 +39,30 @@ if str(_ROOT) not in sys.path:
 # P0-2：冒烟固定 shim 模式（替身可用）。
 os.environ.setdefault("CAR_MONIT_RUNTIME", "shim")
 
+# P1-4：targeted 导出用例的前置条件（同 scripts/smoke_test.py）。
+import tempfile as _tempfile
+
+os.environ.setdefault("OPTIMIZATION_EXPORT_DIR",
+                      _tempfile.mkdtemp(prefix="car-monit-export-"))
+
+
+def _seed_in_memory_es() -> None:
+    import json as _json
+
+    from org.elasticsearch.client.RestHighLevelClient import RestHighLevelClient
+
+    indices = RestHighLevelClient._INDICES
+    indices.setdefault("fee_records", {})
+    indices.setdefault("trail_fitting", {})
+    snapshot = indices.setdefault("snapshot_flow", {})
+    snapshot.setdefault("smoke-1", _json.dumps({
+        "big_id": "smoke-1", "snapshottime": "2025-06-01 12:00:00",
+        "platenumber": "赣A12345", "gantrycode": "G1",
+    }))
+
+
+_seed_in_memory_es()
+
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.main import app  # noqa: E402  (importing registers every route)
