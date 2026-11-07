@@ -1,54 +1,30 @@
 #pragma once
-// PostgreSQL / GaussDB 客户端。
+// PostgreSQL / GaussDB 客户端（基于 libpqxx + libpq）。
 //
-// 为什么不用 libpq：工程只允许 vendored 依赖（third_party 中仅 httplib 与
-// nlohmann），因此这里直接实现 wire protocol v3 的最小子集：
-//   * 启动包 + 参数（client_encoding=UTF8 / DateStyle=ISO / extra_float_digits=3）
-//   * 认证：AuthenticationCleartextPassword(3)、MD5(5)、SCRAM-SHA-256(10/11/12)
-//   * 简单查询协议（Query 消息），只取文本格式结果
-//   * 错误响应映射为 cm::DbError(sqlstate, message)
+// 历史：迁移初期为保证“仅 vendored 头文件”直接实现了 wire protocol v3 的最小子集，
+// 并自带 MD5 / openGauss SHA256 / SCRAM 派生。该实现维护成本高、参数绑定缺失，
+// 且认证派生一旦与 openGauss 行为不一致就会触发失败登录锁定。
 //
-// Java 侧对应 Druid + pgjdbc。池语义保持一致：初始 min-idle、上限 maxActive、
-// 借出超时 maxWait。
+// 本轮（P2）改为 libpqxx（下层 libpq）：
+//   * 认证、TLS、协议细节交给 libpq；
+//   * 对外保留 PgResult / PgPool 等接口，业务层查询代码不需要感知实现变化；
+//   * 新增参数绑定（$1..$n）与语句超时，消除用户输入拼接 SQL 的主要面。
+//
+// 与 Java Druid + pgjdbc 对齐：maxActive 上限、maxWait 借出超时、connectTimeout
+// 建连超时；连接池仍采用懒建连（启动不主动连库，避免 DB 未就绪时反复失败登录）。
 #include <condition_variable>
 #include <cstdint>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace cm::db {
 
-// 口令认证算法选择。openGauss 的 password_encryption_type 决定服务端下发
-// AuthenticationMD5Password(5) 还是 AuthenticationSASL(10)：
-//   0 = md5 + sha256，1 = 仅 md5，2 = 仅 sha256，3 = 仅 sm3（本工程不支持 sm3）
-// 注意 openGauss 的 sha256 与 PostgreSQL 的 SCRAM-SHA-256 不同：
-//   openGauss: SaltedPassword = SHA256(SHA256(password) || salt)
-//   PostgreSQL: SaltedPassword = PBKDF2-HMAC-SHA256(password, salt, i)
-enum class PgAuthMode { Auto, Md5, OpenGaussSha256, ScramSha256 };
-
-PgAuthMode parse_auth_mode(const std::string& mode);
-
-// 服务端 MD5 认证响应：md5(md5(password + user) + salt)。
-std::string pg_md5_auth_response(const std::string& password, const std::string& user,
-                                 const std::string& salt4);
-
-// openGauss sha256 的 SaltedPassword（32 字节）。
-std::vector<uint8_t> opengauss_salted_password(const std::string& password,
-                                               const std::vector<uint8_t>& salt);
-
-// RFC 5802 交换结果（SaltedPassword 由调用方按所选算法派生）。
-struct ScramProof {
-  std::string client_final;         // c=biws,r=<nonce>,p=<client proof>
-  std::string client_proof_b64;     // p= 的值
-  std::string server_signature_b64; // 期望的 ServerSignature
-};
-
-ScramProof compute_scram_proof(const std::vector<uint8_t>& salted_password,
-                               const std::string& client_first_bare,
-                               const std::string& server_first,
-                               const std::string& combined_nonce);
+// SQL 参数：nullopt 绑定为 NULL，其余按文本形式绑定（服务端按列类型解析）。
+using PgParams = std::vector<std::optional<std::string>>;
 
 struct PgField {
   std::string name;
@@ -60,81 +36,91 @@ struct PgResult {
   std::vector<std::string> columns;
   std::vector<std::vector<std::optional<std::string>>> rows;
   std::vector<PgField> fields;
+  // 非查询语句（INSERT/UPDATE/DELETE）的受影响行数；查询语句为 0。
+  long long affected = 0;
 
   bool empty() const { return rows.empty(); }
   std::size_t size() const { return rows.size(); }
   std::optional<std::string> get(std::size_t row, const std::string& column) const;
 };
 
+// 单条物理连接的参数。字段与 libpq conninfo 对齐。
+struct PgConnOptions {
+  std::string host = "127.0.0.1";
+  int port = 5432;
+  std::string user;
+  std::string password;
+  std::string database;
+  // libpq sslmode：disable / allow / prefer / require / verify-ca / verify-full。
+  // 默认 prefer（与 libpq 默认一致）；生产环境建议 require，内网可配 verify-full。
+  std::string sslmode = "prefer";
+  // verify-ca / verify-full 时使用（为空则用系统默认 CA）。
+  std::string sslrootcert;
+  // 建连超时（connectTimeout，毫秒；libpq 以秒为单位，向上取整）。
+  int connect_timeout_ms = 10000;
+  // 语句超时（0 = 不设置）。防止单条慢 SQL 长期占用连接。
+  int statement_timeout_ms = 30000;
+};
+
+// 构造 libpq conninfo（key=value，值做单引号转义）。纯函数，便于单测。
+std::string build_conninfo(const PgConnOptions& options);
+
+// 把 libpq 建连失败文本归类为 SQLSTATE：
+//   28P01 口令被拒 / 28000 账号锁定或认证规格不允许 / 08001 其他连接失败。
+// libpq 建连失败不返回 PGresult，只能依据错误文本归类；该函数可脱离连接测试。
+std::string classify_connect_error(const std::string& message);
+
 class PgConn {
 public:
-  PgConn() = default;
+  PgConn();
   ~PgConn();
   PgConn(const PgConn&) = delete;
   PgConn& operator=(const PgConn&) = delete;
 
-  // auth_mode: auto / md5 / opengauss-sha256 / scram-sha-256。
-  // 认证失败（28P01/28000）后不再换算法重试：任何一次认证失败都会进入进程级
-  // 熔断（见 auth_guard.h），避免连续失败登录触发账号锁定。
-  bool connect(const std::string& host, int port, const std::string& user,
-               const std::string& password, const std::string& database, int timeout_ms,
-               const std::string& auth_mode = "auto");
+  // 建立物理连接并完成认证。失败返回 false（认证类失败已由 AuthGuard 记录，
+  // 具体 SQLSTATE 可通过 last_sqlstate() 读取，供调用方构造错误信息）。
+  bool connect(const PgConnOptions& options);
   void close();
-  bool alive() const { return sock_ >= 0 && ready_; }
+  bool alive() const;
+  const std::string& last_sqlstate() const;
 
   PgResult query(const std::string& sql);
-  // 返回 CommandComplete 中受影响行数（0 表示未提供）。
+  PgResult query(const std::string& sql, const PgParams& params);
   long long execute(const std::string& sql);
+  long long execute(const std::string& sql, const PgParams& params);
   std::string version();
+  // 事务：逐条执行，失败整体回滚。second=true 表示需要返回结果集。
+  std::vector<PgResult> transaction(
+      const std::vector<std::pair<std::string, bool>>& stmts);
 
 private:
-  bool connect_once(const std::string& host, int port, const std::string& user,
-                    const std::string& password, const std::string& database, int timeout_ms);
-  bool startup(const std::string& user, const std::string& password,
-               const std::string& database);
-  bool send_startup(const std::string& user, const std::string& database);
-  bool process_auth(const std::string& user, const std::string& password, int timeout_ms);
-  bool send_message(char type, const std::string& body);
-  bool send_password(const std::string& password);
-  bool send_sasl_initial(const std::string& mechanism, const std::string& data);
-  bool send_sasl_continue(const std::string& data);
-  bool read_bytes(void* dst, std::size_t n);
-  bool write_bytes(const void* src, std::size_t n);
-  // 读取一条后端消息；返回消息类型，body 输出。
-  char read_message(std::string& body, std::string& err_code, std::string& err_msg);
-  void drain_until_ready();
-
-  intptr_t sock_ = -1;
-  bool ready_ = false;
-  PgAuthMode auth_mode_ = PgAuthMode::Auto;
-  bool sasl_requested_ = false; // 服务端下发 AuthenticationSASL
-  bool auth_failed_ = false;    // 收到 28P01（口令/算法不匹配）
-  bool account_locked_ = false; // 收到 28000（账号被锁定）
-  bool use_og_sha256_ = true;   // SASL 时使用 openGauss 派生（否则标准 PBKDF2）
-  std::string server_signature_b64_;
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
+  std::string last_sqlstate_;
 };
 
 class PgPool {
 public:
   static PgPool& instance();
 
-  // connect_timeout_ms：TCP 建连 + 认证超时；max_wait_ms：借出连接等待超时
-  // （Druid maxWait）。两者语义不同，此前混用同一值。
-  void init(const std::string& host, int port, const std::string& user,
-            const std::string& password, const std::string& database, int max_conns,
-            int min_idle, int connect_timeout_ms, const std::string& auth_mode = "auto",
+  // max_wait_ms 为借出连接等待超时（Druid maxWait）。
+  void init(const PgConnOptions& options, int max_conns, int min_idle,
             int max_wait_ms = 60000);
   void shutdown();
 
   PgResult query(const std::string& sql);
+  PgResult query(const std::string& sql, const PgParams& params);
   long long execute(const std::string& sql);
-  // 事务：Java 侧 @Transactional 保护的成组写操作使用。
+  long long execute(const std::string& sql, const PgParams& params);
+  std::vector<PgResult> transaction(
+      const std::vector<std::pair<std::string, bool>>& stmts);
+  // 事务：Java 侧 @Transactional 保护的成组写操作使用；返回受影响行数之和。
   long long execute_in_tx(const std::vector<std::string>& sqls);
-  // 多语句事务（含查询），按顺序执行；任何一条失败回滚并抛出 DbError。
-  std::vector<PgResult> transaction(const std::vector<std::pair<std::string, bool>>& stmts);
   bool available();
   // 健康检查用：当前池内处于可用状态的物理连接数（锁内统计，不主动建连）。
   int live_connections();
+  // 池上限（供 /metrics 与单测断言；不主动建连）。
+  int max_connections();
 
 private:
   PgPool() = default;
@@ -142,7 +128,7 @@ private:
   struct ConnSlot {
     std::unique_ptr<PgConn> conn;
     bool in_use = false;
-    bool reserved = false;  // 锁外建连的占位标记
+    bool reserved = false;     // 锁外建连的占位标记
     long long reserve_gen = 0; // 预留时的池代数（shutdown/re-init 防串槽）
   };
   struct Borrowed {
@@ -159,8 +145,8 @@ private:
   std::mutex mu_;
   std::condition_variable cv_;
   std::vector<ConnSlot> slots_;
-  std::string host_, user_, password_, database_, auth_mode_ = "auto";
-  int port_ = 5432, max_ = 20, min_ = 5, timeout_ms_ = 10000, wait_ms_ = 60000;
+  PgConnOptions options_;
+  int max_ = 20, min_ = 5, wait_ms_ = 60000;
   long long generation_ = 0;
   // 网络故障熔断：连续 kConnectFailureThreshold 次建连失败进入 kConnectCooldownMs
   // 冷却，冷却期内 acquire 直接抛错，避免每次请求都等满 connect 超时。

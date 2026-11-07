@@ -26,7 +26,7 @@
 | Jackson | JSON + `@JsonFormat` | nlohmann/json 3.11.3 | 与 Java 键序/省略语义最接近 | ⚠️ `BigDecimal` 尾零 |
 | MyBatis + XML | 22 个 Mapper | `meta::EntityMeta` 元数据 + `dao` 拼装 | 无运行期反射/XML 解析 | ✅ SQL 与 resultMap 等价 |
 | PageHelper | `startPage()` + `reasonable` | `dao::resolve_page` | 保留越界回夹末页 | ✅ |
-| Druid + pgjdbc | 连接池 + JDBC | `db::PgPool` + `db::PgConn`（wire v3） | third_party 无 libpq | ⚠️ 不支持 SSL/游标/预处理 |
+| Druid + pgjdbc | 连接池 + JDBC | `db::PgPool` + `db::PgConn`（libpqxx 7.10 + libpq 17） | 认证/TLS/协议交给 libpq；参数绑定 `$1..$n` | ⚠️ stock libpq 不支持 openGauss sha256（需服务端 md5 或 openGauss 定制 libpq）；不支持游标/COPY（本工程未使用） |
 | Spring Data Redis (Lettuce) | `RedisTemplate` | `cache::Redis`（RESP2） | 零外部依赖 | ⚠️ 单连接、统一 JSON |
 | Spring `@Scheduled` / Quartz cron | 10 个任务 | `scheduler::Scheduler`（6 段 cron） | 等价触发语义 | ✅ |
 | Kafka (`KafkaTemplate`) | 发送快照流 | `src/mq/kafka_producer.*`（librdkafka 2.6.1） | FetchContent 静态编译 | ✅ key/value/头/重试对齐 |

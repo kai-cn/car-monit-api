@@ -39,20 +39,21 @@
 | 未知字段 | `FAIL_ON_UNKNOWN_PROPERTIES` 默认 true（`@RequestBody` 会 400） | ⚠️ C++ 对 JSON body 中多余字段**忽略**；本项目请求体均为 `Map`/`TrailInfo`，无 400 差异 |
 | 中文 | UTF-8 原样（不转 `\uXXXX`） | ✅ 实测一致 |
 
-## 3. 数据库访问（MyBatis + Druid + pgjdbc → 自实现 wire v3 + 元数据 DAO）
+## 3. 数据库访问（MyBatis + Druid + pgjdbc → libpqxx + 元数据 DAO）
 
 | 项 | 说明 | 结论 |
 |---|---|---|
-| 驱动 | 自实现 PG v3：启动包、MD5 认证、SASL 认证、简单查询协议、错误字段解析 | ✅ 协议层等价；**不支持** SSL、`COPY`、游标、预处理语句（`Parse/Bind/Execute`） |
-| 认证 | MD5：`md5(md5(password+user)+salt)`；SASL 支持两种派生：**openGauss** `SHA256(SHA256(password)‖salt)` 与 PostgreSQL `PBKDF2-HMAC-SHA256` | ✅ 两种均已用独立计算的向量校验（见 `tests/test_main.cpp::test_pg_auth`）；`db.auth-mode`（`CM_PG_AUTH_MODE`）可选 `auto`/`md5`/`opengauss-sha256`/`scram-sha-256`。`auto` = 按 openGauss 派生；**认证失败不再换算法重试**（重试本身也是一次失败登录，会消耗 `failed_login_attempts`） |
-| 连接池 | Druid `initial-size 5 / min-idle 5 / maxActive 20 / maxWait 60000` | ✅ `PgPool` 同参数语义（惰性建连、空闲复用、超时）。**修复（审阅 §3.3 R8）**：`maxWait`（借出等待）与 `connect-timeout-ms`（建连超时，默认 10s）分开解析；建连在锁外进行（锁内只取空闲/预留槽位），DB 抖动不再把全部 HTTP 线程串行阻塞在池锁上；满载等待用条件变量而非 10ms 轮询；非 DbError 异常也归还槽位 |
+| 驱动 | libpqxx 7.10.0 + libpq 17.2（Windows 用 PostgreSQL 官方 EDB 二进制包；Linux 用 `libpq-dev`） | ✅ 认证/TLS/协议交由 libpq；支持参数绑定（`$1..$n`）。**不支持** `COPY` 与游标（本工程未使用） |
+| 认证 | libpq 原生：MD5、SCRAM-SHA-256、cleartext | ✅ 自研派生实现与 `auth-mode` 配置已删除。⚠️ **stock libpq 不支持 openGauss 专有 sha256**：若服务端 `password_encryption_type` 仅允许 sha256/sm3，需改为 md5（`password_encryption_type=1`）或使用 openGauss 定制 libpq；认证失败仍由 AuthGuard 熔断，不反复重试 |
+| TLS | libpq `sslmode`（disable/allow/prefer/require/verify-ca/verify-full）与 `sslrootcert` | ✅ 新增配置项（`spring.datasource...sslmode` / `CM_PG_SSLMODE`），默认 `prefer`（与 libpq 默认一致）；Windows 包内置 OpenSSL 3 |
+| 连接池 | Druid `initial-size 5 / min-idle 5 / maxActive 20 / maxWait 60000` | ✅ `PgPool` 同参数语义（惰性建连、空闲复用、上限、借出超时）。**修复（审阅 §3.3 R8）**：`maxWait`（借出等待）与 `connect-timeout-ms`（建连超时，默认 10s）分开；建连在锁外进行；满载等待用条件变量；非 DbError 异常也归还槽位；新增语句超时（`statement-timeout-ms`，默认 30s） |
 | 网络故障熔断 | Java 无此机制（Druid 网络失败时持续重试） | ✅ 新增：连续 3 次建连失败进入 30s 冷却，冷却期内快速失败（`08001`），避免每次请求都等满建连超时；认证失败仍由 AuthGuard 单独熔断 |
 | 凭据守卫 | Java 侧由外部注入口令；C++ 口令走 `${CM_PG_PASSWORD}` 或 `configs/config.local.yaml` | ✅ 启动阶段校验：为空/未展开占位即退出（退出码 1），**不建 socket、不发认证**（`src/db/auth_guard.cpp`、`src/main.cpp`） |
 | 认证失败熔断 | Java 无此机制（Druid 会反复重建连接，连续失败会把账号锁死） | ✅ 认证类错误（`28P01`/`28000`）后进程内停止重建连接，日志「已停止重试，避免触发账号锁定」；`druid.reconnect-after-auth-failure` 默认 `0`（关闭），可显式放宽 |
-| SQL 拼装 | MyBatis XML `<if test>`、`<foreach>`、`resultMap`、`select_sql/order_sql` | ✅ 固化在 `src/meta/entities_generated.h` 的 `filters/select_sql/order_sql` |
+| SQL 拼装 | MyBatis XML `<if test>`、`<foreach>`、`resultMap`、`select_sql/order_sql` | ✅ 固化在 `src/meta/entities_generated.h` 的 `filters/select_sql/order_sql`；**用户输入的值统一走 `$1..$n` 参数绑定**（`repo::SqlFragment`），标识符仍经白名单/元数据校验 |
 | `agent_pk` 主键 | Java XML 用 `t.agent_pk` 过滤，但物理列是 `id` | ✅ 取 `filters` 的物理列（与 Go/Python 的修正一致） |
 | 查询列 | Java 用 `<include refid="selectXxxVo"/>` 列清单 | ⚠️ **20/22** 实体元数据用 `SELECT *`（仅 `odsRtSzdnSnapshotFlowAddcode` 与 `odsLwzxsfsjFeeRecords01` 有列清单）；`project_row` 只输出 `resultMap` 同名字段，**响应与 Java 等价**，但会多取无关列的带宽 |
-| 事务 | Spring `@Transactional`（本项目实际未使用） | ⚠️ C++ 无声明式事务；写操作均为单条语句，天然原子 |
+| 事务 | Spring `@Transactional`（本项目实际未使用） | ⚠️ 无声明式事务；`PgConn::transaction` / `PgPool::transaction` 提供显式事务（失败整体回滚），写操作仍以单条语句为主 |
 | 隔离级别 | 默认 `READ_COMMITTED`（服务端默认） | ✅ 未显式设置 |
 | 主键类型 | 一律按字符串读取，避免精度丢失 | ✅ |
 | `timestamp without time zone` | JDBC 按 JVM 时区（`Asia/Shanghai`）解释 | ✅ 按 `+08:00` 锚定后再格式化（`timeutil::from_db_text`） |

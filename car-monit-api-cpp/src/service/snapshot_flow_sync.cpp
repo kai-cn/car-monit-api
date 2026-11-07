@@ -181,11 +181,12 @@ void full_sync(const meta::EntityMeta& m, int batch_size, const std::string& top
 
     const std::string cols = columns_of(m);
     while (g_sync_running.load()) {
+      db::PgParams params;
       std::string sql = "SELECT " + cols + " FROM " + m.table;
-      if (!last_sync_id.empty()) sql += " WHERE big_id > " + repo::quote(last_sync_id);
+      if (!last_sync_id.empty()) sql += " WHERE big_id > " + repo::bind_param(params, last_sync_id);
       sql += " ORDER BY big_id ASC LIMIT " + std::to_string(batch_size);
 
-      db::PgResult result = db::PgPool::instance().query(sql);
+      db::PgResult result = db::PgPool::instance().query(sql, params);
       if (result.empty()) {
         CM_LOG_INFO("sync") << "全量同步完成";
         break;

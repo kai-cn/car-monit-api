@@ -102,3 +102,51 @@
   首次运行；若 CI 不可用，则相关结论标注为“代码已修、待 Linux 实测”。
 - **可回退性**：无代码耦合，仅流程约定。
 
+## D-009 PG 客户端改用 libpqxx，Windows 侧引入 PostgreSQL 官方二进制包
+
+- **决策**：用 libpqxx 7.10.0（FetchContent 源码）+ libpq 替换自研 wire v3。
+  - Linux：系统 `libpq-dev`；
+  - Windows：FetchContent 下载 PostgreSQL 官方（EDB 构建）17.2 Windows 二进制包
+    （约 311 MB，SHA256 固定），只使用 `include/lib/bin`；运行时把 `libpq.dll`、
+    `libssl-3-x64.dll`、`libcrypto-3-x64.dll`、`libintl-9.dll`、`libiconv-2.dll`、
+    `libwinpthread-1.dll` 复制到可执行文件目录。
+- **备选**：
+  1. 从 PostgreSQL 源码自行构建静态 libpq：Windows 上需 Perl/NASM/OpenSSL，
+     且 CMake 构建工程量大、无法启用 TLS，验证成本远高于收益；
+  2. 仅 Linux 接入 libpqxx、Windows 保留自研实现：双实现长期维护，行为易漂移；
+  3. 提供 `CM_PG_BACKEND=native` 回退开关：会把“已删除的自研认证/协议”重新拖回仓库。
+- **理由**：官方二进制包来源可信、版本固定；Windows 与 Linux 行为一致；TLS 由
+  包内 OpenSSL 3 提供。源码构建在无 Perl/NASM 的 Windows 环境下不可复现。
+- **影响**：Windows 首次 configure 需下载约 311 MB（CI 已对 `build/_deps` 做缓存）；
+  产物目录多 6 个 DLL（约 7 MB）；`third_party` 仍只保留头文件。
+- **可回退性**：删除 CMake 中的 FetchContent/`PostgreSQL::PostgreSQL` 链接与
+  `pg.cpp` 实现即可回退（需同时恢复旧实现，属较大回退）。
+
+## D-010 参数绑定：SqlFragment + `$1..$n`，替代字符串拼接
+
+- **决策**：新增 `repo::SqlFragment{sql, params}`、`bind_param`、`bind_in`、
+  `append_fragment`（按已有参数数量重编号 `$n`）。DAO 过滤、按 ID 查询、
+  导出/降级查询、字典回源、Kafka 落库等所有用户输入值统一走参数绑定；
+  标识符仍由 EntityMeta / 白名单校验。
+- **备选**：继续用 `quote()` 手工转义；或只在新代码使用参数绑定。
+- **理由**：libpqxx 的 `exec(sql, params)` 能真正把值与 SQL 文本分离，
+  彻底消除“转义遗漏”类注入面；`append_fragment` 解决多段 SQL 拼接时
+  占位符编号冲突。
+- **影响**：查询层函数签名由 `std::string where` 变为 `SqlFragment`；
+  单测可直接断言 SQL 文本不含用户值、参数顺序正确。
+- **可回退性**：`SqlFragment` 只是字符串 + 参数容器，可逐步退回字符串拼接。
+
+## D-011 openGauss 专有 SHA256 认证不再由本工程实现
+
+- **决策**：删除自研 MD5/openGauss SHA256/SCRAM 派生与 `auth-mode` 配置，
+  认证完全交给 libpq。stock libpq 不支持 openGauss 的
+  `SHA256(SHA256(password)‖salt)` 方案。
+- **备选**：保留自研 SASL 分支以兼容 openGauss sha256。
+- **理由**：用户明确要求删除派生实现；继续维护两套认证逻辑会持续产生
+  “算法不匹配 → 失败登录 → 账号锁定”的风险。
+- **影响**：若目标 openGauss 的 `password_encryption_type` 仅允许 sha256/sm3，
+  连接会失败（28P01）。部署侧需改为 `password_encryption_type=1`（md5），
+  或使用 openGauss 提供的定制 libpq。该限制已写入 COMPATIBILITY/MIGRATION_GUIDE。
+- **可回退性**：需重新引入自研认证实现，回退成本高；因此在此显式记录。
+
+

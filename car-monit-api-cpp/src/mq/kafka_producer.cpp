@@ -132,11 +132,12 @@ std::string extract_device_id(const Json& data) {
 void db_update_status(const std::string& id, int status, bool with_send_time) {
   if (id.empty()) return;
   try {
+    db::PgParams params;
     std::string sql = "UPDATE jl_data01.kafka_message_record SET status = " +
-                      std::to_string(status);
-    if (with_send_time) sql += ", send_time = " + repo::quote(now_db_time());
-    sql += " WHERE id = " + repo::quote(id);
-    db::PgPool::instance().execute(sql);
+                      repo::bind_param(params, std::to_string(status));
+    if (with_send_time) sql += ", send_time = " + repo::bind_param(params, now_db_time());
+    sql += " WHERE id = " + repo::bind_param(params, id);
+    db::PgPool::instance().execute(sql, params);
   } catch (const std::exception& e) {
     CM_LOG_WARN("kafka") << "更新 kafka_message_record 失败: id=" << id << ", error=" << e.what();
   }
@@ -145,10 +146,13 @@ void db_update_status(const std::string& id, int status, bool with_send_time) {
 void db_increment_retry(const std::string& id, const std::string& error) {
   if (id.empty()) return;
   try {
+    db::PgParams params;
     db::PgPool::instance().execute(
         "UPDATE jl_data01.kafka_message_record SET retry_count = retry_count + 1, "
         "error_msg = " +
-        repo::quote(error) + ", status = 2 WHERE id = " + repo::quote(id));
+            repo::bind_param(params, error) + ", status = 2 WHERE id = " +
+            repo::bind_param(params, id),
+        params);
   } catch (const std::exception& e) {
     CM_LOG_WARN("kafka") << "累加 kafka_message_record 重试次数失败: id=" << id
                          << ", error=" << e.what();
@@ -158,12 +162,15 @@ void db_increment_retry(const std::string& id, const std::string& error) {
 void db_insert_dead_letter(const std::string& data_id, const std::string& topic,
                            const std::string& message_json, int retry_count) {
   try {
-    db::PgPool::instance().execute(
+    db::PgParams params;
+    std::string sql =
         "INSERT INTO jl_data01.kafka_message_record "
         "(id, data_id, topic, message_json, status, retry_count, create_time) VALUES (" +
-        repo::quote(utils::uuid32()) + ", " + repo::quote(data_id) + ", " + repo::quote(topic) +
-        ", " + repo::quote(message_json) + ", 3, " + std::to_string(retry_count) + ", " +
-        repo::quote(now_db_time()) + ")");
+        repo::bind_param(params, utils::uuid32()) + ", " + repo::bind_param(params, data_id) +
+        ", " + repo::bind_param(params, topic) + ", " + repo::bind_param(params, message_json) +
+        ", 3, " + std::to_string(retry_count) + ", " + repo::bind_param(params, now_db_time()) +
+        ")";
+    db::PgPool::instance().execute(sql, params);
   } catch (const std::exception& e) {
     CM_LOG_ERROR("kafka") << "写入死信 kafka_message_record 失败: dataId=" << data_id
                           << ", error=" << e.what();

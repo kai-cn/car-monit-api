@@ -51,9 +51,17 @@ int main(int argc, char** argv) {
 
   // 数据库连接池（Druid 等价物）。连接失败不阻断启动：Java 侧 Druid 也是懒加载，
   // 首次请求时才建立物理连接。
-  cm::db::PgPool::instance().init(cfg.pg().host, cfg.pg().port, cfg.pg().user, cfg.pg().password,
-                                  cfg.pg().database, cfg.pg().max_conns, cfg.pg().min_idle,
-                                  cfg.pg().connect_timeout_ms, cfg.pg().auth_mode,
+  cm::db::PgConnOptions pg_options;
+  pg_options.host = cfg.pg().host;
+  pg_options.port = cfg.pg().port;
+  pg_options.user = cfg.pg().user;
+  pg_options.password = cfg.pg().password;
+  pg_options.database = cfg.pg().database;
+  pg_options.sslmode = cfg.pg().sslmode;
+  pg_options.sslrootcert = cfg.pg().sslrootcert;
+  pg_options.connect_timeout_ms = cfg.pg().connect_timeout_ms;
+  pg_options.statement_timeout_ms = cfg.pg().statement_timeout_ms;
+  cm::db::PgPool::instance().init(pg_options, cfg.pg().max_conns, cfg.pg().min_idle,
                                   cfg.pg().max_wait_ms);
   try {
     auto& pool = cm::db::PgPool::instance();

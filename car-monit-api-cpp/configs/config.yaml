@@ -48,9 +48,11 @@ spring:
           # 口令为空或仍是未展开的 ${...} 时，进程会在启动阶段直接退出，不会发起任何连接。
           password: ${CM_PG_PASSWORD}
           driver-class-name: org.postgresql.Driver
-          # 口令认证算法：auto / md5 / opengauss-sha256 / scram-sha-256
-          # auto = 按 openGauss sha256 派生；认证失败不会换算法重试（重试也是一次失败登录）
-          auth-mode: auto
+          # TLS：libpq sslmode（disable/allow/prefer/require/verify-ca/verify-full）。
+          # 默认 prefer 与 libpq 一致；生产建议 require，校验证书用 verify-full 并配置
+          # sslrootcert（或使用系统默认 CA）。
+          sslmode: ${CM_PG_SSLMODE:-prefer}
+          # sslrootcert: /path/to/ca.pem
   redis:
     database: 0
     host: 127.0.0.1

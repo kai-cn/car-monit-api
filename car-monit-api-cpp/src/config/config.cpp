@@ -231,8 +231,12 @@ void Config::refresh_business() {
   pg_.max_wait_ms = yaml_.get_int("spring.datasource.dynamic.druid.maxWait", pg_.max_wait_ms);
   pg_.connect_timeout_ms = yaml_.get_int("spring.datasource.dynamic.druid.connect-timeout-ms",
                                          pg_.connect_timeout_ms);
-  pg_.auth_mode =
-      yaml_.get_str("spring.datasource.dynamic.datasource.master.auth-mode", pg_.auth_mode);
+  pg_.sslmode =
+      yaml_.get_str("spring.datasource.dynamic.datasource.master.sslmode", pg_.sslmode);
+  pg_.sslrootcert = yaml_.get_str("spring.datasource.dynamic.datasource.master.sslrootcert",
+                                  pg_.sslrootcert);
+  pg_.statement_timeout_ms = yaml_.get_int(
+      "spring.datasource.dynamic.druid.statement-timeout-ms", pg_.statement_timeout_ms);
   pg_.reconnect_after_auth_failure = yaml_.get_int(
       "spring.datasource.dynamic.druid.reconnect-after-auth-failure",
       pg_.reconnect_after_auth_failure);
@@ -382,7 +386,9 @@ void Config::apply_env_overrides() {
   if (auto v = env("CM_PG_USER")) pg_.user = *v;
   if (auto v = env("CM_PG_PASSWORD")) pg_.password = *v;
   if (auto v = env("CM_PG_DATABASE")) pg_.database = *v;
-  if (auto v = env("CM_PG_AUTH_MODE")) pg_.auth_mode = *v;
+  if (auto v = env("CM_PG_SSLMODE")) pg_.sslmode = *v;
+  if (auto v = env("CM_PG_SSLROOTCERT")) pg_.sslrootcert = *v;
+  if (auto v = env("CM_PG_STATEMENT_TIMEOUT_MS")) pg_.statement_timeout_ms = std::stoi(*v);
   if (auto v = env("CM_REDIS_HOST")) redis_.host = *v;
   if (auto v = env("CM_REDIS_PORT")) redis_.port = std::stoi(*v);
   if (auto v = env("CM_REDIS_PASSWORD")) redis_.password = *v;

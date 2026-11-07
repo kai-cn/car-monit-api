@@ -78,6 +78,45 @@ if(CM_WITH_KAFKA)
   FetchContent_MakeAvailable(librdkafka)
 endif()
 
+# ---------------------------------------------------------------------------
+# PostgreSQL / GaussDB 客户端：libpqxx + libpq（替换自研 wire protocol 实现）。
+#
+# - libpqxx 7.10.0 由 FetchContent 获取（静态库；关闭其自带测试与文档）。
+# - libpq：Linux 走系统包（CI: apt install libpq-dev）；Windows 使用 PostgreSQL
+#   官方（EDB 构建）17.2 二进制包，仅用其 include/lib/bin，URL 与 SHA256 固定。
+#   运行时 DLL（libpq/OpenSSL/iconv/intl）由 post-build 复制到可执行文件目录。
+# - TLS 由 libpq 处理（sslmode / sslrootcert），Windows 包内置 OpenSSL 3。
+# - 认证（MD5/SCRAM 等）全部交给 libpq，本工程不再维护口令派生实现。
+#
+# 离线构建：设置 -DFETCHCONTENT_SOURCE_DIR_LIBPQXX 与
+# -DFETCHCONTENT_SOURCE_DIR_POSTGRES_WINDOWS（或系统已装 libpq）。
+# ---------------------------------------------------------------------------
+include(FetchContent)
+if(WIN32)
+  FetchContent_Declare(postgres_windows
+    URL https://get.enterprisedb.com/postgresql/postgresql-17.2-1-windows-x64-binaries.zip
+    URL_HASH SHA256=115eb69fa92430f162bdda2eced073b60fed538715fb3a19ce0bb8c2d8738d01
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  )
+  FetchContent_MakeAvailable(postgres_windows)
+  # 注：CMake 解压会去掉包内唯一的顶层目录 pgsql/，因此源目录即 pgsql 根。
+  set(CM_PG_RUNTIME_DIR "${postgres_windows_SOURCE_DIR}")
+  set(PostgreSQL_INCLUDE_DIR "${CM_PG_RUNTIME_DIR}/include" CACHE PATH "" FORCE)
+  set(PostgreSQL_TYPE_INCLUDE_DIR "${CM_PG_RUNTIME_DIR}/include" CACHE PATH "" FORCE)
+  set(PostgreSQL_LIBRARY "${CM_PG_RUNTIME_DIR}/lib/libpq.lib" CACHE FILEPATH "" FORCE)
+endif()
+find_package(PostgreSQL REQUIRED)
+
+set(BUILD_DOC OFF CACHE BOOL "" FORCE)
+set(BUILD_TEST OFF CACHE BOOL "" FORCE)
+set(SKIP_BUILD_TEST ON CACHE BOOL "" FORCE)
+FetchContent_Declare(libpqxx
+  URL https://codeload.github.com/jtv/libpqxx/tar.gz/refs/tags/7.10.0
+  URL_HASH SHA256=d588bca36357eda8bcafd5bc1f95df1afe613fdc70c80e426fc89eecb828fc3e
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+FetchContent_MakeAvailable(libpqxx)
+
 file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/config/*.cpp"
@@ -110,7 +149,7 @@ target_compile_definitions(carmonit_core PUBLIC
   WIN32_LEAN_AND_MEAN
   NOMINMAX
 )
-target_link_libraries(carmonit_core PUBLIC Threads::Threads)
+target_link_libraries(carmonit_core PUBLIC Threads::Threads pqxx PostgreSQL::PostgreSQL)
 if(WIN32)
   # secur32 由 librdkafka 在 Windows 下用于随机源（即使关闭 SASL）。
   target_link_libraries(carmonit_core PUBLIC ws2_32 crypt32 secur32)
@@ -129,3 +168,24 @@ add_executable(carmonit_tests "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_main.cpp")
 target_compile_options(carmonit_tests PRIVATE ${CM_WARN_OPTIONS})
 target_link_libraries(carmonit_tests PRIVATE carmonit_core)
 add_test(NAME carmonit_tests COMMAND carmonit_tests)
+
+# libpq 运行时 DLL（Windows EDB 包）复制到可执行文件目录，避免依赖 PATH。
+if(WIN32)
+  set(CM_PG_RUNTIME_DLLS
+    libpq.dll
+    libssl-3-x64.dll
+    libcrypto-3-x64.dll
+    libintl-9.dll
+    libiconv-2.dll
+    libwinpthread-1.dll
+  )
+  foreach(tgt car-monit-api carmonit_tests)
+    foreach(dll ${CM_PG_RUNTIME_DLLS})
+      add_custom_command(TARGET ${tgt} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CM_PG_RUNTIME_DIR}/bin/${dll}" "$<TARGET_FILE_DIR:${tgt}>"
+        VERBATIM
+      )
+    endforeach()
+  endforeach()
+endif()

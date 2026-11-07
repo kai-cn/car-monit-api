@@ -167,9 +167,11 @@ void data_loss_detection_tick() {
   }
 
   // 2. 数据库同一窗口的记录（LambdaQueryWrapper between snapshottime）
+  db::PgParams params;
   auto res = db::PgPool::instance().query(
       "SELECT big_id FROM jl_data01.ods_rt_szdn_snapshot_flow_addcode WHERE snapshottime BETWEEN " +
-      repo::quote(db_time(start)) + " AND " + repo::quote(db_time(end)));
+          repo::bind_param(params, db_time(start)) + " AND " + repo::bind_param(params, db_time(end)),
+      params);
   std::vector<std::string> stored_ids;
   for (std::size_t i = 0; i < res.rows.size(); ++i) {
     auto v = res.get(i, 0);

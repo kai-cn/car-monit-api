@@ -9,7 +9,7 @@
 
 | 项 | 要求 | 本项目实测版本 |
 |---|---|---|
-| 操作系统 | Windows 10/11 x64（**已实测**）；Linux（POSIX 分支已修复，见下，**尚未在本机实测**，用 `scripts/ci-linux.sh` 验证） | Windows 11 |
+| 操作系统 | Windows 10/11 x64（**已实测**）；Linux（由 GitHub Actions 的 GCC/Clang job 验证，见 `.github/workflows/cpp-ci.yml`；本机未实测） | Windows 11 |
 | 编译器 | **MSVC 2019+（VS2022 已实测）或 MinGW-w64 g++ ≥ 10（需支持 C++20）**；Linux 下 g++ ≥ 10 | MSVC 2022 17.13（cl 19.43）+ Ninja（本轮修复的验证工具链；更早基线曾用 MinGW g++ 14.2） |
 | 构建系统 | CMake ≥ 3.20 | cmake 3.30.4 |
 | 生成器 | Ninja（推荐）或 MinGW Makefiles / Visual Studio | Ninja |
@@ -17,14 +17,26 @@
 
 > 说明：**不需要 Conan/vcpkg**。HTTP/JSON 依赖已 vendored 到 `third_party/`：
 > `cpp-httplib 0.15.3`（HTTP 服务/客户端）、`nlohmann/json 3.11.3`（序列化）。
-> PostgreSQL / Redis 客户端是本项目**自实现的 wire protocol**（PG v3：MD5 + SCRAM-SHA-256；Redis RESP2），不依赖 libpq/hiredis。
+> PostgreSQL/GaussDB 客户端使用 **libpqxx 7.10.0 + libpq 17.2**（认证、TLS、协议由
+> libpq 处理；本工程只保留 `PgPool`/`PgResult` 接口与连接池语义）：
+>   - Linux：安装 `libpq-dev`（CI 已自动安装）；
+>   - Windows：CMake `FetchContent` 下载 PostgreSQL 官方（EDB 构建）17.2 二进制包，
+>     仅使用其 `include/lib/bin`，URL 与 SHA256 固定；运行时 DLL 自动复制到输出目录。
 > Kafka 依赖 **librdkafka 2.6.1**，通过 CMake `FetchContent` 在首次 configure 时下载源码并静态编译（缓存在 `build/_deps`）。
-> 离线构建可预先执行 `cmake -S . -B build -DFETCHCONTENT_SOURCE_DIR_LIBRDKAFKA=<librdkafka 源码目录>`；
+> Redis 仍为自研 RESP2 实现（P3 计划替换为 hiredis）。
+> 离线构建可预先执行
+> `cmake -S . -B build -DFETCHCONTENT_SOURCE_DIR_LIBRDKAFKA=<源码目录> -DFETCHCONTENT_SOURCE_DIR_LIBPQXX=<源码目录>`；
 > 或 `-DCM_WITH_KAFKA=OFF` 关闭真实 Kafka、退回 Redis 队列降级路径。
 
 ## 2. 依赖安装
 
-无需包管理命令。确认工具链在 PATH：
+- **Linux**：`sudo apt-get install -y ninja-build cmake g++ libpq-dev`（Ubuntu 22.04+）。
+- **Windows**：无需手工安装 libpq。首次 configure 会自动下载 PostgreSQL 官方
+  17.2 二进制包（约 311 MB）并复制运行时 DLL；请保证可访问
+  `get.enterprisedb.com` 与 `codeload.github.com`。
+- Kafka 的 librdkafka 与 libpqxx 同样由 FetchContent 获取。
+
+确认工具链在 PATH：
 
 ```powershell
 cmake --version        # >= 3.20
