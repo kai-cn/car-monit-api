@@ -17,8 +17,11 @@
 #include <ws2tcpip.h>
 #else
 #include <arpa/inet.h>
+#include <cerrno>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 #endif
@@ -252,6 +255,17 @@ bool PgConn::connect_once(const std::string& host, int port, const std::string& 
   int timeout = timeout_ms;
   setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), sizeof(timeout));
   setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const char*>(&timeout), sizeof(timeout));
+#else
+  // POSIX：恢复阻塞模式并设置收发超时，与 Windows 分支同语义。
+  // 此前只有 _WIN32 分支做恢复（审阅 §3.3 R6），Linux 上连接后 socket 仍是
+  // 非阻塞，后续所有 recv/send 直接 EAGAIN 失败，DB 客户端整体不可用。
+  int flags = fcntl(s, F_GETFL, 0);
+  if (flags >= 0) fcntl(s, F_SETFL, flags & ~O_NONBLOCK);
+  timeval tv{};
+  tv.tv_sec = timeout_ms / 1000;
+  tv.tv_usec = (timeout_ms % 1000) * 1000;
+  setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+  setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
 #endif
   sock_ = intptr_t(s);
   return startup(user, password, database) && ready_;

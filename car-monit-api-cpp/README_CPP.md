@@ -9,8 +9,8 @@
 
 | 项 | 要求 | 本项目实测版本 |
 |---|---|---|
-| 操作系统 | Windows 10/11 x64（Linux 亦可，代码无条件编译分支） | Windows 11 |
-| 编译器 | **MinGW-w64 g++ ≥ 10（需支持 C++20）**；MSVC 2019+ 也可（CMakeLists 已含 `/utf-8 /bigobj` 分支） | g++ 14.2.0（MinGW-W64 msvcrt, posix-seh） |
+| 操作系统 | Windows 10/11 x64（**已实测**）；Linux（POSIX 分支已修复，见下，**尚未在本机实测**，用 `scripts/ci-linux.sh` 验证） | Windows 11 |
+| 编译器 | **MSVC 2019+（VS2022 已实测）或 MinGW-w64 g++ ≥ 10（需支持 C++20）**；Linux 下 g++ ≥ 10 | MSVC 2022 17.13（cl 19.43）+ Ninja（本轮修复的验证工具链；更早基线曾用 MinGW g++ 14.2） |
 | 构建系统 | CMake ≥ 3.20 | cmake 3.30.4 |
 | 生成器 | Ninja（推荐）或 MinGW Makefiles / Visual Studio | Ninja |
 | 外部服务 | PostgreSQL/GaussDB、Redis、Kafka（broker 不可达不影响启动）；ES 可选（不可达时自动降级） | GaussDB `192.168.56.10:5432/RuoYi`、Redis `127.0.0.1:6379/0`、Kafka `localhost:9092` |
@@ -61,6 +61,19 @@ cmake --build build-rel -j
 
 > 首次 configure 会下载并编译 **librdkafka 2.6.1**（静态库，约 1–3 分钟；源码缓存在 `build/_deps`）。
 > 离线环境：`-DFETCHCONTENT_SOURCE_DIR_LIBRDKAFKA=<源码目录>`；或 `-DCM_WITH_KAFKA=OFF`（MQ 退回 Redis 队列）。
+
+Linux 构建与单测（`db/pg.cpp`、`cache/redis.cpp` 的 POSIX 分支已修复：连接后恢复
+阻塞模式、设置 `SO_RCVTIMEO/SO_SNDTIMEO`、补齐 `<fcntl.h>/<cerrno>/<sys/time.h>`）：
+
+```bash
+./scripts/ci-linux.sh            # cmake + ninja + ctest 一条龙；可透传额外 CMake 参数
+# 等价于：cmake -S . -B build-linux -G Ninja -DCMAKE_BUILD_TYPE=Release
+#         cmake --build build-linux --parallel && ctest --test-dir build-linux --output-on-failure
+```
+
+> 状态说明：本轮修复在 Windows/MSVC+Ninja 上验证构建与测试全绿；Linux 分支
+> 按标准 POSIX 接口修复并提供了上述脚本，但尚未在 Linux 机器/CI 上跑过，
+> 上 Linux 前请先执行 `scripts/ci-linux.sh` 确认。
 
 运行测试：
 
