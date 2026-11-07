@@ -19,9 +19,10 @@ package handler
 // Go 收敛为 service.BuildTrailInfos —— 两者的唯一差别是 clearTrailPoints（Java 在 ByCarNo
 // 里显式 setTrailPoints("")，在 ByTime 里那行是注释掉的）。
 //
-// PARITY: total 用「本页行数」。Java 侧 list 被 PageHelper 包成 Page，getTotal() 拿到的是
-// 匹配总数；Go 的轨迹查询没有对应 COUNT，硬算一次全表 COUNT 会打穿 8 亿级表，因此保持本页行数，
-// 前端分页控件在“有下一页”时仍能翻页（因为行数等于 pageSize 时视为未到末页）。
+// PARITY: total 来自与取数同谓词的 COUNT。Java 侧 list 被 PageHelper 包成 Page，
+// getTotal() 拿到的是匹配总数；Go 早期用「本页行数」代替，导致前端算不出总页数、
+// 越界页也无法回夹末页（P-PAGE-8）。现在按 Java 的顺序 count → ClampToLastPage → 取数，
+// 计数与取数共用 repo.applyHistoryTrailFilters（见 CountHistoryTrail 的注释）。
 
 import (
 	"context"

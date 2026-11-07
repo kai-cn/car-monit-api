@@ -18,7 +18,7 @@
 //	@EnableScheduling                      → main() 里显式构造 Scheduler 并 Start(ctx)
 //	@Scheduled(cron = "0 */1 * * * ?")     → Add("名字", "*/1 * * * *", fn)
 //	@Scheduled(fixedRate = 300000)         → Every("名字", 5*time.Minute, fn)
-//	Spring 的单线程调度器（默认 poolSize=1） → 每个 job 一个 goroutine（见 DIFF）
+//	Spring 的调度线程池（SchedulingConfig.java:44 setPoolSize(10)） → 每个 job 一个 goroutine（见 DIFF）
 //	@Scheduled 方法抛异常被 Spring 吞掉      → run() 里的 recover + 日志（语义一致，进程不退出）
 //
 // 架构决策（为什么不用 robfig/cron）:
@@ -120,9 +120,10 @@ func (s *Scheduler) Every(name string, interval time.Duration, fn func(ctx conte
 
 // Start 为每个任务起一个 goroutine。
 //
-// DIFF: Spring 默认 poolSize=1（所有 @Scheduled 串行，一个慢任务会拖垮全部）；
-// Go 侧每个任务独立 goroutine，互不影响——这是本次迁移里**唯一有意改变并发语义**的地方，
-// 因为 8 亿级表的补偿/检测任务耗时差异极大，串行会导致分钟级任务长时间漂移。
+// DIFF: Java 侧 SchedulingConfig.java:44 显式 setPoolSize(10)（线程池 10，任务并行；
+// 同一任务的下一次触发要等上一次结束）。Go 侧每个任务一个 goroutine，语义与之接近；
+// 差别只出现在「同一时刻就绪的任务超过 10 个」时：Java 在池里排队，Go 全部并行。
+// 当前默认配置只有 9 个任务在跑，实际不触发该差异；将来任务数增长时需重新评估。
 //
 // PARITY: Disabled 的任务不参与调度，也不会起 goroutine（启动时只打一条 Info）。
 func (s *Scheduler) Start(ctx context.Context) {

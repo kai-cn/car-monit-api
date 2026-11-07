@@ -320,9 +320,10 @@ func (s *LargeScaleSyncService) RepairSync(ctx context.Context, ds DataSource, s
 
 // readAndDispatch 对应 readAndDispatch()（L402-434）。
 //
-// keyset（游标）分页的核心 SQL 形态：
+// keyset（游标）分页的核心 SQL 形态（区间与 XML 一致，统一为半开 [start, end)，
+// 见 repo/sync_cursor.go 的 PARITY 说明）：
 //
-//	WHERE time >= ? AND time <= ?
+//	WHERE time >= ? AND time < ?
 //	  AND (time, pk) > (cursorTime, cursorId)
 //	ORDER BY time ASC, pk ASC LIMIT 2000
 //
@@ -451,7 +452,7 @@ func (w *bulkWriter) Add(ctx context.Context, id string, rec any) error {
 	return nil
 }
 
-// Flush 提交缓冲；失败时按 1s/2s/4s 退避重试 3 次，最终失败计入 totalWriteErr。
+// Flush 提交缓冲；失败按 1s/2s 退避（共 3 次尝试、2 次退避），最终失败计入 totalWriteErr。
 func (w *bulkWriter) Flush(ctx context.Context) error {
 	if len(w.buf) == 0 {
 		return nil

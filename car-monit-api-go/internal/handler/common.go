@@ -46,7 +46,17 @@ func (d *BaseDeps) inQueryAllScope(ctx context.Context) bool {
 	if err != nil || !ok {
 		return false
 	}
-	return strings.EqualFold(strings.TrimSpace(raw), "queryall")
+	return isQueryAll(raw)
+}
+
+// isQueryAll 对应 Java 的 `"queryall".equals(queryQx)`。
+//
+// PARITY: 必须区分大小写（String.equals 语义）。此前用 strings.EqualFold，
+// 运维把配置写成 "QUERYALL" 时 Java 走受限分支、Go 走全量分支 —— 数据权限被静默放大。
+// 只 TrimSpace 是为了容忍缓存值两端的空白（Java 侧 RedisTemplate 反序列化不会带空白，
+// 这里多一层防御不影响判定结果）。
+func isQueryAll(raw string) bool {
+	return strings.TrimSpace(raw) == "queryall"
 }
 
 // splitCSV 对应 `Arrays.stream(s.split(",")).collect(Collectors.toList())`。

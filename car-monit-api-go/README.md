@@ -8,9 +8,10 @@
 - Java 惯用法翻译成 Go 惯用法处标 `// DIFF:`；行为与 Java 完全一致但有坑处标 `// PARITY:`；
 - `Java 独有概念 → Go 等价物` 的决策理由写在对应文件头部注释里，也在本文件第 4、9 节汇总。
 
-**规模**：112 个 Go 文件 / 22,132 行（含注释）；共 **100 条 HTTP 路由** —— 85 条业务路由与 Java 的
-85 个端点**一一对应**，另有 15 条 Go 侧探针（`/healthz` `/readyz` `/health` + 12 条 `/debug/pprof/*`）；
-21 个定时任务（默认配置下 9 个在跑）；35 个单元测试函数（8 个测试文件，零外部依赖）。
+**规模**：121 个 Go 文件（107 个源码 + 14 个测试）/ 21,552 行（含注释）；共 **101 条 HTTP 路由** —— 85 条业务路由与 Java 的
+85 个端点**一一对应**，另有 16 条 Go 侧探针/运维端点（`/healthz` `/readyz` `/health` `/metrics`
++ 12 条 `/debug/pprof/*`，后两组按配置开关决定是否挂载）；
+21 个定时任务（默认配置下 9 个在跑）；53 个单元测试函数（14 个测试文件，零外部依赖）。
 
 ---
 
@@ -238,6 +239,9 @@ INFO HTTP 服务已启动 addr=:9901 mode=release contextPath=/
 
 > 若 `kafka.bootstrap-servers` 为空，会看到 `WARN 未配置 kafka.bootstrap-servers，消息总线降级为本地模式`，
 > 此时消费端不启动，`/readyz` 里 `mqConsumer=DOWN` —— 这是预期行为，不是故障。
+> 消费端启动后 `mqConsumer` 读的是**消费循环心跳**（45s 无心跳或连续 3 次拉取失败即 DOWN），
+> 不是"启动过一次"的常量；默认不改变 HTTP 状态码，`server.consumer-required-for-ready=true`
+> 时才升级为 503。
 
 ### 6.4 冒烟验证
 
@@ -418,14 +422,16 @@ dlv debug ./cmd/api -- -config configs/config.yaml
    `fwqjcxx`（33 个过滤条件里 28 个引用的是 SELECT 别名，如 `t.id agent_pk` 却被写成
    `and t.agent_pk = #{agentPk}`，Java 侧带任一这类过滤即 `column does not exist` → 500）。
    本轮另外补齐了 `trailtracks` 缺的 6 个条件（此前 `?type=0` 在 Java 过滤生效、Go 全量返回）。
-3. **`total` 的语义差异**：轨迹查询（`/base/sysutil/carTrackQuery*`）的 total 用「本页行数」，
-   因为对应的 COUNT 会打穿 8 亿级表（`handler/sysutil.go` 头部有说明）。
+3. **`total` 已按 Java 语义对齐（P-PAGE-8）**：轨迹查询（`/base/sysutil/carTrackQuery*`）的 total
+   走与取数**同谓词**的 COUNT（`CountHistoryTrail`），越界页按 PageHelper 的 reasonable 回夹末页。
+   早期版本曾用「本页行数」代替 total，已修复（`docs/parity-2026-11-02/09`）。
 4. **`trail:realtime:*` / `trail:pending:*` 不能跨版本共用**：Java 用 JDK 序列化，Go 用 JSON。
    灰度切换前需清空这两类 key（`multisource.go` 头部的 PARITY）。
 5. **`KEYS` 命令**：`ProcessPendingQueue` 与 `CheckOfflineDevices` 沿用了 Java 的 `KEYS pattern`，
-   生产环境 Redis 数据量大时会阻塞 —— 与 Java 行为一致，重构方向是改 `SCAN`（README 已登记）。
-6. **定时任务并发模型变化**：Spring 默认 `poolSize=1`（全部串行），Go 每个任务一个 goroutine。
-   这是**唯一有意改变并发语义**的地方，理由见 `scheduler.go:Start` 的 DIFF。
+   生产环境 Redis 数据量大时会阻塞 —— 与 Java 行为一致；V2 已改为 `SCAN` 游标遍历（见 14 节）。
+6. **定时任务并发模型**：Java 侧 `SchedulingConfig.java:44` 显式 `setPoolSize(10)`（任务并行，
+   同一任务不重入）；Go 每个任务一个 goroutine，语义接近，差异仅在「同一时刻就绪任务 >10」时
+   Java 排队、Go 全并行（当前 9 个任务在跑，不触发）。见 `scheduler.go:Start` 的 DIFF。
 7. **`saveOrUpdate` 是两次 SQL**（先查后写），与 MyBatis-Plus 一致；高并发下可能出现
    「查到不存在 → 双 insert」的竞态，Java 侧同样存在，未在此修复。
 8. **实时轨迹的第二个 Redis 集群未接入**：`syncTrack` 在生产模式下用
@@ -464,7 +470,7 @@ toolchain go1.26.0
 | 编译 | `go build ./...` | 通过 |
 | 静态检查 | `go vet ./...` | 通过 |
 | 格式 | `gofmt -l cmd internal` | 无输出 |
-| 单元测试 | `go test ./internal/...` | handler / router / scheduler / service / utils **5 个包全绿**（24 个测试函数，零外部依赖） |
+| 单元测试 | `go test ./...` | config / db / handler / mq / repo / router / scheduler / service / utils **9 个包全绿**（53 个测试函数，零外部依赖） |
 | 路由完整性 | `go test ./internal/router/ -run TestRoutesRegistered` | 100 条路由，50 条关键路径逐条断言 + 总数下限 60 |
 | 自测端点行为 | `go test ./internal/router/ -run TestSelfTestEndpoints` | 3 个已实现返回 200；4 个抽样 501 带 `javaRef` / `reason` |
 | cron 降级 | `go test ./internal/scheduler/` | 21 个 Quartz 表达式全部可算下次触发时间 |
@@ -472,7 +478,7 @@ toolchain go1.26.0
 | 404 兜底 | `go test ./internal/router/ -run TestRouterMiddlewareChain` | 返回 `{code:404,msg,data}` + `X-Request-Id` |
 | 实体字段完整性 | 一次性审计脚本（未入库） | 30 类 / 901 字段 ↔ 901 字段，缺 0 |
 | Mapper 方法覆盖 | 同上 | 23 个 Mapper / 64 个方法，0 静默缺口（分类见 9.3） |
-| 锚点完整性 | 同上 | 104 个非测试 `.go` 文件**全部**带 `// JAVA 对照:`，且每个文件至少含一处 `DIFF`/`PARITY`/架构决策标记 |
+| 锚点完整性 | 同上 | 104 个业务迁移 `.go` 文件全部带 `// JAVA 对照:`，且每个文件至少含一处 `DIFF`/`PARITY`/架构决策标记；V2 新增的 3 个基础设施文件（`metrics.go`/`health.go`/`wait.go`）标为「Go 侧新增」 |
 | **双端 HTTP 差分回归** | `docs/parity-2026-11-02/tools/parity.py` | 364 条用例 **OK 329 / DIFF 13 / STATUS 22 / NONDET 0**（r12 定稿）；自 r5 起到 r12 零回归（明细见第 13 节） |
 | **谓词覆盖度机械对照** | `docs/parity-2026-11-02/tools/predicates.py` | 19 张表 × Java `<if>` 列 vs Go `tx.Where` 列：**17/19 零缺项**，剩 2 张是 Java 侧自身缺语句 |
 
@@ -583,3 +589,37 @@ python predicates.py                                                          # 
 ```
 写接口默认不执行（`--allow-write` 才跑）；`/large/sync/*` 始终不跑 —— 它会用同 `_id`
 覆盖 Java 写进 ES 的 `_source`，之后所有读对比的基准都会失真。
+
+---
+
+## 14. V2 生产化改造（2026-11-08，分支 `car-monit-api-go-V2`）
+
+依据 `docs/review-2026-11-07/` 的两份审阅报告，本轮只做「不改对外契约」的生产加固。
+所有新增开关的默认值都保持 V1/Java 行为；部署形态与告警建议见 [docs/deploy.md](docs/deploy.md)。
+
+| # | 改动 | 位置 | 默认行为 |
+|---|---|---|---|
+| 1 | **GORM 慢 SQL/错误分级**：慢 SQL → `WARN`、SQL 错误 → `ERROR`（原先全部 `DEBUG`） | `internal/db/db.go:gormSlogLogger` | 不变（只是日志可见性） |
+| 2 | **`/readyz` 消费端心跳化**：`mq.Heartbeat` 记录 running/lastTick/连续失败；45s 无心跳或连续 3 次拉取失败 → `mqConsumer=DOWN` | `internal/mq/health.go`、`internal/service/snapshot_consumer.go` | 响应体可见；状态码不变 |
+| 3 | **消费循环无限重试**：异常 → 5s 退避 → 重启（原实现只重试一次就退出） | `internal/service/snapshot_consumer.go:Start` | 与 Java `while(true)` 对齐 |
+| 4 | **优雅关闭补全**：导出服务 `Close()` 接入 shutdown（先 cancel 进程级 ctx 再等）、常驻协程补 recover、后台组件共享 60s 超时预算 | `cmd/api/main.go:shutdown`、`service/export.go`、`service/large.go`、`service/snapshot_sync.go` | 关闭更慢但不再截断 CSV / 不再无限等待 |
+| 5 | **Prometheus 指标**：`/metrics`（HTTP RED、依赖健康、消费心跳/耗时、同步计数、连接池） | `internal/metrics`、`internal/router/router.go` | `server.metrics-enabled: true` |
+| 6 | **pprof 开关**：`/debug/pprof/*` 从"始终挂载"改为默认关闭 | `internal/router/router.go` | `server.pprof-enabled: false` |
+| 7 | **时区固定**：`app.timezone`（默认 `Asia/Shanghai`）启动时赋值 `time.Local`，消除 DB 路径与绑定/JSON 路径双轨 | `cmd/api/main.go`、`internal/config/config.go:ResolveTimezone` | 与 JVM 部署基线一致 |
+| 8 | **依赖安全水位**：x/net v0.25→v0.42、x/crypto v0.23→v0.40 等（受 go1.24.1 工具链上限约束） | `go.mod` | 无行为变化 |
+| 9 | **CI 门禁**：gofmt(只查)/build/vet/test + govulncheck | `.github/workflows/car-monit-api-go-ci.yml`、`check.bat` | 本地脚本不再 `gofmt -w` |
+| 10 | **`KEYS` → `SCAN`**：待处理队列、设备心跳、延迟统计、丢失检测四处 | `internal/cache/redis.go:ScanKeys` + 4 个调用点 | 结果集一致（内部去重） |
+| 11 | **缓存击穿防护**：`GetOrLoad` 用 singleflight 合并同 key 并发回源 | `internal/cache/redis.go` | 目前无生产调用点，为后续接入准备 |
+| 12 | **请求级超时兜底**：`server.request-timeout`（默认 0=关闭） | `internal/middleware/middleware.go:Timeout` | 关闭 |
+| 13 | **配置与部署物料**：`configs/config.example.yaml`（密码置空 + env 注入）、`deploy/k8s.yaml`（单副本 + Recreate + 90s grace）、`docs/deploy.md` | 新增 | 不改现有配置 |
+
+**未做（按「无事实依据不改线上契约」处理）**：
+
+- 调度器分布式锁：当前按**单副本**部署（manifest 已固化 `replicas: 1`），扩容前必须先补锁；
+- 接口鉴权：与 Java 一致（`SecurityInterceptor` 整文件被注释），依赖网络层隔离；
+- CSV 列结构：Java 产物列数 `{4,39}` 且标准解析器读不回来，Go 是合法 RFC4180（恒 4 列），
+  切换前需由下游消费方确认，不在本轮擅自改动；
+- gorm / gin / go-redis 的功能性升级：需要独立回归窗口，本轮只升安全相关的 x/*。
+
+**验证**：`go build ./...`、`go vet ./...`、`go test ./...`（9 个包 / 53 个测试函数）全部通过；
+`gofmt -l cmd internal` 在 LF 检出下无输出。
