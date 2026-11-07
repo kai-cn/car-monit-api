@@ -15,15 +15,30 @@ from __future__ import annotations
 
 import datetime as _dt
 import logging
+import os
 import platform
 import sys
 from typing import Any, Callable, Optional
 
 log = logging.getLogger(__name__)
 
-__all__ = ["HealthRegistry", "health_registry"]
+__all__ = ["HealthRegistry", "health_registry", "health_verbose"]
 
 STARTED_AT = _dt.datetime.now(tz=_dt.timezone.utc)
+
+
+def health_verbose() -> bool:
+    """P0-6：``/health`` 是否携带 ``config`` 细节（含中间件地址）。
+
+    默认仅 shim（开发）模式携带；prod 模式需显式 ``CAR_MONIT_HEALTH_VERBOSE=true``
+    （Java 侧没有 /health 端点，这是 Python 侧新增的生产收敛，不是契约变更）。
+    """
+    value = (os.environ.get("CAR_MONIT_HEALTH_VERBOSE") or "").strip().lower()
+    if value:
+        return value in ("1", "true", "yes", "on")
+    from app.runtime import runtime_mode
+
+    return runtime_mode() != "prod"
 
 
 class HealthRegistry:
@@ -57,12 +72,14 @@ health_registry = HealthRegistry()
 
 def health_payload(extra: Optional[dict] = None) -> dict[str, Any]:
     from app import __version__
+    from app.runtime import runtime_mode
 
     result = health_registry.run()
     payload: dict[str, Any] = {
         "status": result["status"],
         "app": "car-monit-api",
         "version": __version__,
+        "runtime": runtime_mode(),  # P0-6：shim/prod 可见，防止替身被误当生产
         "javaVersion": "1.8",
         "springBootVersion": "2.4.5",
         "python": platform.python_version(),

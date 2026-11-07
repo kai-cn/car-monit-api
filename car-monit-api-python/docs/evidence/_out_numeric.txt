@@ -1,0 +1,10 @@
+﻿=== /base/feerecords/list ===
+status: 500
+total: None rows: 0
+
+=== /base/feerecords/{bigId} (no XML statement) ===
+status: 500
+body: {"timestamp":"2026-11-07T10:51:49.840+00:00","status":500,"error":"Internal Server Error","message":"","path":"/base/feerecords/1"}
+
+=== /base/feerecords/listToExport ===
+status: 500 body: {"timestamp":"2026-11-07T10:51:49.875+00:00","status":500,"error":"Internal Server Error","message":"","path":"/base/feerecords/listToExport"}

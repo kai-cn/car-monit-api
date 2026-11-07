@@ -86,7 +86,7 @@ curl http://127.0.0.1:9901/health
 ```
 car-monit-api-python/
 ├── app/            ← FastAPI 宿主（Java 无对应，26 个 .py）
-├── com/ java/ javax/ org/   ← JDK + 三方库替身（171 个 .py）
+├── com/ java/ javax/ org/   ← JDK + 三方库替身（172 个 .py）
 ├── pro-base-common/src/main/java/com/ruoyi/common/      ← 业务：公共模块（54 个 .py）
 ├── pro-business-api/src/main/java/com/ruoyi/            ← 业务：主模块（166 个 .py）
 ├── tests/          ← pytest
@@ -125,16 +125,33 @@ car-monit-api-python/
 | `app.scheduler.enabled` | `true` | `set APP_SCHEDULER_ENABLED=false` | **Python 独有**开关，见 4.3 |
 | `isLocalhost` | `local` | 改 yml | `local` / `prod` 部署标记 |
 
-### 4.3 Python 侧新增的环境变量（**仅 5 个**，全部是宿主层行为，不改业务）
+### 4.3 Python 侧新增的环境变量（宿主层行为，不改业务）
+
+**运行模式与启动（V2 新增，见 `app/runtime.py`）**：
+
+| 变量 | 默认 | 作用 |
+|---|---|---|
+| `CAR_MONIT_RUNTIME` | `shim` | `shim`=开发/测试（替身可用）；`prod`=生产（**替身假成功操作抛错拒绝**：Kafka/ES/Redis 写等中间件替身在无真实适配器时会显式失败，等价 Java 中间件宕机路径） |
+| `CAR_MONIT_STARTUP_FAIL_FAST` | `true` | `false` → Mapper/路由/调度器启动失败仅记日志（应急排障用；默认与 Spring 一致失败即退出） |
+| `CAR_MONIT_DOCS_ENABLED` | shim 开 / prod 关 | `/docs` 与 `/openapi.json` 开关 |
+| `CAR_MONIT_HEALTH_VERBOSE` | shim 开 / prod 关 | `/health` 是否携带 `config`（中间件地址）细节 |
+| `APP_BEANS_ENABLED` | `false` | `true` → 启动 Java 侧 `@Service#@PostConstruct` 后台 Bean（全量/增量同步、Kafka 重试；**启用前须确认决策②③**，见 `app/beans.py`） |
+
+**连接与部署**：
 
 | 变量 | 默认 | 作用 |
 |---|---|---|
 | `CAR_MONIT_HOST` | `0.0.0.0` | uvicorn 绑定地址（对应 Tomcat 的 `address`） |
-| `CAR_MONIT_PORT` | `server.port` | uvicorn 端口 |
+| `CAR_MONIT_PORT` | `server.port` | uvicorn 端口（同时是 `settings.server_port` 的最高优先级） |
+| `CAR_MONIT_WORKERS` | `1` | uvicorn 进程数；**>1 会复制进程内状态**（调度器/内存替身/导出任务表），真实中间件接入前慎用 |
 | `CAR_MONIT_RELOAD` | `false` | `true` → 热重载（**仅开发用**，等价于 `spring-boot-devtools`） |
 | `CAR_MONIT_LOG_LEVEL` | `INFO` | `DEBUG` / `INFO` / `WARNING` |
 | `CAR_MONIT_REDIS_URL` | *(空)* | 如 `redis://127.0.0.1:6379/0`：`RedisCache` 对**未命中且为标量**的键向真实 Redis 取值。不设置则与之前完全一致（纯内存） |
 | `APP_SCHEDULER_ENABLED` | `true` | `false` → 不启动 10 个定时任务（自检时会用） |
+
+> **密钥（P0-6）**：随包 `application.yml` 只含 `${ENV:}` 占位符；真实口令写
+> `pro-business-api/src/main/resources/application-local.yml`（已 gitignore，
+> 优先级：环境变量 > local 文件 > yml > 占位符默认值），或经环境变量注入。
 
 ### 4.4 代码里怎么读配置
 
@@ -415,11 +432,11 @@ ERROR ... mapper method without statement: com.ruoyi.base.mapper.XxxMapper#yyy
 ## 7. 测试 / Tests
 
 ```bat
-:: 全部回归网（82 用例）
+:: 全部回归网（V2：161 项 = 159 passed + 2 skipped 集成）
 .venv\Scripts\pytest.exe -q
 
-:: 单个阶段
-.venv\Scripts\pytest.exe tests/test_phase2c.py -v
+:: 一键门禁（pytest + 4 个 check + 2 个 smoke，同 CI 顺序）
+powershell -ExecutionPolicy Bypass -File tools\run_checks.ps1
 ```
 
 | 文件 | 覆盖 |
@@ -429,6 +446,11 @@ ERROR ... mapper method without statement: com.ruoyi.base.mapper.XxxMapper#yyy
 | `tests/test_phase2c.py` | MyBatis XML 解释、QueryWrapper、分页 |
 | `tests/test_phase2d.py` | 调度器、CronExpression |
 | `tests/test_phase2e.py` | 中间件替身（Redis / ES / Kafka / Pulsar） |
+| `tests/test_v2_p0.py` | V2 P0 回归：运行时模式守卫、Bean 生命周期、事务、fail-fast、密钥 |
+| `tests/test_v2_p1.py` | V2 P1 回归：Decimal 精度、worker 线程、请求 ID/metrics |
+| `tests/business/test_smoke_scripts.py` | 23 个迁移期冒烟脚本（子进程隔离） |
+| `tests/business/test_sql_golden.py` | 54 条 statement 渲染 SQL 逐字节锁定 |
+| `tests/business/test_integration_db.py` | 真实 GaussDB 集成（`CAR_MONIT_TEST_DB=1` 开启，默认跳过） |
 
 ### 验证工具（比 pytest 更适合"改完看有没有弄坏"）
 

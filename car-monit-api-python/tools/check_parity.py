@@ -29,6 +29,14 @@ WORKSPACE = PROJECT_ROOT.parent
 SKIP_DIRS = {"target", ".git", ".idea", ".mimocode", ".vscode", "node_modules",
              "__pycache__", "out", "build", ".venv"}
 
+#: 只对照两个业务模块的 Java 源。此前扫描整个 WORKSPACE，会把兄弟工程
+#: ``car-monit-api-rust/.run/*.java`` 误判为 Tier B 缺口，导致本工具永久
+#: exit 1、门禁失效（见 docs/迁移审阅报告.md §3.8）。
+JAVA_SOURCE_ROOTS = tuple(
+    WORKSPACE / module / "src" / "main" / "java"
+    for module in ("pro-base-common", "pro-business-api")
+)
+
 # 这些词出现在"返回类型"位置时，说明抓到的是调用表达式而不是方法声明
 # 例如 `return str(bytes, charset);` / `throw new RuntimeException(...)`
 _CALL_KEYWORDS = {
@@ -176,8 +184,13 @@ def main() -> int:
     tier_a: list[tuple[str, list[str], list[str]]] = []
     tier_b: list[tuple[str, list[str], list[str]]] = []
 
-    for java_path in sorted(
-            (d / n for d, ns in walk(WORKSPACE) for n in ns if n.endswith(".java"))):
+    java_files = sorted(
+        d / n
+        for root in JAVA_SOURCE_ROOTS
+        for d, ns in walk(root)
+        for n in ns if n.endswith(".java")
+    )
+    for java_path in java_files:
         rel = java_path.relative_to(WORKSPACE).as_posix()
         if only and only not in rel:
             continue

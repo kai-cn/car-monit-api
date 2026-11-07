@@ -284,6 +284,11 @@ class _TextNode(_Node):
         if "#{" in text:
             text = _BIND_RE.sub(lambda m: context.bind(m.group(1)), text)
         if "${" in text:
+            # P2-11：MyBatis 的 ${} 是字面量拼接（SQL 注入面）。本工程 22 个 XML
+            # 均未使用；一旦未来引入，这里保留 MyBatis 语义但显式告警。
+            log.warning("${...} literal interpolation rendered (SQL-injection surface, "
+                        "statement text follows in debug log)")
+            log.debug("interpolated fragment: %s", text)
             text = _INTERP_RE.sub(lambda m: _stringify(context.resolve(m.group(1))), text)
         context.emit(text)
 

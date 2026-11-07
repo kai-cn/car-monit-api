@@ -33,6 +33,8 @@ from com.alibaba.fastjson2.JSONObject import JSONObject
 from com.ruoyi.base.domain.SuspiciousCarVO import SuspiciousCarVO
 from com.ruoyi.common.constant.HttpStatus import HttpStatus
 
+from app.runtime import reject_shim_operation
+
 log = logging.getLogger(__name__)
 
 __all__ = ["HttpSysUtilApiService", "ForestHttpSysUtilApiService"]
@@ -66,6 +68,10 @@ class ForestHttpSysUtilApiService(HttpSysUtilApiService):
         self.base_url: str = base_url or self.BASE_URL_PLACEHOLDER
 
     def syncSuspiciousCarTask(self, suspiciousCarVO: SuspiciousCarVO) -> JSONObject:
+        # P0-2：prod 模式下拒绝“假 200”（上游系统不会收到任何请求）。
+        reject_shim_operation(
+            "Forest HttpSysUtilApiService.syncSuspiciousCarTask",
+            "（真实 HTTP 客户端未实现，上游系统收不到可疑车辆同步。）")
         # 【Java→Python】真实请求体序列化（对应 @JSONBody）：
         # Java 序列化的是 SuspiciousCarVO 的属性；这里保留同样的调用与日志，
         # 但不真正建立网络连接（离线替身）。

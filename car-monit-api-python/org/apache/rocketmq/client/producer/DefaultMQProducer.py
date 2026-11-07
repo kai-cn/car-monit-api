@@ -34,6 +34,8 @@ from org.apache.rocketmq.client.producer.SendStatus import SendStatus
 from org.apache.rocketmq.common.message.Message import Message
 from org.apache.rocketmq.common.message.MessageQueue import MessageQueue
 
+from app.runtime import reject_shim_operation
+
 __all__ = ["DefaultMQProducer"]
 
 
@@ -100,6 +102,10 @@ class DefaultMQProducer(object):
         批量重载 ``send(Collection<Message>)`` 也用本方法表达：传入 list/tuple 时
         逐条发送并返回最后一条的结果（Java 的批量发送同样逐条投递）。
         """
+        # P0-2：prod 模式下拒绝“假成功”发送（消息只会进进程内存，broker 收不到）。
+        reject_shim_operation(
+            "DefaultMQProducer.send",
+            "（真实 RocketMQ 适配器未实现，消息不会到达 NameServer/Broker。）")
         if not self._started:
             # 对应 MQClientException: The producer service state not OK
             raise RuntimeError("MQClientException: The producer service state not OK")

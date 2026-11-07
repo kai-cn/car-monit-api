@@ -12,11 +12,19 @@ source, exactly like Spring.
 
 Priority order (identical to Spring):
     environment variables (SYNC_BATCH_SIZE)
+      > application-local.yml (P0-6, secrets)
       > application.yml
       > the inline default inside the placeholder
+
+P1-6：收敛为"每个属性都有真实消费点"的门面。以下属性因全工程零调用被移除
+（业务侧各自走 ``Environment().value(...)`` 读取同名 key，行为不变）：
+``map_underscore_to_camel_case`` / ``call_setters_on_nulls`` /
+``pool_validation_query`` / ``p6spy_enabled`` / ``export_dir`` /
+``consistency_reconcile_enabled`` / ``sys_base_url`` / ``es_connection_timeout_ms``。
 """
 from __future__ import annotations
 
+import os
 import re
 from typing import Any, Optional
 
@@ -78,12 +86,31 @@ class Settings:
     # ------------------------------------------------------------------ server
     @property
     def server_port(self) -> int:
+        """实际监听端口：``CAR_MONIT_PORT`` > ``server.port``（P1-6 修正）。
+
+        此前恒返回 yml 的 9901，导致 /health 的 config 与真实端口不一致
+        （报告 Q16）。run.py 的覆盖顺序与此保持一致。
+        """
+        override = os.environ.get("CAR_MONIT_PORT")
+        if override:
+            try:
+                return int(override)
+            except ValueError:
+                pass
         return self.integer("server.port", 9901)
 
     @property
     def context_path(self) -> str:
         path = self.text("server.servlet.context-path", "/")
         return "" if path == "/" else path.rstrip("/")
+
+    @property
+    def worker_threads(self) -> int:
+        """P1-2：``app.server.worker-threads``——anyio 线程池令牌数（等价 Tomcat max-threads）。
+
+        README 此前提到该配置但从未实现（报告 Q3）；默认 40 与 anyio 缺省一致。
+        """
+        return max(1, self.integer("app.server.worker-threads", 40))
 
     # ------------------------------------------------------------------ datasource
     @property
@@ -125,15 +152,6 @@ class Settings:
     def pool_max_wait_ms(self) -> int:
         return self.integer("spring.datasource.dynamic.druid.maxWait", 60_000)
 
-    @property
-    def pool_validation_query(self) -> str:
-        return self.text("spring.datasource.dynamic.druid.validationQuery", "SELECT 1")
-
-    @property
-    def p6spy_enabled(self) -> bool:
-        """``spring.datasource.dynamic.p6spy``: print the fully expanded SQL."""
-        return self.boolean("spring.datasource.dynamic.p6spy", False)
-
     # ------------------------------------------------------------------ mybatis
     @property
     def mapper_locations(self) -> str:
@@ -141,18 +159,6 @@ class Settings:
             "mybatis-plus.mapper-locations",
             "classpath*:com/ruoyi/base/**/xml/*Mapper.xml",
         )
-
-    @property
-    def type_aliases_package(self) -> str:
-        return self.text("mybatis-plus.type-aliases-package", "com.ruoyi.base.domain")
-
-    @property
-    def map_underscore_to_camel_case(self) -> bool:
-        return self.boolean("mybatis-plus.configuration.map-underscore-to-camel-case", True)
-
-    @property
-    def call_setters_on_nulls(self) -> bool:
-        return self.boolean("mybatis-plus.configuration.call-setters-on-nulls", True)
 
     # ------------------------------------------------------------------ redis
     @property
@@ -218,10 +224,6 @@ class Settings:
         return None if value in (None, "") else str(value)
 
     @property
-    def es_connection_timeout_ms(self) -> int:
-        return self.integer("elasticsearch.connection-timeout", 30_000)
-
-    @property
     def es_socket_timeout_ms(self) -> int:
         return self.integer("elasticsearch.socket-timeout", 30_000)
 
@@ -246,18 +248,6 @@ class Settings:
     def is_localhost(self) -> str:
         """``isLocalhost: local`` -- "local" or "prod" deployment marker."""
         return self.text("isLocalhost", "local")
-
-    @property
-    def sys_base_url(self) -> str:
-        return self.text("sysbaseUrl", "http://223.84.150.189:26066/prod-api")
-
-    @property
-    def export_dir(self) -> str:
-        return self.text("optimization.export.dir", "/data/export")
-
-    @property
-    def consistency_reconcile_enabled(self) -> bool:
-        return self.boolean("consistency.reconcile.enabled", False)
 
     @property
     def scheduler_enabled(self) -> bool:

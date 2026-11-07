@@ -20,7 +20,7 @@ Java 侧来自 spring-data-redis：`org.springframework.data.redis.core.StringRe
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any
 
 from org.springframework.data.redis.core.RedisTemplate import RedisTemplate, defaultRedisTemplate
 
@@ -31,14 +31,12 @@ class StringRedisTemplate(RedisTemplate):
     """`StringRedisTemplate` 的进程内替身（与 RedisTemplate 共用同一套内存语义）。"""
 
 
-def defaultStringRedisTemplate() -> RedisTemplate:
+def defaultStringRedisTemplate() -> Any:
     """获取共享的 StringRedisTemplate（@Autowired 的默认值）。
 
-    【Java→Python】返回的就是进程级 RedisTemplate 单例：
-    Spring 容器里两者操作同一个 Redis，替身也必须操作同一份内存数据。
+    【Java→Python】返回的就是进程级共享模板（P2-2 起与 RedisCache 共用同一
+    真实/内存模板）：Spring 容器里两者操作同一个 Redis，适配器也必须操作同一份
+    数据。真实适配（RealRedisTemplate）是鸭子类型，不参与本类的继承体系，因此
+    不再做旧内存版的 ``__class__`` 换形。
     """
-    template: Optional[RedisTemplate] = defaultRedisTemplate()
-    if not isinstance(template, StringRedisTemplate):
-        # 首次调用时把共享单例“升级”为 StringRedisTemplate（同一实例继续对外服务）
-        template.__class__ = StringRedisTemplate
-    return template
+    return defaultRedisTemplate()

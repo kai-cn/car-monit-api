@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.base.mapper.ZdataTrailTracksMapper">
+
+    <resultMap type="com.ruoyi.base.domain.ZdataTrailTracks" id="ZdataTrailTracksResult">
+        <result property="uuid"    column="uuid"    />
+        <result property="type"    column="type"    />
+        <result property="pointCount"    column="point_count"    />
+        <result property="plateKey"    column="plate_key"    />
+        <result property="enterTime"    column="enter_time"    />
+        <result property="exitTime"    column="exit_time"    />
+        <result property="enterLocationcode"    column="enter_locationcode"    />
+        <result property="exitLocationcode"    column="exit_locationcode"    />
+        <result property="trailPoints"    column="trail_points"    />
+
+    </resultMap>
+
+    <sql id="selectZdataTrailTracksVo">
+        t.uuid,
+        t.type,
+        t.point_count,
+        t.plate_key,
+        t.enter_time,
+        t.exit_time,
+        t.enter_locationcode,
+        t.exit_locationcode,
+        t.trail_points,
+        t.create_time
+    </sql>
+
+
+    <select id="selectZdataTrailTracksList" parameterType="com.ruoyi.base.domain.ZdataTrailTracks" resultMap="ZdataTrailTracksResult">
+        SELECT
+        <include refid="selectZdataTrailTracksVo"/>
+        FROM jl_data01.zdata_trail_tracks t
+        WHERE 1 = 1
+        <if test="uuid != null  and uuid != ''"> and t.uuid = #{uuid}</if>
+        <if test="type != null "> and t.type = #{type}</if>
+        <if test="pointCount != null "> and t.point_count = #{pointCount}</if>
+        <if test="plateKey != null  and plateKey != ''"> and t.plate_key = #{plateKey}</if>
+        <if test="enterTime != null "> and t.enter_time = #{enterTime}</if>
+        <if test="exitTime != null "> and t.exit_time = #{exitTime}</if>
+        <if test="trailPoints != null  and trailPoints != ''"> and t.trail_points = #{trailPoints}</if>
+    </select>
+
+    <select id="selectZdataTrailTracksById" parameterType="String" resultMap="ZdataTrailTracksResult">
+         select
+         <include refid="selectZdataTrailTracksVo"/>
+         from jl_data01.zdata_trail_tracks t
+         where t.uuid = #{uuid}
+    </select>
+
+    <select id="getLatestTrail" parameterType="com.ruoyi.base.domain.CarParaVO" resultType="com.ruoyi.base.domain.ZdataTrailTracks">
+        select
+            t.cid uuid,
+            t.envehicleid plateKey,
+            t.enaxlecount,
+            t.entime enterTime,
+            t.entolllaneid,
+            t.entollstationid,
+            t.entollstationname,
+            t.envehicleclass,
+            t.envehicleid,
+            t.envehicletype,
+            t.enweight,
+            t.extime exitTime,
+            t.extolllaneid,
+            t.extollstationid,
+            t.extollstationname,
+            t.exvehicleclass,
+            t.exvehicleid,
+            t.exvehicletype,
+            t.exweight,
+            t.trailpoints,
+            t.trailtype
+        from jl_data01.zdata_trail_fitting t
+        <where>
+
+        <!-- 吉安东权限 !-->
+        <if test="flag != null and flag == 'jiandong' ">
+            and exists  (
+                select 1 from jl_data01.ods_szdn_toll sip where (sip.toll_code = t.entollstationid
+                or sip.toll_code = t.extollstationid)
+                and sip.org_code = '030000011'
+            )
+        </if>
+
+        <!-- 跨省全程屏蔽 !-->
+        <if test="flag != null and flag == 'ksqcpb' ">
+            and t.trailtype = 0
+        </if>
+
+        <!-- 路段逃费 !-->
+        <if test="flag != null and flag == 'ldtf' ">
+            and t.trailtype = 1
+            and EXISTS (
+            SELECT 1
+            FROM UNNEST(trailpoints) AS elem
+            WHERE (elem::json->>'sectionCode') in
+                <foreach collection="sectionList" open="(" separator="," close=")" item="item">
+                    #{item}
+                </foreach>
+            )
+        </if>
+
+        <!-- 时间查询范围 !-->
+         and t.extime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')
+         and t.extime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS')
+
+        </where>
+        order by t.cid,t.extime
+        <if test="startNum != null ">  LIMIT #{startNum} </if>
+        <if test="endNum != null ">  OFFSET #{endNum} </if>
+    </select>
+
+    <select id="getHistoryTrail" parameterType="com.ruoyi.base.domain.CarParaVO" resultType="com.ruoyi.base.domain.ZdataTrailTracks">
+        select
+            t.cid uuid,
+            t.envehicleid plateKey,
+            t.enaxlecount,
+            t.entime enterTime,
+            t.entolllaneid,
+            t.entollstationid,
+            t.entollstationname,
+            t.envehicleclass,
+            t.envehicleid,
+            t.envehicletype,
+            t.enweight,
+            t.extime exitTime,
+            t.extolllaneid,
+            t.extollstationid,
+            t.extollstationname,
+            t.exvehicleclass,
+            t.exvehicleid,
+            t.exvehicletype,
+            t.exweight,
+            t.trailpoints
+        from jl_data01.zdata_trail_fitting t
+        <where>
+            <if test="carNo != null  and carNo != ''"> and t.envehicleid = #{carNo} </if>
+            <if test="applyTime1 != null  and applyTime1 != ''">and t.extime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')</if>
+            <if test="applyTime2 != null  and applyTime2 != ''">and t.extime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS') </if>
+            <!-- 默认查询半年-->
+            <if test="flag != null and flag == 'bannian' ">
+                and t.extime >= now() - 180 and t.extime <![CDATA[<=]]> now()
+            </if>
+            <!-- 默认查询三天之前的-->
+            <if test="flag != null and flag == 'yiyue' ">
+                and t.extime >= now() - 3 and t.extime <![CDATA[<=]]> now()
+            </if>
+            <if test="carNoList != null and carNoList.size() > 0">
+               and  t.envehicleid in
+                <foreach collection="carNoList" open="(" separator="," close=")" item="item">
+                    #{item}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+
+    <select id="getUnFitting" parameterType="com.ruoyi.base.domain.CarParaVO" resultType="com.ruoyi.base.domain.ZdataTrailTracks">
+        select
+        t.platenumber plateKey,
+        t.entime enterTime,
+        t.extime exitTime,
+        t.trailpoints,
+        t.vehicletype envehicletype
+        from jl_data01.zdata_trail_unfitting t
+        <where>
+            <!-- 时间查询范围 !-->
+            and t.capturedate >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')
+            and t.capturedate <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS')
+
+        </where>
+        order by t.capturedate,t.platenumber
+        <if test="startNum != null ">  LIMIT #{startNum} </if>
+        <if test="endNum != null ">  OFFSET #{endNum} </if>
+    </select>
+
+    <!-- 游标分页查询轨迹数据（高性能版本） -->
+    <select id="getLatestTrailByCursor" parameterType="com.ruoyi.base.domain.CarParaVO" resultType="com.ruoyi.base.domain.ZdataTrailTracks">
+        select
+            t.cid uuid,
+            t.envehicleid plateKey,
+            t.enaxlecount,
+            t.entime enterTime,
+            t.entolllaneid,
+            t.entollstationid,
+            t.entollstationname,
+            t.envehicleclass,
+            t.envehicleid,
+            t.envehicletype,
+            t.enweight,
+            t.extime exitTime,
+            t.extolllaneid,
+            t.extollstationid,
+            t.extollstationname,
+            t.exvehicleclass,
+            t.exvehicleid,
+            t.exvehicletype,
+            t.exweight,
+            t.trailpoints,
+            t.trailtype
+        from jl_data01.zdata_trail_fitting t
+        <where>
+            <!-- 跨省全程屏蔽 !-->
+            and t.trailtype = 0
+
+            <!-- 时间查询范围 !-->
+            and t.extime >= to_timestamp(#{applyTime1},'yyyy-mm-dd HH24:MI:SS')
+            and t.extime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS')
+
+            <!-- 游标条件：优先使用时间游标，只查询出站时间大于lastExitTime的数据 -->
+            <if test="lastExitTime != null">
+                and t.extime > #{lastExitTime}
+            </if>
+            <!-- 游标条件：备选使用ID游标，只查询ID大于lastId的数据 -->
+            <if test="lastId != null and lastId != ''">
+                and t.cid > #{lastId}
+            </if>
+        </where>
+        order by t.extime, t.cid
+        <if test="pageSize != null">
+            LIMIT #{pageSize}
+        </if>
+    </select>
+
+
+</mapper>

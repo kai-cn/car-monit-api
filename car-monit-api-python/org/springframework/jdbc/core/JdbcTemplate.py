@@ -25,6 +25,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
+from app.runtime import reject_shim_operation
+
 __all__ = ["JdbcTemplate"]
 
 
@@ -69,6 +71,11 @@ class JdbcTemplate(object):
 
     # ------------------------------------------------------------------ 内部
     def _record(self, method: str, sql: str, args: Any) -> None:
+        # P0-2：prod 模式下拒绝“假成功”执行（queryForList/queryForObject/update/execute
+        # 全部收口于此；REFRESH MATERIALIZED VIEW 等不会真的发生）。
+        reject_shim_operation(
+            "JdbcTemplate.%s" % method,
+            "（真实 JDBC 适配器未实现，SQL 不会执行。）")
         self.executed.append((method, sql, args))
         if self.failOn is not None:
             # 模拟 DataAccessException：业务代码的 catch 分支由此触发

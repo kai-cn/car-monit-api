@@ -1,0 +1,50 @@
+﻿.venv\Scripts\python.exe : com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectGantryNum has no statement (neithe
+r XML nor annotation): calling it raises like MyBatis
+所在位置 行:15 字符: 1702
++ ... M = 'dumb'; .venv\Scripts\python.exe tools\_audit_probe.py 2>&1 | Out ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (com.ruoyi.base....es like MyBatis:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01ById has no statement (neither XML nor
+ annotation): calling it raises like MyBatis
+com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01List has no statement (neither XML nor
+ annotation): calling it raises like MyBatis
+com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01ListNew has no statement (neither XML 
+nor annotation): calling it raises like MyBatis
+com.ruoyi.base.mapper.ZdataTrailFittingMapper#selectZdataTrailFittingById has no statement (neither XML nor annotation)
+: calling it raises like MyBatis
+com.ruoyi.base.mapper.ZdataTrailFittingMapper#selectZdataTrailFittingList has no statement (neither XML nor annotation)
+: calling it raises like MyBatis
+=== RouteInstallReport ===
+controllers: 24 routes: 85
+unavailable: []
+skipped: []
+missing_methods: []
+signature_mismatches: []
+base_path_mismatches: []
+duplicates: []
+ROUTES table size: 85
+
+=== MapperRegistry classpath roots ===
+D:\work\IdeaProjects\car-monit-api\car-monit-api-python | is_dir=True | xml=0
+D:\work\IdeaProjects\car-monit-api\pro-business-api\src\main\java | is_dir=True | xml=22
+D:\work\IdeaProjects\car-monit-api\pro-business-api\src\main\resources | is_dir=True | xml=0
+D:\work\IdeaProjects\car-monit-api\pro-base-common\src\main\java | is_dir=True | xml=0
+D:\work\IdeaProjects\car-monit-api\pro-base-common\src\main\resources | is_dir=False | xml=0
+D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java | is_dir=True | xml=0
+D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\resources | is_dir=True | xml=0
+D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-base-common\src\main\java | is_dir=True | xml=0
+D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-base-common\src\main\resources | is_dir=False | xml=0
+loaded xml namespaces: 22
+loaded statements: 54
+
+=== InstallReport ===
+mappers: 23 statements: 58 patched: 58
+missing_statements: ['com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectGantryNum', 'com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01ById', 'com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01List', 'com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01ListNew', 'com.ruoyi.base.mapper.ZdataTrailFittingMapper#selectZdataTrailFittingById', 'com.ruoyi.base.mapper.ZdataTrailFittingMapper#selectZdataTrailFittingList']
+failed_files: []
+orphan_statements: []
+annotated_statements: ['com.ruoyi.base.mapper.OdsRtSzdnSnapshotFlowAddcodeMapper.getMaxSnapshotTime', 'com.ruoyi.base.mapper.PulsarMessageRecordMapper.incrementRetryCount', 'com.ruoyi.base.mapper.PulsarMessageRecordMapper.selectFailedRecords', 'com.ruoyi.base.mapper.PulsarMessageRecordMapper.updateStatusById']
+
+=== standalone simulation (root 指向空目录) ===
+xml: 22 statements: 54

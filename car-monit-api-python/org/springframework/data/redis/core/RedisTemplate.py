@@ -24,7 +24,7 @@ Java 侧来自 spring-data-redis jar：`org.springframework.data.redis.core.Redi
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 from com.ruoyi.common.core.redis.RedisCache import _InMemoryRedisTemplate
 
@@ -35,13 +35,19 @@ class RedisTemplate(_InMemoryRedisTemplate):
     """`RedisTemplate<K,V>` 的进程内替身（一个实例即一份“Redis 库”）。"""
 
 
-# 进程级单例：等价 Spring 容器里唯一的 RedisTemplate Bean
+# 进程级单例：等价 Spring 容器里唯一的 RedisTemplate Bean。
+# P2-2：与 RedisCache 共用同一个共享模板（真实适配或内存），见
+# com.ruoyi.common.core.redis.RedisCache.shared_redis_template。
 _DEFAULT_TEMPLATE: Optional[RedisTemplate] = None
 
 
-def defaultRedisTemplate() -> RedisTemplate:
-    """获取共享的 RedisTemplate（@Autowired 的默认值）。"""
-    global _DEFAULT_TEMPLATE
-    if _DEFAULT_TEMPLATE is None:
-        _DEFAULT_TEMPLATE = RedisTemplate()
-    return _DEFAULT_TEMPLATE
+def defaultRedisTemplate() -> Any:
+    """获取共享的 RedisTemplate（@Autowired 的默认值）。
+
+    P2-2 起直接返回进程级共享模板：设置 ``CAR_MONIT_REDIS_URL`` 时为
+    :class:`app.middleware.real_redis.RealRedisTemplate`（真实读写），
+    否则为内存替身——与 ``RedisCache`` 操作同一份数据（Spring 单例语义）。
+    """
+    from com.ruoyi.common.core.redis.RedisCache import shared_redis_template
+
+    return shared_redis_template()

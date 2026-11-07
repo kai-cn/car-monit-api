@@ -30,7 +30,7 @@ import re
 import threading
 from contextlib import contextmanager
 from typing import Any, Iterator, Optional
-from urllib.parse import quote
+from urllib.parse import parse_qs, quote
 
 from psycopg.types.string import StrDumperVarchar
 from sqlalchemy import create_engine, event, text
@@ -47,6 +47,10 @@ __all__ = [
     "jdbc_to_sqlalchemy_url",
     "install_gaussdb_version_shim",
 ]
+
+#: 线程本地的事务上下文（P0-4，@Transactional 等价物）。
+#: FastAPI 的同步 handler 跑在 worker 线程里，每个线程至多一个未决事务。
+_TX_LOCAL = threading.local()
 
 _JDBC_PREFIXES = ("jdbc:postgresql://", "jdbc:opengauss://", "jdbc:gaussdb://")
 
@@ -88,13 +92,23 @@ install_gaussdb_version_shim()
 
 
 def jdbc_to_sqlalchemy_url(jdbc_url: str, username: str, password: str) -> str:
-    """``jdbc:postgresql://h:p/db?...`` -> ``postgresql+psycopg://u:p@h:p/db``."""
+    """``jdbc:postgresql://h:p/db?...`` -> ``postgresql+psycopg://u:p@h:p/db``。
+
+    P2（决策④合理默认）：JDBC URL query 串里的 ``currentSchema`` **透传**为
+    psycopg 连接参数（``options=-csearch_path=..``）——pgjdbc 对
+    ``currentSchema`` 的实现就是连接后 ``SET search_path``，透传即与 Java
+    行为等价，不发明任何配置值；URL 未带该参数时行为不变（跟随数据库用户
+    默认 search_path，同 Java 未配置时一致）。其余 query 参数（pgjdbc 专属）
+    依旧忽略。生产 GaussDB 实际 search_path 仍属 docs/迁移审阅报告.md
+    §6.2 D5 待业主确认项（确认的是"值"，不再是"行为"）；
+    ``@TableName(schema=...)`` 的表级前缀由 ``TABLE_SCHEMAS`` 另行处理。
+    """
     raw = jdbc_url.strip()
     for prefix in _JDBC_PREFIXES:
         if raw.startswith(prefix):
             raw = raw[len(prefix):]
             break
-    head, _, _query = raw.partition("?")
+    head, _, query = raw.partition("?")
     netloc, _, database = head.partition("/")
     credentials = ""
     if username:
@@ -102,7 +116,12 @@ def jdbc_to_sqlalchemy_url(jdbc_url: str, username: str, password: str) -> str:
         if password:
             credentials += ":" + quote(password, safe="")
         credentials += "@"
-    return f"postgresql+psycopg://{credentials}{netloc}/{database}"
+    url = f"postgresql+psycopg://{credentials}{netloc}/{database}"
+    if query:
+        schema = (parse_qs(query).get("currentSchema") or [None])[0]
+        if schema:
+            url += "?options=" + quote("-csearch_path=" + schema, safe="")
+    return url
 
 
 def _install_pgjdbc_string_dumper(engine: Engine) -> None:
@@ -174,10 +193,33 @@ class Database:
             self._engine = None
 
     # ------------------------------------------------------------------ queries
+    @staticmethod
+    def _ambient_connection() -> Optional[Connection]:
+        """当前线程是否存在未决事务（P0-4）。"""
+        return getattr(_TX_LOCAL, "connection", None)
+
     @contextmanager
-    def connection(self) -> Iterator[Connection]:
-        with self.engine.connect() as connection:
-            yield connection
+    def transaction(self) -> Iterator[Connection]:
+        """事务上下文（P0-4，Spring ``@Transactional`` 的 REQUIRED 传播等价物）。
+
+        * 上下文内的 :meth:`query` / :meth:`query_scalars` / :meth:`execute`
+          自动复用同一连接并加入本事务（未提交的写对同事务内的读可见）；
+        * 正常退出提交、异常回滚（含 ``rollbackFor = Exception.class`` 语义）；
+        * 嵌套调用复用外层事务（不设 savepoint，等价 REQUIRED 平铺）。
+
+        目前唯一的使用方是 ``DataProcessService.process``（Java 侧全工程唯一的
+        ``@Transactional`` 方法：MySQL 插入 + ES 写入同事务，ES 失败回滚 MySQL）。
+        """
+        existing = self._ambient_connection()
+        if existing is not None:
+            yield existing  # REQUIRED：加入外层事务
+            return
+        with self.engine.begin() as connection:
+            _TX_LOCAL.connection = connection
+            try:
+                yield connection
+            finally:
+                _TX_LOCAL.connection = None
 
     def query(self, sql: str, params: Optional[dict[str, Any]] = None) -> list[dict[str, Any]]:
         """Run a SELECT and return rows as ordered dicts (column label -> value).
@@ -186,18 +228,37 @@ class Database:
         doubled by SQLAlchemy itself when building the ``pyformat`` statement,
         exactly like MyBatis hands the raw SQL to pgjdbc.
         """
+        connection = self._ambient_connection()
+        if connection is not None:
+            return self._query_rows(connection, sql, params)
         with self.engine.connect() as connection:
-            result = connection.execute(text(sql), params or {})
-            return [dict(row) for row in result.mappings().all()]
+            return self._query_rows(connection, sql, params)
+
+    @staticmethod
+    def _query_rows(connection: Connection, sql: str,
+                    params: Optional[dict[str, Any]]) -> list[dict[str, Any]]:
+        result = connection.execute(text(sql), params or {})
+        return [dict(row) for row in result.mappings().all()]
 
     def query_scalars(self, sql: str, params: Optional[dict[str, Any]] = None) -> list[Any]:
         """Run a SELECT returning a single column (MyBatis ``List<String>``)."""
+        connection = self._ambient_connection()
+        if connection is not None:
+            result = connection.execute(text(sql), params or {})
+            return [row[0] for row in result.fetchall()]
         with self.engine.connect() as connection:
             result = connection.execute(text(sql), params or {})
             return [row[0] for row in result.fetchall()]
 
     def execute(self, sql: str, params: Optional[dict[str, Any]] = None) -> int:
-        """Run INSERT/UPDATE/DELETE and return the affected row count."""
+        """Run INSERT/UPDATE/DELETE and return the affected row count.
+
+        在 :meth:`transaction` 上下文内不自行提交（由外层统一提交/回滚）。
+        """
+        connection = self._ambient_connection()
+        if connection is not None:
+            result = connection.execute(text(sql), params or {})
+            return result.rowcount if result.rowcount is not None else 0
         with self.engine.begin() as connection:
             result = connection.execute(text(sql), params or {})
             return result.rowcount if result.rowcount is not None else 0

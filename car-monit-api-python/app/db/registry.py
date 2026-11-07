@@ -38,13 +38,28 @@ from app.db.xml_mapper import (
 
 log = logging.getLogger(__name__)
 
-__all__ = ["MapperRegistry", "InstallReport", "get_registry", "install_mappers"]
+__all__ = ["MapperRegistry", "InstallReport", "get_registry", "install_mappers",
+           "KNOWN_MISSING_STATEMENTS"]
+
+#: TODO(V2/决策①)：Java 侧同样缺失 XML 的 6 个 Mapper 方法（调用即
+#: ``BindingException`` → HTTP 500，见 docs/迁移审阅报告.md §2.4/§6.2 D1）。
+#: 是"补 SQL 恢复 4 个接口"还是"保留与 Java 一致的 500"属业主拍板项，
+#: 在此白名单化以免 P0-5 的 fail-fast 误杀启动；拍板补 SQL 后请同步删条目。
+KNOWN_MISSING_STATEMENTS = frozenset({
+    "com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectGantryNum",
+    "com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01ById",
+    "com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01List",
+    "com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01ListNew",
+    "com.ruoyi.base.mapper.ZdataTrailFittingMapper#selectZdataTrailFittingById",
+    "com.ruoyi.base.mapper.ZdataTrailFittingMapper#selectZdataTrailFittingList",
+})
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
-# The mapper XMLs are *not* duplicated into the Python tree: the migration keeps
-# the original files as the single source of truth, so the classpath is the Java
-# project itself (``refactor/`` sits inside it). A mirrored copy is honoured too,
-# in case someone vendors the XMLs next to the Python code.
+# XML 的唯一真相是 Java 源码树；Python 发布物通过 tools/sync_mapper_xml.py
+# 把副本放进 ``pro-business-api/src/main/resources``（P0-1），独立部署时只有
+# 副本可用。两侧都在时，Python 树的 classpath 根排在父工程**之后**加载、
+# 同名 namespace 后写覆盖，因此**随包副本优先生效**（副本与源逐字节一致，
+# 由 tools/check_mappers.py 的同步校验保证不漂移）。
 _JAVA_ROOT = _PROJECT_ROOT.parent
 _MODULE_ROOTS = ("pro-business-api", "pro-base-common")
 _CLASSPATH_ROOTS = tuple(
@@ -210,6 +225,16 @@ class MapperRegistry:
                 log.warning("%s#%s has no statement (neither XML nor annotation): "
                             "calling it raises like MyBatis", namespace, method_name)
         self._installed = report
+        if not self.mapper_xmls:
+            # P0-1（docs/迁移审阅报告.md）：独立部署 Python 目录时父工程不存在，
+            # XML 必须随包发布（pro-business-api/src/main/resources/...，由
+            # tools/sync_mapper_xml.py 同步）。0 个 XML 意味着所有 Mapper 都会
+            # 退回“移植期臆造实现”并返回空数据 —— 这是静默错误，必须拒绝启动。
+            raise SqlError(
+                "no mapper XML was loaded: the Python package must ship its "
+                "mapper XMLs under pro-business-api/src/main/resources "
+                "(run tools/sync_mapper_xml.py to sync them from the Java tree); "
+                "refusing to continue with zero statements")
         log.info("mapper registry: %s", report.summary())
         if report.orphan_statements:
             log.warning("%d XML statement(s) have no matching mapper method: %s",

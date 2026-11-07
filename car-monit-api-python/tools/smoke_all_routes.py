@@ -36,6 +36,26 @@ _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+# P0-2：冒烟固定 shim 模式（替身可用）。
+os.environ.setdefault("CAR_MONIT_RUNTIME", "shim")
+
+# P1-4：targeted 导出用例的前置条件（同 scripts/smoke_test.py）。
+import tempfile as _tempfile
+
+os.environ.setdefault("OPTIMIZATION_EXPORT_DIR",
+                      _tempfile.mkdtemp(prefix="car-monit-export-"))
+
+
+def _seed_es() -> None:
+    # P2-3：改经业务链路（EsIndexManageService + IndexRequest）种子化——
+    # shim 模式写进程内替身；设了 CAR_MONIT_ES_URL 时写真实集群（同一条代码路径）。
+    from tools.smoke_seed import seed_es_via_business_chain
+
+    seed_es_via_business_chain()
+
+
+_seed_es()
+
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.main import app  # noqa: E402  (importing registers every route)

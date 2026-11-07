@@ -1,0 +1,18 @@
+﻿==============================================================================
+checked files        : 219
+fully matched        : 187
+documented equivalences : 9 known entry(ies)
+Tier A (shared/inherited) : 29 file(s) with 30 name(s)
+Tier B (real gaps)        : 3 file(s)
+==============================================================================
+
+### Tier B -- 未在 Python 树中任何位置定义，且未登记为已知等价映射
+
+car-monit-api-rust/.run/A.java
+  method missing : <entire file missing>
+
+car-monit-api-rust/.run/Q.java
+  method missing : <entire file missing>
+
+car-monit-api-rust/.run/SchemaDump.java
+  method missing : <entire file missing>
