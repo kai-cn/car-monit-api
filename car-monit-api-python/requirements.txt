@@ -1,6 +1,10 @@
 # Runtime dependencies of the Python 3.12 port.
 # Mirrors pyproject.toml. Install with:
 #   D:\Python\Python312\python.exe -m pip install -r requirements.txt
+#
+# P1-8：可复现构建请用 requirements.lock.txt（由 6 个运行时依赖的闭包
+# 精确锁定，不含 dev/本机多余包）：
+#   pip install -r requirements.lock.txt
 
 fastapi>=0.115,<1.0
 uvicorn[standard]>=0.30,<1.0

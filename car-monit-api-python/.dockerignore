@@ -1,0 +1,16 @@
+# 构建上下文裁剪（P1-8）：镜像只需要运行物
+.venv/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+logs/
+docs/
+tests/
+tools/
+scripts/
+_*.py
+_*.txt
+py.log
+.git/
+# 本地口令文件绝不进镜像（P0-6：密钥经环境变量/Secret 注入）
+pro-business-api/src/main/resources/application-local.yml
