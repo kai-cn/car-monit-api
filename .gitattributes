@@ -1,0 +1,3 @@
+# 随包 mapper XML 必须与 Java 源逐字节一致（tools/check_mappers.py 门禁比对磁盘文件）；
+# 锁定 LF，禁止 checkout 时的 LF->CRLF 转换（merge 后主仓曾因此漂移）。
+car-monit-api-python/pro-business-api/src/main/resources/**/*.xml text eol=lf
