@@ -61,3 +61,44 @@
   且不改变现有行为。
 - **影响**：`get_env` 返回 `std::optional<std::string>`，调用点需解引用。
 - **可回退性**：可回退，纯内部工具函数。
+
+## D-006 CI 平台：GitHub Actions，Windows + Linux 双矩阵
+
+- **决策**：使用 GitHub Actions（而非自建 Jenkins/GitLab CI），矩阵覆盖
+  Windows(MSVC)、Ubuntu(GCC)、Ubuntu(Clang)，另加一个 Clang ASan/UBSan job 与
+  一个静态分析 job。
+- **备选**：仅保留本地 PowerShell 脚本；或引入 GitLab CI（当前仓库托管形态未确认）。
+- **理由**：仓库已托管在 Git 平台且无既有 CI 配置，Actions 零基础设施成本；Linux
+  矩阵能把此前“已修但未验证”的 POSIX 分支变成真实验证。本机 WSL 被禁用、无 Docker，
+  Actions 是唯一可执行的 Linux 验证手段。
+- **影响**：首次 push 前无法在本地执行 workflow，只能本地静态检查 YAML；若 Linux
+  出现平台特有编译告警，`CM_WERROR` 可临时置 OFF 解锁。
+- **可回退性**：删除 `.github/workflows/cpp-ci.yml` 即可，不影响构建。
+
+## D-007 静态分析与格式检查的落地方式
+
+- **决策**：
+  - 静态分析用 **cppcheck**（`--enable=warning,performance,portability`），排除
+    `third_party`，`--error-exitcode=1` 阻断；
+  - 同时提供 `.clang-tidy` 配置供 IDE/本地使用，但暂不接入 CI（本机无 clang-tidy，
+    全量接入无法先行验证，避免红叉）；
+  - clang-format 只提供**基线配置** `.clang-format`，CI 只检查“相对基线变更的文件”，
+    且当前为 `continue-on-error` 建议阶段。
+- **备选**：一次性 `clang-format -i` 全仓格式化；或完全不引入格式检查。
+- **理由**：全仓格式化会让本轮工程化 diff 与历史代码风格变更混在一起，难以审阅；
+  增量检查能在新增代码上逐步收敛，不阻塞现有工作。
+- **影响**：老文件不受格式约束；新改动文件会被提示。待全仓逐批格式化后，把
+  `continue-on-error` 移除即可转为阻断。
+- **可回退性**：删除配置与 job 即可。
+
+## D-008 Linux 验证路径
+
+- **决策**：Linux 构建/测试统一走 `scripts/ci-linux.sh`，CI 矩阵与 sanitizer job
+  均调用同一脚本；本地无法验证时以 CI 结果为准。
+- **备选**：在 Windows 上尝试 MinGW/Clang-cl 交叉验证。
+- **理由**：MinGW 与目标 Linux 运行时差异大（POSIX socket、信号、文件系统语义），
+  会给出虚假的安全感；MinGW 也不在本轮工具链假设内。
+- **影响**：Linux 相关问题（socket 阻塞模式、`<fcntl.h>` 等）的最终确认依赖 CI
+  首次运行；若 CI 不可用，则相关结论标注为“代码已修、待 Linux 实测”。
+- **可回退性**：无代码耦合，仅流程约定。
+

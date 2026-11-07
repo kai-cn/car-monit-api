@@ -1,0 +1,12 @@
+# clang-tidy 配置（供 IDE/本地使用；CI 目前以 cppcheck 为准，见 docs/DECISIONS.md D-006）。
+Checks: >
+  -*,
+  bugprone-*,
+  performance-*,
+  modernize-use-override,
+  modernize-use-nullptr,
+  readability-container-size-empty,
+  readability-redundant-string-cstr
+WarningsAsErrors: ''
+HeaderFilterRegex: '.*/src/.*\.(h|hpp)$'
+FormatStyle: file

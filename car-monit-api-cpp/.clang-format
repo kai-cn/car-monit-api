@@ -1,0 +1,17 @@
+# C++ 格式化基线（clang-format）。
+# 说明：仓库尚未整体格式化，本轮只建立基线；CI 仅对“相对基线变更的文件”做检查
+# （scripts/format-check.sh），避免一次性全仓格式化产生巨大 diff。
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+IndentWidth: 2
+ContinuationIndentWidth: 4
+ColumnLimit: 100
+AccessModifierOffset: -1
+BreakBeforeBraces: Attach
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: WithoutElse
+PointerAlignment: Left
+SortIncludes: Never
+IncludeBlocks: Preserve
+DerivePointerAlignment: false
