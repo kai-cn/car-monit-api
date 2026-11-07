@@ -10,6 +10,7 @@
 //
 // Java 侧对应 Druid + pgjdbc。池语义保持一致：初始 min-idle、上限 maxActive、
 // 借出超时 maxWait。
+#include <condition_variable>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -117,9 +118,12 @@ class PgPool {
 public:
   static PgPool& instance();
 
+  // connect_timeout_ms：TCP 建连 + 认证超时；max_wait_ms：借出连接等待超时
+  // （Druid maxWait）。两者语义不同，此前混用同一值。
   void init(const std::string& host, int port, const std::string& user,
             const std::string& password, const std::string& database, int max_conns,
-            int min_idle, int timeout_ms, const std::string& auth_mode = "auto");
+            int min_idle, int connect_timeout_ms, const std::string& auth_mode = "auto",
+            int max_wait_ms = 60000);
   void shutdown();
 
   PgResult query(const std::string& sql);
@@ -136,13 +140,34 @@ private:
   struct ConnSlot {
     std::unique_ptr<PgConn> conn;
     bool in_use = false;
+    bool reserved = false;  // 锁外建连的占位标记
+    long long reserve_gen = 0; // 预留时的池代数（shutdown/re-init 防串槽）
+  };
+  struct Borrowed {
+    std::size_t index = std::string::npos;
+    PgConn* raw = nullptr;
   };
 
+  // 借出连接：锁内取空闲/预留新槽，锁外建连（不持 mu_ 执行 connect，
+  // DB 不可达时不再把全站请求串行阻塞在池锁上）。
+  Borrowed acquire();
+  void release(std::size_t index, bool broken);
+  void note_connect_result_locked(bool ok); // mu_ 持有下调用
+
   std::mutex mu_;
+  std::condition_variable cv_;
   std::vector<ConnSlot> slots_;
   std::string host_, user_, password_, database_, auth_mode_ = "auto";
-  int port_ = 5432, max_ = 20, min_ = 5, timeout_ms_ = 10000;
+  int port_ = 5432, max_ = 20, min_ = 5, timeout_ms_ = 10000, wait_ms_ = 60000;
+  long long generation_ = 0;
+  // 网络故障熔断：连续 kConnectFailureThreshold 次建连失败进入 kConnectCooldownMs
+  // 冷却，冷却期内 acquire 直接抛错，避免每次请求都等满 connect 超时。
+  int consecutive_connect_failures_ = 0;
+  long long breaker_until_epoch_ms_ = 0;
   bool inited_ = false;
+
+  static constexpr int kConnectFailureThreshold = 3;
+  static constexpr long long kConnectCooldownMs = 30000;
 };
 
 } // namespace cm::db

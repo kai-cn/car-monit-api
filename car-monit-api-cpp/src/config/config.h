@@ -40,7 +40,11 @@ struct PgOptions {
   std::string database = "RuoYi";
   int max_conns = 20;
   int min_idle = 5;
+  // TCP 建连 + 认证的超时（pgjdbc connectTimeout 默认 10s）。
   int connect_timeout_ms = 10000;
+  // 借出连接的等待超时（Druid maxWait，默认 60s）。此前误把 maxWait 当
+  // connect 超时使用，两者语义不同，现分开配置。
+  int max_wait_ms = 60000;
   // 认证失败后允许连接池重建连接的次数；默认 0 = 关闭自动重连（熔断）。
   int reconnect_after_auth_failure = 0;
   // auto / md5 / opengauss-sha256 / scram-sha-256，对应 openGauss password_encryption_type

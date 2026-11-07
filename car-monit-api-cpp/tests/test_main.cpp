@@ -6,6 +6,7 @@
 #include "common/error.h"
 #include "common/result.h"
 #include "common/utils.h"
+#include "common/worker_pool.h"
 #include "config/config.h"
 #include "db/auth_guard.h"
 #include "db/pg.h"
@@ -17,6 +18,7 @@
 #include "scheduler/cron.h"
 #include "service/optimization.h"
 
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <cstdlib>
@@ -419,7 +421,9 @@ static void test_local_config_override() {
   fs::create_directories(dir);
   {
     std::ofstream f(dir / "config.yaml");
-    f << "server:\n  port: 9901\nspring:\n  datasource:\n    dynamic:\n      datasource:\n"
+    f << "server:\n  port: 9901\nspring:\n  datasource:\n    dynamic:\n      druid:\n"
+         "        maxActive: 20\n        maxWait: 60000\n        connect-timeout-ms: 7000\n"
+         "      datasource:\n"
          "        master:\n          url: jdbc:postgresql://127.0.0.1:5432/RuoYi\n"
          "          username: gaussdb\n          password: ${CM_PG_PASSWORD}\n";
   }
@@ -432,6 +436,11 @@ static void test_local_config_override() {
   cfg.load((dir / "config.yaml").string());
   CHECK(cfg.pg().password == "local-secret");
   CHECK(cfg.local_override_path().find("config.local.yaml") != std::string::npos);
+  // Druid maxWait（借出等待）与 connect-timeout-ms（建连超时）分开解析，
+  // 不再把 maxWait 误当 connect 超时（审阅 §3.3 R8）。
+  CHECK(cfg.pg().max_conns == 20);
+  CHECK(cfg.pg().max_wait_ms == 60000);
+  CHECK(cfg.pg().connect_timeout_ms == 7000);
   fs::remove_all(dir);
 }
 
@@ -679,6 +688,89 @@ static void test_reliability_timeout() {
   cfg.kafka.enabled = old_enabled;
 }
 
+static void test_worker_pool() {
+  // 受控线程池（审阅 §4.2 #15）：固定 worker + 有界队列 + 满载拒绝 + shutdown join。
+  constexpr int kWorkers = 2, kQueue = 3;
+  cm::WorkerPool pool(kWorkers, kQueue);
+  std::atomic<int> done{0};
+  std::atomic<int> running{0};
+  std::atomic<bool> gate{false};
+  auto wait_for = [&](auto&& pred, int timeout_ms) {
+    for (int t = 0; t < timeout_ms && !pred(); t += 5)
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    return pred();
+  };
+  auto submit_blocked = [&] {
+    return pool.submit([&] {
+      running.fetch_add(1);
+      while (!gate.load()) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+      done.fetch_add(1);
+    });
+  };
+
+  // 逐个提交并确认 worker 已开跑（避免与队列容量判断竞态），占满 2 个 worker。
+  CHECK(submit_blocked());
+  CHECK(wait_for([&] { return running.load() >= 1; }, 5000));
+  CHECK(submit_blocked());
+  CHECK(wait_for([&] { return running.load() >= 2; }, 5000));
+  // 两个 worker 都被 gate 挡住：再灌满队列（容量 3），下一个提交应被拒绝。
+  CHECK(submit_blocked());
+  CHECK(submit_blocked());
+  CHECK(submit_blocked());
+  CHECK(!submit_blocked());
+  gate.store(true);
+  CHECK(wait_for([&] { return done.load() >= 5; }, 5000));
+
+  // 排空后可继续提交；shutdown 后拒绝且不崩溃。
+  CHECK(pool.submit([&] { done.fetch_add(1); }));
+  CHECK(wait_for([&] { return done.load() >= 6; }, 5000));
+  pool.shutdown();
+  CHECK(!pool.submit([] {}));
+}
+
+static void test_pg_pool_connect_breaker() {
+  // 连接池"锁外建连 + 网络故障熔断"（审阅 §3.3 R8）：
+  // 连一个必然拒绝的本地端口（127.0.0.1:1，无监听、不涉及真实数据库认证，
+  // 不会产生失败登录）。连续 3 次建连失败后进入 30s 熔断，快速失败。
+  auto& pool = cm::db::PgPool::instance();
+  pool.init("127.0.0.1", 1, "probe-user", "probe-password-not-a-real-login", "probe", 2, 0, 500,
+            "auto", 2000);
+  auto expect_db_error = [&](const char* needle) {
+    try {
+      pool.query("SELECT 1");
+      std::cerr << "FAIL 连接池应抛 DbError: " << needle << std::endl;
+      ++g_fail;
+      return;
+    } catch (const cm::DbError& e) {
+      if (std::string(e.message()).find(needle) == std::string::npos) {
+        std::cerr << "FAIL DbError 消息不含预期关键字 '" << needle << "': " << e.message()
+                  << std::endl;
+        ++g_fail;
+      }
+    } catch (const std::exception& e) {
+      std::cerr << "FAIL 应为 DbError 而非: " << e.what() << std::endl;
+      ++g_fail;
+    }
+  };
+  expect_db_error("无法连接数据库");
+  expect_db_error("无法连接数据库");
+  expect_db_error("无法连接数据库");
+  // 第 4 次：熔断冷却中（不真正发起建连，立即失败）。
+  expect_db_error("熔断冷却");
+  pool.shutdown();
+}
+
+static void test_redis_reconnect_no_deadlock() {
+  // Redis 重连路径（审阅 §3.3 R7 + 代码复查）：
+  // 1) fd 泄漏：ensure() 不再先把 sock_ 置 -1（旧 fd 由 connect_locked 关闭）；
+  // 2) 自锁死锁：ensure() 在 cmd 持锁下改走 connect_locked（原实现调 connect
+  //    会二次加锁）。连必然拒绝的 127.0.0.1:1，随后的 get 必须快速返回而不是挂死。
+  auto& redis = cm::cache::Redis::instance();
+  CHECK(!redis.connect("127.0.0.1", 1, "", 0, 300));
+  auto v = redis.get("cm-test-reconnect-probe"); // 原实现在这里死锁
+  CHECK(!v.has_value());
+}
+
 int main() {
   test_utils();
   test_datetime();
@@ -690,6 +782,9 @@ int main() {
   test_cors();
   test_kafka_no_broker();
   test_reliability_timeout();
+  test_worker_pool();
+  test_pg_pool_connect_breaker();
+  test_redis_reconnect_no_deadlock();
   test_auth_guard();
   test_local_config_override();
   test_query_field_whitelist();

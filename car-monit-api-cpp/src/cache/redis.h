@@ -54,6 +54,10 @@ private:
   bool send_command(const std::vector<std::string>& args);
   bool read_reply(std::string& out, char& type);
   bool read_line(std::string& out);
+  // mu_ 已由调用方持有时使用的重连入口（connect 会自己加锁，在持锁路径下
+  // 调 connect 会造成非递归 mutex 自锁死锁）。
+  bool connect_locked(const std::string& host, int port, const std::string& password,
+                      int database, int timeout_ms);
   void close_unlocked();
 
   std::mutex mu_;

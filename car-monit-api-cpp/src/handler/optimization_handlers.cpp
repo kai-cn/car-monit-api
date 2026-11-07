@@ -4,6 +4,7 @@
 #include "common/logging.h"
 #include "common/result.h"
 #include "common/utils.h"
+#include "common/worker_pool.h"
 #include "http/server.h"
 
 #include <string>
@@ -264,13 +265,17 @@ void register_optimization(http::Router& r) {
   });
 
   r.add("POST", "/api/v1/large/sync/full", [](http::Request&) {
-    std::thread([] {
-      try {
-        service::data_sync().full_sync_one_year();
-      } catch (const std::exception& e) {
-        CM_LOG_ERROR("optimization.sync") << "全量同步失败: " << e.what();
-      }
-    }).detach();
+    // 受控线程池（审阅 §4.2 #15）：替代 per-request detached 线程，
+    // 满载时快速失败而不是无限拉线程。
+    if (!cm::background_pool().submit([] {
+          try {
+            service::data_sync().full_sync_one_year();
+          } catch (const std::exception& e) {
+            CM_LOG_ERROR("optimization.sync") << "全量同步失败: " << e.what();
+          }
+        })) {
+      return http::Response::ok(error_body(503, "后台任务队列已满，请稍后重试"));
+    }
     Json out = Json::object();
     out["code"] = 200;
     out["message"] = "全量同步任务已提交";
@@ -295,13 +300,15 @@ void register_optimization(http::Router& r) {
     std::string end = required_param(req, "endTime");
     service::DataSource ds = service::resolve_data_source(type);
 
-    std::thread([ds, start, end] {
-      try {
-        service::data_sync().repair_sync(ds, start, end);
-      } catch (const std::exception& e) {
-        CM_LOG_ERROR("optimization.sync") << "修复同步失败: " << e.what();
-      }
-    }).detach();
+    if (!cm::background_pool().submit([ds, start, end] {
+          try {
+            service::data_sync().repair_sync(ds, start, end);
+          } catch (const std::exception& e) {
+            CM_LOG_ERROR("optimization.sync") << "修复同步失败: " << e.what();
+          }
+        })) {
+      return http::Response::ok(error_body(503, "后台任务队列已满，请稍后重试"));
+    }
 
     Json out = Json::object();
     out["code"] = 200;

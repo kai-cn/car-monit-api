@@ -5,6 +5,7 @@
 #include "db/auth_guard.h"
 #include "db/pg.h"
 #include "common/logging.h"
+#include "common/worker_pool.h"
 #include "http/server.h"
 #include "mq/kafka_producer.h"
 #include "service/snapshot_flow_sync.h"
@@ -49,7 +50,8 @@ int main(int argc, char** argv) {
   // 首次请求时才建立物理连接。
   cm::db::PgPool::instance().init(cfg.pg().host, cfg.pg().port, cfg.pg().user, cfg.pg().password,
                                   cfg.pg().database, cfg.pg().max_conns, cfg.pg().min_idle,
-                                  cfg.pg().connect_timeout_ms, cfg.pg().auth_mode);
+                                  cfg.pg().connect_timeout_ms, cfg.pg().auth_mode,
+                                  cfg.pg().max_wait_ms);
   try {
     auto& pool = cm::db::PgPool::instance();
     pool.query("SELECT 1");
@@ -88,6 +90,8 @@ int main(int argc, char** argv) {
   cm::service::start_snapshot_flow_sync();
 
   int rc = cm::http::run_server(cfg.server_port(), router, 16);
+  // 停机回收：后台任务池（导出/同步）先排空 join，再停 Kafka（flush）。
+  cm::background_pool().shutdown();
   cm::mq::KafkaProducer::instance().stop();
   return rc;
 
