@@ -41,6 +41,8 @@ from org.apache.http.client.config.RequestConfig import RequestConfig
 from org.elasticsearch.client.Request import Request
 from org.elasticsearch.client.Response import Response, StatusLine, HttpEntity
 
+from app.runtime import reject_shim_operation
+
 __all__ = ["RestClient", "RestClientBuilder"]
 
 #: ``GET/PUT /_ilm/policy/{name}`` 的路径匹配
@@ -76,6 +78,11 @@ class RestClient(object):
         【Java→Python】真实实现会发 HTTP；替身只处理 EsIndexManageService
         用到的三个 ILM 相关端点（见模块注释），其余端点返回 200 空 JSON。
         """
+        # P0-2：prod 模式下拒绝“假响应”（EsIndexManageService 的 ILM 调用走这里；
+        # 异常会被其 init 的 catch 分支吞掉并告警，与 Java-ES-宕机时行为一致）。
+        reject_shim_operation(
+            "RestClient.performRequest",
+            "（真实 ES 适配器未实现，请求不会发往集群。）")
         method = (request.getMethod() or "GET").upper()
         endpoint = request.getEndpoint() or ""
         body = request.getJsonEntity()

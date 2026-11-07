@@ -36,6 +36,9 @@ _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+# P0-2：冒烟固定 shim 模式（替身可用）。
+os.environ.setdefault("CAR_MONIT_RUNTIME", "shim")
+
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.main import app  # noqa: E402  (importing registers every route)

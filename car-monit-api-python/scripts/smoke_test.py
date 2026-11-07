@@ -42,6 +42,9 @@ _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+# P0-2：自检固定 shim 模式（替身可用）；prod 模式守卫由 tests/test_v2_p0.py 覆盖。
+os.environ.setdefault("CAR_MONIT_RUNTIME", "shim")
+
 START = "2025-06-01 00:00:00"
 END = "2025-06-02 00:00:00"
 

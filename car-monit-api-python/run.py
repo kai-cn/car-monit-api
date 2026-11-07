@@ -27,6 +27,17 @@ def main() -> None:
     level = os.environ.get("CAR_MONIT_LOG_LEVEL", "INFO")
     configure_logging(level)
 
+    # P0-2：shim 模式下打印醒目横幅，防止“替身假成功”被误当生产环境使用。
+    from app.runtime import runtime_mode
+
+    if runtime_mode() != "prod":
+        print("=" * 74)
+        print("⚠  CAR_MONIT_RUNTIME=shim（开发/测试模式）")
+        print("⚠  Kafka / Pulsar / RocketMQ / ES / Redis 写 / JdbcTemplate / Forest")
+        print("⚠  均为进程内替身：操作返回“成功”但数据不会离开本进程。")
+        print("⚠  生产部署必须设置 CAR_MONIT_RUNTIME=prod（假成功将被拒绝并抛错）。")
+        print("=" * 74, flush=True)
+
     reload_enabled = os.environ.get("CAR_MONIT_RELOAD", "false").strip().lower() in ("1", "true", "yes", "on")
     uvicorn.run(
         "app.main:app",

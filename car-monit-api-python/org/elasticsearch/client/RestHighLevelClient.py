@@ -64,6 +64,8 @@ from org.elasticsearch.search.SearchHits import SearchHits
 from org.elasticsearch.search.aggregations.Aggregations import Aggregations
 from org.elasticsearch.search.builder.SearchSourceBuilder import SearchSourceBuilder
 
+from app.runtime import reject_shim_operation
+
 __all__ = ["RestHighLevelClient"]
 
 
@@ -123,6 +125,10 @@ class RestHighLevelClient(object):
     def index(self, request: IndexRequest,
               options: Any = None) -> IndexResponse:
         """对应 ``index(IndexRequest, RequestOptions)``。"""
+        # P0-2：prod 模式下拒绝“假写入”（文档只会进进程内存，集群收不到）。
+        reject_shim_operation(
+            "RestHighLevelClient.index",
+            "（真实 ES 适配器未实现，文档不会写入集群。）")
         self._ensureAvailable()
         index_name = request.index()
         doc_id = request.getId()
@@ -153,6 +159,10 @@ class RestHighLevelClient(object):
         语义对齐点：Java 的 bulk 是“部分失败”语义 —— 单条文档失败只会体现在
         对应 `BulkItemResponse` 上，不会中断整个批次；替身同样逐条 try/except。
         """
+        # P0-2：prod 模式下拒绝“假写入”（bulkAsync 内部逐条调用 index，此处统一拦截）。
+        reject_shim_operation(
+            "RestHighLevelClient.bulkAsync",
+            "（真实 ES 适配器未实现，批次不会写入集群。）")
         self._ensureAvailable()
         items: List[BulkItemResponse] = []
         for action in request.requests():
@@ -171,6 +181,11 @@ class RestHighLevelClient(object):
     def search(self, request: SearchRequest,
                options: Any = None) -> SearchResponse:
         """对应 ``search(SearchRequest, RequestOptions)``。"""
+        # P0-2：prod 模式下拒绝“假查询”（内存索引 ≠ 集群数据，查出的结果是错的；
+        # 抛错后 UnifiedQueryService 走 MySQL 降级，与 Java-ES-宕机一致）。
+        reject_shim_operation(
+            "RestHighLevelClient.search",
+            "（真实 ES 适配器未实现，查询不会发往集群。）")
         self._ensureAvailable()
         builder: Optional[SearchSourceBuilder] = request.getSource()
         query = builder.getQuery() if builder is not None else None
@@ -252,6 +267,10 @@ class RestHighLevelClient(object):
         游标已被 clear（或 id 非法）时，ES 抛 ``SearchContextMissingException``，
         替身抛 ``ValueError``。
         """
+        # P0-2：prod 模式下拒绝“假游标”（进程内 _SCROLLS ≠ 集群 search context）。
+        reject_shim_operation(
+            "RestHighLevelClient.scroll",
+            "（真实 ES 适配器未实现，游标不会发往集群。）")
         self._ensureAvailable()
         scroll_id = request.scrollId()
         cursor = self._SCROLLS.get(scroll_id)

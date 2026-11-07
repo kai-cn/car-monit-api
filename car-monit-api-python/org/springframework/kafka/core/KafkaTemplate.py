@@ -25,6 +25,8 @@ from typing import Any, List, Optional, Tuple
 from org.springframework.kafka.support.SendResult import RecordMetadata, SendResult
 from org.springframework.util.concurrent.ListenableFuture import ListenableFuture
 
+from app.runtime import reject_shim_operation
+
 __all__ = ["KafkaTemplate", "defaultKafkaTemplate"]
 
 
@@ -49,6 +51,10 @@ class KafkaTemplate(object):
     # ------------------------------------------------------------------ 发送
     def send(self, topic: str, key: Any = None, value: Any = None) -> ListenableFuture:
         """等价 `send(String topic, K key, V value)`；返回已完成的 ListenableFuture。"""
+        # P0-2：prod 模式下拒绝"假成功"发送（消息只会进进程内存，broker 收不到）。
+        reject_shim_operation(
+            "KafkaTemplate.send",
+            "（真实 Kafka 适配器未实现，消息不会到达 broker。）")
         future = ListenableFuture()
 
         error = self._next_error()

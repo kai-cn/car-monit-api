@@ -31,6 +31,20 @@ from typing import Any, Collection, Iterable, Optional
 
 from com.ruoyi.common.core.redis._RespClient import RespClient, open_from_env
 
+from app.runtime import reject_shim_operation
+
+
+def _reject_shim_write(operation: str) -> None:
+    """P0-2（docs/迁移审阅报告.md）：prod 模式下拒绝进程内 Redis 写。
+
+    读不受影响（含 CAR_MONIT_REDIS_URL 的标量只读穿透）。写适配器未实现的原因：
+    对象值需要与 Java FastJson（``@type``/``123L``）兼容的序列化决策，
+    属报告 §6.2 D2 待确认项；实现路径见报告 P2-2。
+    """
+    reject_shim_operation(
+        "Redis." + operation,
+        "（真实 Redis 写适配器未实现，写入只对本进程可见。）")
+
 
 class TimeUnit(Enum):
     """java.util.concurrent.TimeUnit 的最小替身（只保留本项目用到的单位）。
@@ -83,6 +97,7 @@ class _ValueOperations:
 
     def set(self, key: str, value: Any, timeout: Optional[int] = None,
             time_unit: Optional[TimeUnit] = None) -> None:
+        _reject_shim_write("opsForValue().set")
         # 【Java→Python】Spring Data Redis 通过序列化器把对象转成字节写入 Redis，
         # 读出来是“新对象”；这里用 deepcopy 模拟同样的序列化隔离。
         self._store[key] = copy.deepcopy(value)
@@ -106,6 +121,7 @@ class _ValueOperations:
         【Java→Python】Redis 的 INCRBY 在 key 不存在时按 0 处理；
         字符串值在 Redis 里会报错，这里用 int() 还原“非数字即异常”的语义。
         """
+        _reject_shim_write("opsForValue().increment")
         self._check_expire(key)
         current = self._store.get(key)
         value = 0 if current is None else int(current)
@@ -120,6 +136,7 @@ class _ValueOperations:
         【Java→Python】Redis 的 SET NX 是原子操作：已存在返回 False 且不覆盖;
         本替身在进程内单线程写入，无需额外加锁。
         """
+        _reject_shim_write("opsForValue().setIfAbsent")
         self._check_expire(key)
         if key in self._store:
             return False
@@ -140,6 +157,7 @@ class _ListOperations:
         self._store = store
 
     def rightPushAll(self, key: str, data_list: Iterable[Any]) -> int:
+        _reject_shim_write("opsForList().rightPushAll")
         target = self._store.setdefault(key, [])
         target.extend(copy.deepcopy(list(data_list)))
         return len(target)
@@ -154,12 +172,14 @@ class _ListOperations:
 
     def rightPush(self, key: str, value: Any) -> int:
         """RPUSH：从尾部插入，返回 push 后列表长度。"""
+        _reject_shim_write("opsForList().rightPush")
         target = self._store.setdefault(key, [])
         target.append(copy.deepcopy(value))
         return len(target)
 
     def leftPush(self, key: str, value: Any) -> int:
         """LPUSH：从头部插入，返回 push 后列表长度。"""
+        _reject_shim_write("opsForList().leftPush")
         target = self._store.setdefault(key, [])
         target.insert(0, copy.deepcopy(value))
         return len(target)
@@ -177,6 +197,7 @@ class _ListOperations:
 
     def set(self, key: str, index: int, value: Any) -> None:
         """LSET：索引越界时 Redis 抛 ERR index out of range。"""
+        _reject_shim_write("opsForList().set")
         data = self._store.get(key) or []
         if index >= len(data) or index < -len(data):
             raise IndexError("index out of range")
@@ -184,6 +205,7 @@ class _ListOperations:
 
     def remove(self, key: str, count: int, value: Any) -> int:
         """LREM：count>0 从头删、count<0 从尾删、count=0 全删；返回删除个数。"""
+        _reject_shim_write("opsForList().remove")
         data = self._store.get(key) or []
         removed = 0
         if count > 0:
@@ -213,6 +235,7 @@ class _ListOperations:
 
     def trim(self, key: str, start: int, end: int) -> None:
         """LTRIM：只保留 [start, end]（闭区间，负数从尾部数），其余删除。"""
+        _reject_shim_write("opsForList().trim")
         data = self._store.get(key) or []
         length = len(data)
         start_index = start if start >= 0 else max(0, length + start)
@@ -226,6 +249,7 @@ class _ListOperations:
         【Java→Python】BRPOP 在真实 Redis 里是阻塞命令，这里用短暂的轮询等待模拟，
         timeout=0 表示“永久阻塞”，为避免进程挂死，这里退化为“立即返回 None”。
         """
+        _reject_shim_write("opsForList().rightPop")
         deadline = None
         if timeout is not None and timeout > 0:
             unit = time_unit or TimeUnit.SECONDS
@@ -245,6 +269,7 @@ class _BoundSetOperations:
         self._key = key
 
     def add(self, *values: Any) -> int:
+        _reject_shim_write("boundSetOps().add")
         target = self._store.setdefault(self._key, set())
         before = len(target)
         target.update(copy.deepcopy(list(values)))
@@ -263,6 +288,7 @@ class _SetOperations:
 
     def add(self, key: str, values: Any) -> int:
         """SADD：Java 传的是 Object... 数组，这里接受可迭代对象或单值。"""
+        _reject_shim_write("opsForSet().add")
         target = self._store.setdefault(key, set())
         before = len(target)
         if isinstance(values, (list, tuple, set, frozenset)):
@@ -275,6 +301,7 @@ class _SetOperations:
         return len(self._store.get(key) or set())
 
     def remove(self, key: str, values: Any) -> int:
+        _reject_shim_write("opsForSet().remove")
         target = self._store.get(key) or set()
         if isinstance(values, (list, tuple, set, frozenset)):
             candidates = list(values)
@@ -293,10 +320,12 @@ class _HashOperations:
         self._store = store
 
     def putAll(self, key: str, data_map: dict[str, Any]) -> None:
+        _reject_shim_write("opsForHash().putAll")
         target = self._store.setdefault(key, {})
         target.update(copy.deepcopy(data_map))
 
     def put(self, key: str, h_key: str, value: Any) -> None:
+        _reject_shim_write("opsForHash().put")
         target = self._store.setdefault(key, {})
         target[h_key] = copy.deepcopy(value)
 
@@ -314,6 +343,7 @@ class _HashOperations:
         return [copy.deepcopy(target.get(h_key)) for h_key in h_keys]
 
     def delete(self, key: str, h_key: str) -> int:
+        _reject_shim_write("opsForHash().delete")
         target = self._store.get(key) or {}
         return 1 if target.pop(h_key, None) is not None else 0
 
@@ -322,6 +352,7 @@ class _HashOperations:
 
     def increment(self, key: str, h_key: str, delta: float = 1) -> float:
         """HINCRBYFLOAT 的语义：field 不存在按 0 处理。"""
+        _reject_shim_write("opsForHash().increment")
         target = self._store.setdefault(key, {})
         current = target.get(h_key)
         value = 0.0 if current is None else float(current)
@@ -362,6 +393,7 @@ class _InMemoryRedisTemplate:
         return _BoundSetOperations(self._store, key)
 
     def expire(self, key: str, timeout: int, unit: TimeUnit) -> bool:
+        _reject_shim_write("expire")
         if key not in self._store:
             return False
         self._expiries[key] = time.time() + unit.toSeconds(timeout)
@@ -383,6 +415,7 @@ class _InMemoryRedisTemplate:
 
     def delete(self, key_or_keys: Any) -> int:
         """Java: delete(String) / delete(Collection) 两个重载，返回删除数量。"""
+        _reject_shim_write("delete")
         if isinstance(key_or_keys, str):
             removed = 1 if self._store.pop(key_or_keys, None) is not None else 0
             self._expiries.pop(key_or_keys, None)

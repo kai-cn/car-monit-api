@@ -32,6 +32,7 @@ from app import __version__
 from app.health import health_payload
 from app.logging_config import configure_logging
 from app.routes import register_routes
+from app.runtime import runtime_mode
 from app.settings import settings
 from app.web.binding import BindingError
 from app.web.errors import basic_error_endpoint_response, error_response
@@ -94,6 +95,7 @@ async def lifespan(_: FastAPI):
 
     elapsed = time.perf_counter() - started
     log.info("Starting %s v%s (Python %s)", APP_NAME, __version__, os.sys.version.split()[0])
+    log.info("Runtime mode: %s (CAR_MONIT_RUNTIME)", runtime_mode())
     log.info("Tomcat started on port(s): %s (http) with context path '%s'",
              os.environ.get("CAR_MONIT_PORT", settings.server_port), settings.context_path)
     log.info("MyBatis: %s", mapper_note)
