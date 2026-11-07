@@ -326,7 +326,7 @@ bool should_route_to_es(DataSource ds, const std::string& start, const std::stri
 
 Json pg_rows(const meta::EntityMeta& m, const repo::SqlFragment& where, const std::string& order,
              long long limit, long long offset) {
-  std::string sql = "SELECT " + m.select_sql + " FROM " + m.table + " WHERE 1=1" + where.sql;
+  std::string sql = "SELECT " + meta::select_columns(m) + " FROM " + m.table + " WHERE 1=1" + where.sql;
   if (!order.empty()) sql += " ORDER BY " + order;
   if (limit > 0) {
     sql += " LIMIT " + std::to_string(limit);

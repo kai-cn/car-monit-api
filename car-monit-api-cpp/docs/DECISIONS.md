@@ -166,5 +166,28 @@
   单连接模型在高并发下是已知瓶颈，后续如需可再引入连接池/pipeline。
 - **可回退性**：`Redis` 接口未变，可替换回自研实现；但 TLS/超时能力会随之丢失。
 
+## D-013 查询质量：运行期列展开、字典本地缓存、深翻页标注
+
+- **决策**：
+  1. `meta::select_columns` 在运行期把 `select_sql == "*"` 的实体按 `fields` 的物理列
+     展开（跳过空列、按列名去重），所有 SELECT 入口统一走该函数；
+  2. 字典在 Redis 缓存之上增加进程内缓存（TTL 300s，可显式失效）；
+  3. `weight_capture_map` 先查 Redis，再按 100 个 uuid 批量回源；
+  4. 深翻页保持 `LIMIT/OFFSET`（与 Java PageHelper 一致），count 查询去掉
+     `ORDER BY`，并在 COMPATIBILITY 标注 O(offset) 为已知限制。
+- **备选**：
+  1. 直接改 `entities_generated.h` 里 20 处 `*`：文件为自动生成，手改会破坏
+     “可重新生成”的约束；
+  2. 不加入本地缓存，只做批量回源：track 处理每个点位时仍会重复 Redis GET +
+     JSON 解析 + map 重建；
+  3. 引入 keyset pagination：会改变 API 分页语义，与 Java 行为不一致。
+- **理由**：运行期展开不触碰生成文件，且测试能直接断言映射列齐全；本地缓存
+  在保持 Redis 共享缓存的前提下把高频字典读取降为进程内操作。
+- **影响**：`select_columns` 每次调用会拼接字符串（对每请求一次可忽略）；本地字典
+  缓存最多滞后 5 分钟（已在 COMPATIBILITY 标注）。
+- **可回退性**：三处均可独立回退（恢复 `select_sql` 直接用、去掉 memo_map、
+  改回逐条回源）。
+
+
 
 

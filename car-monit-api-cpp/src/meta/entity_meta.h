@@ -7,6 +7,7 @@
 //     动态行可以精确复现“全字段 + null 填充”的序列化结果；
 //   * 过滤条件（@RequestParam 绑定到实体属性）在 MyBatis XML 中
 //     是固定的 if 链，用 FilterMeta 描述即可一一对应。
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -58,5 +59,23 @@ struct EntityMeta {
   std::vector<FieldMeta> fields;
   std::vector<FilterMeta> filters;
 };
+
+// 实际使用的 SELECT 列清单：
+//   * select_sql 为显式列清单时原样返回；
+//   * select_sql 为 "*" 时按 fields 的物理列展开（跳过无物理列的 Java-only 字段，
+//     并按列名去重），使查询只取 resultMap 需要的列。
+inline std::string select_columns(const EntityMeta& m) {
+  if (m.select_sql != "*") return m.select_sql;
+  std::string out;
+  std::vector<std::string> seen;
+  for (const auto& f : m.fields) {
+    if (f.column.empty()) continue;
+    if (std::find(seen.begin(), seen.end(), f.column) != seen.end()) continue;
+    seen.push_back(f.column);
+    if (!out.empty()) out += ",\n\t";
+    out += f.column;
+  }
+  return out.empty() ? "*" : out;
+}
 
 } // namespace cm::meta
