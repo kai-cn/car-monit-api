@@ -30,3 +30,6 @@ pythonpath = [
     "pro-business-api/src/main/java",
 ]
 testpaths = ["tests"]
+markers = [
+    "integration: 需要真实数据库/中间件（CAR_MONIT_TEST_DB=1 开启，默认跳过）",
+]
