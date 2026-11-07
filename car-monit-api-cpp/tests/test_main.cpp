@@ -14,6 +14,7 @@
 #include "http/server.h"
 #include "mq/kafka_producer.h"
 #include "router/routes.h"
+#include "scheduler/cron.h"
 #include "service/optimization.h"
 
 #include <cassert>
@@ -557,6 +558,94 @@ static void test_info_envelope_contract() {
   CHECK(found["code"] == 200);
 }
 
+static void test_cron_spring_semantics() {
+  // Spring @Scheduled cron 语义（以 Java 侧 spring-context 5.3.6 实证行为为准，
+  // 审阅报告 §3.3 R4：0/3 步进被忽略、周字段口径、日/周组合语义）。
+  using cm::scheduler::WallTime;
+  auto wt = [](int mon, int day, int h, int m, int s, int wday) {
+    WallTime t;
+    t.year = 2026;
+    t.month = mon;
+    t.day = day;
+    t.hour = h;
+    t.minute = m;
+    t.second = s;
+    t.wday = wday;
+    return t;
+  };
+  auto m = [](const char* e, WallTime t) { return cm::scheduler::cron_match(e, t); };
+
+  // 实际任务表达式：syncCurrentTrack "0 0/3 * * * ?" 每 3 分钟（修复前只在第 0 分）。
+  CHECK(m("0 0/3 * * * ?", wt(11, 7, 10, 0, 0, 6)));
+  CHECK(m("0 0/3 * * * ?", wt(11, 7, 10, 3, 0, 6)));
+  CHECK(m("0 0/3 * * * ?", wt(11, 7, 10, 57, 0, 6)));
+  CHECK(!m("0 0/3 * * * ?", wt(11, 7, 10, 1, 0, 6)));
+  CHECK(!m("0 0/3 * * * ?", wt(11, 7, 10, 2, 0, 6)));
+  CHECK(!m("0 0/3 * * * ?", wt(11, 7, 10, 4, 0, 6)));
+  CHECK(!m("0 0/3 * * * ?", wt(11, 7, 10, 0, 1, 6))); // 秒必须为 0
+  // */N 等价 0/N：processPendingQueue 每分钟、syncGantryCaptureData 每 5 分钟。
+  CHECK(m("0 */1 * * * ?", wt(11, 7, 10, 7, 0, 6)));
+  CHECK(m("0 */5 * * * ?", wt(11, 7, 10, 25, 0, 6)));
+  CHECK(!m("0 */5 * * * ?", wt(11, 7, 10, 26, 0, 6)));
+  // 区间 + 步进（实证 "1-5/2" = 1,3,5）。
+  CHECK(m("0 1-5/2 * * * ?", wt(11, 7, 10, 1, 0, 6)));
+  CHECK(m("0 1-5/2 * * * ?", wt(11, 7, 10, 3, 0, 6)));
+  CHECK(m("0 1-5/2 * * * ?", wt(11, 7, 10, 5, 0, 6)));
+  CHECK(!m("0 1-5/2 * * * ?", wt(11, 7, 10, 2, 0, 6)));
+  CHECK(!m("0 1-5/2 * * * ?", wt(11, 7, 10, 4, 0, 6)));
+  CHECK(!m("0 1-5/2 * * * ?", wt(11, 7, 10, 7, 0, 6)));
+  // 纯数字头 + 步进（实证 "5/15" = 5,20,35,50）。
+  CHECK(m("0 5/15 * * * ?", wt(11, 7, 10, 5, 0, 6)));
+  CHECK(m("0 5/15 * * * ?", wt(11, 7, 10, 20, 0, 6)));
+  CHECK(m("0 5/15 * * * ?", wt(11, 7, 10, 35, 0, 6)));
+  CHECK(m("0 5/15 * * * ?", wt(11, 7, 10, 50, 0, 6)));
+  CHECK(!m("0 5/15 * * * ?", wt(11, 7, 10, 6, 0, 6)));
+  CHECK(!m("0 5/15 * * * ?", wt(11, 7, 10, 15, 0, 6)));
+  // 单值精确 / 逗号列表 / 秒字段。
+  CHECK(m("0 5 * * * ?", wt(11, 7, 10, 5, 0, 6)));
+  CHECK(!m("0 5 * * * ?", wt(11, 7, 10, 6, 0, 6)));
+  CHECK(m("0 5,10,15 * * * ?", wt(11, 7, 10, 10, 0, 6)));
+  CHECK(!m("0 5,10,15 * * * ?", wt(11, 7, 10, 11, 0, 6)));
+  CHECK(m("30 * * * * ?", wt(11, 7, 10, 0, 30, 6)));
+  CHECK(!m("30 * * * * ?", wt(11, 7, 10, 0, 29, 6)));
+  // 日/时/月：syncBaseInfo 每天 0 点；syncHistroyTrack 每天 4 点；含月字段。
+  CHECK(m("0 0 0 * * ?", wt(11, 7, 0, 0, 0, 6)));
+  CHECK(!m("0 0 0 * * ?", wt(11, 7, 1, 0, 0, 6)));
+  CHECK(m("0 0 4 1 1 ?", wt(1, 1, 4, 0, 0, 4)));
+  CHECK(!m("0 0 4 1 1 ?", wt(2, 1, 4, 0, 0, 4)));
+  // 周字段（实证：0 与 7 均为周日、1=周一、6=周六）。
+  CHECK(m("* * * * * 0", wt(11, 1, 10, 0, 0, 0)));
+  CHECK(m("* * * * * 7", wt(11, 1, 10, 0, 0, 0)));
+  CHECK(m("* * * * * 6", wt(11, 7, 10, 0, 0, 6)));
+  CHECK(m("* * * * * 1", wt(11, 2, 10, 0, 0, 1)));
+  CHECK(!m("* * * * * 1", wt(11, 1, 10, 0, 0, 0)));
+  // 周区间 6-7 = 周六与周日；周列表。
+  CHECK(m("* * * * * 6-7", wt(11, 7, 10, 0, 0, 6)));
+  CHECK(m("* * * * * 6-7", wt(11, 1, 10, 0, 0, 0)));
+  CHECK(!m("* * * * * 6-7", wt(11, 2, 10, 0, 0, 1)));
+  CHECK(m("* * * * * 1,3,5", wt(11, 4, 10, 0, 0, 3)));
+  CHECK(!m("* * * * * 1,3,5", wt(11, 3, 10, 0, 0, 2)));
+  // 日与周同时受限为 AND（实证 "0 0 0 1 * 1" 仅在"1 号且周一"触发，
+  // 如 2027-02-01；审阅报告称 Spring 为 OR，实证为 AND，以实证为准）。
+  CHECK(m("0 0 0 1 * 1", WallTime{2027, 2, 1, 0, 0, 0, 1}));  // 1 号 + 周一
+  CHECK(!m("0 0 0 1 * 1", wt(11, 2, 0, 0, 0, 1)));             // 周一但非 1 号
+  CHECK(!m("0 0 0 1 * 1", wt(11, 1, 0, 0, 0, 0)));             // 1 号但周日
+  // 第 7 段（年）在 Spring 中非法。
+  CHECK(!m("0 0/3 * * * ? 2026", wt(11, 7, 10, 6, 0, 6)));
+  // 字段数不足 / 空表达式。
+  CHECK(!m("0 0 * * *", wt(11, 7, 10, 0, 0, 6)));
+  CHECK(!m("", wt(11, 7, 10, 0, 0, 6)));
+  // 结构校验。
+  CHECK(cm::scheduler::cron_validate("0 0/3 * * * ?"));
+  CHECK(cm::scheduler::cron_validate("0 30 2 * * ?"));
+  CHECK(!cm::scheduler::cron_validate("0 1-5/2,10 8-18 * * MON-FRI")); // 不支持英文名
+  CHECK(!cm::scheduler::cron_validate("0 0 * * *"));
+  CHECK(!cm::scheduler::cron_validate("0 0/0 * * * ?"));
+  CHECK(!cm::scheduler::cron_validate("0 60 * * * ?"));
+  CHECK(!cm::scheduler::cron_validate("0 0 0 32 * ?"));
+  CHECK(!cm::scheduler::cron_validate("* * * * * * *"));
+}
+
 int main() {
   test_utils();
   test_datetime();
@@ -571,6 +660,7 @@ int main() {
   test_local_config_override();
   test_query_field_whitelist();
   test_info_envelope_contract();
+  test_cron_spring_semantics();
   test_db_optional();
   if (g_fail == 0) {
     std::cout << "ALL TESTS PASSED" << std::endl;
