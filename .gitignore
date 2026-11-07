@@ -85,4 +85,5 @@ car-monit-api-python/pro-business-api/src/main/resources/application-local.yml
 
 ### P2 覆盖率产物 ###
 car-monit-api-python/coverage/
+car-monit-api-python/.coverage
 .services-tmp/

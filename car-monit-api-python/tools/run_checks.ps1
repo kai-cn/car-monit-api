@@ -1,16 +1,14 @@
-# -*- coding: utf-8 -*-
-"""一键门禁（P1-4 起；P2 起含覆盖率门禁）：任一失败则 exit 1。
-
-用法（在 car-monit-api-python 目录下）：
-    powershell -ExecutionPolicy Bypass -File tools\run_checks.ps1
-    powershell -ExecutionPolicy Bypass -File tools\run_checks.ps1 -SkipSmoke  # 跳过两个冒烟
-
-覆盖率口径（P2）：
-    * 业务覆盖率（app/** + com/ruoyi/**，含 23 个冒烟脚本追加）= 门禁，fail-under=65
-      （实测基线 68.3%，留跨平台余量）；
-    * 总覆盖率（含替身层）= 信息展示；
-    * HTML/XML 产物写入 coverage/（已 gitignore）。
-"""
+﻿# 一键门禁（P1-4 起；P2 起含覆盖率门禁）：任一失败则 exit 1。
+#
+# 用法（在 car-monit-api-python 目录下）：
+#     powershell -ExecutionPolicy Bypass -File tools\run_checks.ps1
+#     powershell -ExecutionPolicy Bypass -File tools\run_checks.ps1 -SkipSmoke  # 跳过两个冒烟
+#
+# 覆盖率口径（P2）：
+#     * 业务覆盖率（app/** + com/ruoyi/**，含 23 个冒烟脚本追加）= 门禁，fail-under=65
+#       （实测基线 68.3%，留跨平台余量）；
+#     * 总覆盖率（含替身层）= 信息展示；
+#     * HTML/XML 产物写入 coverage/（已 gitignore）。
 param(
     [switch]$SkipSmoke
 )
@@ -18,7 +16,12 @@ param(
 $ErrorActionPreference = "Continue"
 $root = Split-Path -Parent $PSScriptRoot
 $py = Join-Path $root ".venv\Scripts\python.exe"
-if (-not (Test-Path $py)) { $py = "python" }
+if (-not (Test-Path $py)) {
+    # worktree 场景：不另建虚拟环境，回退主仓 .venv（worktree 根 <repo>-V2 与
+    # 主仓 python 目录同名且同级：<主仓>\car-monit-api-python\.venv）
+    $mainPy = Join-Path (Split-Path -Parent (Split-Path -Parent $root)) "car-monit-api-python\.venv\Scripts\python.exe"
+    if (Test-Path $mainPy) { $py = $mainPy } else { $py = "python" }
+}
 
 $failed = @()
 
