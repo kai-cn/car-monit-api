@@ -90,6 +90,7 @@
 | 失败处理 | 失败回调 `incrementRetryCount` + 指数退避（`2^retry * 1000ms`，默认 5 次），超限进死信 | 同（`reliability.max-retry-count=5`；死信写 Redis `DEAD` + `kafka_message_record` `status=3`） | ✅ |
 | DB 重试任务 | 每 30s 查 `status IN (0,2) AND retry_count < 10`，异常休眠 60s | 同（`kafka.retry-interval-ms` / `retry-error-interval-ms`） | ✅ |
 | Redis 可靠性键 | `reliability:msg:content:<id>` / `reliability:msg:status:<id>`（24h） | 同 | ✅ |
+| 超时检测 | `scheduleTimeoutCheck`：发出后 `message-timeout-ms`（默认 30s）读状态，非 `CONFIRMED` 即 RPUSH `reliability:timeout:queue` + 告警 | 同（`kafka_producer.cpp` 的 `schedule_timeout_check`/`process_due_timeouts`，独立线程、降级模式亦生效；判定逻辑 `reliability_timed_out` 有单测） | ✅ |
 | 无 broker | 应用可启动，发送在后台重试 | 同（`rd_kafka_new` 不建连；失败走回调） | ✅ |
 | 降级路径 | 无 | `kafka.fallback-redis=true` 或 `kafka.enabled=false` 时写 `mq:pending:<topic>`（默认关闭） | ✅ 新增可选项 |
 | SnapshotFlowSyncService | `@PostConstruct` 全量+增量把表数据推 Kafka | ✅ 已迁移（`src/service/snapshot_flow_sync.cpp`）：2 线程、`sync.batch-size=1000`、批间 `sleep(100ms)`、增量 `sleep(interval)` 且异常按同间隔重试、游标键 `snapshot_flow:last_sync_id` / `snapshot_flow:last_sync_time`、`sync.full-sync-enabled` 默认 true | ✅ |

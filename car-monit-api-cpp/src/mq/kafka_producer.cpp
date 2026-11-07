@@ -33,6 +33,8 @@ using cache::Redis;
 
 constexpr const char* kMsgStatusPrefix = "reliability:msg:status:";
 constexpr const char* kMsgContentPrefix = "reliability:msg:content:";
+// Java DataReliabilityService.TIMEOUT_QUEUE（同 service/ops.cpp 的超时队列键）。
+constexpr const char* kTimeoutQueue = "reliability:timeout:queue";
 // Spring Kafka JsonSerializer 默认写入的 value 类型头。
 constexpr const char* kWrapTypeId =
     "com.ruoyi.base.service.impl.DataReliabilityService$ReliableMessageWrapper";
@@ -170,6 +172,12 @@ void db_insert_dead_letter(const std::string& data_id, const std::string& topic,
 
 } // namespace
 
+// Java scheduleTimeoutCheck：sleep(messageTimeoutMs) 后读 Redis 状态，
+// status != CONFIRMED（含键已过期/null）即超时。
+bool reliability_timed_out(const std::optional<std::string>& status) {
+  return !status || *status != "CONFIRMED";
+}
+
 struct KafkaProducer::Impl {
   struct DeliveryCtx {
     Impl* owner = nullptr;
@@ -212,6 +220,24 @@ struct KafkaProducer::Impl {
 
   std::mutex err_mu;
   std::string last_error;
+
+  // Java DataReliabilityService#scheduleTimeoutCheck / handleMessageTimeout：
+  // 可靠消息发出后 reliability.message-timeout-ms 内未达 CONFIRMED，即把
+  // messageId 推入 reliability:timeout:queue，由 ops::reliability_compensation_tick
+  // 补偿（审阅报告 §3.3 R9：此前只写 PENDING、无人入队，补偿任务永远读到空列表）。
+  struct TimeoutCheck {
+    std::chrono::steady_clock::time_point due;
+    std::string message_id;
+  };
+  std::mutex timeout_mu;
+  std::map<std::string, TimeoutCheck> timeout_checks; // key = messageId
+  std::mutex timeout_thread_mu;
+  std::thread timeout_thread;
+  std::atomic<bool> timeout_running{false};
+
+  void schedule_timeout_check(const std::string& message_id);
+  void process_due_timeouts();
+  void ensure_timeout_thread();
 
   void set_error(const std::string& error) {
     std::lock_guard<std::mutex> lock(err_mu);
@@ -389,6 +415,61 @@ void KafkaProducer::Impl::process_due_retries() {
   }
 }
 
+// Java scheduleTimeoutCheck：记录到期时间，由超时线程统一检查
+//（Java 是每消息提交一个 sleep 任务，这里等价改为扫描到期表）。
+void KafkaProducer::Impl::schedule_timeout_check(const std::string& message_id) {
+  auto& cfg = config::Config::instance();
+  {
+    std::lock_guard<std::mutex> lock(timeout_mu);
+    timeout_checks[message_id] = TimeoutCheck{
+        std::chrono::steady_clock::now() +
+            std::chrono::milliseconds(cfg.reliability.message_timeout_ms),
+        message_id};
+  }
+  ensure_timeout_thread();
+}
+
+// Java scheduleTimeoutCheck 的检查体 + handleMessageTimeout：
+// 到期后读取 Redis 状态，非 CONFIRMED 即推入超时队列并发告警。
+void KafkaProducer::Impl::process_due_timeouts() {
+  std::vector<std::string> due;
+  {
+    std::lock_guard<std::mutex> lock(timeout_mu);
+    auto now = std::chrono::steady_clock::now();
+    for (auto it = timeout_checks.begin(); it != timeout_checks.end();) {
+      if (it->second.due <= now) {
+        due.push_back(std::move(it->second.message_id));
+        it = timeout_checks.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  }
+  for (const auto& id : due) {
+    auto status = Redis::instance().get(std::string(kMsgStatusPrefix) + id);
+    if (!reliability_timed_out(status)) continue;
+    Redis::instance().rpush(kTimeoutQueue, id);
+    CM_LOG_WARN("reliability") << "[可靠性服务] 消息超时: messageId=" << id
+                               << ", 当前状态=" << (status ? *status : "<null>");
+    CM_LOG_WARN("alert") << "[MESSAGE_TIMEOUT] 消息超时未确认: " << id
+                         << ", 状态: " << (status ? *status : "<null>");
+  }
+}
+
+// 超时检查线程独立于 Kafka 生产者生命周期（kafka.enabled=false 的 Redis 降级
+// 模式下 sendReliableMessage 依然需要超时检测，与 Java retryExecutor 常驻一致）。
+void KafkaProducer::Impl::ensure_timeout_thread() {
+  std::lock_guard<std::mutex> lock(timeout_thread_mu);
+  if (timeout_running.load()) return;
+  timeout_running.store(true);
+  timeout_thread = std::thread([this] {
+    while (timeout_running.load()) {
+      process_due_timeouts();
+      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
+  });
+}
+
 KafkaProducer::KafkaProducer() : impl_(std::make_unique<Impl>()) {}
 KafkaProducer::~KafkaProducer() { stop(); }
 
@@ -466,6 +547,12 @@ bool KafkaProducer::start(bool start_db_retry) {
 
 void KafkaProducer::stop() {
   std::lock_guard<std::mutex> lock(impl_->start_mu);
+  // 超时检测线程与 Kafka 生产者生命周期解耦（降级模式也会启动），两条路径都要回收。
+  {
+    std::lock_guard<std::mutex> tlock(impl_->timeout_thread_mu);
+    impl_->timeout_running.store(false);
+  }
+  if (impl_->timeout_thread.joinable()) impl_->timeout_thread.join();
   if (!impl_->running.exchange(false)) {
 #if defined(CM_WITH_KAFKA)
     if (impl_->rk) {
@@ -622,6 +709,8 @@ std::string KafkaProducer::send_reliable_message(const Json& data, const std::st
                              << ", dataId=" << data_id << ", topic=" << actual_topic;
 
   deliver(actual_topic, message_json);
+  // Java sendReliableMessage 第 8 步：scheduleTimeoutCheck(messageId)。
+  impl_->schedule_timeout_check(message_id);
   return message_id;
 }
 
