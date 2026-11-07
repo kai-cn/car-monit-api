@@ -87,6 +87,8 @@ void register_optimization(http::Router& r) {
       out["pageSize"] = page_size;
       out["data"] = data;
       return http::Response::ok(out);
+    } catch (const BindError&) {
+      throw; // 非法查询字段 -> HTTP 400（Spring 默认错误信封）
     } catch (const std::invalid_argument& e) {
       return http::Response::ok(error_body(400, e.what()));
     } catch (const std::exception& e) {
@@ -108,6 +110,8 @@ void register_optimization(http::Router& r) {
       out["message"] = "导出任务已提交, 请用 taskId 轮询状态";
       out["taskId"] = task_id;
       return http::Response::ok(out);
+    } catch (const BindError&) {
+      throw; // 非法查询字段 -> HTTP 400（Spring 默认错误信封）
     } catch (const std::invalid_argument& e) {
       return http::Response::ok(error_body(400, e.what()));
     } catch (const std::exception& e) {
@@ -139,10 +143,12 @@ void register_optimization(http::Router& r) {
       int page_size = req.int_or("pageSize", 20);
       service::FuzzyFields fuzzy = fuzzy_from_query(req);
 
+      // Java LargeScaleQueryController.queryByDs：/snapshot /fee /trail 三个列表
+      // 端点统一走 UnifiedQueryService.query（逻辑字段翻译 + ES/PG 路由），
+      // 不走 translate=false 的 LargeScaleQueryService.fuzzyQuery。
       service::DataSource ds = service::resolve_data_source(type);
       try {
-        Json data = service::large_scale_query().fuzzy_query(type, start, end, fuzzy, page_num,
-                                                             page_size);
+        Json data = service::unified_query().query(ds, start, end, fuzzy, page_num, page_size);
         Json out = Json::object();
         out["code"] = 200;
         out["message"] = "ok";
@@ -151,6 +157,8 @@ void register_optimization(http::Router& r) {
         out["pageSize"] = page_size;
         out["data"] = data;
         return http::Response::ok(out);
+      } catch (const BindError&) {
+        throw; // 非法查询字段 -> HTTP 400（Spring 默认错误信封）
       } catch (const std::exception& e) {
         return http::Response::ok(error_body(500, e.what()));
       }
@@ -162,17 +170,20 @@ void register_optimization(http::Router& r) {
   r.add("GET", "/api/v1/large/trail", large_list_handler("trail"));
 
   r.add("GET", "/api/v1/large/carTrackQueryByCarNo", [](http::Request& req) {
-    auto car_no = req.get("carNo");
+    // Java @RequestParam String carNo：缺失参数由 Spring 报 400。
+    std::string car_no = required_param(req, "carNo");
     std::string start = required_param(req, "startTime");
     std::string end = required_param(req, "endTime");
     int page_num = req.int_or("pageNum", 1);
     int page_size = req.int_or("pageSize", 20);
     service::FuzzyFields fuzzy;
-    if (car_no && !car_no->empty()) fuzzy["platenumber"] = *car_no;
+    if (!car_no.empty()) fuzzy["platenumber"] = car_no;
 
+    // Java queryCarTrackByCarNo：carNo 映射为逻辑字段 platenumber，交由
+    // UnifiedQueryService 翻译为轨迹表物理字段 envehicleid 后查询。
     try {
-      Json data = service::large_scale_query().fuzzy_query(
-          "trail", start, end, fuzzy, page_num, page_size);
+      Json data = service::unified_query().query(service::DataSource::Trail, start, end, fuzzy,
+                                                 page_num, page_size);
       Json out = Json::object();
       out["code"] = 200;
       out["message"] = "ok";
@@ -181,6 +192,8 @@ void register_optimization(http::Router& r) {
       out["pageSize"] = page_size;
       out["data"] = data;
       return http::Response::ok(out);
+    } catch (const BindError&) {
+      throw; // 非法查询字段 -> HTTP 400（Spring 默认错误信封）
     } catch (const std::exception& e) {
       return http::Response::ok(error_body(500, e.what()));
     }
@@ -206,6 +219,8 @@ void register_optimization(http::Router& r) {
       out["topN"] = top_n;
       out["data"] = data;
       return http::Response::ok(out);
+    } catch (const BindError&) {
+      throw; // groupBy/countField/查询字段非法 -> HTTP 400（Spring 默认错误信封）
     } catch (const std::exception& e) {
       return http::Response::ok(error_body(500, e.what()));
     }
@@ -225,6 +240,8 @@ void register_optimization(http::Router& r) {
       out["message"] = "导出任务已提交";
       out["taskId"] = task_id;
       return http::Response::ok(out);
+    } catch (const BindError&) {
+      throw; // 非法查询字段 -> HTTP 400（Spring 默认错误信封）
     } catch (const std::exception& e) {
       return http::Response::ok(error_body(500, e.what()));
     }

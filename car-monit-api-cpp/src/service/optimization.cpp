@@ -143,6 +143,17 @@ std::string translate_field(DataSource ds, const std::string& logical) {
   return logical;
 }
 
+// 白名单数据源：实体的已知列集合（json 属性名或物理列名二选一命中即可）。
+// 仅存在于 Java 类、无对应数据库列的字段（column 为空）不能作为查询列。
+const std::string& known_column_or_empty(const meta::EntityMeta& m, const std::string& name) {
+  static const std::string kEmpty;
+  for (const auto& f : m.fields) {
+    if (f.column.empty()) continue;
+    if (name == f.column || name == f.json) return f.column;
+  }
+  return kEmpty;
+}
+
 std::string sql_literal(const std::string& value) { return utils::sql_quote(value); }
 
 std::string like_literal(const std::string& value) {
@@ -340,7 +351,9 @@ std::string pg_where(DataSource ds, const std::string& start, const std::string&
   if (!end.empty()) where += " AND " + tf + " <= " + sql_literal(end);
   for (const auto& kv : fuzzy) {
     if (kv.second.empty()) continue;
-    std::string field = translate ? translate_field(ds, kv.first) : kv.first;
+    // 标识符必须命中白名单（guard_query_field 未命中抛 BindError(400)），
+    // 杜绝把 fuzzyFields.<key> 的 key 拼进 SQL；值继续走字面量转义。
+    std::string field = guard_query_field(ds, kv.first, translate);
     where += " AND " + field + " LIKE " + like_literal(kv.second);
   }
   return where;
@@ -1018,6 +1031,18 @@ std::string month_first_day(int year, int month) {
 } // namespace
 
 // ---------------------------------------------------------------------------
+// 查询字段白名单（防 SQL 注入，见 optimization.h 注释）
+// ---------------------------------------------------------------------------
+
+std::string guard_query_field(DataSource ds, const std::string& field, bool translate) {
+  std::string name = translate ? translate_field(ds, field) : field;
+  const std::string& column = known_column_or_empty(entity_meta(ds), name);
+  if (!column.empty()) return column;
+  throw BindError(400, "非法查询字段 '" + field + "'：" + data_source_name(ds) +
+                           " 数据源不支持该字段（白名单校验失败）");
+}
+
+// ---------------------------------------------------------------------------
 // 数据源解析
 // ---------------------------------------------------------------------------
 
@@ -1052,6 +1077,10 @@ DataSource resolve_data_source(const std::string& type) {
 Json UnifiedQueryService::query(DataSource ds, const std::string& start_time,
                                 const std::string& end_time, const FuzzyFields& fuzzy,
                                 int page_num, int page_size) {
+  // 入口白名单校验：非法字段直接 400，ES 与 PG 降级路径行为一致。
+  for (const auto& kv : fuzzy) {
+    if (!kv.second.empty()) guard_query_field(ds, kv.first, true);
+  }
   bool use_es = should_route_to_es(ds, start_time, end_time, fuzzy);
 
   auto query_from_pg = [&]() -> Json {
@@ -1115,6 +1144,10 @@ Json LargeScaleQueryService::fuzzy_query(const std::string& type, const std::str
                                          const std::string& end_time, const FuzzyFields& fuzzy,
                                          int page_num, int page_size) {
   DataSource ds = resolve_data_source(type);
+  // 入口白名单校验：本服务不做逻辑字段翻译，只接受实体已知列。
+  for (const auto& kv : fuzzy) {
+    if (!kv.second.empty()) guard_query_field(ds, kv.first, false);
+  }
 
   int from = (page_num - 1) * page_size; // 与 Java 一致，负值交给 ES 报错 / 降级
   Json body = Json::object();
@@ -1150,6 +1183,16 @@ Json LargeScaleQueryService::aggregation_stats(const std::string& type,
                                                const std::optional<std::string>& count_field,
                                                const FuzzyFields& fuzzy, int top_n) {
   DataSource ds = resolve_data_source(type);
+  // 白名单校验：groupBy/countField/fuzzyFields key 都会进入 ES DSL 或 PG 降级
+  // SQL 的标识符位置，必须是实体已知列；countField 为空或 "_id" 时等价 count(1)。
+  std::string group_col = guard_query_field(ds, group_by, false);
+  std::string count_expr = "count(1)";
+  if (count_field.has_value() && !count_field->empty() && *count_field != "_id") {
+    count_expr = "count(" + guard_query_field(ds, *count_field, false) + ")";
+  }
+  for (const auto& kv : fuzzy) {
+    if (!kv.second.empty()) guard_query_field(ds, kv.first, false);
+  }
 
   Json body = Json::object();
   body["query"] = build_bool_query(ds, start_time, end_time, fuzzy, false);
@@ -1192,13 +1235,11 @@ Json LargeScaleQueryService::aggregation_stats(const std::string& type,
 
   CM_LOG_WARN("optimization.query")
       << "[环境差异] 统计查询 " << type << " 的 ES 调用不可用，降级为 PostgreSQL 等价查询";
-  std::string count_expr = (count_field.has_value() && !count_field->empty())
-                               ? "count(" + *count_field + ")"
-                               : "count(1)";
-  std::string sql = "SELECT " + group_by + " AS k, " + count_expr +
+  // PG 降级路径：group_by/count_field 已在入口过白名单，此处只用解析后的物理列。
+  std::string sql = "SELECT " + group_col + " AS k, " + count_expr +
                     " AS c FROM " + entity_meta(ds).table + " WHERE 1=1" +
                     pg_where(ds, start_time, end_time, fuzzy, false) + " GROUP BY " +
-                    group_by + " ORDER BY c DESC LIMIT " + std::to_string(top_n);
+                    group_col + " ORDER BY c DESC LIMIT " + std::to_string(top_n);
   auto result = db::PgPool::instance().query(sql);
   Json out = Json::object();
   for (std::size_t i = 0; i < result.rows.size(); ++i) {
@@ -1221,9 +1262,14 @@ std::string LargeScaleQueryService::submit_export_task(const std::string& type,
                                                        const std::string& start_time,
                                                        const std::string& end_time,
                                                        const FuzzyFields& fuzzy) {
+  // 提交时即做白名单校验：后台线程里的 BindError 无法转成 400 响应。
+  DataSource ds = resolve_data_source(type);
+  for (const auto& kv : fuzzy) {
+    if (!kv.second.empty()) guard_query_field(ds, kv.first, false);
+  }
   std::string task_id = utils::uuid4();
   auto task = create_task(task_id);
-  task->data_source = data_source_name(resolve_data_source(type));
+  task->data_source = data_source_name(ds);
   task->type = type.empty() ? "snapshot" : type;
   task->start_time = start_time;
   task->end_time = end_time;
@@ -1258,6 +1304,10 @@ Json LargeScaleQueryService::export_status(const std::string& task_id) {
 std::string UnifiedExportService::submit_export_task(DataSource ds, const std::string& start_time,
                                                      const std::string& end_time,
                                                      const FuzzyFields& fuzzy) {
+  // 提交时即做白名单校验（translate=true：统一查询逻辑字段翻译语义）。
+  for (const auto& kv : fuzzy) {
+    if (!kv.second.empty()) guard_query_field(ds, kv.first, true);
+  }
   std::string task_id = utils::uuid4();
   auto task = create_task(task_id);
   task->data_source = data_source_name(ds);

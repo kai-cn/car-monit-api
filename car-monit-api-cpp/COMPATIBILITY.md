@@ -17,6 +17,7 @@
 | 未知路径 | HTTP 404 + `{"timestamp","status":404,"error":"Not Found","message":"","path"}` | 逐字节一致（时间戳同样 `+00:00`） | ✅ |
 | 分页 | `pageNum/pageSize/orderByColumn/isAsc`，`reasonable` 越界回夹末页 | 同（`dao::resolve_page`） | ✅ |
 | `orderByColumn` 白名单 | `SqlUtil.escapeOrderBySql` + 仅允许字母数字下划线点 | 同（`valid_order_column`） | ✅ |
+| `fuzzyFields`/`groupBy`/`countField` 白名单 | Java 只用 ES DSL（字段名进 mapping，不进 SQL）；未知字段在 ES 上为 0 命中，不报错 | C++ 的 ES 降级路径会把字段名拼进 PG SQL，因此新增**实体已知列白名单**（`service::guard_query_field`，`optimization.h`）：未命中直接 `BindError(400)`（Spring 默认错误信封），值参数仍走字面量转义。行为差异：Java 对未知字段返回空结果，C++ 返回 400（安全加固，见 `tests/test_main.cpp::test_query_field_whitelist`） | ⚠️ 有意的安全加固 |
 | 未分页时 | `TableDataInfo.total` 仍返回总行数 | 同（先 `count_rows`） | ✅ |
 | CORS 响应头 | Java **源码无全局 CORS 配置**；运行实例存在 CORS 处理器：跨域预检被拒返回 `403 Invalid CORS request`，实际跨域请求继续且不带 ACAO，响应带 `Vary` | 按 Spring `CorsConfiguration`/`DefaultCorsProcessor` 语义实现（见 §6.2），默认等价 `applyPermitDefaultValues()`；预检通过 200、白名单不匹配 403、`*`+credentials 返回 500 | ✅ 语义一致（配置可覆盖） |
 | `Content-Type` | `application/json`（错误信封）/`application/json;charset=UTF-8`（控制器） | 同 | ✅ |

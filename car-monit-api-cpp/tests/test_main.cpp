@@ -3,6 +3,7 @@
 #include "cache/redis.h"
 #include "common/crypto.h"
 #include "common/datetime.h"
+#include "common/error.h"
 #include "common/result.h"
 #include "common/utils.h"
 #include "config/config.h"
@@ -12,6 +13,7 @@
 #include "http/server.h"
 #include "mq/kafka_producer.h"
 #include "router/routes.h"
+#include "service/optimization.h"
 
 #include <cassert>
 #include <cstdlib>
@@ -471,6 +473,50 @@ static void test_decimal() {
   CHECK(cm::json_dump(obj) == "{\"lon\":113.50,\"total\":2}");
 }
 
+static void test_query_field_whitelist() {
+  // SQL 注入防护（审阅报告 §3.3 R3）：fuzzyFields key / groupBy / countField
+  // 只能取实体已知列，未命中必须抛 BindError(400)，不得进入 SQL 标识符位置。
+  using cm::service::DataSource;
+  auto guard = [](DataSource ds, const std::string& f, bool t) {
+    return cm::service::guard_query_field(ds, f, t);
+  };
+  auto throws_bind_400 = [](DataSource ds, const std::string& f, bool t) {
+    try {
+      cm::service::guard_query_field(ds, f, t);
+      return false;
+    } catch (const cm::BindError& e) {
+      return e.status() == 400;
+    } catch (...) {
+      return false;
+    }
+  };
+
+  // translate=true（UnifiedQueryService 路径）：逻辑字段按数据源翻译为物理列。
+  CHECK(guard(DataSource::Snapshot, "platenumber", true) == "platenumber");
+  CHECK(guard(DataSource::Fee, "platenumber", true) == "vehicleplate");
+  CHECK(guard(DataSource::Trail, "platenumber", true) == "envehicleid");
+  CHECK(guard(DataSource::Snapshot, "orgname", true) == "orgname");
+  CHECK(guard(DataSource::Snapshot, "gantryname", true) == "gantryname");
+  // 已知物理列/JSON 属性名同样放行（等价 Java getOrDefault 透传后命中列）。
+  CHECK(guard(DataSource::Fee, "vehicleplate", true) == "vehicleplate");
+  CHECK(guard(DataSource::Fee, "bigId", false) == "big_id");
+
+  // translate=false（LargeScaleQueryService 路径）：必须是实体已知列。
+  CHECK(guard(DataSource::Fee, "vehicleplate", false) == "vehicleplate");
+  CHECK(guard(DataSource::Trail, "envehicleid", false) == "envehicleid");
+
+  // 未命中白名单 -> BindError(400)。
+  CHECK(throws_bind_400(DataSource::Fee, "orgname", true));        // fee 无 orgname 列
+  CHECK(throws_bind_400(DataSource::Trail, "platenumber", false)); // large 路径不接受逻辑名
+  CHECK(throws_bind_400(DataSource::Snapshot, "", true));
+  // 典型注入载荷必须被拒（不能再拼进 LIKE/GROUP BY/ORDER BY）。
+  CHECK(throws_bind_400(DataSource::Snapshot, "platenumber; DROP TABLE x", true));
+  CHECK(throws_bind_400(DataSource::Snapshot, "1=1) UNION SELECT 1--", true));
+  CHECK(throws_bind_400(DataSource::Fee, "vehicleplate' --", false));
+  CHECK(throws_bind_400(DataSource::Snapshot, "datauuid\" ASC", false));
+  CHECK(throws_bind_400(DataSource::Snapshot, "(SELECT pg_sleep(10))", false));
+}
+
 int main() {
   test_utils();
   test_datetime();
@@ -483,6 +529,7 @@ int main() {
   test_kafka_no_broker();
   test_auth_guard();
   test_local_config_override();
+  test_query_field_whitelist();
   test_db_optional();
   if (g_fail == 0) {
     std::cout << "ALL TESTS PASSED" << std::endl;
