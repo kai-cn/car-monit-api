@@ -11,9 +11,17 @@
 #include "common/json.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace cm::mq {
+
+// Java DataReliabilityService.scheduleTimeoutCheck 的超时判定（纯逻辑，可单测）：
+// 消息发出 reliability.message-timeout-ms 后读取 Redis 状态，
+// 缺失（键过期）或非 CONFIRMED 均视为超时，需推入 reliability:timeout:queue
+// 供补偿任务处理；仅 CONFIRMED 不超时。
+bool reliability_timed_out(const std::optional<std::string>& status);
+
 
 class KafkaProducer {
 public:

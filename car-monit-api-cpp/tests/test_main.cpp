@@ -18,10 +18,13 @@
 #include "service/optimization.h"
 
 #include <cassert>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <optional>
+#include <thread>
 
 static int g_fail = 0;
 
@@ -646,6 +649,36 @@ static void test_cron_spring_semantics() {
   CHECK(!cm::scheduler::cron_validate("* * * * * * *"));
 }
 
+static void test_reliability_timeout() {
+  // Java DataReliabilityService.scheduleTimeoutCheck 的超时判定（审阅 §3.3 R9）：
+  // 状态缺失（键过期）、PENDING/SENT/DEAD/未知值均视为超时；仅 CONFIRMED 不超时。
+  CHECK(cm::mq::reliability_timed_out(std::nullopt));
+  CHECK(cm::mq::reliability_timed_out(std::optional<std::string>("PENDING")));
+  CHECK(cm::mq::reliability_timed_out(std::optional<std::string>("SENT")));
+  CHECK(cm::mq::reliability_timed_out(std::optional<std::string>("DEAD")));
+  CHECK(cm::mq::reliability_timed_out(std::optional<std::string>("GARBAGE")));
+  CHECK(!cm::mq::reliability_timed_out(std::optional<std::string>("CONFIRMED")));
+
+  // 超时检测线程生命周期冒烟：把 message-timeout-ms 调到 100ms，
+  // 发送一条可靠消息（kafka 关闭走 Redis 降级路径，本机无 Redis/Kafka 也只产生
+  // 日志不崩溃），等超时到期被扫描处理后 stop() 必须能干净 join。
+  auto& cfg = cm::config::Config::instance();
+  int old_timeout = cfg.reliability.message_timeout_ms;
+  bool old_enabled = cfg.kafka.enabled;
+  cfg.reliability.message_timeout_ms = 100;
+  cfg.kafka.enabled = false;
+  auto& producer = cm::mq::KafkaProducer::instance();
+  cm::Json data = cm::Json::object();
+  data["bigId"] = "reliability-smoke-1";
+  std::string id = producer.send_reliable_message(data, "reliability-smoke-1", "");
+  CHECK(!id.empty());
+  std::this_thread::sleep_for(std::chrono::milliseconds(1200)); // 100ms 到期 + 500ms 扫描周期
+  producer.stop(); // 超时线程必须可回收，不得死锁/崩溃
+  CHECK(true);
+  cfg.reliability.message_timeout_ms = old_timeout;
+  cfg.kafka.enabled = old_enabled;
+}
+
 int main() {
   test_utils();
   test_datetime();
@@ -656,6 +689,7 @@ int main() {
   test_router();
   test_cors();
   test_kafka_no_broker();
+  test_reliability_timeout();
   test_auth_guard();
   test_local_config_override();
   test_query_field_whitelist();
