@@ -10,10 +10,13 @@ dependencies = [
     "psycopg[binary]>=3.1,<4.0",
     "httpx>=0.27,<1.0",
     "orjson>=3.10,<4.0",
+    # P2：真实中间件适配（CAR_MONIT_REDIS_URL / CAR_MONIT_ES_URL 启用）
+    "redis>=5.0,<7.0",
+    "elasticsearch>=7.17,<8.0",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "pytest-mock>=3.14"]
+dev = ["pytest>=8.0", "pytest-mock>=3.14", "pytest-cov>=7.0"]
 
 # The project is executed from source (the Java-mirrored trees are import
 # roots registered by bootstrap.py), so no wheel is built.
@@ -33,3 +36,37 @@ testpaths = ["tests"]
 markers = [
     "integration: 需要真实数据库/中间件（CAR_MONIT_TEST_DB=1 开启，默认跳过）",
 ]
+
+# ---------------------------------------------------------------------------
+# 覆盖率（P2）：分支覆盖；source 按目录枚举——com/java/javax/org 是命名空间包
+# 横跨多个 sys.path 根（顶层替身层 + 镜像业务树），按包名指定会漏文件。
+#
+# 两个口径（见 tools/run_checks.ps1 与 CI）：
+#   * 总覆盖率     ：上表全部（含替身层）——反映整体移植测试面
+#   * 业务覆盖率   ：--include="app/*,*/com/ruoyi/*" ——门禁挂这个口径
+# 排除说明：
+#   * tools/、scripts/、tests/、根目录 _smoke_*.py：开发脚本与测试自身，
+#     以子进程运行（_smoke）或非被测对象，不进入 source；
+#   * run.py / bootstrap.py：入口胶水，经 prod-boot 子进程用例验证，
+#     不在进程内覆盖率里体现（计入会拉低门禁且无法反映真实执行）。
+[tool.coverage.run]
+branch = true
+source = [
+    "app",
+    "com",
+    "java",
+    "javax",
+    "org",
+    "pro-base-common/src/main/java",
+    "pro-business-api/src/main/java",
+]
+
+[tool.coverage.report]
+precision = 1
+skip_empty = true
+
+[tool.coverage.html]
+directory = "coverage/html"
+
+[tool.coverage.xml]
+output = "coverage/coverage.xml"

@@ -18,8 +18,22 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: pip install -r requirements.txt
-      - name: pytest
-        run: python -m pytest -q
+      - name: pytest (coverage)
+        run: python -m pytest -q --cov --cov-report=
+      - name: smoke coverage append
+        run: python tools/smoke_coverage.py
+      - name: coverage gate (business >= 65%)
+        run: python -m coverage report --include="app/*,*/com/ruoyi/*" --fail-under=65
+      - name: coverage total (informational)
+        run: python -m coverage report
+      - name: coverage artifacts
+        run: |
+          python -m coverage html
+          python -m coverage xml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: car-monit-api-python/coverage/
       - name: check_routes
         run: python tools/check_routes.py
       - name: check_mappers (mapper XML sync)
@@ -32,3 +46,40 @@ jobs:
         run: python scripts/smoke_test.py
       - name: smoke_all_routes
         run: python tools/smoke_all_routes.py
+
+  integration:
+    # P2：真实中间件集成测试（Redis/ES service container；DB 需自备，默认跳过）
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    services:
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+      elasticsearch:
+        image: elasticsearch:7.17.13
+        ports: ["9200:9200"]
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: "false"
+        options: >-
+          --health-cmd "curl -fs http://localhost:9200"
+          --health-interval 15s --health-timeout 10s --health-retries 10
+    defaults:
+      run:
+        working-directory: car-monit-api-python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: integration (redis + es)
+        run: python -m pytest tests/business -m integration -q
+        env:
+          CAR_MONIT_TEST_REDIS: "1"
+          CAR_MONIT_REDIS_URL: "redis://127.0.0.1:6379/0"
+          CAR_MONIT_TEST_ES: "1"
+          CAR_MONIT_ES_URL: "http://127.0.0.1:9200"

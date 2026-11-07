@@ -82,3 +82,7 @@ car-monit-api-rust/
 
 ### V2 P0-6: 本地口令覆盖文件（真实敏感值写这里，勿提交） ###
 car-monit-api-python/pro-business-api/src/main/resources/application-local.yml
+
+### P2 覆盖率产物 ###
+car-monit-api-python/coverage/
+.services-tmp/

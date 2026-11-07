@@ -26,12 +26,12 @@ REQUIRED = [
     ("psycopg", "psycopg"),
     ("httpx", "httpx"),
     ("orjson", "orjson"),
+    ("redis", "redis"),                  # P2：真实 Redis 适配
+    ("elasticsearch", "elasticsearch"),  # P2：真实 ES 适配（7.x 客户端）
 ]
 
 #: 开发机可能装了、但**不**是运行时依赖的包（仅提示，不计入缺失）
 INFO_ONLY = [
-    ("redis", "redis"),
-    ("elasticsearch", "elasticsearch"),
     ("apscheduler", "APScheduler"),
     ("yaml", "PyYAML"),
 ]
