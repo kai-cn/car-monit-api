@@ -1,19 +1,36 @@
 # Java → C++ 迁移进度清单（最终）
 
 > 源工程：`../pro-business-api` + `../pro-base-common`（RuoYi / Spring Boot 2.4.5，24 个 Controller、85 个端点）
-> 目标：C++20 + CMake + MinGW-w64 g++ 14.2 + Ninja（Windows）；HTTP/JSON 依赖 vendored，Kafka 依赖由 CMake FetchContent 构建
-> 更新时间：2026-11-05
+> 目标：C++20 + CMake + MSVC 2022/Ninja（Windows，已实测）或 MinGW-w64 g++ ≥ 10；HTTP/JSON 依赖 vendored，Kafka 依赖由 CMake FetchContent 构建
+> 更新时间：2026-11-07（审阅修复轮完成后）
+
+## 〇、2026-11-07 审阅修复轮（依据 docs/CODE_REVIEW.md，分支 car-monit-api-cpp）
+
+按问题严重性逐项修复，每项独立提交、构建 + ctest 全绿后推进：
+
+| # | 修复 | 提交 | 验证 |
+|---|---|---|---|
+| 基线 | 迁移基线入库（worktree `d:\work\IdeaProjects\car-monit-api-cpp-wt`，基于 master@21cc4ea） | `c21271f` | MSVC+Ninja 构建 + ctest 1/1 |
+| 1 | SQL 注入（fuzzyFields key / groupBy / countField 白名单 + large 路由对齐 Java queryByDs） | `b094ed8` | test_query_field_whitelist（含注入载荷拒绝） |
+| 2 | 16 个 `/{id}` 端点 AjaxResult 信封 + 空结果非空 body | `dd3f54d` | test_info_envelope_contract（16/3 全路径核对） |
+| 3 | cron `0/3` 步进 / 周 0-7=周日 / 日周 AND（spring-context 5.3.6 探针实证）+ 丢失检测 30s | `f20dcae` | test_cron_spring_semantics（40+ 断言） |
+| 4 | 可靠性超时检测闭环（scheduleTimeoutCheck + timeout 队列写入；澄清 Java 回调写 SENT） | `22b2fe6` | test_reliability_timeout（判定 + 线程生命周期） |
+| 5 | POSIX 分支恢复阻塞/超时/include + scripts/ci-linux.sh + README 平台声明如实 + .gitattributes | `bc29c46`+`2f71b86` | Windows 回归全绿；Linux 提供脚本待实机验证 |
+| 6 | 连接池锁外建连+CV+30s 熔断+maxWait 分离；Redis fd 泄漏+自锁死锁+半包读+SCAN；受控后台线程池 | `9bde423` | test_worker_pool / test_pg_pool_connect_breaker / test_redis_reconnect_no_deadlock |
+| 7 | 可选 API-Key 鉴权 + IP 限流（默认关闭对齐 Java）+ 1MB 请求体 + 30s 读写超时 | `f7a5448` | test_server_security |
+| 8 | /health 四组件状态（不主动建连）、/metrics、SIGINT/SIGTERM 优雅停机（全线程可 join）、日志按大小轮转 | `ccf97ca` | test_health_and_metrics / test_log_rotation |
+| 9 | 文档纠偏（未分页 total、SELECT * 20/22、BigDecimal 尾零、端点数 87、线程模型描述） | 本次提交 | 文档与代码逐项核对 |
 
 ## 一、总体状态
 
 | 指标 | 结果 |
 |---|---|
-| 构建 | ✅ `cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release` + `cmake --build build` 通过（含 librdkafka 2.6.1 静态库），零错误 |
-| 测试 | ✅ `ctest` 1/1 通过（`ALL TESTS PASSED`；新增 CORS 用例与 Kafka 无 broker 失败路径） |
-| 启动 | ✅ `/health` 200 `{"status":"UP"}`；日志 `路由数 86`、`任务数=10`、`Kafka 生产者启动` |
-| 端点 | ✅ 85 个 Java 端点 + 1 个 `/health` = 86 条路由 |
-| 定时任务 | ✅ 10 个（与 Java 生效任务一一对应） |
-| Kafka | ✅ 默认 librdkafka 真实发送；Redis `mq:pending:<topic>` 可配置降级（默认关闭） |
+| 构建 | ✅ MSVC 2022（cl 19.43）+ Ninja + Release 通过（含 librdkafka 2.6.1 静态库），零错误；更早基线曾用 MinGW g++ 14.2 |
+| 测试 | ✅ `ctest` 1/1 通过（`ALL TESTS PASSED`；含本轮新增：白名单/信封契约/cron 语义/池熔断/线程池/安全/健康检查/日志轮转等用例） |
+| 启动 | ✅ `/health` 200（依赖连接状态汇总，UP/DEGRADED，不主动建连）；新增 `/metrics`（请求计数/错误/时延） |
+| 端点 | ✅ 85 个 Java 端点 + `/health` + `/metrics` = 87 条路由 |
+| 定时任务 | ✅ 10 个（触发频率与 Java 一致：0/3 分钟步进、30s 丢失检测、02:30 对账等） |
+| Kafka | ✅ 默认 librdkafka 真实发送；Redis `mq:pending:<topic>` 可配置降级（默认关闭）；可靠性超时队列已闭环 |
 | CORS | ✅ Spring `CorsConfiguration` 语义；预检 200/403、实际请求头完整 |
 | 数据库冒烟 | ⛔ 被 DB 侧账号锁阻塞（`28000 The account has been locked.`/`28P01`），需 DB 管理员解锁后复测；与代码无关。2026-11-06 14:45、14:51（干净重建后）两次复测仍返回 `28000`；同期 Java 9902 因连接池中**旧连接**仍能返回真实数据 |
 
@@ -23,7 +40,7 @@
 |---|---|---|---|
 | 入口/启动 | `EcBusinessApiApplication` | ✅ 已迁移 | `src/main.cpp` |
 | 配置 | `application.yml` + `application-optimization.yml` | ✅ 已迁移 | `src/config/*`、`configs/config.yaml`，键名保留 |
-| 日志 | logback-spring.xml | ✅ 已迁移 | 级别/文件可配；线程名→线程 ID |
+| 日志 | logback-spring.xml | ✅ 已迁移 | 级别/文件可配；线程名→线程 ID；按大小轮转（logging.max-file-mb/max-files） |
 | 工具类 | StringUtils/DateUtils/Convert/PageUtils/SqlUtil/RedisUtil | ✅ 已迁移 | `src/common/*`；另含自实现 MD5/SHA1/SHA256/HMAC/PBKDF2 |
 | 数据库客户端 | Druid + pgjdbc | ✅ 已迁移 | `src/db/pg.*`（wire v3，MD5+SCRAM）；⚠️ 无 SSL/游标 |
 | 数据访问 | 22 个 Mapper XML + PageHelper | ✅ 已迁移 | `src/db/dao.*` + `src/meta/entities_generated.h`（19 实体） |
@@ -36,19 +53,19 @@
 | 轨迹/可疑车辆 | TrackTask + SysUtilServiceImpl | ✅ 已迁移 | `service/track.cpp`（13 个对外函数） |
 | 大表查询优化 | optimization 包 12 服务（17 端点） | ✅ 已迁移 | `service/optimization.*` + `optimization_handlers.cpp` |
 | ES 客户端 | RestHighLevelClient | ✅ 已迁移 | httplib REST（search/scroll/bulk）；不可达降级 DB |
-| 定时任务 | `@Scheduled` + Quartz cron | ✅ 已迁移 | `src/scheduler/scheduler.cpp`（10 任务） |
+| 定时任务 | `@Scheduled` + Quartz cron | ✅ 已迁移 | `src/scheduler/`（10 任务；`cron.{h,cpp}` 独立解析器，Spring 5.3.6 语义） |
 | 可靠性/丢失/延迟/一致性 | DataReliability / DataLossDetection / DelayMonitoring / GaussEsConsistency | ✅ 已迁移 | `service/ops.*` |
 | 路由装配 | Spring MVC | ✅ 已迁移 | `src/router/routes.cpp` |
 | 测试 | JUnit | ✅ 已迁移 | `tests/test_main.cpp` + CTest |
 | 交付文档 | 提示词要求 | ✅ 已迁移 | `README_CPP.md`、`MIGRATION_GUIDE.md`、`COMPATIBILITY.md`、本清单 |
-| 启动脚本 | — | ✅ 已迁移 | `scripts/run.ps1` |
-| Kafka 生产 | KafkaProducerConfig + KafkaProducerService + DataReliabilityService | ✅ 已迁移 | `src/mq/kafka_producer.*`（librdkafka：key=dataId、value=JSON、`__TypeId__`、异步回调、重试/死信、`kafka_message_record`） |
+| 启动脚本 | — | ✅ 已迁移 | `scripts/run.ps1`；另有 `scripts/ci-linux.sh`（Linux 验证） |
+| Kafka 生产 | KafkaProducerConfig + KafkaProducerService + DataReliabilityService | ✅ 已迁移 | `src/mq/kafka_producer.*`（librdkafka：key=dataId、value=JSON、`__TypeId__`、异步回调、重试/死信、`kafka_message_record`、超时检测） |
 | CORS | Spring CorsConfiguration / DefaultCorsProcessor | ✅ 已迁移 | `src/http/cors.*`；预检前置、`Vary`、ACAO/ACAM/ACAH/ACEH/ACAC/ACMA |
-| SnapshotFlowSyncService | `@PostConstruct` 全量/增量推送 | ✅ 已迁移 | `src/service/snapshot_flow_sync.*`（2 线程、batch=1000、批间 100ms、增量 interval=60000ms、游标键与 Java 一致） |
+| SnapshotFlowSyncService | `@PostConstruct` 全量/增量推送 | ✅ 已迁移 | `src/service/snapshot_flow_sync.*`（2 线程、batch=1000、批间 100ms、增量 interval=60000ms、游标键与 Java 一致、可停机 join） |
 | Pulsar 消费者 | SnapshotFlow / DebeziumReadonly | ⛔ 不适用 | Java 中 `@Service` 被注释，运行时未注册 |
 | RocketMQ 消费 | RocketMqConsumer | ⛔ 不适用 | Java 注解被注释 |
 | CarTask | 全部方法体注释 | ⛔ 不适用 | 不注册调度 |
-| SecurityInterceptor / WebConfig | 整体被注释 | ⛔ 不适用 | 无鉴权（与 Java 运行一致） |
+| SecurityInterceptor / WebConfig | 整体被注释 | ⛔ 不适用 | 无鉴权（与 Java 运行一致；C++ 另提供可选 API-Key/限流，默认关闭） |
 | Spring AOP / 反射 / 事务 | 无实际切面；`@Transactional` 未使用 | ⛔ 不适用 | 见 COMPATIBILITY.md |
 | Flink Job | `VehicleTrackFlinkJob`（独立作业） | ⛔ 不适用 | 不在 `pro-business-api` 的 HTTP 服务内运行 |
 
@@ -56,9 +73,10 @@
 
 | 验证项 | 结果 |
 |---|---|
-| 全量编译 | ✅ 通过（零 error；`-Wall -Wextra`） |
-| 单元/契约测试 | ✅ `ALL TESTS PASSED`（crypto 向量、分页夹末页、AjaxResult 键序、Spring 404 信封、路由计数、CORS 10 组用例、Kafka 无 broker 失败路径） |
-| `/health` | ✅ 200 `{"status":"UP"}` |
+| 全量编译 | ✅ 通过（零 error；MSVC /W3，POSIX 分支 -Wall -Wextra 等价检查随 ci-linux.sh） |
+| 单元/契约测试 | ✅ `ALL TESTS PASSED`（crypto 向量、分页夹末页、AjaxResult 键序、Spring 404 信封、路由计数、CORS 10 组用例、Kafka 无 broker 失败路径、查询字段白名单、信封契约、cron 语义、池熔断、线程池、安全判定、健康检查结构、日志轮转） |
+| `/health` | ✅ 200 `{status: UP|DEGRADED, components:{database,redis,kafka,elasticsearch}}` |
+| `/metrics` | ✅ 200 `{requestsTotal,errorsTotal,inFlight,avgLatencyMs,uptimeSeconds}` |
 | CORS 预检通过 | ✅ `OPTIONS` + 白名单 origin → 200 + `Access-Control-Allow-Origin/Methods/Max-Age` + `Vary` |
 | CORS 预检被拒 | ✅ 非白名单 origin → 403 `Invalid CORS request`（`text/plain;charset=ISO-8859-1`） |
 | CORS 实际请求 | ✅ 跨域 GET 带 ACAO；origin 不在白名单时继续业务且不带 ACAO |
@@ -76,3 +94,5 @@
 5. **SnapshotFlowSyncService**：✅ 已按 Java 源码一比一迁移（`src/service/snapshot_flow_sync.cpp`），游标/批大小/间隔/启停条件均取自源码。
 6. **ES 索引管理**：不建索引、不挂 ILM（与 Java 配置 `auto-create:false`/`attach-ilm:false` 一致），但依赖外部已建好索引。
 7. **无事务**：新增多语句写操作时需要人工补偿。
+8. **Linux 实机验证**：POSIX 分支已修复（bc29c46）并提供 `scripts/ci-linux.sh`，本机 WSL 被禁用无法代跑；上 Linux 前先执行该脚本确认。
+9. **审阅 §5.1 未尽项**：契约测试黄金样本集（#12 全量 85 端点 diff，需 DB 解锁）、TLS（自研 PG 客户端不支持 SSL，按审阅 §5.4 建议由网关终结/换 libpq 长期解决）、20/22 实体 SELECT * 换列清单（§5.2 项）、N+1 字典读取（§5.2 项）。

@@ -192,8 +192,8 @@ register_spec(router, s);   // 自动注册 /list、/{agentPk}（按需 /listToE
 2. **无 Spring 事务**（⚠️ 高）：`@Transactional` 的回滚语义不存在；当前 85 个端点以查询为主，写操作是单条语句。新增多语句写入时必须自己实现"失败补偿"，不能假设自动回滚。
 3. **无反射/DI/AOP**（❌ 高）：新增一个 Controller 需要手写 `Spec` 并调用 `register_spec`；Bean 是单例，AOP 切面（日志/权限/事务）一律没有。
 4. **内存所有权**（❌ 高）：`PgConn` 由 `PgPool` 持有，`shared_ptr` 出池；`Response` 按值返回。切勿把局部 `Json&` 或裸连接指针带出作用域。
-5. **线程模型**（⚠️ 中高）：HTTP 16 线程固定；调度任务同线程执行，长任务会挤占后续任务（Java 单线程调度同样如此）。SysTest 用 detached 线程，**进程退出时不会等待**。
-6. **`BigDecimal` 尾零丢失**（⚠️ 中）：`Decimal` 走 `Json::parse` 变浮点，`1.2300` → `1.23`。对账/金额展示如需严格标度，改 `convert_value` 的 `Decimal` 分支为字符串。
+5. **线程模型**（⚠️ 中高）：HTTP 16 线程固定；调度/导出/同步任务运行在受控线程池（调度 2 worker、后台任务 4 worker/队列 128，满载快速失败）。SIGINT/SIGTERM 触发优雅停机：停止接受新请求 → 回收调度器/同步线程 → 排空后台任务 → `rd_kafka_flush` → 关连接池。
+6. **`BigDecimal` 尾零已保真**（✅ 已修复）：`convert_value` 的 `Decimal` 分支用 `json_raw_decimal()` 以原始字面量输出（`1.2300` 原样保留），`json_dump()` 序列化时还原为未加引号的数字；`tests/test_main.cpp::test_decimal` 覆盖不同标度/负数/零/非数字字面量。（历史版本曾丢失尾零，勿再按旧文档排查。）
 7. **Redis 值编码**（⚠️ 中）：统一 JSON 文本。若与 Java 进程共用一个 Redis 且 Java 用 JDK 序列化，双方**无法互读**。
 8. **`null` 与缺键**（⚠️ 中）：`AjaxResult.data` 为 null 时键消失；`Json::is_null()` 与"键不存在"要分开判断。
 9. **时间语义**（⚠️ 中）：DB `timestamp without time zone` 一律按 `+08:00` 锚定，输出 `yyyy-MM-dd HH:mm:ss`；用 `timeutil::format_naive_plus8`，不要 `localtime`。

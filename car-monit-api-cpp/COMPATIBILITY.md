@@ -8,7 +8,7 @@
 | 项 | Java 行为 | C++ 行为 | 结论 |
 |---|---|---|---|
 | 端口 / context-path | `9901`，`/` | `configs/config.yaml` 的 `server.port`，路由不含前缀 | ✅ |
-| 路由总数 | 85 | 85 + `/health`（本工程新增的健康检查） | ✅（新增项已标注） |
+| 路由总数 | 85 | 85 + `/health` + `/metrics`（两个均为本工程新增：依赖状态汇总/运行指标）= 87 | ✅（新增项已标注） |
 | `AjaxResult` | `{msg,code,data}`；`data == null` 时**键消失** | 同键序、同省略规则 | ✅ |
 | `/{id}` 详情（getInfo） | 19 个实体控制器中 16 个返回 `AjaxResult.success(entity)`；查不到返回 `{"msg":"操作成功","code":200}`（data 键省略）。仅 feeGantry/feerecords/snapshotflow 3 个直接返回实体，查不到时空 body（HTTP 200） | 同（`info_returns_raw_entity` 为唯一权威映射，`base_handlers.cpp`；16/3 逐端点核对过 Java 控制器返回类型） | ✅ |
 | `TableDataInfo` | `{total,rows,code,msg}` | 同键序（`total` 为数字，非字符串） | ✅ |
@@ -19,7 +19,7 @@
 | 分页 | `pageNum/pageSize/orderByColumn/isAsc`，`reasonable` 越界回夹末页 | 同（`dao::resolve_page`） | ✅ |
 | `orderByColumn` 白名单 | `SqlUtil.escapeOrderBySql` + 仅允许字母数字下划线点 | 同（`valid_order_column`） | ✅ |
 | `fuzzyFields`/`groupBy`/`countField` 白名单 | Java 只用 ES DSL（字段名进 mapping，不进 SQL）；未知字段在 ES 上为 0 命中，不报错 | C++ 的 ES 降级路径会把字段名拼进 PG SQL，因此新增**实体已知列白名单**（`service::guard_query_field`，`optimization.h`）：未命中直接 `BindError(400)`（Spring 默认错误信封），值参数仍走字面量转义。行为差异：Java 对未知字段返回空结果，C++ 返回 400（安全加固，见 `tests/test_main.cpp::test_query_field_whitelist`） | ⚠️ 有意的安全加固 |
-| 未分页时 | `TableDataInfo.total` 仍返回总行数 | 同（先 `count_rows`） | ✅ |
+| 未分页时 | `TableDataInfo.total` 仍返回总行数 | 同：未分页时 `total = rows.size()`（当前返回行数，对应 Java `getDataTable(list)` 的 `list.size()`）；分页时才先 `count_rows`（`dao.cpp::select_list`） | ✅ |
 | CORS 响应头 | Java **源码无全局 CORS 配置**；运行实例存在 CORS 处理器：跨域预检被拒返回 `403 Invalid CORS request`，实际跨域请求继续且不带 ACAO，响应带 `Vary` | 按 Spring `CorsConfiguration`/`DefaultCorsProcessor` 语义实现（见 §6.2），默认等价 `applyPermitDefaultValues()`；预检通过 200、白名单不匹配 403、`*`+credentials 返回 500 | ✅ 语义一致（配置可覆盖） |
 | `Content-Type` | `application/json`（错误信封）/`application/json;charset=UTF-8`（控制器） | 同 | ✅ |
 | 鉴权 | Java 的 SecurityInterceptor 在 WebConfig.java 中被**整体注释**——生产实例无鉴权 | **新增可选能力（默认关闭，对齐 Java）**：`server.auth.enabled=true` 时校验 `X-API-Key` 或 `Authorization: Bearer`（401 拒绝；未配置密钥 fail-closed；`/health` 与 CORS 预检豁免），`server.auth.api-key` 建议放 `config.local.yaml` | ⚠️ 新增（默认行为与 Java 一致） |
@@ -51,7 +51,7 @@
 | 认证失败熔断 | Java 无此机制（Druid 会反复重建连接，连续失败会把账号锁死） | ✅ 认证类错误（`28P01`/`28000`）后进程内停止重建连接，日志「已停止重试，避免触发账号锁定」；`druid.reconnect-after-auth-failure` 默认 `0`（关闭），可显式放宽 |
 | SQL 拼装 | MyBatis XML `<if test>`、`<foreach>`、`resultMap`、`select_sql/order_sql` | ✅ 固化在 `src/meta/entities_generated.h` 的 `filters/select_sql/order_sql` |
 | `agent_pk` 主键 | Java XML 用 `t.agent_pk` 过滤，但物理列是 `id` | ✅ 取 `filters` 的物理列（与 Go/Python 的修正一致） |
-| 查询列 | Java 用 `<include refid="selectXxxVo"/>` 列清单 | ⚠️ 部分实体（如 `odsSzdnGantry`/`odsSzdnGantryIp`）元数据用 `SELECT *`；`project_row` 只输出 `resultMap` 同名字段，**响应与 Java 等价**，但会多取无关列的带宽 |
+| 查询列 | Java 用 `<include refid="selectXxxVo"/>` 列清单 | ⚠️ **20/22** 实体元数据用 `SELECT *`（仅 `odsRtSzdnSnapshotFlowAddcode` 与 `odsLwzxsfsjFeeRecords01` 有列清单）；`project_row` 只输出 `resultMap` 同名字段，**响应与 Java 等价**，但会多取无关列的带宽 |
 | 事务 | Spring `@Transactional`（本项目实际未使用） | ⚠️ C++ 无声明式事务；写操作均为单条语句，天然原子 |
 | 隔离级别 | 默认 `READ_COMMITTED`（服务端默认） | ✅ 未显式设置 |
 | 主键类型 | 一律按字符串读取，避免精度丢失 | ✅ |
