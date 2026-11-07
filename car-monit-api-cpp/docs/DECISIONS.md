@@ -118,7 +118,8 @@
 - **理由**：官方二进制包来源可信、版本固定；Windows 与 Linux 行为一致；TLS 由
   包内 OpenSSL 3 提供。源码构建在无 Perl/NASM 的 Windows 环境下不可复现。
 - **影响**：Windows 首次 configure 需下载约 311 MB（CI 已对 `build/_deps` 做缓存）；
-  产物目录多 6 个 DLL（约 7 MB）；`third_party` 仍只保留头文件。
+  configure 后只保留 `include/lib/bin`（pgAdmin/StackBuilder/doc/share 会被删除，
+  显著降低 `_deps` 占用）；产物目录多 6 个 DLL（约 7 MB）；`third_party` 仍只保留头文件。
 - **可回退性**：删除 CMake 中的 FetchContent/`PostgreSQL::PostgreSQL` 链接与
   `pg.cpp` 实现即可回退（需同时恢复旧实现，属较大回退）。
 

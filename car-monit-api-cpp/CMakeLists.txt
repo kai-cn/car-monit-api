@@ -101,6 +101,14 @@ if(WIN32)
   FetchContent_MakeAvailable(postgres_windows)
   # 注：CMake 解压会去掉包内唯一的顶层目录 pgsql/，因此源目录即 pgsql 根。
   set(CM_PG_RUNTIME_DIR "${postgres_windows_SOURCE_DIR}")
+  # 只保留 include/lib/bin：包内 pgAdmin/StackBuilder/doc/share 与构建无关，
+  # 删除后显著降低 _deps 占用（CI 缓存也受益）。
+  file(REMOVE_RECURSE
+    "${CM_PG_RUNTIME_DIR}/pgAdmin 4"
+    "${CM_PG_RUNTIME_DIR}/StackBuilder"
+    "${CM_PG_RUNTIME_DIR}/doc"
+    "${CM_PG_RUNTIME_DIR}/share"
+  )
   set(PostgreSQL_INCLUDE_DIR "${CM_PG_RUNTIME_DIR}/include" CACHE PATH "" FORCE)
   set(PostgreSQL_TYPE_INCLUDE_DIR "${CM_PG_RUNTIME_DIR}/include" CACHE PATH "" FORCE)
   set(PostgreSQL_LIBRARY "${CM_PG_RUNTIME_DIR}/lib/libpq.lib" CACHE FILEPATH "" FORCE)
