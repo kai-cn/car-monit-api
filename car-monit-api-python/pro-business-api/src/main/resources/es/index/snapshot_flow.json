@@ -4,6 +4,7 @@
       "number_of_shards": __NUMBER_OF_SHARDS__,
       "number_of_replicas": __NUMBER_OF_REPLICAS__,
       "refresh_interval": "5s",
+      "max_ngram_diff": 2,
       "analysis": {
         "analyzer": {
           "ngram_analyzer": {

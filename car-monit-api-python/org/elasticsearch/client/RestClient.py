@@ -78,11 +78,21 @@ class RestClient(object):
         【Java→Python】真实实现会发 HTTP；替身只处理 EsIndexManageService
         用到的三个 ILM 相关端点（见模块注释），其余端点返回 200 空 JSON。
         """
+        # P2-3：CAR_MONIT_ES_URL 设置时透传给真实集群（ILM 等低层 REST 调用）。
+        from app.middleware.real_es import shared_es_backend
+        backend = shared_es_backend()
+        if backend is not None:
+            return backend.performRequest(
+                request, memory=lambda: self._performRequest_memory(request))
         # P0-2：prod 模式下拒绝“假响应”（EsIndexManageService 的 ILM 调用走这里；
         # 异常会被其 init 的 catch 分支吞掉并告警，与 Java-ES-宕机时行为一致）。
         reject_shim_operation(
             "RestClient.performRequest",
             "（真实 ES 适配器未实现，请求不会发往集群。）")
+        return self._performRequest_memory(request)
+
+    def _performRequest_memory(self, request: Request) -> Response:
+        """进程内存实现（P2-3 抽出：真实后端熔断降级时复用同一份逻辑）。"""
         method = (request.getMethod() or "GET").upper()
         endpoint = request.getEndpoint() or ""
         body = request.getJsonEntity()

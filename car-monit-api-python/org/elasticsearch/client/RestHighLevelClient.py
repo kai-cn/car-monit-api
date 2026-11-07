@@ -39,6 +39,14 @@ Java 侧来自 elasticsearch jar：``org.elasticsearch.client.RestHighLevelClien
    ``scroll(request)`` 逐批取走，``clearScroll(request)`` 释放。
    真实 ES 按 keepAlive 超时回收上下文，替身**不做过期回收**（进程内数据量有限）；
    游标耗尽后继续 ``scroll`` 返回空 page（与 ES 一致，不抛异常）。
+9) **P2-3 真实后端挂载**：设置 ``CAR_MONIT_ES_URL`` 后，本类构造时挂载
+   :class:`app.middleware.real_es.RealEsBackend`（进程级共享，等价 Java 里
+   多个服务注入同一个 Bean）。此后 ``index``/``bulkAsync``/``search``/
+   ``scroll``/``clearScroll``/``ping`` 全部翻译成真实 REST/DSL 发往集群，
+   响应重建回本模块的替身对象——业务代码零改动。未设置 URL 时行为与
+   纯替身完全一致（P0-2 守卫也只在此路径触发）。原进程内存实现抽到
+   ``_*_memory`` 私有方法，供真实后端“熔断降级为进程内存”时复用
+   （见 real_es.py 的降级语义说明）。
 """
 
 from __future__ import annotations
@@ -97,10 +105,16 @@ class RestHighLevelClient(object):
                 "RestHighLevelClient 需要 RestClientBuilder 或 RestClient，实际为 "
                 + type(rest_client).__name__)
         self.closed = False
+        # P2-3：CAR_MONIT_ES_URL 设置时挂载真实 ES 后端（惰性 import 避免循环依赖；
+        # 进程级共享，等价 Java 里多个服务注入同一个 RestHighLevelClient Bean）。
+        from app.middleware.real_es import shared_es_backend
+        self._real = shared_es_backend()
 
     # ------------------------------------------------------------------ 连接检测
     def ping(self, options: Any = None) -> bool:
         """对应 ``ping(RequestOptions)``。"""
+        if self._real is not None:
+            return self._real.ping(memory=lambda: True)
         self._ensureAvailable()
         return True
 
@@ -125,11 +139,18 @@ class RestHighLevelClient(object):
     def index(self, request: IndexRequest,
               options: Any = None) -> IndexResponse:
         """对应 ``index(IndexRequest, RequestOptions)``。"""
+        if self._real is not None:
+            return self._real.index(
+                request, memory=lambda: self._index_memory(request))
         # P0-2：prod 模式下拒绝“假写入”（文档只会进进程内存，集群收不到）。
         reject_shim_operation(
             "RestHighLevelClient.index",
             "（真实 ES 适配器未实现，文档不会写入集群。）")
         self._ensureAvailable()
+        return self._index_memory(request)
+
+    def _index_memory(self, request: IndexRequest) -> IndexResponse:
+        """进程内存实现（P2-3 抽出：真实后端熔断降级时复用同一份逻辑）。"""
         index_name = request.index()
         doc_id = request.getId()
         source = request.getSource()
@@ -159,15 +180,24 @@ class RestHighLevelClient(object):
         语义对齐点：Java 的 bulk 是“部分失败”语义 —— 单条文档失败只会体现在
         对应 `BulkItemResponse` 上，不会中断整个批次；替身同样逐条 try/except。
         """
+        if self._real is not None:
+            return self._real.bulkAsync(
+                request, listener,
+                memory=lambda: self._bulkAsync_memory(request, listener))
         # P0-2：prod 模式下拒绝“假写入”（bulkAsync 内部逐条调用 index，此处统一拦截）。
         reject_shim_operation(
             "RestHighLevelClient.bulkAsync",
             "（真实 ES 适配器未实现，批次不会写入集群。）")
         self._ensureAvailable()
+        return self._bulkAsync_memory(request, listener)
+
+    def _bulkAsync_memory(self, request: BulkRequest,
+                          listener: Any) -> BulkResponse:
+        """进程内存实现（P2-3 抽出）。"""
         items: List[BulkItemResponse] = []
         for action in request.requests():
             try:
-                self.index(action, options)
+                self._index_memory(action)
                 items.append(BulkItemResponse(action.getId(), False, None))
             except Exception as error:  # noqa: BLE001 - 单条失败不影响整批
                 items.append(BulkItemResponse(action.getId(), True, str(error)))
@@ -181,12 +211,19 @@ class RestHighLevelClient(object):
     def search(self, request: SearchRequest,
                options: Any = None) -> SearchResponse:
         """对应 ``search(SearchRequest, RequestOptions)``。"""
+        if self._real is not None:
+            return self._real.search(
+                request, memory=lambda: self._search_memory(request))
         # P0-2：prod 模式下拒绝“假查询”（内存索引 ≠ 集群数据，查出的结果是错的；
         # 抛错后 UnifiedQueryService 走 MySQL 降级，与 Java-ES-宕机一致）。
         reject_shim_operation(
             "RestHighLevelClient.search",
             "（真实 ES 适配器未实现，查询不会发往集群。）")
         self._ensureAvailable()
+        return self._search_memory(request)
+
+    def _search_memory(self, request: SearchRequest) -> SearchResponse:
+        """进程内存实现（P2-3 抽出：真实后端熔断降级时复用同一份逻辑）。"""
         builder: Optional[SearchSourceBuilder] = request.getSource()
         query = builder.getQuery() if builder is not None else None
         skip = builder.getFrom() if builder is not None else 0
@@ -267,11 +304,18 @@ class RestHighLevelClient(object):
         游标已被 clear（或 id 非法）时，ES 抛 ``SearchContextMissingException``，
         替身抛 ``ValueError``。
         """
+        if self._real is not None:
+            return self._real.scroll(
+                request, memory=lambda: self._scroll_memory(request))
         # P0-2：prod 模式下拒绝“假游标”（进程内 _SCROLLS ≠ 集群 search context）。
         reject_shim_operation(
             "RestHighLevelClient.scroll",
             "（真实 ES 适配器未实现，游标不会发往集群。）")
         self._ensureAvailable()
+        return self._scroll_memory(request)
+
+    def _scroll_memory(self, request: SearchScrollRequest) -> SearchResponse:
+        """进程内存实现（P2-3 抽出）。"""
         scroll_id = request.scrollId()
         cursor = self._SCROLLS.get(scroll_id)
         if cursor is None:
@@ -288,7 +332,14 @@ class RestHighLevelClient(object):
     def clearScroll(self, request: ClearScrollRequest,
                     options: Any = None) -> ClearScrollResponse:
         """对应 ``clearScroll(ClearScrollRequest, RequestOptions)``：释放游标。"""
+        if self._real is not None:
+            return self._real.clearScroll(
+                request, memory=lambda: self._clearScroll_memory(request))
         self._ensureAvailable()
+        return self._clearScroll_memory(request)
+
+    def _clearScroll_memory(self, request: ClearScrollRequest) -> ClearScrollResponse:
+        """进程内存实现（P2-3 抽出）。"""
         freed = 0
         for scroll_id in request.getScrollIds():
             if self._SCROLLS.pop(scroll_id, None) is not None:
