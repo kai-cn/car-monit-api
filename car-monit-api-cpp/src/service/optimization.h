@@ -34,6 +34,17 @@ DataSource parse_data_source(const std::string& ds);
 // LargeScaleQueryController 的 resolveDs：null/未知按 snapshot 处理。
 DataSource resolve_data_source(const std::string& type);
 
+// 查询字段白名单校验（防 SQL 注入，对应审阅报告 §3.3 R3 / §4.2 #1）。
+// /api/v1/unified|large 的 fuzzyFields key 与 /api/v1/large/stats/group 的
+// groupBy/countField 会进入 PostgreSQL 降级查询的 SQL 标识符位置，必须先经此解析：
+//   translate=true  → 先按 Java UnifiedQueryService.buildFieldTranslation 翻译
+//                     逻辑字段名（platenumber -> vehicleplate/envehicleid 等），
+//                     翻译结果必须是该数据源实体的已知列；
+//   translate=false → 字段名必须直接是实体已知列（json 属性名或物理列名）。
+// 命中返回物理列名；未命中抛 BindError(400)（由 HTTP 边界转成 400 响应）。
+// 只校验标识符：查询值仍走 sql_literal/like_literal 字面量转义，不经此函数。
+std::string guard_query_field(DataSource ds, const std::string& field, bool translate);
+
 using FuzzyFields = std::map<std::string, std::string>;
 
 class UnifiedQueryService {
