@@ -1,8 +1,21 @@
 # Java → C++ 迁移进度清单（最终）
 
 > 源工程：`../pro-business-api` + `../pro-base-common`（RuoYi / Spring Boot 2.4.5，24 个 Controller、85 个端点）
-> 目标：C++20 + CMake + MSVC 2022/Ninja（Windows，已实测）或 MinGW-w64 g++ ≥ 10；HTTP/JSON 依赖 vendored，Kafka 依赖由 CMake FetchContent 构建
-> 更新时间：2026-11-07（审阅修复轮完成后）
+> 目标：C++20 + CMake + MSVC 2022/Ninja（Windows，已实测）；Linux 由 GitHub Actions 矩阵验证
+> 更新时间：2026-11-08（P0-P7 工程化推进完成）
+
+## 〇〇、2026-11-08 工程化推进（P0-P7，分支 `car-monit-api-cpp`）
+
+| 阶段 | 内容 | 提交 | 验证 |
+|---|---|---|---|
+| P0 | 清理可再生构建目录；MSVC `/W4` + `-Wall -Wextra -Wpedantic` + 默认 `-Werror`；第三方头 SYSTEM 隔离；ASan/UBSan 选项；`getenv` 收敛 | `977534d` | 全量重编译零告警；ctest 1/1 |
+| P1 | GitHub Actions：Windows(MSVC)/Linux(GCC)/Linux(Clang) 矩阵 + ASan/UBSan + cppcheck + 增量 clang-format | `4717a4e` | Linux 结果以 CI 首次运行为准（本机无 WSL/Docker） |
+| P2 | PG 客户端换 libpqxx 7.10 + libpq 17：参数绑定、TLS、语句超时、28P01/28000 映射、事务；查询层 SqlFragment 全量参数化；删除自研认证与 `auth-mode` | `9cfb768` | MSVC 构建零告警；ctest 1/1（含回环失败路径，未连真实库） |
+| P3 | Redis 客户端换 hiredis 1.5：连接/命令超时、可选 TLS；保留接口与重连语义 | `c33a74d` | 同上；fd 泄漏/自锁测试扩展 |
+| P4 | 20 个 `SELECT *` 运行期展开显式列；字典进程内缓存（TTL 300s）+ 称重字典批量回源；count 去 ORDER BY；深翻页标注 | `4d261fc` | 新增 `test_entity_select_columns`；ctest 1/1 |
+| P5 | 契约骨架：87 条路由黄金基线；只读采集脚本 + JSON diff 脚本 | `d045300` | 黄金基线严格比较通过；Java 9902 不可达 → 真实响应待采集 |
+| P6 | 指标 P50/P95/P99 + 错误率 + 依赖状态/延迟 + 线程池队列；Prometheus 文本；JSON 日志 + requestId；停机硬超时 | `9b54c55` | 新增指标/JSON 日志断言；ctest 1/1 |
+| P7 | 文档收尾 + 清空重建 + 启动冒烟 | 本次提交 | 见下节“最终自检” |
 
 ## 〇、2026-11-07 审阅修复轮（依据 docs/CODE_REVIEW.md，分支 car-monit-api-cpp）
 
@@ -25,9 +38,9 @@
 
 | 指标 | 结果 |
 |---|---|
-| 构建 | ✅ MSVC 2022（cl 19.43）+ Ninja + Release 通过（含 librdkafka 2.6.1 静态库），零错误；更早基线曾用 MinGW g++ 14.2 |
-| 测试 | ✅ `ctest` 1/1 通过（`ALL TESTS PASSED`；含本轮新增：白名单/信封契约/cron 语义/池熔断/线程池/安全/健康检查/日志轮转等用例） |
-| 启动 | ✅ `/health` 200（依赖连接状态汇总，UP/DEGRADED，不主动建连）；新增 `/metrics`（请求计数/错误/时延） |
+| 构建 | ✅ MSVC 2022（cl 19.43）+ Ninja + Release 通过；依赖 librdkafka 2.6.1 / libpqxx 7.10.0 / libpq 17.2 / hiredis 1.5.0，零告警（`/W4` + `/WX`） |
+| 测试 | ✅ `ctest` 1/1 通过（`ALL TESTS PASSED`；含白名单/信封契约/cron/池熔断/参数绑定/列清单/契约基线/指标/JSON 日志等用例） |
+| 启动 | ✅ `/health` 200（依赖状态汇总，不主动建连）；`/metrics` JSON + `?format=prometheus` |
 | 端点 | ✅ 85 个 Java 端点 + `/health` + `/metrics` = 87 条路由 |
 | 定时任务 | ✅ 10 个（触发频率与 Java 一致：0/3 分钟步进、30s 丢失检测、02:30 对账等） |
 | Kafka | ✅ 默认 librdkafka 真实发送；Redis `mq:pending:<topic>` 可配置降级（默认关闭）；可靠性超时队列已闭环 |
@@ -94,5 +107,19 @@
 5. **SnapshotFlowSyncService**：✅ 已按 Java 源码一比一迁移（`src/service/snapshot_flow_sync.cpp`），游标/批大小/间隔/启停条件均取自源码。
 6. **ES 索引管理**：不建索引、不挂 ILM（与 Java 配置 `auto-create:false`/`attach-ilm:false` 一致），但依赖外部已建好索引。
 7. **无事务**：新增多语句写操作时需要人工补偿。
-8. **Linux 实机验证**：POSIX 分支已修复（bc29c46）并提供 `scripts/ci-linux.sh`，本机 WSL 被禁用无法代跑；上 Linux 前先执行该脚本确认。
-9. **审阅 §5.1 未尽项**：契约测试黄金样本集（#12 全量 85 端点 diff，需 DB 解锁）、TLS（自研 PG 客户端不支持 SSL，按审阅 §5.4 建议由网关终结/换 libpq 长期解决）、20/22 实体 SELECT * 换列清单（§5.2 项）、N+1 字典读取（§5.2 项）。
+8. **Linux 实机验证**：POSIX 差异已由 libpqxx/hiredis 接管；CI 已配置 GCC/Clang/ASan 三个 Linux job，但本机 WSL 被禁用、无 Docker，**首次 CI 运行结果待确认**。
+9. **契约响应体 diff**：路由级黄金基线（87 条）已完成；Java 9902 于 2026-11-08 探测为连接被拒绝，真实响应样本待采集；采集/diff 脚本已就绪（`scripts/contract-collect.ps1`、`contract-diff.ps1`）。
+10. **openGauss 专有 SHA256**：stock libpq 不支持；若服务端 `password_encryption_type` 仅允许 sha256/sm3，需改为 md5 或使用 openGauss 定制 libpq（见 DECISIONS D-011）。
+11. **HTTP TLS**：PG/Redis 已支持 TLS；HTTP 监听仍为明文，按审阅建议由前置网关终结 TLS。
+12. **Kafka 端到端**：仍无可用 broker；只覆盖失败路径/死信落库。
+13. **SysTest 异步任务**：`syncSuspiciousCar1..10` 仍使用 detached 线程（Java 为 `CompletableFuture.runAsync`）；后续可改为独立受控线程池。
+14. **磁盘**：P7 清空重建后 D 盘仅剩约 55 MB（回收站占用需人工清空）；后续大构建前需先释放空间。
+
+## 五、P7 最终自检（2026-11-08）
+
+| 项 | 结果 |
+|---|---|
+| 清空重建 | 删除 `build/` 后全新 configure + build 成功；本工程代码零告警（第三方库仅 C4819/C5030 噪声） |
+| ctest | `1/1 Test #1: carmonit_tests ... Passed`（`ALL TESTS PASSED`） |
+| 启动冒烟 | 回环失败路径（DB/Redis 指向 `127.0.0.1:1`、Kafka 关闭）：`/health` 200 `DEGRADED`（database/redis/kafka/elasticsearch 四组件齐全）；`/metrics` JSON 含依赖状态/延迟分位；`/metrics?format=prometheus` 60 行；`/no-such-endpoint` 返回 Spring error 信封（`timestamp/status/error/message/path`） |
+| 磁盘 | D 盘剩余约 55 MB（低于 1 GB 阈值，需人工清空回收站后才能继续大构建） |
