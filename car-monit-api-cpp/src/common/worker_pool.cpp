@@ -1,6 +1,8 @@
 #include "common/worker_pool.h"
 
+#include <atomic>
 #include <condition_variable>
+#include <cstddef>
 #include <deque>
 #include <mutex>
 #include <thread>
@@ -14,6 +16,7 @@ struct WorkerPool::Impl {
   std::condition_variable cv_space;  // shutdown 时确认排空（可选）
   std::deque<std::function<void()>> queue;
   std::vector<std::thread> workers;
+  std::atomic<int> active{0};
   int capacity = 128;
   bool stopped = false;
 
@@ -27,7 +30,9 @@ struct WorkerPool::Impl {
         task = std::move(queue.front());
         queue.pop_front();
       }
+      active.fetch_add(1);
       task(); // 异常由任务自身负责（与 Java 线程池的 worker 捕获语义一致）
+      active.fetch_sub(1);
     }
   }
 };
@@ -56,6 +61,15 @@ bool WorkerPool::submit(std::function<void()> task) {
   impl_->cv_work.notify_one();
   return true;
 }
+
+std::size_t WorkerPool::pending() const {
+  std::lock_guard<std::mutex> lock(impl_->mu);
+  return impl_->queue.size();
+}
+
+int WorkerPool::active() const { return impl_->active.load(); }
+
+int WorkerPool::capacity() const { return impl_->capacity; }
 
 void WorkerPool::shutdown() {
   {

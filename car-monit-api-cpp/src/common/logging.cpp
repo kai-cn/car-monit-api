@@ -1,7 +1,9 @@
 #include "common/logging.h"
 
 #include "common/datetime.h"
+#include "common/json.h"
 
+#include <atomic>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -20,6 +22,19 @@ std::string g_path;
 long long g_max_bytes = 50LL * 1024 * 1024; // 0 = 不轮转
 int g_keep_files = 5;
 long long g_written = 0;
+std::atomic<bool> g_json{false};
+thread_local std::string g_request_id;
+
+const char* level_name(Level l) {
+  switch (l) {
+    case Level::Trace: return "TRACE";
+    case Level::Debug: return "DEBUG";
+    case Level::Info: return "INFO";
+    case Level::Warn: return "WARN";
+    case Level::Error: return "ERROR";
+  }
+  return "INFO";
+}
 
 char level_char(Level l) {
   switch (l) {
@@ -67,6 +82,17 @@ void rotate_locked() {
 void set_level(Level level) { g_level = level; }
 Level level() { return g_level; }
 
+void set_json(bool enabled) { g_json.store(enabled); }
+bool json_enabled() { return g_json.load(); }
+void set_request_id(const std::string& id) { g_request_id = id; }
+const std::string& request_id() { return g_request_id; }
+
+RequestIdScope::RequestIdScope(std::string id) : previous_(g_request_id) {
+  g_request_id = std::move(id);
+}
+
+RequestIdScope::~RequestIdScope() { g_request_id = previous_; }
+
 void set_rotation(long long max_bytes, int keep_files) {
   std::lock_guard<std::mutex> lock(g_mutex);
   g_max_bytes = max_bytes > 0 ? max_bytes : 0; // 0 = 关闭轮转
@@ -108,9 +134,20 @@ void write(Level lvl, const std::string& logger, const std::string& msg) {
     std::snprintf(buf, sizeof(buf), "%03lld", tod);
     millis_stamp = stamp + "." + buf;
   }
-  std::string line = millis_stamp + " [" + thread_name() + "] " +
-                     std::string(1, level_char(lvl)) +
-                     "     " + logger + " - " + msg + "\n";
+  std::string line;
+  if (g_json.load()) {
+    Json j = Json::object();
+    j["time"] = millis_stamp;
+    j["level"] = level_name(lvl);
+    j["thread"] = thread_name();
+    j["logger"] = logger;
+    j["msg"] = msg;
+    if (!g_request_id.empty()) j["requestId"] = g_request_id;
+    line = j.dump() + "\n";
+  } else {
+    line = millis_stamp + " [" + thread_name() + "] " + std::string(1, level_char(lvl)) +
+           "     " + logger + " - " + msg + "\n";
+  }
   std::lock_guard<std::mutex> lock(g_mutex);
   std::fputs(line.c_str(), stdout);
   std::fflush(stdout);

@@ -27,6 +27,8 @@ int main(int argc, char** argv) {
 
   cm::log::set_level(cm::log::Level::Info);
   cm::log::set_file("logs/car-monit-api.log");
+  // 结构化日志（JSON）开关：logging.json / CM_LOG_JSON；每行携带 requestId。
+  cm::log::set_json(cfg.log_json());
   // 日志按大小轮转（logging.max-file-mb / logging.max-files，默认 50MB x 5）。
   cm::log::set_rotation(static_cast<long long>(cfg.log_max_file_mb()) * 1024 * 1024,
                         cfg.log_max_files());
@@ -101,7 +103,7 @@ int main(int argc, char** argv) {
   // 只在后台线程运行，DB/Kafka 不可达时不会阻塞启动。
   cm::service::start_snapshot_flow_sync();
 
-  int rc = cm::http::run_server(cfg.server_port(), router, 16);
+  int rc = cm::http::run_server(cfg.server_port(), router, 16, cfg.shutdown_timeout_ms());
   // 优雅停机（审阅 §5.1 #11）：run_server 因信号或错误返回后，按依赖顺序回收——
   // 调度器（停止触发 + join 执行池）→ 快照同步线程 → 后台任务池（导出/全量修复
   // 同步，排空 join）→ Kafka（rd_kafka_flush）→ 数据库连接池。

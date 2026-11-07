@@ -139,8 +139,10 @@
 | 线程池 | Tomcat `max-threads`、`@Async` 线程池 | ⚠️ httplib 固定 16 线程；SysTest 的 `syncSuspiciousCar1..10` 用 detached 线程（与 Java `CompletableFuture.runAsync` 等价） |
 | Kafka 后台线程 | Kafka 客户端网络线程 + 重试调度线程 | ✅ 1 个 poll 线程（delivery 回调/到期重试）+ 1 个 DB 重试线程（30s/60s） |
 | 类加载 / 热部署 | DevTools 热重启 | ❌ 需重新编译链接 |
-| 日志 | logback：`时间 [线程名] 级别 logger - msg` | ⚠️ 格式复刻，`[线程名]` 改为**线程 ID**（`[96471]`） |
-| 配置刷新 | `@RefreshScope`/Nacos | ❌ 不支持热刷新，改配置需重启 |
+| 日志 | logback：`时间 [线程名] 级别 logger - msg` | ⚠️ 默认格式复刻（`[线程名]` 改为线程 ID）；`logging.json=true`/`CM_LOG_JSON=true` 时输出**每行 JSON**，并自动携带 requestId（响应头 `X-Request-Id` 回写） |
+| 指标 | Java 侧无 `/metrics` | ✅ 新增：`/metrics` 默认 JSON（请求量/错误率/延迟 P50/P95/P99/在途/状态码分类/依赖状态与延迟/后台池队列深度）；`?format=prometheus` 返回 Prometheus 文本（`text/plain; version=0.0.4`）。依赖探活 5s 缓存，DB/Redis 只在已有连接上探测，**不新建连接** |
+| 优雅停机 | Spring 关闭容器（默认等待在途请求） | ✅ SIGINT/SIGTERM 停止接受新请求；在途请求最多等待 `server.shutdown-timeout-ms`（默认 30s），超时强制退出（日志逐行 flush） |
+| 配置刷新 | `@RefreshScope`/Nacos | ❌ 不支持热刷新/SIGHUP：改配置需重启（明确不支持，避免半热更状态） |
 
 ## 9. 运维注意事项
 

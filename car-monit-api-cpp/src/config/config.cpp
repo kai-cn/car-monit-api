@@ -200,6 +200,9 @@ void Config::refresh_business() {
   // 日志轮转（logging.max-file-mb=0 关闭）。
   log_max_file_mb_ = yaml_.get_int("logging.max-file-mb", log_max_file_mb_);
   log_max_files_ = yaml_.get_int("logging.max-files", log_max_files_);
+  log_json_ = yaml_.get_bool("logging.json", log_json_);
+  shutdown_timeout_ms_ =
+      yaml_.get_int("server.shutdown-timeout-ms", shutdown_timeout_ms_);
 
   std::string url = yaml_.get_str("spring.datasource.dynamic.datasource.master.url", "");
   if (!url.empty()) {
@@ -386,6 +389,8 @@ void Config::refresh_business() {
 void Config::apply_env_overrides() {
   auto env = [](const char* name) { return cm::utils::get_env(name); };
   if (auto v = env("CM_SERVER_PORT")) server_port_ = std::stoi(*v);
+  if (auto v = env("CM_LOG_JSON")) log_json_ = (*v == "1" || *v == "true" || *v == "on");
+  if (auto v = env("CM_SHUTDOWN_TIMEOUT_MS")) shutdown_timeout_ms_ = std::stoi(*v);
   if (auto v = env("CM_PG_HOST")) pg_.host = *v;
   if (auto v = env("CM_PG_PORT")) pg_.port = std::stoi(*v);
   if (auto v = env("CM_PG_USER")) pg_.user = *v;
