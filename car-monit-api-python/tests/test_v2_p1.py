@@ -78,3 +78,53 @@ def test_wrapper_predicate_compares_decimal_against_float_string() -> None:
     assert wrapper.toPredicate()(entity) is True
     wrapper = QueryWrapper().gt("fee", "1.50")
     assert wrapper.toPredicate()(entity) is False
+
+
+# ---------------------------------------------------------------- P1-2 worker 线程数
+def test_worker_threads_setting(monkeypatch) -> None:
+    from app.settings import Settings
+
+    monkeypatch.delenv("APP_SERVER_WORKER_THREADS", raising=False)
+    assert Settings().worker_threads == 40  # 与 anyio 缺省一致
+    monkeypatch.setenv("APP_SERVER_WORKER_THREADS", "200")
+    assert Settings().worker_threads == 200
+    monkeypatch.setenv("APP_SERVER_WORKER_THREADS", "0")
+    assert Settings().worker_threads == 1  # 下限保护
+
+
+# ---------------------------------------------------------------- P1-3 可观测性
+def test_request_id_header_and_metrics_endpoint() -> None:
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    client = TestClient(app, raise_server_exceptions=False)
+    response = client.get("/health/live")
+    assert response.status_code == 200
+    assert response.headers.get("X-Request-ID")  # 自动生成并回写
+
+    inbound = client.get("/health/live", headers={"X-Request-ID": "rid-42"})
+    assert inbound.headers.get("X-Request-ID") == "rid-42"  # 沿用入站值
+
+    metrics = client.get("/metrics")
+    assert metrics.status_code == 200
+    text = metrics.text
+    assert "app_requests_total" in text
+    assert 'app_responses_total{status="200"}' in text
+
+
+def test_metrics_counts_404_and_access_log(caplog) -> None:
+    import logging
+
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+    from app.observability import metrics_text
+
+    caplog.set_level(logging.INFO, logger="app.access")
+    client = TestClient(app, raise_server_exceptions=False)
+    client.get("/__definitely_not_a_route__")
+    text = metrics_text()
+    assert 'app_responses_total{status="404"}' in text
+    assert any("rid=" in record.message for record in caplog.records
+               if record.name == "app.access")

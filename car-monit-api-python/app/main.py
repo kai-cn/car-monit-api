@@ -27,10 +27,12 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import Response
 
 from app import __version__
 from app.health import health_payload
 from app.logging_config import configure_logging
+from app.observability import metrics_text, request_context_middleware
 from app.routes import register_routes
 from app.runtime import docs_enabled, runtime_mode, startup_fail_fast
 from app.settings import settings
@@ -97,6 +99,16 @@ def _install_persistence() -> str:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     started = time.perf_counter()
+    # P1-2：实现文档承诺的 app.server.worker-threads（此前 README 提及但未实现）。
+    # 等价 Tomcat 的 max-threads：FastAPI 同步 handler 跑在 anyio 线程池，
+    # 默认 40 个令牌；调大可在 DB 慢查询场景提高并发容量。
+    try:
+        import anyio.to_thread
+
+        anyio.to_thread.current_default_thread_limiter().total_tokens = max(
+            1, settings.worker_threads)
+    except Exception as error:  # noqa: BLE001 - 观测/线程池调参失败不阻断启动
+        log.warning("worker thread limiter not applied: %s", error)
     mapper_note = _install_persistence()
     _register_health_probes()
 
@@ -155,6 +167,9 @@ app = FastAPI(
     openapi_url="/openapi.json" if docs_enabled() else None,
 )
 
+# P1-3：请求 ID + 访问日志 + 指标采样（顺序上包裹全部路由）
+app.middleware("http")(request_context_middleware)
+
 
 # --------------------------------------------------------------------- routes
 @app.get("/health", tags=["migration"], summary="Liveness/readiness (migration-only)")
@@ -176,6 +191,14 @@ def health() -> dict[str, Any]:
 def health_live() -> dict[str, Any]:
     """进程存活探针：容器只要活着就 200（不检查任何依赖）。"""
     return {"status": "UP"}
+
+
+@app.get("/metrics", include_in_schema=False)
+def metrics() -> Response:
+    """P1-3：基础指标（Prometheus 文本格式，零依赖实现）。"""
+    from starlette.responses import PlainTextResponse
+
+    return PlainTextResponse(metrics_text(), media_type="text/plain; version=0.0.4")
 
 
 @app.get("/health/ready", tags=["migration"], summary="Readiness (503 when degraded)")

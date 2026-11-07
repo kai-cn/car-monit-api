@@ -39,12 +39,20 @@ def main() -> None:
         print("=" * 74, flush=True)
 
     reload_enabled = os.environ.get("CAR_MONIT_RELOAD", "false").strip().lower() in ("1", "true", "yes", "on")
+    # P1-2：多进程参数（默认单进程）。TODO(V2/决策③)：workers>1 会复制全部进程内
+    # 状态（Redis/ES 替身、调度器、导出任务表、Bean 线程），替换真实中间件并
+    # 加分布式锁之前不要开（docs/迁移审阅报告.md §6.2 D4）。
+    workers = max(1, int(os.environ.get("CAR_MONIT_WORKERS", "1")))
+    if workers > 1 and not reload_enabled:
+        print("⚠  CAR_MONIT_WORKERS=%d：多进程会复制进程内状态（调度器/内存替身），"
+              "在真实中间件接入前仅建议配合 CAR_MONIT_RUNTIME=prod 评估使用。" % workers)
     uvicorn.run(
         "app.main:app",
         host=os.environ.get("CAR_MONIT_HOST", "0.0.0.0"),
         port=int(os.environ.get("CAR_MONIT_PORT", settings.server_port)),
         reload=reload_enabled,
         reload_dirs=[str(Path(__file__).resolve().parent / "app")] if reload_enabled else None,
+        workers=None if reload_enabled else workers,
         log_level=level.lower(),
         access_log=False,
     )

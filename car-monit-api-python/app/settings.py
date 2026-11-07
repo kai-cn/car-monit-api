@@ -85,6 +85,14 @@ class Settings:
         path = self.text("server.servlet.context-path", "/")
         return "" if path == "/" else path.rstrip("/")
 
+    @property
+    def worker_threads(self) -> int:
+        """P1-2：``app.server.worker-threads``——anyio 线程池令牌数（等价 Tomcat max-threads）。
+
+        README 此前提到该配置但从未实现（报告 Q3）；默认 40 与 anyio 缺省一致。
+        """
+        return max(1, self.integer("app.server.worker-threads", 40))
+
     # ------------------------------------------------------------------ datasource
     @property
     def jdbc_url(self) -> str:
