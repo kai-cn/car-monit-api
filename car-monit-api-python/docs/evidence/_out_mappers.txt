@@ -1,0 +1,107 @@
+﻿.venv\Scripts\python.exe : com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectGantryNum has no statement (neithe
+r XML nor annotation): calling it raises like MyBatis
+所在位置 行:15 字符: 1702
++ ... M = 'dumb'; .venv\Scripts\python.exe tools\check_mappers.py 2>&1 | Ou ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (com.ruoyi.base....es like MyBatis:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01ById has no statement (neither XML nor
+ annotation): calling it raises like MyBatis
+com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01List has no statement (neither XML nor
+ annotation): calling it raises like MyBatis
+com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01ListNew has no statement (neither XML 
+nor annotation): calling it raises like MyBatis
+com.ruoyi.base.mapper.ZdataTrailFittingMapper#selectZdataTrailFittingById has no statement (neither XML nor annotation)
+: calling it raises like MyBatis
+com.ruoyi.base.mapper.ZdataTrailFittingMapper#selectZdataTrailFittingList has no statement (neither XML nor annotation)
+: calling it raises like MyBatis
+mapper XML files : 22
+statements       : 54
+sql fragments    : 19
+
+DwdLcztFwqjcxxMapper  (DwdLcztFwqjcxxMapper.xml)
+    select selectDwdLcztFwqjcxxById
+    select selectDwdLcztFwqjcxxList
+DwdLcztSfsjcxxMapper  (DwdLcztSfsjcxxMapper.xml)
+    select selectDwdLcztSfsjcxxById
+    select selectDwdLcztSfsjcxxList
+DwdLcztSfzjcxxMapper  (DwdLcztSfzjcxxMapper.xml)
+    select selectDwdLcztSfzjcxxById
+    select selectDwdLcztSfzjcxxList
+KafkaMessageRecordMapper  (KafkaMessageRecordMapper.xml)
+    update incrementRetryCount
+    select selectFailedRecords
+    update updateStatusById
+OdsCxztFwqcllsMapper  (OdsCxztFwqcllsMapper.xml)
+    select selectOdsCxztFwqcllsById
+    select selectOdsCxztFwqcllsList
+OdsLwzxsfsjFeeGantryFusion01Mapper  (OdsLwzxsfsjFeeGantryFusion01Mapper.xml)
+    select selectOdsLwzxsfsjFeeGantryFusion01ById
+    select selectOdsLwzxsfsjFeeGantryFusion01List
+OdsLwzxsfsjFeeRecords01Mapper  (OdsLwzxsfsjFeeRecords01Mapper.xml)
+    select selectByCursorShard
+OdsLwzxsfsjFeeStationEnter01Mapper  (OdsLwzxsfsjFeeStationEnter01Mapper.xml)
+    select selectOdsLwzxsfsjFeeStationEnter01ById
+    select selectOdsLwzxsfsjFeeStationEnter01List
+OdsLwzxsfsjFeeStationExit01Mapper  (OdsLwzxsfsjFeeStationExit01Mapper.xml)
+    select selectOdsLwzxsfsjFeeStationExit01ById
+    select selectOdsLwzxsfsjFeeStationExit01List
+OdsRtSzdnSnapshotFlowAddcodeMapper  (OdsRtSzdnSnapshotFlowAddcodeMapper.xml)
+    select selectByCursorShard
+    select selectOdsRtSzdnSnapshotFlowAddcodeById
+    select selectOdsRtSzdnSnapshotFlowAddcodeByUuidList
+    select selectOdsRtSzdnSnapshotFlowAddcodeList
+    select selectOdsRtSzdnSnapshotFlowAddcodeListNew
+OdsRtSzdnSnapshotFlowProvcaptureAddcodeMapper  (OdsRtSzdnSnapshotFlowProvcaptureAddcodeMapper.xml)
+    select selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeById
+    select selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeByUuidList
+    select selectOdsRtSzdnSnapshotFlowProvcaptureAddcodeList
+OdsRtSzdnSnapshotFlowStationcaptureAddcodeMapper  (OdsRtSzdnSnapshotFlowStationcaptureAddcodeMapper.xml)
+    select selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeById
+    select selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeByUuidList
+    select selectOdsRtSzdnSnapshotFlowStationcaptureAddcodeList
+OdsSzdnGantryIpMapper  (OdsSzdnGantryIpMapper.xml)
+    select selectIPSet
+    select selectOdsSzdnGantryIpById
+    select selectOdsSzdnGantryIpList
+OdsSzdnGantryMapper  (OdsSzdnGantryMapper.xml)
+    select selectOdsSzdnGantryById
+    select selectOdsSzdnGantryList
+OdsSzdnProvinceBorderVehicleWeightNewstructureMapper  (OdsSzdnProvinceBorderVehicleWeightNewstructureMapper.xml)
+    select selectOdsSzdnProvinceBorderVehicleWeightNewstructureById
+    select selectOdsSzdnProvinceBorderVehicleWeightNewstructureByUuidList
+    select selectOdsSzdnProvinceBorderVehicleWeightNewstructureList
+OdsSzdnSectionMapper  (OdsSzdnSectionMapper.xml)
+    select selectOdsSzdnSectionById
+    select selectOdsSzdnSectionList
+OdsSzdnTollMapper  (OdsSzdnTollMapper.xml)
+    select selectOdsSzdnTollById
+    select selectOdsSzdnTollList
+OdsSzdnTollStationIpMapper  (OdsSzdnTollStationIpMapper.xml)
+    select selectOdsSzdnTollStationIpById
+    select selectOdsSzdnTollStationIpList
+OdsYhglVBaseOrgMapper  (OdsYhglVBaseOrgMapper.xml)
+    select selectOdsYhglVBaseOrgById
+    select selectOdsYhglVBaseOrgList
+ZdataLocationDictMapper  (ZdataLocationDictMapper.xml)
+    select selectZdataLocationDictById
+    select selectZdataLocationDictList
+ZdataTrailFittingMapper  (ZdataTrailFittingMapper.xml)
+    select selectByCursorShard
+ZdataTrailTracksMapper  (ZdataTrailTracksMapper.xml)
+    select getHistoryTrail
+    select getLatestTrail
+    select getLatestTrailByCursor
+    select getUnFitting
+    select selectZdataTrailTracksById
+    select selectZdataTrailTracksList
+
+bound methods    : 58
+without XML      : 6
+    com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectGantryNum
+    com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01ById
+    com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01List
+    com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01ListNew
+    com.ruoyi.base.mapper.ZdataTrailFittingMapper#selectZdataTrailFittingById
+    com.ruoyi.base.mapper.ZdataTrailFittingMapper#selectZdataTrailFittingList

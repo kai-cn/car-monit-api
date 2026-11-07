@@ -1,0 +1,52 @@
+﻿
+=== GET /health ===
+status: 200
+content-type: application/json
+body[:240]: {"status":"UP","app":"car-monit-api","version":"1.0.0","javaVersion":"1.8","springBootVersion":"2.4.5","python":"3.12.9","implementation":"cpython","startedAt":"2026-11-07T10:50:04+00:00","uptimeSeconds":26,"components":{"db":{"status":"UP"
+
+=== GET /base/gantry/list?pageNum=2&pageSize=3 ===
+status: 200
+content-type: application/json
+body[:400]: {"total":1526,"rows":[{"id":"32","gantryCode":"G007636026001020010","gantryName":"罗坳互通-于都互通门架1","roadCode":"G76","sectionCode":"200R500760712000","tollCode":"G0076360260030","orgCode":"030000007","hexCode":"396F10","direction":"1","pileNo":"ZK377+600","lon":"115.35802008681657","lat":"25.898089758431226","isVirtual":"0","mileage":"9500","boundaryGantryType":null,"gantryType":"0","cityCode":"360731
+total: 1526 rows: 3
+first gantryName: 罗坳互通-于都互通门架1
+
+=== GET /base/gantry/18 ===
+status: 200
+content-type: application/json
+body[:400]: {"code":200,"msg":"操作成功","data":{"id":"18","gantryCode":"G003536012000720010","gantryName":"瑞金北互通-宁都东互通门架1","roadCode":"G35","sectionCode":"200R500350729001","tollCode":"G35360730F0020","orgCode":"030000007","hexCode":"39110A","direction":"1","pileNo":"ZK1396+010","lon":"116.13113948740477","lat":"26.22047484041828","isVirtual":"0","mileage":"30672","boundaryGantryType":null,"gantryType":"0","city
+
+=== GET /base/gantry/99999999 ===
+status: 200
+content-type: application/json
+body[:400]: {"code":200,"msg":"操作成功"}
+
+=== GET /not-found ===
+status: 404
+content-type: application/json
+body[:200]: {"timestamp":"2026-11-07T10:50:30.643+00:00","status":404,"error":"Not Found","message":"","path":"/not-found"}
+
+=== GET /base/gantry/list?pageNum=abc ===
+status: 200
+content-type: application/json
+body[:250]: {"total":1526,"rows":[{"id":"18","gantryCode":"G003536012000720010","gantryName":"瑞金北互通-宁都东互通门架1","roadCode":"G35","sectionCode":"200R500350729001","tollCode":"G35360730F0020","orgCode":"030000007","hexCode":"39110A","direction":"1","pileNo":"ZK1396+
+
+=== POST /base/gantry (no body / wrong media) ===
+status: 404
+content-type: application/json
+body[:200]: {"timestamp":"2026-11-07T10:50:30.659+00:00","status":404,"error":"Not Found","message":"","path":"/base/gantry"}
+
+=== GET /error ===
+status: 500
+content-type: application/json
+body[:200]: {"timestamp":"2026-11-07T10:50:30.663+00:00","status":999,"error":"None","message":""}
+
+=== GET /docs ===
+status: 200
+content-type: text/html; charset=utf-8
+body[:60]: \n    <!DOCTYPE html>\n    <html>\n    <head>\n    <meta name="v
+
+=== GET /openapi.json ===
+status: 200
+content-type: application/json
+body[:60]: {"openapi":"3.1.0","info":{"title":"car-monit-api","descript

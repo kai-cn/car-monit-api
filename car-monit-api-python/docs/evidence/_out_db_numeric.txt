@@ -1,0 +1,67 @@
+﻿.venv\Scripts\python.exe : Traceback (most recent call last):
+所在位置 行:15 字符: 1702
++ ... nv:PAGER = 'more'; $env:TERM = 'dumb'; .venv\Scripts\python.exe -c @"
++                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\.venv\Lib\site-packages\sqlalchemy\engine\base.py", lin
+e 1976, in _exec_single_context
+    self.dialect.do_execute(
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\.venv\Lib\site-packages\sqlalchemy\engine\default.py", 
+line 964, in do_execute
+    cursor.execute(statement, parameters)
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\.venv\Lib\site-packages\psycopg\cursor.py", line 117, i
+n execute
+    raise ex.with_traceback(None)
+psycopg.errors.UndefinedTable: relation "ods_lwzxsfsj_fee_records_01" does not exist on gaussdb
+LINE 1: ...iclelength::text as vl, transfee::text as tf from ods_lwzxsf...
+                                                             ^
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "<string>", line 10, in <module>
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\app\db\engine.py", line 190, in query
+    result = connection.execute(text(sql), params or {})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\.venv\Lib\site-packages\sqlalchemy\engine\base.py", lin
+e 1428, in execute
+    return meth(
+           ^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\.venv\Lib\site-packages\sqlalchemy\sql\elements.py", li
+ne 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\.venv\Lib\site-packages\sqlalchemy\engine\base.py", lin
+e 1650, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\.venv\Lib\site-packages\sqlalchemy\engine\base.py", lin
+e 1855, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\.venv\Lib\site-packages\sqlalchemy\engine\base.py", lin
+e 1995, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\.venv\Lib\site-packages\sqlalchemy\engine\base.py", lin
+e 2372, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\.venv\Lib\site-packages\sqlalchemy\engine\base.py", lin
+e 1976, in _exec_single_context
+    self.dialect.do_execute(
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\.venv\Lib\site-packages\sqlalchemy\engine\default.py", 
+line 964, in do_execute
+    cursor.execute(statement, parameters)
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\.venv\Lib\site-packages\psycopg\cursor.py", line 117, i
+n execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.UndefinedTable) relation "ods_lwzxsfsj_fee_records_01" does not exist 
+on gaussdb
+LINE 1: ...iclelength::text as vl, transfee::text as tf from ods_lwzxsf...
+                                                             ^
+[SQL: select fee::text as fee, payfee::text as payfee, totalweight::text as tw, vehiclelength::text as vl, transfee::te
+xt as tf from ods_lwzxsfsj_fee_records_01 limit 5]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+TABLE_NAME ods_lwzxsfsj_fee_records_01 schema None
+table ods_lwzxsfsj_fee_records_01 pk big_id

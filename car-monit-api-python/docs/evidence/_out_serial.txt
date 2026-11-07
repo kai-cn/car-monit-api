@@ -1,0 +1,6 @@
+﻿dt pattern SSS micro=123456 -> 2026-01-01 19:04:05.123456
+dt pattern SSS micro=123000 -> 2026-01-01 19:04:05.123000
+dt pattern SSS micro=0      -> 2026-01-01 19:04:05.000
+Decimal big -> 1.2345678901234567e+19
+Decimal 1.50 -> 1.5
+Decimal 0.10 -> 0.1
