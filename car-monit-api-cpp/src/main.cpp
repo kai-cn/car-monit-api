@@ -21,12 +21,15 @@ int main(int argc, char** argv) {
     if ((arg == "-c" || arg == "--config") && i + 1 < argc) config_path = argv[++i];
   }
 
-  cm::log::set_level(cm::log::Level::Info);
-  cm::log::set_file("logs/car-monit-api.log");
-
   auto& cfg = cm::config::Config::instance();
   cfg.load(config_path);
   cfg.apply_env_overrides();
+
+  cm::log::set_level(cm::log::Level::Info);
+  cm::log::set_file("logs/car-monit-api.log");
+  // 日志按大小轮转（logging.max-file-mb / logging.max-files，默认 50MB x 5）。
+  cm::log::set_rotation(static_cast<long long>(cfg.log_max_file_mb()) * 1024 * 1024,
+                        cfg.log_max_files());
 
   // 凭据守卫：口令未解析/为空/仍是 ${...} 占位时直接退出。
   // 这里刻意放在任何网络动作（DB/Redis/Kafka）之前，避免一次空口令连接变成
@@ -90,9 +93,15 @@ int main(int argc, char** argv) {
   cm::service::start_snapshot_flow_sync();
 
   int rc = cm::http::run_server(cfg.server_port(), router, 16);
-  // 停机回收：后台任务池（导出/同步）先排空 join，再停 Kafka（flush）。
+  // 优雅停机（审阅 §5.1 #11）：run_server 因信号或错误返回后，按依赖顺序回收——
+  // 调度器（停止触发 + join 执行池）→ 快照同步线程 → 后台任务池（导出/全量修复
+  // 同步，排空 join）→ Kafka（rd_kafka_flush）→ 数据库连接池。
+  cm::router::stop_schedulers();
+  cm::service::stop_snapshot_flow_sync();
   cm::background_pool().shutdown();
   cm::mq::KafkaProducer::instance().stop();
+  cm::db::PgPool::instance().shutdown();
+  CM_LOG_INFO("main") << "car-monit-api 已停止（退出码 " << rc << "）";
   return rc;
 
 }

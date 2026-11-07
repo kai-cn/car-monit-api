@@ -169,6 +169,7 @@ std::string like_literal(const std::string& value) {
 // ---------------------------------------------------------------------------
 
 std::atomic<long long> g_es_failure_ms{0};
+std::atomic<long long> g_es_calls{0}; // 健康检查用：区分"从未调用"与"最近成功"
 constexpr long long kEsCooldownMs = 30000;
 
 struct EsRaw {
@@ -182,6 +183,7 @@ std::optional<EsRaw> es_call(const std::string& method, const std::string& path,
   const auto& cfg = config::Config::instance();
   const auto& es = cfg.es();
 
+  g_es_calls.fetch_add(1);
   long long now = now_ms();
   long long failed = g_es_failure_ms.load();
   if (failed > 0 && now - failed < kEsCooldownMs) return std::nullopt;
@@ -1046,6 +1048,14 @@ std::string guard_query_field(DataSource ds, const std::string& field, bool tran
 // ---------------------------------------------------------------------------
 // 数据源解析
 // ---------------------------------------------------------------------------
+
+std::string es_health_status() {
+  // 不主动发起连接：g_es_failure_ms > 0 = 上次失败进入 30s 冷却；
+  // 从未调用过（g_es_calls == 0）= UNKNOWN；其余 = UP。
+  if (g_es_failure_ms.load() > 0) return "DOWN";
+  if (g_es_calls.load() == 0) return "UNKNOWN";
+  return "UP";
+}
 
 std::string data_source_name(DataSource ds) {
   switch (ds) {

@@ -20,5 +20,7 @@ void register_systest(http::Router& r);
 void register_optimization(http::Router& r);
 // 定时任务（10 个）
 void start_schedulers();
+// 优雅停机：停止调度循环并 join 执行池（幂等，未启动时为 no-op）。
+void stop_schedulers();
 
 } // namespace cm::handler

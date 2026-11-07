@@ -8,5 +8,7 @@
 namespace cm::service {
 
 void start_snapshot_flow_sync();
+// 优雅停机：停止两条同步线程并 join（对应 Java @PreDestroy 的 shutdownNow 语义）。
+void stop_snapshot_flow_sync();
 
 } // namespace cm::service

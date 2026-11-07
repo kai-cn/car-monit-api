@@ -2,6 +2,7 @@
 
 #include "common/datetime.h"
 #include "common/logging.h"
+#include "common/worker_pool.h"
 #include "config/config.h"
 #include "scheduler/cron.h"
 #include "service/ops.h"
@@ -10,6 +11,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -67,26 +69,42 @@ long long steady_now_ms() {
       .count();
 }
 
-void launch(Job& job) {
-  if (job.running.exchange(true)) return;
-  std::thread worker([&job]() {
-    try {
-      job.fn();
-    } catch (const std::exception& e) {
-      CM_LOG_ERROR("scheduler") << "任务执行异常: " << job.name << ": " << e.what();
-    } catch (...) {
-      CM_LOG_ERROR("scheduler") << "任务执行异常: " << job.name << ": <unknown>";
-    }
-    job.running = false;
-  });
-  worker.detach();
+// 调度任务执行池（Java ThreadPoolTaskScheduler 默认单线程的受控等价物；
+// 2 worker + 每任务原子防重入）。优雅停机时由 stop_schedulers() join 回收，
+// 替代原先的 detached 线程（审阅 §5.1 #11）。
+cm::WorkerPool& sched_pool() {
+  static cm::WorkerPool pool(2, 64);
+  return pool;
 }
+
+void launch(const std::shared_ptr<Job>& job) {
+  if (job->running.exchange(true)) return;
+  if (!sched_pool().submit([job]() {
+        try {
+          job->fn();
+        } catch (const std::exception& e) {
+          CM_LOG_ERROR("scheduler") << "任务执行异常: " << job->name << ": " << e.what();
+        } catch (...) {
+          CM_LOG_ERROR("scheduler") << "任务执行异常: " << job->name << ": <unknown>";
+        }
+        job->running = false;
+      })) {
+    // 池满：本轮放弃（不视为任务失败），下个触发周期自然重试。
+    job->running = false;
+    CM_LOG_WARN("scheduler") << "调度任务队列已满，本轮跳过: " << job->name;
+  }
+}
+
+// 优雅停机状态：调度循环线程与执行池都可停止并 join。
+std::atomic<bool> g_running{true};
+std::thread g_loop;
 
 } // namespace
 
 void start_schedulers() {
+  if (g_loop.joinable()) return; // 已在运行，幂等
   auto& cfg = config::Config::instance();
-  std::vector<std::unique_ptr<Job>> jobs;
+  std::vector<std::shared_ptr<Job>> jobs;
 
   auto add_cron = [&](const std::string& name, const std::string& expr,
                       std::function<void()> fn) {
@@ -95,14 +113,14 @@ void start_schedulers() {
       CM_LOG_WARN("scheduler") << "cron 表达式不合法（任务将永不触发）: " << name << " -> "
                                 << expr << "（Spring 要求恰好 6 个字段：秒 分 时 日 月 周）";
     }
-    auto job = std::make_unique<Job>();
+    auto job = std::make_shared<Job>();
     job->name = name;
     job->cron = expr;
     job->fn = std::move(fn);
     jobs.push_back(std::move(job));
   };
   auto add_fixed = [&](const std::string& name, long long interval_ms, std::function<void()> fn) {
-    auto job = std::make_unique<Job>();
+    auto job = std::make_shared<Job>();
     job->name = name;
     job->fixed_rate = true;
     job->interval_ms = interval_ms > 0 ? interval_ms : 60000;
@@ -134,27 +152,35 @@ void start_schedulers() {
   add_cron("gaussEsConsistency", cfg.consistency.cron,
            [] { service::ops::gauss_es_consistency_tick(); });
 
-  std::thread loop([jobs = std::move(jobs)]() mutable {
+  g_running.store(true);
+  g_loop = std::thread([jobs = std::move(jobs)]() mutable {
     CM_LOG_INFO("scheduler") << "定时任务调度线程启动，任务数=" << jobs.size();
-    while (true) {
+    while (g_running.load()) {
       const long long now = steady_now_ms();
       const scheduler::WallTime w = wall_now();
       const long long sec = timeutil::to_millis(timeutil::now()) / 1000;
       for (auto& j : jobs) {
         if (j->fixed_rate) {
           if (now >= j->next_due_ms) {
-            launch(*j);
+            launch(j);
             j->next_due_ms = now + j->interval_ms;
           }
         } else if (j->last_match != sec && scheduler::cron_match(j->cron, w)) {
           j->last_match = sec;
-          launch(*j);
+          launch(j);
         }
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
+    CM_LOG_INFO("scheduler") << "定时任务调度线程已停止";
   });
-  loop.detach();
+  // 不再 detach：由 stop_schedulers() 停止并 join（优雅停机）。
+}
+
+void stop_schedulers() {
+  if (!g_running.exchange(false)) return; // 未启动或已停止：幂等 no-op
+  if (g_loop.joinable()) g_loop.join();
+  sched_pool().shutdown();
 }
 
 } // namespace cm::handler

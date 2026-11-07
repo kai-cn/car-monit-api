@@ -10,7 +10,9 @@
 #include "httplib.h"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
+#include <csignal>
 #include <sstream>
 
 namespace cm::http {
@@ -19,6 +21,32 @@ namespace {
 // 进程级 IP 限流器（server.rate-limit.enabled 开启时使用）。
 // 放在文件作用域：static 局部变量不能被 lambda 简单捕获（C3495）。
 RateLimiter g_rate_limiter;
+
+// 运行期指标（审阅 §5.1 #10）：请求计数 / 错误计数 / 在途数 / 累计时延。
+std::atomic<long long> g_requests_total{0};
+std::atomic<long long> g_errors_total{0};
+std::atomic<long long> g_in_flight{0};
+std::atomic<long long> g_total_latency_ms{0};
+// 优雅停机：信号处理器只置位（async-signal-safe），监视线程负责调 svr.stop()。
+std::atomic<bool> g_shutdown_requested{false};
+
+} // namespace
+
+Json metrics_snapshot() {
+  Json j = Json::object();
+  long long total = g_requests_total.load();
+  long long latency = g_total_latency_ms.load();
+  j["requestsTotal"] = total;
+  j["errorsTotal"] = g_errors_total.load();
+  j["inFlight"] = g_in_flight.load();
+  j["avgLatencyMs"] = total > 0 ? (latency / total) : 0;
+  j["uptimeSeconds"] = std::chrono::duration_cast<std::chrono::seconds>(
+                           std::chrono::steady_clock::now().time_since_epoch())
+                           .count();
+  return j;
+}
+
+namespace {
 
 std::vector<std::string> split_path(const std::string& path) {
   std::vector<std::string> segs;
@@ -232,6 +260,11 @@ int run_server(int port, const Router& router, int /*thread_count*/) {
   }
 
   auto handler = [&router, &sec](const httplib::Request& raw, httplib::Response& res) {
+    const auto t0 = std::chrono::steady_clock::now();
+    g_in_flight.fetch_add(1);
+    struct FlightGuard {
+      ~FlightGuard() { g_in_flight.fetch_sub(1); }
+    } flight_guard;
     Request req;
     req.method = raw.method;
     req.path = raw.path;
@@ -348,6 +381,14 @@ int run_server(int port, const Router& router, int /*thread_count*/) {
         res.set_header("Content-Disposition", "attachment");
     }
     for (const auto& kv : out.headers) res.set_header(kv.first, utils::join(kv.second, ","));
+
+    // 指标累计（审阅 §5.1 #10）。
+    g_requests_total.fetch_add(1);
+    if (out.status >= 500) g_errors_total.fetch_add(1);
+    g_total_latency_ms.fetch_add(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - t0)
+            .count());
   };
 
   svr.Get(R"(.*)", handler);
@@ -356,12 +397,32 @@ int run_server(int port, const Router& router, int /*thread_count*/) {
   svr.Delete(R"(.*)", handler);
   svr.Options(R"(.*)", handler);
 
+  // 优雅停机（审阅 §5.1 #11）：SIGINT/SIGTERM 只置位原子标志（async-signal-safe），
+  // 监视线程检测到后调用 svr.stop() 停止接受新连接；run_server 返回后由 main
+  // 依次回收调度器/同步线程/后台任务池/Kafka/连接池。
+  g_shutdown_requested.store(false);
+  std::signal(SIGINT, [](int) { g_shutdown_requested.store(true); });
+  std::signal(SIGTERM, [](int) { g_shutdown_requested.store(true); });
+  std::thread shutdown_watcher([&svr] {
+    while (!g_shutdown_requested.load()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    CM_LOG_INFO("http") << "收到停机信号，停止接受新请求";
+    svr.stop();
+  });
+
   CM_LOG_INFO("http") << "HTTP 服务启动于 0.0.0.0:" << port << "，路由数 "
                      << router.route_count();
-  if (!svr.listen("0.0.0.0", port)) {
+  const bool listening = svr.listen("0.0.0.0", port);
+  // listen 返回（信号停机或监听失败）：让监视线程退出并 join，
+  // 避免其引用已析构的栈上 svr。
+  g_shutdown_requested.store(true);
+  if (shutdown_watcher.joinable()) shutdown_watcher.join();
+  if (!listening) {
     CM_LOG_ERROR("http") << "端口监听失败: " << port;
     return 1;
   }
+  CM_LOG_INFO("http") << "HTTP 服务已停止（等待中的请求已全部返回）";
   return 0;
 }
 

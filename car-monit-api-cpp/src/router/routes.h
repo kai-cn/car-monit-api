@@ -6,5 +6,7 @@ namespace cm::router {
 
 http::Router build_routes();
 void start_schedulers();
+// 优雅停机：停止调度循环并 join 执行池（幂等）。
+void stop_schedulers();
 
 } // namespace cm::router

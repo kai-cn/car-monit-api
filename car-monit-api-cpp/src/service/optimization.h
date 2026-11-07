@@ -135,4 +135,8 @@ GaussEsConsistencyService& consistency_service();
 // 守护线程（等价于 Java 的 Quartz 定时任务）。未开启时不做任何事。
 void ensure_consistency_scheduler();
 
+// ES 健康状态（供 /health 汇总）：UP=最近一次调用成功；DOWN=处于失败冷却；
+// UNKNOWN=启动以来从未调用过。不主动发起连接。
+std::string es_health_status();
+
 } // namespace cm::service
