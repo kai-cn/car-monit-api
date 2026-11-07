@@ -29,6 +29,9 @@ func TestLoadExampleConfig(t *testing.T) {
 	if cfg.App.Timezone != "Asia/Shanghai" {
 		t.Errorf("app.timezone 默认值 = %q，期望 Asia/Shanghai", cfg.App.Timezone)
 	}
+	if cfg.Server.RequestTimeout != 0 {
+		t.Errorf("server.request-timeout 默认值 = %v，期望 0（关闭，保持 Java 行为）", cfg.Server.RequestTimeout)
+	}
 }
 
 func TestResolveTimezone(t *testing.T) {

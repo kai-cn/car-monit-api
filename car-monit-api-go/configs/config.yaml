@@ -16,6 +16,9 @@ server:
   # 默认 false = 保持 Java 侧「MQ 非强依赖」语义（只体现在响应 body）；
   # 以 MQ 为关键链路的部署可置 true，让 K8s readiness 直接摘流量。
   consumer-required-for-ready: false
+  # Go 侧新增（报告 02 P1-9）：请求级 ctx 超时兜底，0=关闭（保持 Java 行为）。
+  # 开启示例：request-timeout: 30s —— 慢依赖下基础表查询按超时返回错误而不是无限等待。
+  request-timeout: 0
 
 spring:
   datasource:

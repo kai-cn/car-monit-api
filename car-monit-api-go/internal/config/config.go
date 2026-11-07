@@ -60,6 +60,9 @@ type ServerConfig struct {
 	PprofEnabled             bool   `mapstructure:"pprof-enabled"`
 	MetricsEnabled           bool   `mapstructure:"metrics-enabled"`
 	ConsumerRequiredForReady bool   `mapstructure:"consumer-required-for-ready"`
+	// RequestTimeout 为基础查询链路提供统一 ctx 超时（0 = 关闭，保持 Java 既有行为）。
+	// 报告 02 P1-9：/base/*/list 之前完全依赖 pgx 默认行为，慢依赖会拖住 goroutine。
+	RequestTimeout time.Duration `mapstructure:"request-timeout"`
 }
 
 // DatasourceConfig 对应 application.yml 的 spring: 节点（本项目的 spring 下只有 datasource）。
@@ -317,6 +320,7 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("server.pprof-enabled", false)
 	v.SetDefault("server.metrics-enabled", true)
 	v.SetDefault("server.consumer-required-for-ready", false)
+	v.SetDefault("server.request-timeout", 0) // 0 = 不启用（保持 Java 行为）
 	v.SetDefault("app.timezone", "Asia/Shanghai")
 	v.SetDefault("redis.host", "127.0.0.1")
 	v.SetDefault("redis.port", 6379)

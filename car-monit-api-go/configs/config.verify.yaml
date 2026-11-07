@@ -11,6 +11,7 @@ server:
   pprof-enabled: false
   metrics-enabled: true
   consumer-required-for-ready: false
+  request-timeout: 0
 
 spring:
   datasource:

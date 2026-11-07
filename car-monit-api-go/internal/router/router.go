@@ -74,6 +74,10 @@ func New(opts Options) *gin.Engine {
 	// 这里用 gin.New() + 自己的中间件，让日志统一走 slog（与 Java 的 logback 单一出口对应）。
 	engine := gin.New()
 	engine.Use(middleware.RequestID(), middleware.AccessLog(), middleware.Recovery(), middleware.ErrorHandler())
+	// 请求级超时兜底（报告 02 P1-9）：默认 0=关闭，开启后覆盖全部业务路由。
+	if opts.Config.Server.RequestTimeout > 0 {
+		engine.Use(middleware.Timeout(opts.Config.Server.RequestTimeout))
+	}
 	// Java 配了 `spring.mvc.pathmatch.matching-strategy: ant_path_matcher`（application.yml:9-10），
 	// 实测 `/base/gantry/list/` 在 Java 上是 200 —— Spring 的 AntPathMatcher 容忍结尾斜杠。
 	// 之前这里写 false 并注释成"与 Spring 一致"，判定是反的：Go 会对同一个 URL 返回 404，

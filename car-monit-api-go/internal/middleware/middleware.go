@@ -17,6 +17,7 @@
 package middleware
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -52,6 +53,24 @@ func RequestID() gin.HandlerFunc {
 
 		ctx := c.Request.Context()
 		ctx = logging.WithLogger(ctx, slog.Default().With("requestId", rid, "path", c.FullPath()))
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
+	}
+}
+
+// Timeout 给请求级 ctx 加统一超时（报告 02 P1-9）。
+//
+// 默认关闭（server.request-timeout: 0）。开启后 DB/ES 等下游调用会随 ctx 到期返回
+// context deadline exceeded，由既有 ErrorHandler 转成错误响应 —— 不改任何接口契约，
+// 只是避免慢依赖无限拖住 goroutine。
+func Timeout(d time.Duration) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if d <= 0 {
+			c.Next()
+			return
+		}
+		ctx, cancel := context.WithTimeout(c.Request.Context(), d)
+		defer cancel()
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}
