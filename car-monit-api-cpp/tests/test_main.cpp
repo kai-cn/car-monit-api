@@ -27,6 +27,7 @@
 #include <cassert>
 #include <cctype>
 #include <chrono>
+#include <cstring>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -881,6 +882,79 @@ static void test_entity_select_columns() {
   cm::service::invalidate_dict_cache();
 }
 
+static std::string endpoint_kind(const std::string& path) {
+  auto ends = [&](const char* suffix) {
+    return path.size() >= std::strlen(suffix) &&
+           path.compare(path.size() - std::strlen(suffix), std::strlen(suffix), suffix) == 0;
+  };
+  if (ends("/list") || ends("/listToExport") || ends("/listAll")) return "table";
+  const auto pos = path.find("/{");
+  if (pos != std::string::npos) {
+    const std::string base = path.substr(0, pos);
+    return cm::handler::info_returns_raw_entity(base) ? "raw_entity" : "ajax_entity";
+  }
+  if (path == "/health" || path == "/metrics") return "diagnostic";
+  return "ajax";
+}
+
+static void test_contract_routes_golden() {
+  // P5：85 个端点的请求契约基线（method/path/响应形态）。
+  // 更新基线：设置 CM_UPDATE_CONTRACT_GOLDEN=1 运行测试。
+  auto router = cm::router::build_routes();
+  auto routes = router.routes();
+  std::sort(routes.begin(), routes.end(),
+            [](const std::pair<std::string, std::string>& a,
+               const std::pair<std::string, std::string>& b) {
+              if (a.second != b.second) return a.second < b.second;
+              return a.first < b.first;
+            });
+  cm::Json endpoints = cm::Json::array();
+  for (const auto& r : routes) {
+    cm::Json e = cm::Json::object();
+    e["method"] = r.first;
+    e["path"] = r.second;
+    e["kind"] = endpoint_kind(r.second);
+    endpoints.push_back(e);
+  }
+  cm::Json golden = cm::Json::object();
+  golden["generated_by"] = "carmonit_tests::test_contract_routes_golden";
+  golden["endpoints"] = endpoints;
+
+  const std::string file = std::string(CM_SOURCE_DIR) + "/contracts/endpoints.golden.json";
+  const auto update = cm::utils::get_env("CM_UPDATE_CONTRACT_GOLDEN");
+  if (update && (*update == "1" || *update == "true")) {
+    std::filesystem::create_directories(std::string(CM_SOURCE_DIR) + "/contracts");
+    std::ofstream out(file);
+    out << golden.dump(2) << "\n";
+    std::cout << "已写入契约基线: " << file << " (" << endpoints.size() << " 端点)" << std::endl;
+    return;
+  }
+
+  std::ifstream in(file);
+  if (!in) {
+    std::cerr << "FAIL 缺少契约基线: " << file
+              << "（可设置 CM_UPDATE_CONTRACT_GOLDEN=1 重新生成）" << std::endl;
+    ++g_fail;
+    return;
+  }
+  cm::Json expected;
+  in >> expected;
+  const auto& exp = expected["endpoints"];
+  CHECK(!exp.is_null());
+  CHECK(exp.size() == endpoints.size());
+  for (std::size_t i = 0; i < endpoints.size() && i < exp.size(); ++i) {
+    if (endpoints[i]["method"] != exp[i]["method"] || endpoints[i]["path"] != exp[i]["path"] ||
+        endpoints[i]["kind"] != exp[i]["kind"]) {
+      std::cerr << "FAIL 端点契约漂移 #" << i << ": expected " << exp[i]["method"] << " "
+                << exp[i]["path"] << " (" << exp[i]["kind"] << "), got "
+                << endpoints[i]["method"] << " " << endpoints[i]["path"] << " ("
+                << endpoints[i]["kind"] << ")" << std::endl;
+      ++g_fail;
+    }
+  }
+  CHECK(endpoints.size() >= 80); // 当前 85 个端点
+}
+
 static void test_redis_reconnect_no_deadlock() {
   // Redis 重连路径（审阅 §3.3 R7 + 代码复查，改用 hiredis 后保持覆盖）：
   // 1) 连接失败后不得泄漏 fd（hiredis redisFree 负责关闭）；
@@ -1016,6 +1090,7 @@ int main() {
   test_pg_pool_config_bounds();
   test_dao_param_binding();
   test_entity_select_columns();
+  test_contract_routes_golden();
   test_pg_pool_connect_breaker();
   test_redis_reconnect_no_deadlock();
   test_auth_guard();

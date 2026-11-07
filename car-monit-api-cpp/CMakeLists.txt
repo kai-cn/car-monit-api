@@ -208,6 +208,9 @@ target_link_libraries(car-monit-api PRIVATE carmonit_core)
 enable_testing()
 add_executable(carmonit_tests "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_main.cpp")
 target_compile_options(carmonit_tests PRIVATE ${CM_WARN_OPTIONS})
+target_compile_definitions(carmonit_tests PRIVATE
+  CM_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+)
 target_link_libraries(carmonit_tests PRIVATE carmonit_core)
 add_test(NAME carmonit_tests COMMAND carmonit_tests)
 

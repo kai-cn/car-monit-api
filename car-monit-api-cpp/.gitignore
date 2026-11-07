@@ -24,3 +24,6 @@ configs/*.secret
 # 控制台重定向产物（同上，可能含连接串）
 run.out
 run.err
+
+# 契约采集结果可能包含真实业务数据/凭据，不入库
+contracts/captured/
