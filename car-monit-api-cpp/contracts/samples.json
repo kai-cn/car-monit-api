@@ -1,0 +1,20 @@
+{
+  "_comment": "契约采集样本配置。pathParams 可按环境覆盖；query 会附加到 table 类端点。",
+  "pathParams": {
+    "agentPk": "1",
+    "bigId": "1",
+    "dataSource": "SNAPSHOT",
+    "ds": "snapshot",
+    "id": "1",
+    "taskId": "contract-sample-task",
+    "uuid": "00000000-0000-0000-0000-000000000000"
+  },
+  "query": {
+    "pageNum": "1",
+    "pageSize": "10"
+  },
+  "headers": {
+    "Accept": "application/json"
+  },
+  "skipMethods": ["POST", "PUT", "DELETE", "PATCH"]
+}

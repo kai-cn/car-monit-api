@@ -1,0 +1,440 @@
+{
+  "generated_by": "carmonit_tests::test_contract_routes_golden",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/large/carTrackQueryByCarNo",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/large/export/status/{taskId}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/large/export/submit",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/large/fee",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/large/snapshot",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/large/stats/group",
+      "kind": "ajax"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/large/sync/full",
+      "kind": "ajax"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/large/sync/incremental",
+      "kind": "ajax"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/large/sync/repair",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/large/trail",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/unified/export/status/{taskId}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/unified/{ds}/export/submit",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/unified/{ds}/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/feeGantry/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/feeGantry/{bigId}",
+      "kind": "raw_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/base/feeStationEnter/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/feeStationEnter/{bigId}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/base/feerecords/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/feerecords/listToExport",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/feerecords/{bigId}",
+      "kind": "raw_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/base/feestationexit/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/feestationexit/{bigId}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/base/fwqjcxx/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/fwqjcxx/listAll",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/fwqjcxx/{agentPk}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/base/gantry/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/gantry/listAll",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/gantry/{id}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/base/gantryIp/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/gantryIp/{id}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/base/org/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/org/listAll",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/org/{bigId}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/base/provcapture/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/provcapture/{bigId}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/base/section/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/section/listAll",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/section/{id}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sfsjcxx/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sfsjcxx/listAll",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sfsjcxx/{agentPk}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sfzjcxx/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sfzjcxx/listAll",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sfzjcxx/{agentPk}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/base/snapshotflow/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/snapshotflow/listToExport",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/snapshotflow/{bigId}",
+      "kind": "raw_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/base/stationcapture/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/stationcapture/{bigId}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutil/carTrackQueryByCarNo",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutil/carTrackQueryByTime",
+      "kind": "ajax"
+    },
+    {
+      "method": "POST",
+      "path": "/base/sysutil/changeTrailInfo",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutil/getByTrailBo",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutil/saveRedis",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutilTest/separateSnapshotFlowTimeList",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutilTest/syncBaseInfo",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutilTest/syncCurrentTrack",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutilTest/syncHistroyTrack",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutilTest/syncOdsSzdnGantry",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutilTest/syncSuspiciousCar1",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutilTest/syncSuspiciousCar10",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutilTest/syncSuspiciousCar2",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutilTest/syncSuspiciousCar3",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutilTest/syncSuspiciousCar4",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutilTest/syncSuspiciousCar5",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutilTest/syncSuspiciousCar6",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutilTest/syncSuspiciousCar7",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutilTest/syncSuspiciousCar8",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/sysutilTest/syncSuspiciousCar9",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/toll/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/toll/listAll",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/toll/{id}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/base/tollStationIp/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/tollStationIp/{id}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/base/trailtracks/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/trailtracks/{uuid}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/base/vehicleweight/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/base/vehicleweight/map",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/base/vehicleweight/{dataSource}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "kind": "diagnostic"
+    },
+    {
+      "method": "GET",
+      "path": "/manager/fwqclls/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/manager/fwqclls/{bigId}",
+      "kind": "ajax_entity"
+    },
+    {
+      "method": "GET",
+      "path": "/metrics",
+      "kind": "diagnostic"
+    },
+    {
+      "method": "GET",
+      "path": "/progressive/feerecords/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/progressive/scale-level",
+      "kind": "ajax"
+    },
+    {
+      "method": "GET",
+      "path": "/progressive/snapshotflow/list",
+      "kind": "table"
+    },
+    {
+      "method": "GET",
+      "path": "/progressive/trailfitting/list",
+      "kind": "table"
+    }
+  ]
+}

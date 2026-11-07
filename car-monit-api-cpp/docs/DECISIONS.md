@@ -188,6 +188,26 @@
 - **可回退性**：三处均可独立回退（恢复 `select_sql` 直接用、去掉 memo_map、
   改回逐条回源）。
 
+## D-014 契约测试：路由黄金基线 + 只读采集/diff 脚本
+
+- **决策**：
+  1. `contracts/endpoints.golden.json` 固化为 87 条路由（85 业务 + `/health`、
+     `/metrics`）的 method/path/响应形态，由 `carmonit_tests` 生成与校验；
+     更新基线需显式设置 `CM_UPDATE_CONTRACT_GOLDEN=1`；
+  2. `scripts/contract-collect.ps1` 只发 GET（跳过写方法），按端点保存
+     status/contentType/body，Java 与 C++ 用同一脚本采集；
+  3. `scripts/contract-diff.ps1` 做 JSON 结构 diff，忽略时间戳/自增 id/分页 total
+     等易变字段，数组按元素排序后比较。
+- **备选**：
+  1. 立刻生成 85 份请求/响应样本文件：没有真实响应时只能凭空构造，校准价值低；
+  2. 用 Postman/Newman 集合：引入额外运行时依赖，且与本仓库脚本化流程不一致。
+- **理由**：先把“路由与响应形态”固化为可阻断的基线，等 DB 解锁后一条命令采集
+  Java 真实响应再 diff；采集结果不入库（避免生产数据/凭据进版本库）。
+- **影响**：当前基线只覆盖 method/path/kind，精确 body 契约待采集；
+  **Java 9902 在 2026-11-08 探测为不可达（连接被拒绝），标记为待采集**。
+- **可回退性**：删除脚本与基线文件即可，不影响构建与测试。
+
+
 
 
 
