@@ -23,7 +23,7 @@
 >   - Windows：CMake `FetchContent` 下载 PostgreSQL 官方（EDB 构建）17.2 二进制包，
 >     仅使用其 `include/lib/bin`，URL 与 SHA256 固定；运行时 DLL 自动复制到输出目录。
 > Kafka 依赖 **librdkafka 2.6.1**，通过 CMake `FetchContent` 在首次 configure 时下载源码并静态编译（缓存在 `build/_deps`）。
-> Redis 仍为自研 RESP2 实现（P3 计划替换为 hiredis）。
+> Redis 使用 **hiredis 1.5.0**（FetchContent 静态编译；TLS 由 hiredis_ssl + OpenSSL 3 提供）。
 > 离线构建可预先执行
 > `cmake -S . -B build -DFETCHCONTENT_SOURCE_DIR_LIBRDKAFKA=<源码目录> -DFETCHCONTENT_SOURCE_DIR_LIBPQXX=<源码目录>`；
 > 或 `-DCM_WITH_KAFKA=OFF` 关闭真实 Kafka、退回 Redis 队列降级路径。
@@ -74,8 +74,7 @@ cmake --build build-rel -j
 > 首次 configure 会下载并编译 **librdkafka 2.6.1**（静态库，约 1–3 分钟；源码缓存在 `build/_deps`）。
 > 离线环境：`-DFETCHCONTENT_SOURCE_DIR_LIBRDKAFKA=<源码目录>`；或 `-DCM_WITH_KAFKA=OFF`（MQ 退回 Redis 队列）。
 
-Linux 构建与单测（`db/pg.cpp`、`cache/redis.cpp` 的 POSIX 分支已修复：连接后恢复
-阻塞模式、设置 `SO_RCVTIMEO/SO_SNDTIMEO`、补齐 `<fcntl.h>/<cerrno>/<sys/time.h>`）：
+Linux 构建与单测（PG/Redis 协议栈已改用 libpqxx/hiredis，平台差异由依赖库处理）：
 
 ```bash
 ./scripts/ci-linux.sh            # cmake + ninja + ctest 一条龙；可透传额外 CMake 参数
@@ -111,6 +110,7 @@ ctest --test-dir build --output-on-failure
 | `spring.datasource.dynamic.datasource.master.url` | JDBC 风格 URL，内部解析 host/port/database | `jdbc:postgresql://192.168.56.10:5432/RuoYi?...` |
 | `...master.username` / `...master.password` | 数据库账号 | 用户名 `gaussdb`；口令**不写进仓库**：配置文件里放 `${CM_PG_PASSWORD}` 占位，运行时从环境变量展开（见 4.2） |
 | `spring.redis.host` / `port` / `database` | Redis | `127.0.0.1` / `6379` / `0` |
+| `spring.redis.ssl` / `ssl-cacert` / `ssl-cert` / `ssl-key` | Redis TLS（默认关闭） | 可选 |
 | `elasticsearch.host` / `port` | ES（不可达时查询自动降级到 DB） | `localhost` / `9200` |
 
 ### 4.2 环境变量覆盖（优先级高于配置文件）
@@ -119,8 +119,10 @@ ctest --test-dir build --output-on-failure
 |---|---|
 | `CM_SERVER_PORT` | `server.port` |
 | `CM_PG_HOST` / `CM_PG_PORT` / `CM_PG_USER` / `CM_PG_PASSWORD` / `CM_PG_DATABASE` | 数据源 |
-| `CM_PG_AUTH_MODE` | 口令认证算法：`auto`（默认）/`md5`/`opengauss-sha256`/`scram-sha-256` |
+| `CM_PG_SSLMODE` / `CM_PG_SSLROOTCERT` | PostgreSQL TLS（`disable/allow/prefer/require/verify-ca/verify-full`，默认 `prefer`） |
+| `CM_PG_STATEMENT_TIMEOUT_MS` | 语句超时（默认 30000，0=不设置） |
 | `CM_REDIS_HOST` / `CM_REDIS_PORT` / `CM_REDIS_PASSWORD` | Redis |
+| `CM_REDIS_TLS` / `CM_REDIS_TLS_CACERT` / `CM_REDIS_TLS_CERT` / `CM_REDIS_TLS_KEY` | Redis TLS |
 | `CM_ES_HOST` / `CM_ES_PORT` | Elasticsearch |
 | `CM_KAFKA_ENABLED` | `kafka.enabled`（`false` 时退回 Redis 降级队列） |
 | `CM_KAFKA_BOOTSTRAP` | `kafka.bootstrap-servers` |
@@ -303,8 +305,8 @@ src/
   main.cpp              # 对应 EcBusinessApiApplication + SpringApplication.run
   common/               # StringUtils/DateUtils/Convert/PageUtils/SqlUtil/RedisUtil 的等价工具
   config/               # application.yml -> config.yaml 解析 + @Value 语义
-  db/                   # pg.cpp（wire v3 客户端/池）、dao.cpp（MyBatis XML + PageHelper 等价）
-  cache/                # RedisTemplate / RedisCache 等价（RESP2）
+  db/                   # pg.cpp（libpqxx 客户端/池）、dao.cpp（MyBatis XML + PageHelper 等价）
+  cache/                # RedisTemplate / RedisCache 等价（hiredis）
   meta/                 # 19 个实体的 @TableField / resultMap / SQL 片段（entities_generated.h）
   mq/                   # KafkaTemplate 等价物（librdkafka 生产者 + 重试/死信）
   service/              # ServiceImpl：dict(字典)、track(轨迹)、ops(可靠性/检测)、optimization(大表查询)

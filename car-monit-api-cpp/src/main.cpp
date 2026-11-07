@@ -72,9 +72,10 @@ int main(int argc, char** argv) {
     CM_LOG_WARN("main") << "数据库连接失败（启动继续，请求时重试）: " << e.what();
   }
 
-  if (cm::cache::Redis::instance().connect(cfg.redis().host, cfg.redis().port,
-                                           cfg.redis().password, cfg.redis().database,
-                                           cfg.redis().timeout_ms)) {
+  if (cm::cache::Redis::instance().connect(
+          cfg.redis().host, cfg.redis().port, cfg.redis().password, cfg.redis().database,
+          cfg.redis().timeout_ms, cfg.redis().tls, cfg.redis().tls_cacert, cfg.redis().tls_cert,
+          cfg.redis().tls_key)) {
     CM_LOG_INFO("main") << "Redis 连接成功: " << cfg.redis().host << ":" << cfg.redis().port;
   } else {
     CM_LOG_WARN("main") << "Redis 连接失败，缓存相关功能将按 Java 侧降级语义处理";

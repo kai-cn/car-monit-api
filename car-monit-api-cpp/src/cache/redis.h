@@ -1,9 +1,16 @@
 #pragma once
-// Redis 客户端（RESP2）。
+// Redis 客户端（hiredis 1.5）。
 //
 // Java 侧：Spring Data Redis (Lettuce) + RuoYi RedisCache/RedisUtil，
 // 序列化器为 FastJson2JsonRedisSerializer（字符串存 JSON）。C++ 侧保持
 // 同样的键名与 JSON 值，不做额外前缀，保证与 Java 版本互通。
+//
+// 历史：迁移初期自行实现 RESP2（含半包读、SCAN、重连 fd 泄漏等修复）。
+// 本轮（P3）改为 hiredis：连接/命令超时由库处理，TLS 由 hiredis_ssl 提供；
+// 对外仍保持 Redis 类的命令接口。
+struct redisContext;
+struct redisSSLContext;
+
 #include <mutex>
 #include <optional>
 #include <string>
@@ -15,12 +22,15 @@ class Redis {
 public:
   static Redis& instance();
 
+  // tls=true 时使用 hiredis_ssl（OpenSSL）。cacert 为空则使用系统默认 CA；
+  // cert/key 需成对提供（客户端证书认证）。
   bool connect(const std::string& host, int port, const std::string& password, int database,
-               int timeout_ms);
+               int timeout_ms, bool tls = false, const std::string& cacert = "",
+               const std::string& cert = "", const std::string& key = "");
   bool connected();
   void close();
 
-  // 原始命令：返回第一条回复（数组以 JSON 数组形式返回）。
+  // 原始命令：返回第一条回复（数组以 JSON 数组形式返回；nil 返回 nullopt）。
   std::optional<std::string> cmd(const std::vector<std::string>& args);
 
   // RedisCache 语义
@@ -50,23 +60,30 @@ public:
 
 private:
   Redis() = default;
+  ~Redis();
+  Redis(const Redis&) = delete;
+  Redis& operator=(const Redis&) = delete;
+
+  // 以下两个函数要求调用方已持有 mu_（避免在持锁路径再次加锁造成自锁）。
   bool ensure();
-  bool send_command(const std::vector<std::string>& args);
-  bool read_reply(std::string& out, char& type);
-  bool read_line(std::string& out);
-  // mu_ 已由调用方持有时使用的重连入口（connect 会自己加锁，在持锁路径下
-  // 调 connect 会造成非递归 mutex 自锁死锁）。
-  bool connect_locked(const std::string& host, int port, const std::string& password,
-                      int database, int timeout_ms);
+  bool connect_locked(const std::string& host, int port, const std::string& password, int database,
+                      int timeout_ms, bool tls, const std::string& cacert, const std::string& cert,
+                      const std::string& key);
   void close_unlocked();
+  std::optional<std::string> cmd_locked(const std::vector<std::string>& args);
 
   std::mutex mu_;
-  intptr_t sock_ = -1;
+  ::redisContext* ctx_ = nullptr;
+  ::redisSSLContext* ssl_ctx_ = nullptr;
   std::string host_;
-  int port_ = 6379;
   std::string password_;
+  std::string tls_cacert_;
+  std::string tls_cert_;
+  std::string tls_key_;
+  int port_ = 6379;
   int database_ = 0;
   int timeout_ms_ = 3000;
+  bool tls_ = false;
   bool ready_ = false;
 };
 

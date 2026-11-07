@@ -58,6 +58,11 @@ spring:
     host: 127.0.0.1
     port: 6379
     timeout: 3000
+    # TLS 默认关闭（与 Java 侧一致）。开启后使用 hiredis_ssl：
+    # ssl: true
+    # ssl-cacert: /path/to/ca.pem
+    # ssl-cert: /path/to/client-cert.pem
+    # ssl-key: /path/to/client-key.pem
   kafka:
     bootstrap-servers: localhost:9092
   pulsar:

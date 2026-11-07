@@ -819,14 +819,26 @@ static void test_dao_param_binding() {
 }
 
 static void test_redis_reconnect_no_deadlock() {
-  // Redis 重连路径（审阅 §3.3 R7 + 代码复查）：
-  // 1) fd 泄漏：ensure() 不再先把 sock_ 置 -1（旧 fd 由 connect_locked 关闭）；
-  // 2) 自锁死锁：ensure() 在 cmd 持锁下改走 connect_locked（原实现调 connect
-  //    会二次加锁）。连必然拒绝的 127.0.0.1:1，随后的 get 必须快速返回而不是挂死。
+  // Redis 重连路径（审阅 §3.3 R7 + 代码复查，改用 hiredis 后保持覆盖）：
+  // 1) 连接失败后不得泄漏 fd（hiredis redisFree 负责关闭）；
+  // 2) 失败后的命令必须快速返回而不是挂死（旧实现在持锁重连时自锁）。
+  // 连必然拒绝的 127.0.0.1:1，不涉及真实 Redis。
   auto& redis = cm::cache::Redis::instance();
   CHECK(!redis.connect("127.0.0.1", 1, "", 0, 300));
-  auto v = redis.get("cm-test-reconnect-probe"); // 原实现在这里死锁
-  CHECK(!v.has_value());
+  CHECK(!redis.connected());
+  // 反复失败-重连路径：每次都应快速失败，不允许挂死或泄漏。
+  for (int i = 0; i < 3; ++i) {
+    auto v = redis.get("cm-test-reconnect-probe");
+    CHECK(!v.has_value());
+    CHECK(!redis.connected());
+  }
+  bool threw = false;
+  try {
+    redis.cmd({"PING"});
+  } catch (const cm::RedisError&) {
+    threw = true;
+  }
+  CHECK(threw);
 }
 
 static void test_server_security() {

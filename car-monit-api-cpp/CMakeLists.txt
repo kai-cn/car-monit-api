@@ -116,6 +116,44 @@ FetchContent_Declare(libpqxx
   DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 FetchContent_MakeAvailable(libpqxx)
+# libpqxx 头文件同样按 SYSTEM 引入（其 internal/concat.hxx 使用 [[assume]]，
+# MSVC 19.43 会给出 C5030；/W4 + /WX 下不能让其告警阻断本工程）。
+if(TARGET pqxx)
+  set_target_properties(pqxx PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
+endif()
+
+# ---------------------------------------------------------------------------
+# Redis 客户端：hiredis 1.5.0（替换自研 RESP2 实现）。
+#
+# - 静态库；TLS 由 hiredis_ssl + OpenSSL 提供。
+# - Windows 复用 PostgreSQL 包中的 OpenSSL 3（include/openssl + libssl.lib/
+#   libcrypto.lib 均由该包提供），避免再下载一份 OpenSSL。
+# - Linux 需要 libssl-dev（CI 已安装）。
+# - 本工程无 pipeline 批量命令调用点，故只接入同步 API；单连接 + 互斥锁语义
+#   与既有实现一致（详见 docs/DECISIONS.md D-012）。
+# ---------------------------------------------------------------------------
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(ENABLE_SSL ON CACHE BOOL "" FORCE)
+set(DISABLE_TESTS ON CACHE BOOL "" FORCE)
+set(ENABLE_SSL_TESTS OFF CACHE BOOL "" FORCE)
+set(ENABLE_EXAMPLES OFF CACHE BOOL "" FORCE)
+if(WIN32 AND DEFINED CM_PG_RUNTIME_DIR)
+  set(OPENSSL_ROOT_DIR "${CM_PG_RUNTIME_DIR}" CACHE PATH "" FORCE)
+endif()
+FetchContent_Declare(hiredis
+  URL https://codeload.github.com/redis/hiredis/tar.gz/refs/tags/v1.5.0
+  URL_HASH SHA256=eec7ef8641d221e144a58d5ef8d733c8c75c7fd487097a233aacb4fa33981cfb
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+FetchContent_MakeAvailable(hiredis)
+# hiredis 头文件按 SYSTEM 引入（其 sds.h 使用零长数组，C4200 会在 /W4 + /WX 下
+# 变成错误）。清空其 INTERFACE_INCLUDE_DIRECTORIES，改由本工程以 SYSTEM 方式引入。
+if(TARGET hiredis)
+  set_target_properties(hiredis PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
+endif()
+if(TARGET hiredis_ssl)
+  set_target_properties(hiredis_ssl PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
+endif()
 
 file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.cpp"
@@ -142,6 +180,9 @@ target_include_directories(carmonit_core SYSTEM PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}/third_party"
   "${CMAKE_CURRENT_SOURCE_DIR}/third_party/httplib"
   "${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann"
+  "${hiredis_SOURCE_DIR}"
+  "${libpqxx_BINARY_DIR}/include"
+  "${libpqxx_SOURCE_DIR}/include"
 )
 target_compile_options(carmonit_core PRIVATE ${CM_WARN_OPTIONS})
 target_compile_definitions(carmonit_core PUBLIC
@@ -149,7 +190,8 @@ target_compile_definitions(carmonit_core PUBLIC
   WIN32_LEAN_AND_MEAN
   NOMINMAX
 )
-target_link_libraries(carmonit_core PUBLIC Threads::Threads pqxx PostgreSQL::PostgreSQL)
+target_link_libraries(carmonit_core PUBLIC Threads::Threads pqxx PostgreSQL::PostgreSQL hiredis
+                                              hiredis::hiredis_ssl)
 if(WIN32)
   # secur32 由 librdkafka 在 Windows 下用于随机源（即使关闭 SASL）。
   target_link_libraries(carmonit_core PUBLIC ws2_32 crypt32 secur32)

@@ -245,6 +245,11 @@ void Config::refresh_business() {
   redis_.port = yaml_.get_int("spring.redis.port", redis_.port);
   redis_.password = yaml_.get_str("spring.redis.password", redis_.password);
   redis_.database = yaml_.get_int("spring.redis.database", redis_.database);
+  redis_.timeout_ms = yaml_.get_int("spring.redis.timeout", redis_.timeout_ms);
+  redis_.tls = yaml_.get_bool("spring.redis.ssl", redis_.tls);
+  redis_.tls_cacert = yaml_.get_str("spring.redis.ssl-cacert", redis_.tls_cacert);
+  redis_.tls_cert = yaml_.get_str("spring.redis.ssl-cert", redis_.tls_cert);
+  redis_.tls_key = yaml_.get_str("spring.redis.ssl-key", redis_.tls_key);
 
   es_.host = yaml_.get_str("elasticsearch.host", es_.host);
   es_.port = yaml_.get_int("elasticsearch.port", es_.port);
@@ -392,6 +397,10 @@ void Config::apply_env_overrides() {
   if (auto v = env("CM_REDIS_HOST")) redis_.host = *v;
   if (auto v = env("CM_REDIS_PORT")) redis_.port = std::stoi(*v);
   if (auto v = env("CM_REDIS_PASSWORD")) redis_.password = *v;
+  if (auto v = env("CM_REDIS_TLS")) redis_.tls = (*v == "1" || *v == "true" || *v == "on");
+  if (auto v = env("CM_REDIS_TLS_CACERT")) redis_.tls_cacert = *v;
+  if (auto v = env("CM_REDIS_TLS_CERT")) redis_.tls_cert = *v;
+  if (auto v = env("CM_REDIS_TLS_KEY")) redis_.tls_key = *v;
   if (auto v = env("CM_ES_HOST")) es_.host = *v;
   if (auto v = env("CM_ES_PORT")) es_.port = std::stoi(*v);
   if (auto v = env("CM_KAFKA_ENABLED")) {
