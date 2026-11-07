@@ -59,7 +59,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: 安装依赖
-        run: sudo apt-get update && sudo apt-get install -y ninja-build libpq-dev
+        run: sudo apt-get update && sudo apt-get install -y ninja-build libpq-dev libssl-dev
 
       - name: 配置 + 构建 + 测试（scripts/ci-linux.sh）
         env:
@@ -75,7 +75,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: 安装依赖
-        run: sudo apt-get update && sudo apt-get install -y ninja-build libpq-dev
+        run: sudo apt-get update && sudo apt-get install -y ninja-build libpq-dev libssl-dev
 
       - name: ASan + UBSan 构建与测试
         env:

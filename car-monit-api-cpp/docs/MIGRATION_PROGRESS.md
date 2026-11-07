@@ -42,9 +42,9 @@
 | 配置 | `application.yml` + `application-optimization.yml` | ✅ 已迁移 | `src/config/*`、`configs/config.yaml`，键名保留 |
 | 日志 | logback-spring.xml | ✅ 已迁移 | 级别/文件可配；线程名→线程 ID；按大小轮转（logging.max-file-mb/max-files） |
 | 工具类 | StringUtils/DateUtils/Convert/PageUtils/SqlUtil/RedisUtil | ✅ 已迁移 | `src/common/*`；另含自实现 MD5/SHA1/SHA256/HMAC/PBKDF2 |
-| 数据库客户端 | Druid + pgjdbc | ✅ 已迁移 | `src/db/pg.*`（wire v3，MD5+SCRAM）；⚠️ 无 SSL/游标 |
+| 数据库客户端 | Druid + pgjdbc | ✅ 已迁移 | `src/db/pg.*`（libpqxx 7.10 + libpq 17；参数绑定/TLS/语句超时）；⚠️ stock libpq 不支持 openGauss sha256 |
 | 数据访问 | 22 个 Mapper XML + PageHelper | ✅ 已迁移 | `src/db/dao.*` + `src/meta/entities_generated.h`（19 实体） |
-| 缓存 | Lettuce + RedisTemplate | ✅ 已迁移 | `src/cache/redis.*`（RESP2） |
+| 缓存 | Lettuce + RedisTemplate | ✅ 已迁移 | `src/cache/redis.*`（hiredis 1.5；连接/命令超时、可选 TLS） |
 | 字典/基础缓存 | SysDict + RedisUtil | ✅ 已迁移 | `src/service/dict.*` |
 | 元数据 | domain 实体 + resultMap | ✅ 已迁移 | 19 个 EntityMeta（字段/物理列/类型/过滤/SQL） |
 | 基础 CRUD | 19 个 Controller（48 端点） | ✅ 已迁移 | `src/handler/base_handlers.cpp` |

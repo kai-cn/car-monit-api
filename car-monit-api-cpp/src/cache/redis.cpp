@@ -4,43 +4,46 @@
 #include "common/json.h"
 #include "common/logging.h"
 
-#include <algorithm>
-#include <chrono>
-#include <cstring>
-#include <thread>
-
 #ifdef _WIN32
 #include <winsock2.h>
-#include <ws2tcpip.h>
-#else
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <unistd.h>
 #endif
+#include <hiredis.h>
+#include <hiredis_ssl.h>
+
+#include <cstring>
 
 namespace cm::cache {
 namespace {
 
-#ifdef _WIN32
-using sock_t = SOCKET;
-constexpr intptr_t kInvalid = -1; // INVALID_SOCKET
-void ensure_wsa() {
-  static bool done = false;
-  static std::mutex m;
-  std::lock_guard<std::mutex> lock(m);
-  if (!done) {
-    WSADATA data;
-    WSAStartup(MAKEWORD(2, 2), &data);
-    done = true;
+std::string reply_text(const redisReply* r) {
+  if (r == nullptr) return {};
+  switch (r->type) {
+    case REDIS_REPLY_STRING:
+    case REDIS_REPLY_STATUS:
+    case REDIS_REPLY_ERROR:
+      return std::string(r->str ? r->str : "", r->len);
+    case REDIS_REPLY_INTEGER:
+      return std::to_string(r->integer);
+    case REDIS_REPLY_DOUBLE:
+      return std::to_string(r->dval);
+    case REDIS_REPLY_BOOL:
+      return r->integer ? "1" : "0";
+    case REDIS_REPLY_NIL:
+      return {};
+    default:
+      return std::string(r->str ? r->str : "", r->len);
   }
 }
-#else
-using sock_t = int;
-constexpr intptr_t kInvalid = -1;
-void ensure_wsa() {}
-#endif
+
+Json reply_to_json(const redisReply* r) {
+  if (r == nullptr || r->type == REDIS_REPLY_NIL) return Json(nullptr);
+  if (r->type == REDIS_REPLY_ARRAY) {
+    Json arr = Json::array();
+    for (std::size_t i = 0; i < r->elements; ++i) arr.push_back(reply_to_json(r->element[i]));
+    return arr;
+  }
+  return Json(reply_text(r));
+}
 
 } // namespace
 
@@ -49,14 +52,16 @@ Redis& Redis::instance() {
   return r;
 }
 
+Redis::~Redis() { close_unlocked(); }
+
 void Redis::close_unlocked() {
-  if (sock_ != kInvalid) {
-#ifdef _WIN32
-    closesocket(sock_t(sock_));
-#else
-    ::close(int(sock_));
-#endif
-    sock_ = -1;
+  if (ctx_ != nullptr) {
+    redisFree(ctx_);
+    ctx_ = nullptr;
+  }
+  if (ssl_ctx_ != nullptr) {
+    redisFreeSSLContext(ssl_ctx_);
+    ssl_ctx_ = nullptr;
   }
   ready_ = false;
 }
@@ -68,205 +73,131 @@ void Redis::close() {
 
 bool Redis::connected() {
   std::lock_guard<std::mutex> lock(mu_);
-  return ready_ && sock_ != kInvalid;
+  return ready_ && ctx_ != nullptr && ctx_->err == 0;
 }
 
-bool Redis::connect(const std::string& host, int port, const std::string& password,
-                    int database, int timeout_ms) {
+bool Redis::connect(const std::string& host, int port, const std::string& password, int database,
+                    int timeout_ms, bool tls, const std::string& cacert, const std::string& cert,
+                    const std::string& key) {
   std::lock_guard<std::mutex> lock(mu_);
-  return connect_locked(host, port, password, database, timeout_ms);
+  return connect_locked(host, port, password, database, timeout_ms, tls, cacert, cert, key);
 }
 
 bool Redis::connect_locked(const std::string& host, int port, const std::string& password,
-                           int database, int timeout_ms) {
-  ensure_wsa();
+                           int database, int timeout_ms, bool tls, const std::string& cacert,
+                           const std::string& cert, const std::string& key) {
   close_unlocked();
   host_ = host;
   port_ = port;
   password_ = password;
   database_ = database;
-  timeout_ms_ = timeout_ms;
+  timeout_ms_ = timeout_ms > 0 ? timeout_ms : 3000;
+  tls_ = tls;
+  tls_cacert_ = cacert;
+  tls_cert_ = cert;
+  tls_key_ = key;
 
-  sock_t s = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (static_cast<intptr_t>(s) == kInvalid) return false;
-  sockaddr_in addr{};
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(uint16_t(port));
-  inet_pton(AF_INET, host.c_str(), &addr.sin_addr);
-#ifdef _WIN32
-  int timeout = timeout_ms;
-  setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), sizeof(timeout));
-  setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const char*>(&timeout), sizeof(timeout));
-#else
-  // POSIX 同样设置收发超时（timeval 语义），避免 Linux 上 recv 无限阻塞。
   timeval tv{};
-  tv.tv_sec = timeout_ms / 1000;
-  tv.tv_usec = (timeout_ms % 1000) * 1000;
-  setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-  setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
-#endif
-  if (::connect(s, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
-#ifdef _WIN32
-    int err = WSAGetLastError();
-#else
-    int err = errno;
-#endif
-    CM_LOG_WARN("cache.redis") << "连接失败 " << host << ":" << port << " err=" << err;
-#ifdef _WIN32
-    closesocket(s);
-#else
-    ::close(s);
-#endif
+  tv.tv_sec = timeout_ms_ / 1000;
+  tv.tv_usec = (timeout_ms_ % 1000) * 1000;
+
+  redisOptions options{};
+  REDIS_OPTIONS_SET_TCP(&options, host.c_str(), port);
+  options.connect_timeout = &tv;
+  options.command_timeout = &tv;
+  ctx_ = redisConnectWithOptions(&options);
+  if (ctx_ == nullptr || ctx_->err != 0) {
+    CM_LOG_WARN("cache.redis") << "连接失败 " << host << ":" << port
+                               << " err=" << (ctx_ ? ctx_->errstr : "redisConnectWithOptions");
+    close_unlocked();
     return false;
   }
-  sock_ = intptr_t(s);
 
-  auto auth = [&](std::vector<std::string> args) -> bool {
-    if (!send_command(args)) return false;
-    std::string out;
-    char type = 0;
-    if (!read_reply(out, type)) return false;
-    if (type == '-') {
-      CM_LOG_WARN("cache.redis") << "Redis 命令失败: " << out;
+  if (tls_) {
+    static const bool ssl_inited = [] {
+      redisInitOpenSSL();
+      return true;
+    }();
+    (void)ssl_inited;
+    redisSSLContextError ssl_error = REDIS_SSL_CTX_NONE;
+    ssl_ctx_ = redisCreateSSLContext(cacert.empty() ? nullptr : cacert.c_str(), nullptr,
+                                     cert.empty() ? nullptr : cert.c_str(),
+                                     key.empty() ? nullptr : key.c_str(), host.c_str(), &ssl_error);
+    if (ssl_ctx_ == nullptr) {
+      CM_LOG_WARN("cache.redis") << "TLS 上下文创建失败: " << redisSSLContextGetError(ssl_error);
+      close_unlocked();
       return false;
     }
-    return true;
-  };
-  if (!password_.empty()) {
-    if (!auth({"AUTH", password_})) {
+    if (redisInitiateSSLWithContext(ctx_, ssl_ctx_) != REDIS_OK) {
+      CM_LOG_WARN("cache.redis") << "TLS 握手失败: " << (ctx_->errstr ? ctx_->errstr : "unknown");
       close_unlocked();
       return false;
     }
   }
-  if (database_ > 0) {
-    if (!auth({"SELECT", std::to_string(database_)})) {
-      close_unlocked();
+
+  auto check_reply = [&](redisReply* reply) -> bool {
+    if (reply == nullptr) {
+      CM_LOG_WARN("cache.redis") << "初始化命令失败: " << (ctx_->errstr ? ctx_->errstr : "unknown");
       return false;
     }
+    const bool ok = reply->type != REDIS_REPLY_ERROR;
+    if (!ok) CM_LOG_WARN("cache.redis") << "Redis 命令失败: " << reply_text(reply);
+    freeReplyObject(reply);
+    return ok;
+  };
+  if (!password_.empty() &&
+      !check_reply(static_cast<redisReply*>(redisCommand(ctx_, "AUTH %s", password_.c_str())))) {
+    close_unlocked();
+    return false;
+  }
+  if (database_ > 0 &&
+      !check_reply(static_cast<redisReply*>(redisCommand(ctx_, "SELECT %d", database_)))) {
+    close_unlocked();
+    return false;
   }
   ready_ = true;
   return true;
 }
 
 bool Redis::ensure() {
-  // mu_ 已由调用方（cmd）持有。
-  if (ready_ && sock_ != kInvalid) return true;
+  // mu_ 已由调用方持有；connect_locked 也要求持锁，不会重复加锁/自锁。
+  if (ready_ && ctx_ != nullptr && ctx_->err == 0) return true;
   if (host_.empty()) return false;
-  // 修复两处缺陷（审阅 §3.3 R7 及代码复查）：
-  // 1) fd 泄漏：此前先把 sock_ 置 -1 再调 connect()，connect 内的
-  //    close_unlocked() 看到 -1 不会关闭旧 fd，每次"读失败→重连"泄漏一个 socket；
-  // 2) 自锁死锁：ensure() 在 cmd() 持有 mu_ 时被调用，再调 connect()（内部
-  //    再次 lock mu_，非递归 mutex）会死锁；改走 connect_locked。
-  // connect_locked 内部先 close_unlocked()，旧 fd 会被正确关闭。
-  return connect_locked(host_, port_, password_, database_, timeout_ms_);
-}
-
-bool Redis::send_command(const std::vector<std::string>& args) {
-  std::string out;
-  out.reserve(64);
-  out += "*" + std::to_string(args.size()) + "\r\n";
-  for (const auto& a : args) {
-    out += "$" + std::to_string(a.size()) + "\r\n";
-    out += a;
-    out += "\r\n";
-  }
-#ifdef _WIN32
-  int sent = ::send(sock_t(sock_), out.data(), int(out.size()), 0);
-  return sent == int(out.size());
-#else
-  ssize_t sent = ::send(int(sock_), out.data(), out.size(), 0);
-  return sent == ssize_t(out.size());
-#endif
-}
-
-bool Redis::read_line(std::string& out) {
-  out.clear();
-  char c;
-  while (true) {
-#ifdef _WIN32
-    int got = ::recv(sock_t(sock_), &c, 1, 0);
-#else
-    ssize_t got = ::recv(int(sock_), &c, 1, 0);
-#endif
-    if (got <= 0) return false;
-    if (c == '\r') continue;
-    if (c == '\n') return true;
-    out.push_back(c);
-  }
-}
-
-bool Redis::read_reply(std::string& out, char& type) {
-  if (!read_line(out)) return false;
-  if (out.empty()) return false;
-  type = out[0];
-  std::string payload = out.substr(1);
-  switch (type) {
-    case '+':
-    case '-':
-      out = payload;
-      return true;
-    case ':':
-      out = payload;
-      return true;
-    case '$': {
-      int len = std::atoi(payload.c_str());
-      if (len < 0) {
-        out.clear();
-        return true;
-      }
-      out.assign(std::size_t(len), '\0');
-      // 循环读满：单次 recv 对大 value 可能半包返回（Windows 尤其明显，
-      // 此前 Windows 分支 got != len 直接失败，审阅 §3.3 R7）。
-      std::size_t left = std::size_t(len);
-      char* p = out.data();
-      while (left > 0) {
-#ifdef _WIN32
-        int chunk = int(std::min<std::size_t>(left, 1u << 30));
-        int got = ::recv(sock_t(sock_), p, chunk, 0);
-#else
-        ssize_t got = ::recv(int(sock_), p, left, 0);
-#endif
-        if (got <= 0) return false;
-        p += got;
-        left -= std::size_t(got);
-      }
-      std::string crlf;
-      read_line(crlf);
-      return true;
-    }
-    case '*': {
-      int n = std::atoi(payload.c_str());
-      Json arr = Json::array();
-      for (int i = 0; i < n; ++i) {
-        std::string item;
-        char t2 = 0;
-        if (!read_reply(item, t2)) return false;
-        arr.push_back(item);
-      }
-      out = arr.dump();
-      return true;
-    }
-    default:
-      return false;
-  }
+  return connect_locked(host_, port_, password_, database_, timeout_ms_, tls_, tls_cacert_,
+                        tls_cert_, tls_key_);
 }
 
 std::optional<std::string> Redis::cmd(const std::vector<std::string>& args) {
   std::lock_guard<std::mutex> lock(mu_);
+  return cmd_locked(args);
+}
+
+std::optional<std::string> Redis::cmd_locked(const std::vector<std::string>& args) {
   if (!ensure()) throw RedisError("Redis 未连接");
-  if (!send_command(args)) {
-    ready_ = false;
-    throw RedisError("Redis 发送命令失败");
+  std::vector<const char*> argv;
+  std::vector<size_t> argvlen;
+  argv.reserve(args.size());
+  argvlen.reserve(args.size());
+  for (const auto& a : args) {
+    argv.push_back(a.c_str());
+    argvlen.push_back(a.size());
   }
-  std::string out;
-  char type = 0;
-  if (!read_reply(out, type)) {
-    ready_ = false;
-    throw RedisError("Redis 读取响应失败");
+  redisReply* reply = static_cast<redisReply*>(
+      redisCommandArgv(ctx_, static_cast<int>(argv.size()), argv.data(), argvlen.data()));
+  if (reply == nullptr) {
+    std::string err = ctx_ && ctx_->errstr ? ctx_->errstr : "unknown";
+    close_unlocked();
+    throw RedisError("Redis 读取响应失败: " + err);
   }
-  if (type == '-') throw RedisError(out);
-  if (type == '$') return out.empty() ? std::nullopt : std::optional<std::string>(out);
-  return out;
+  struct ReplyGuard {
+    redisReply* r;
+    ~ReplyGuard() { freeReplyObject(r); }
+  } guard{reply};
+
+  if (reply->type == REDIS_REPLY_ERROR) throw RedisError(reply_text(reply));
+  if (reply->type == REDIS_REPLY_NIL) return std::nullopt;
+  if (reply->type == REDIS_REPLY_ARRAY) return reply_to_json(reply).dump();
+  return reply_text(reply);
 }
 
 std::optional<std::string> Redis::get(const std::string& key) {
@@ -342,9 +273,8 @@ long long Redis::decr(const std::string& key) {
 }
 
 std::vector<std::string> Redis::keys(const std::string& pattern) {
-  // KEYS 是 O(整个键空间) 的阻塞命令（审阅 §4.2 #6），改用 SCAN 增量遍历。
-  // SCAN 可能对存活整个扫描期的键返回重复，调用方按需去重（当前调用方
-  // 只做遍历检查，重复无害）。
+  // KEYS 是 O(整个键空间) 的阻塞命令，改用 SCAN 增量遍历。
+  // SCAN 可能对存活整个扫描期的键返回重复，调用方按需去重。
   std::vector<std::string> out;
   try {
     long long cursor = 0;

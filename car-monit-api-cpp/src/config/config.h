@@ -80,6 +80,11 @@ struct RedisOptions {
   std::string password;
   int database = 0;
   int timeout_ms = 3000;
+  // TLS：默认关闭，与 Java 侧（未配置 SSL）保持一致。开启后使用 hiredis_ssl。
+  bool tls = false;
+  std::string tls_cacert; // 为空则使用系统默认 CA
+  std::string tls_cert;   // 客户端证书（与 tls_key 成对）
+  std::string tls_key;
 };
 
 struct EsOptions {

@@ -58,11 +58,12 @@
 | 主键类型 | 一律按字符串读取，避免精度丢失 | ✅ |
 | `timestamp without time zone` | JDBC 按 JVM 时区（`Asia/Shanghai`）解释 | ✅ 按 `+08:00` 锚定后再格式化（`timeutil::from_db_text`） |
 
-## 4. 缓存（Spring Data Redis → RESP2）
+## 4. 缓存（Spring Data Redis → hiredis 1.5）
 
 | 项 | 差异 | 结论 |
 |---|---|---|
-| 连接 | Lettuce 连接池 → 单连接 + 互斥 | ⚠️ 并发吞吐低于 Lettuce 池；语义一致（RESP2、`SELECT db`、`AUTH`）。**修复（审阅 §3.3 R7）**：重连不再泄漏旧 socket fd；`ensure()` 改走 `connect_locked`（原实现在 `cmd` 持锁下调 `connect` 会二次加锁自锁死锁）；bulk 读循环读满（Windows 半包不再失败）；`keys` 由阻塞的 `KEYS` 改为 `SCAN` 增量遍历 |
+| 连接 | Lettuce 连接池 → hiredis 单连接 + 互斥 | ⚠️ 并发吞吐低于 Lettuce 池；语义一致（RESP2、`SELECT db`、`AUTH`）。连接/命令超时由 hiredis 处理；重连失败快速返回、不泄漏 fd；`keys` 仍用 `SCAN` 增量遍历。**无 pipeline**（本工程无批量命令调用点，见 DECISIONS D-012） |
+| TLS | Java 侧未配置 SSL | ✅ 新增 `spring.redis.ssl` / `ssl-cacert` / `ssl-cert` / `ssl-key`（`CM_REDIS_TLS*`），默认关闭；开启后由 hiredis_ssl（OpenSSL 3）握手 |
 | 值编码 | Java 侧 `RedisTemplate` 默认 JDK 序列化，部分键用 FastJson | ⚠️ C++ 统一按 **JSON 文本**读写；与 Java 进程**共用同一 Redis 时**，JDK 序列化的键无法互相解析（本项目自建的 `car_*`/`sys_config:*` 键均为 JSON，一致） |
 | 键名 | `Constants.java` 常量 | ✅ 全部按原常量（`car_list_jc`、`js_car_snapshot`、`DATE_BorderWeighingCapture:` 等） |
 | 过期 | `setex`/`expire` 语义 | ✅ |

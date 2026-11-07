@@ -149,4 +149,22 @@
   或使用 openGauss 提供的定制 libpq。该限制已写入 COMPATIBILITY/MIGRATION_GUIDE。
 - **可回退性**：需重新引入自研认证实现，回退成本高；因此在此显式记录。
 
+## D-012 Redis 客户端改用 hiredis，暂不引入 pipeline
+
+- **决策**：用 hiredis 1.5.0（FetchContent 静态库）+ hiredis_ssl 替换自研 RESP2。
+  保持 `cache::Redis` 的对外命令接口；连接超时/命令超时由 `redisOptions`
+  的 `connect_timeout` / `command_timeout` 处理；TLS 由 hiredis_ssl（OpenSSL 3）
+  提供，默认关闭（与 Java 侧一致）。
+- **备选**：
+  1. 保留自研 RESP2 并补 TLS/超时：需自行维护 RESP3/RESP2 边界、SSL、重连状态机；
+  2. 引入 Redis++ 等 C++ 封装：依赖更重，且会引入连接池/线程模型改动；
+  3. 接入 pipeline：当前代码无批量命令调用点，加了也无调用方。
+- **理由**：hiredis 是 Redis 官方 C 客户端，协议/超时/TLS 成熟；同步 API 与现有
+  “单连接 + 互斥锁”语义完全匹配，改造面最小。hiredis 1.2 的 CMake 最低版本
+  低于 CMake 4 的下限，故选用 1.5.0。
+- **影响**：并发吞吐仍受单连接 + 互斥限制（与改造前一致，已在 COMPATIBILITY 标注）；
+  单连接模型在高并发下是已知瓶颈，后续如需可再引入连接池/pipeline。
+- **可回退性**：`Redis` 接口未变，可替换回自研实现；但 TLS/超时能力会随之丢失。
+
+
 
