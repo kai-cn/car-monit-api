@@ -30,7 +30,7 @@ import re
 import threading
 from contextlib import contextmanager
 from typing import Any, Iterator, Optional
-from urllib.parse import quote
+from urllib.parse import parse_qs, quote
 
 from psycopg.types.string import StrDumperVarchar
 from sqlalchemy import create_engine, event, text
@@ -94,18 +94,21 @@ install_gaussdb_version_shim()
 def jdbc_to_sqlalchemy_url(jdbc_url: str, username: str, password: str) -> str:
     """``jdbc:postgresql://h:p/db?...`` -> ``postgresql+psycopg://u:p@h:p/db``。
 
-    TODO(V2/决策④)：JDBC URL query 串（含 ``currentSchema``）当前被整体丢弃——
-    若生产 GaussDB 依赖 ``currentSchema`` 定位业务表（而非每条 SQL 写全限定名/
-    ``TABLE_SCHEMAS``），需要在这里解析并传给 psycopg（``options=-csearch_path=..``）。
-    生产 ``search_path`` 到底是什么属 docs/迁移审阅报告.md §6.2 D5 待业主确认项，
-    确认后若需支持请补解析 + 单测。
+    P2（决策④合理默认）：JDBC URL query 串里的 ``currentSchema`` **透传**为
+    psycopg 连接参数（``options=-csearch_path=..``）——pgjdbc 对
+    ``currentSchema`` 的实现就是连接后 ``SET search_path``，透传即与 Java
+    行为等价，不发明任何配置值；URL 未带该参数时行为不变（跟随数据库用户
+    默认 search_path，同 Java 未配置时一致）。其余 query 参数（pgjdbc 专属）
+    依旧忽略。生产 GaussDB 实际 search_path 仍属 docs/迁移审阅报告.md
+    §6.2 D5 待业主确认项（确认的是"值"，不再是"行为"）；
+    ``@TableName(schema=...)`` 的表级前缀由 ``TABLE_SCHEMAS`` 另行处理。
     """
     raw = jdbc_url.strip()
     for prefix in _JDBC_PREFIXES:
         if raw.startswith(prefix):
             raw = raw[len(prefix):]
             break
-    head, _, _query = raw.partition("?")
+    head, _, query = raw.partition("?")
     netloc, _, database = head.partition("/")
     credentials = ""
     if username:
@@ -113,7 +116,12 @@ def jdbc_to_sqlalchemy_url(jdbc_url: str, username: str, password: str) -> str:
         if password:
             credentials += ":" + quote(password, safe="")
         credentials += "@"
-    return f"postgresql+psycopg://{credentials}{netloc}/{database}"
+    url = f"postgresql+psycopg://{credentials}{netloc}/{database}"
+    if query:
+        schema = (parse_qs(query).get("currentSchema") or [None])[0]
+        if schema:
+            url += "?options=" + quote("-csearch_path=" + schema, safe="")
+    return url
 
 
 def _install_pgjdbc_string_dumper(engine: Engine) -> None:

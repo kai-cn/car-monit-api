@@ -337,3 +337,30 @@ def test_es_real_backend_bypasses_p0_guard(monkeypatch) -> None:
 
     client._real = _StubBackend()
     assert client.search(SearchRequest("snapshot_flow")) == "real-ok"
+
+
+# ------------------------------------------- 决策④默认：JDBC currentSchema 透传
+def test_jdbc_current_schema_passthrough() -> None:
+    from app.db.engine import jdbc_to_sqlalchemy_url
+
+    # 无 query：URL 原样（跟随数据库用户默认 search_path，同 Java 未配置）
+    plain = jdbc_to_sqlalchemy_url(
+        "jdbc:postgresql://db-host:5432/monit", "user", "pass")
+    assert plain == "postgresql+psycopg://user:pass@db-host:5432/monit"
+
+    # currentSchema → psycopg options=-csearch_path=..（pgjdbc 同义行为）
+    schema = jdbc_to_sqlalchemy_url(
+        "jdbc:postgresql://db-host:5432/monit?currentSchema=jl_data01&ssl=false",
+        "user", "pass")
+    assert schema == ("postgresql+psycopg://user:pass@db-host:5432/monit"
+                      "?options=-csearch_path%3Djl_data01")
+
+    # 多 schema 逗号列表原样透传（search_path 支持逗号分隔）
+    multi = jdbc_to_sqlalchemy_url(
+        "jdbc:opengauss://h:5432/d?currentSchema=a,b", "u", "p")
+    assert multi.endswith("?options=-csearch_path%3Da%2Cb")
+
+    # 其余 query 参数依旧忽略
+    ignored = jdbc_to_sqlalchemy_url(
+        "jdbc:postgresql://db-host:5432/monit?ssl=false", "u", "p")
+    assert ignored == "postgresql+psycopg://u:p@db-host:5432/monit"
