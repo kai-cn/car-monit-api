@@ -54,22 +54,15 @@ os.environ.setdefault("OPTIMIZATION_EXPORT_DIR",
                       _tempfile.mkdtemp(prefix="car-monit-export-"))
 
 
-def _seed_in_memory_es() -> None:
-    import json as _json
+def _seed_es() -> None:
+    # P2-3：改经业务链路（EsIndexManageService + IndexRequest）种子化——
+    # shim 模式写进程内替身；设了 CAR_MONIT_ES_URL 时写真实集群（同一条代码路径）。
+    from tools.smoke_seed import seed_es_via_business_chain
 
-    from org.elasticsearch.client.RestHighLevelClient import RestHighLevelClient
-
-    indices = RestHighLevelClient._INDICES
-    indices.setdefault("fee_records", {})
-    indices.setdefault("trail_fitting", {})
-    snapshot = indices.setdefault("snapshot_flow", {})
-    snapshot.setdefault("smoke-1", _json.dumps({
-        "big_id": "smoke-1", "snapshottime": "2025-06-01 12:00:00",
-        "platenumber": "赣A12345", "gantrycode": "G1",
-    }))
+    seed_es_via_business_chain()
 
 
-_seed_in_memory_es()
+_seed_es()
 
 START = "2025-06-01 00:00:00"
 END = "2025-06-02 00:00:00"
