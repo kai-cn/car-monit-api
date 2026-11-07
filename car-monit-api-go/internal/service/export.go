@@ -56,10 +56,10 @@ type UnifiedExportService struct {
 	query *UnifiedQueryService
 	cfg   config.OptimizationConfig
 
-	mu     sync.RWMutex
-	tasks  map[string]*ExportTaskStatus
-	sem    chan struct{} // 并发上限，等价于 ThreadPoolExecutor 的线程数
-	wg     sync.WaitGroup
+	mu    sync.RWMutex
+	tasks map[string]*ExportTaskStatus
+	sem   chan struct{} // 并发上限，等价于 ThreadPoolExecutor 的线程数
+	wg    sync.WaitGroup
 	// baseCtx/baseCancel 是进程级任务上下文：既不被 HTTP 请求取消（导出要跨请求存活），
 	// 又能在 Close() 时一次性取消所有在途任务（对应 Java 线程池的 shutdownNow）。
 	baseCtx    context.Context
