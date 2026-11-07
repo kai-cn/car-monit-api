@@ -337,6 +337,24 @@ def test_transaction_commit_rollback_and_visibility(tmp_path) -> None:
     assert database.query("SELECT count(*) AS c FROM t")[0]["c"] == 1
 
 
+class _MemoryInsertMapper:
+    """与全局类改写解耦（test_smoke 隔离修复）。
+
+    test_phase2a 的 lifespan 会调用 ``install_mappers()``，经由
+    ``app.db.base_mapper.install`` 把 com.baomidou BaseMapper 及各 Mapper
+    **类**原地改写为真 SQL（进程级）；本组单测只验证事务编排，必须用
+    自包含的内存 insert 与该全局状态解耦——否则会隐性依赖一条可达的
+    GaussDB 连接（并往业务表写测试数据）。
+    """
+
+    def __init__(self) -> None:
+        self.rows: list = []
+
+    def insert(self, entity) -> int:
+        self.rows.append(entity)
+        return 1
+
+
 def test_dataprocess_service_rolls_back_on_es_failure(monkeypatch) -> None:
     """Java ``@Transactional(rollbackFor=Exception.class)``：ES 失败 -> 整体回滚。"""
     import contextlib
@@ -362,7 +380,7 @@ def test_dataprocess_service_rolls_back_on_es_failure(monkeypatch) -> None:
 
     monkeypatch.setattr(engine_mod, "get_database", lambda: _FakeDatabase())
 
-    service = DataProcessService()
+    service = DataProcessService(mapper=_MemoryInsertMapper())
     service.esClient.available = False  # 模拟 ES 集群不可用
     data = OdsRtSzdnSnapshotFlowAddcode()
     data.setId("tx-1")
@@ -395,7 +413,7 @@ def test_dataprocess_service_commits_when_es_succeeds(monkeypatch) -> None:
 
     monkeypatch.setattr(engine_mod, "get_database", lambda: _FakeDatabase())
 
-    service = DataProcessService()
+    service = DataProcessService(mapper=_MemoryInsertMapper())
     data = OdsRtSzdnSnapshotFlowAddcode()
     data.setId("tx-2")
     service.process(data)  # shim 模式：内存 Mapper + 内存 ES 均成功
@@ -535,8 +553,13 @@ def test_docs_enabled_gating(monkeypatch) -> None:
 def test_health_endpoints_and_config_gating(monkeypatch) -> None:
     from fastapi.testclient import TestClient
 
+    from app.health import health_registry
     from app.main import app
 
+    # 与全局探针解耦：更早的用例（test_phase2a 的 lifespan）会把 db 探针注册进
+    # 进程级 health_registry 且不卸载；本用例验证"无组件 → UP"分支，临时清空
+    # （monkeypatch 结束后恢复原 dict），避免隐性依赖可达的 GaussDB。
+    monkeypatch.setattr(health_registry, "_probes", {})
     client = TestClient(app, raise_server_exceptions=False)
     assert client.get("/health/live").status_code == 200
     assert client.get("/health/ready").status_code == 200  # in-process 无组件 → UP
