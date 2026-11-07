@@ -66,9 +66,10 @@
 
 | 项 | 差异 | 结论 |
 |---|---|---|
-| cron | Spring 6 段（秒 分 时 日 月 周），支持 `* ? a/b a-b 逗号` | ✅ 自实现 6 段解析，按 `+08:00` 墙钟计算 |
+| cron | Spring 6 段（秒 分 时 日 月 周），支持 `* ? a/b a-b a-b/s 逗号`；周字段 0/7=周日、1=周一；日/周同时受限为 AND；第 7 段（年）非法 | ✅ 独立模块 `src/scheduler/cron.{h,cpp}`，语义以 spring-context 5.3.6 实证为准（`0/3`=0,3,…,57；`5/15`=5,20,35,50），按 `+08:00` 墙钟计算；注册时 `cron_validate` 预检并告警 |
 | 触发模型 | 单线程 `ThreadPoolTaskScheduler`（默认池大小 1）→ **不会重入** | ✅ 每任务 `std::atomic<bool> running` 防重入，行为一致 |
 | fixedRate | `initialDelay=0`，启动即执行一次 | ✅ 同（启动日志可见首轮执行） |
+| 丢失检测周期 | `@Scheduled(fixedRateString="${detection.interval-minutes:30}000")` —— 占位符与字面量 `"000"` 拼接，默认 **30 秒**（键名叫 minutes，实际按秒） | ✅ 同（`interval_minutes * 1000`，修复原 `*60000` 把周期放大 60 倍的问题） |
 | 任务清单 | 5 个 cron + 5 个固定间隔（检测/补偿/离线/延迟/一致性） | ✅ 共 10 个 |
 | `CarTask` | Java 中全部方法体被注释 | ❌ 不注册（与 Java 等价） |
 | 一致性任务 | `consistency.reconcile.enabled=false` 时直接返回 | ✅ 同 |

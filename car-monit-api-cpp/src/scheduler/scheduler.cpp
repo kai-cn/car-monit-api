@@ -3,6 +3,7 @@
 #include "common/datetime.h"
 #include "common/logging.h"
 #include "config/config.h"
+#include "scheduler/cron.h"
 #include "service/ops.h"
 
 #include <atomic>
@@ -29,12 +30,8 @@ namespace {
 
 using Clock = std::chrono::steady_clock;
 
-struct WallClock {
-  int year = 1970, month = 1, day = 1, hour = 0, minute = 0, second = 0, wday = 0;
-};
-
-// Quartz cron 使用 JVM 默认时区（+08:00）解释时间。
-WallClock wall_now() {
+// Spring cron 使用 JVM 默认时区（+08:00）解释时间。
+scheduler::WallTime wall_now() {
   auto tp = timeutil::now() + std::chrono::minutes(timeutil::kJavaZoneOffsetMinutes);
   std::time_t t = std::time_t(timeutil::to_millis(tp) / 1000);
   std::tm tm{};
@@ -43,69 +40,15 @@ WallClock wall_now() {
 #else
   gmtime_r(&t, &tm);
 #endif
-  WallClock w;
+  scheduler::WallTime w;
   w.year = tm.tm_year + 1900;
   w.month = tm.tm_mon + 1;
   w.day = tm.tm_mday;
   w.hour = tm.tm_hour;
   w.minute = tm.tm_min;
   w.second = tm.tm_sec;
-  w.wday = tm.tm_wday; // 0=Sunday
+  w.wday = tm.tm_wday; // 0=Sunday（cron_match 内部转 Spring 1-7 口径）
   return w;
-}
-
-bool match_token(const std::string& tok, int v, int lo) {
-  if (tok == "*" || tok == "?") return true;
-  auto slash = tok.find('/');
-  int step = 1, base = lo;
-  std::string head = tok;
-  if (slash != std::string::npos) {
-    head = tok.substr(0, slash);
-    step = std::atoi(tok.substr(slash + 1).c_str());
-    if (step <= 0) step = 1;
-  }
-  if (head == "*" || head == "?") {
-    // 通配 + 步长
-    return (v - base) % step == 0;
-  }
-  auto dash = head.find('-');
-  if (dash != std::string::npos) {
-    int a = std::atoi(head.substr(0, dash).c_str());
-    int b = std::atoi(head.substr(dash + 1).c_str());
-    return v >= a && v <= b && (v - a) % step == 0;
-  }
-  return v == std::atoi(head.c_str());
-}
-
-bool match_field(const std::string& field, int v, int lo) {
-  // 逗号分隔的多值
-  std::size_t start = 0;
-  while (start <= field.size()) {
-    auto pos = field.find(',', start);
-    std::string tok = field.substr(start, pos == std::string::npos ? std::string::npos : pos - start);
-    if (match_token(tok, v, lo)) return true;
-    if (pos == std::string::npos) break;
-    start = pos + 1;
-  }
-  return false;
-}
-
-// Quartz 六段/七段 cron：秒 分 时 日 月 周 [年]
-bool cron_match(const std::string& expr, const WallClock& w) {
-  std::vector<std::string> f;
-  std::size_t start = 0;
-  while (start <= expr.size()) {
-    auto pos = expr.find(' ', start);
-    std::string tok = expr.substr(start, pos == std::string::npos ? std::string::npos : pos - start);
-    if (!tok.empty()) f.push_back(tok);
-    if (pos == std::string::npos) break;
-    start = pos + 1;
-  }
-  if (f.size() < 6) return false;
-  int dow = w.wday; // Quartz: 0/7=Sunday ... 6=Saturday，与 tm_wday 一致
-  return match_field(f[0], w.second, 0) && match_field(f[1], w.minute, 0) &&
-         match_field(f[2], w.hour, 0) && match_field(f[3], w.day, 1) &&
-         match_field(f[4], w.month, 1) && match_field(f[5], dow, 0);
 }
 
 struct Job {
@@ -147,6 +90,11 @@ void start_schedulers() {
 
   auto add_cron = [&](const std::string& name, const std::string& expr,
                       std::function<void()> fn) {
+    // 非法表达式在 Spring 侧会导致启动失败；这里告警并保留任务（永不触发）。
+    if (!scheduler::cron_validate(expr)) {
+      CM_LOG_WARN("scheduler") << "cron 表达式不合法（任务将永不触发）: " << name << " -> "
+                                << expr << "（Spring 要求恰好 6 个字段：秒 分 时 日 月 周）";
+    }
     auto job = std::make_unique<Job>();
     job->name = name;
     job->cron = expr;
@@ -171,7 +119,11 @@ void start_schedulers() {
   add_cron("processPendingQueue", "0 */1 * * * ?", [] { service::process_pending_queue(); });
   add_cron("syncGantryCaptureData", "0 */5 * * * ?", [] { service::sync_gantry_capture_data(); });
   // ---- 可靠性/监控 ----
-  add_fixed("dataLossDetection", static_cast<long long>(cfg.detection.interval_minutes) * 60000LL,
+  // Java: @Scheduled(fixedRateString = "${detection.interval-minutes:30}000") ——
+  // 占位符展开后与字面量 "000" 拼接，默认 30 -> "30000"ms = 30 秒（配置键名叫
+  // minutes，实际语义是秒）。这里乘 1000 复刻该行为，修复原先 *60000（30 分钟）
+  // 导致丢失检测周期放大 60 倍的问题（审阅报告 §3.3 R5）。
+  add_fixed("dataLossDetection", static_cast<long long>(cfg.detection.interval_minutes) * 1000LL,
             [] { service::ops::data_loss_detection_tick(); });
   add_fixed("reliabilityCompensation",
             static_cast<long long>(cfg.reliability.compensation_interval_seconds) * 1000LL,
@@ -186,7 +138,7 @@ void start_schedulers() {
     CM_LOG_INFO("scheduler") << "定时任务调度线程启动，任务数=" << jobs.size();
     while (true) {
       const long long now = steady_now_ms();
-      const WallClock w = wall_now();
+      const scheduler::WallTime w = wall_now();
       const long long sec = timeutil::to_millis(timeutil::now()) / 1000;
       for (auto& j : jobs) {
         if (j->fixed_rate) {
@@ -194,7 +146,7 @@ void start_schedulers() {
             launch(*j);
             j->next_due_ms = now + j->interval_ms;
           }
-        } else if (j->last_match != sec && cron_match(j->cron, w)) {
+        } else if (j->last_match != sec && scheduler::cron_match(j->cron, w)) {
           j->last_match = sec;
           launch(*j);
         }
