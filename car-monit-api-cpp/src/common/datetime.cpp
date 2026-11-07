@@ -126,6 +126,11 @@ Parts utc_parts(TimePoint tp) {
   return p;
 }
 
+std::string fmt(const Parts& p, const char* pattern) {
+  char buf[64];
+  std::snprintf(buf, sizeof(buf), pattern, p.y, p.m, p.d, p.hh, p.mi, p.ss, p.ms);
+  return std::string(buf);
+}
 } // namespace
 
 std::string format_day(TimePoint tp) {

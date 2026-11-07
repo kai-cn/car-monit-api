@@ -29,18 +29,4 @@ inline std::string json_string(const Json& j, const std::string& def = "") {
   return def;
 }
 
-// BigDecimal 的 JSON 数字字面量。
-//
-// Java 侧 BigDecimal("1.50") 经 Jackson/fastjson2 序列化后是 1.50（保留标度与
-// 尾零），而 nlohmann::json 只能存 double，会被写成 1.5。这里把字面量存成占位
-// 字符串，由 json_dump() 在最终序列化时还原成未加引号的数字，从而与 Java 逐字节一致。
-// 非数字字面量（NaN/Infinity）按 Jackson 默认的 QUOTE_NON_NUMERIC_NUMBERS 语义写成字符串。
-Json json_raw_decimal(const std::string& literal);
-
-// 等价于 Json::dump()，但会把 json_raw_decimal 的占位还原为数字字面量。
-std::string json_dump(const Json& j);
-
-// 若 v 是 json_raw_decimal 产生的占位字符串，返回其原始数字字面量（不加引号）。
-bool json_raw_decimal_literal(const Json& v, std::string& literal);
-
 } // namespace cm

@@ -32,12 +32,8 @@ bool starts_with(std::string_view s, std::string_view p);
 bool ends_with(std::string_view s, std::string_view p);
 std::string replace_all(std::string s, std::string_view from, std::string_view to);
 bool contains(std::string_view s, std::string_view p);
-// StringUtils.toUnderScoreCase
-std::string to_under_score(std::string_view s);
 
 std::string uuid4();
-// RuoYi StringUtils.getUUID(): UUID.randomUUID().toString().replaceAll("-", "")
-std::string uuid32();
 std::string url_decode(std::string_view s);
 std::string url_encode(std::string_view s);
 std::string base64_encode(const std::string& in);
