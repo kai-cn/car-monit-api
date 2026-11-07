@@ -155,12 +155,6 @@ const std::string& known_column_or_empty(const meta::EntityMeta& m, const std::s
   return kEmpty;
 }
 
-std::string sql_literal(const std::string& value) { return utils::sql_quote(value); }
-
-std::string like_literal(const std::string& value) {
-  return "'%" + utils::replace_all(value, "'", "''") + "%'";
-}
-
 // ---------------------------------------------------------------------------
 // Elasticsearch REST 客户端（vendored cpp-httplib）
 //
@@ -330,15 +324,15 @@ bool should_route_to_es(DataSource ds, const std::string& start, const std::stri
 // PostgreSQL 等价查询（ES 不可用时的降级路径）
 // ---------------------------------------------------------------------------
 
-Json pg_rows(const meta::EntityMeta& m, const std::string& where, const std::string& order,
+Json pg_rows(const meta::EntityMeta& m, const repo::SqlFragment& where, const std::string& order,
              long long limit, long long offset) {
-  std::string sql = "SELECT " + m.select_sql + " FROM " + m.table + " WHERE 1=1" + where;
+  std::string sql = "SELECT " + m.select_sql + " FROM " + m.table + " WHERE 1=1" + where.sql;
   if (!order.empty()) sql += " ORDER BY " + order;
   if (limit > 0) {
     sql += " LIMIT " + std::to_string(limit);
     if (offset > 0) sql += " OFFSET " + std::to_string(offset);
   }
-  auto result = db::PgPool::instance().query(sql);
+  auto result = db::PgPool::instance().query(sql, where.params);
   Json rows = Json::array();
   for (std::size_t i = 0; i < result.rows.size(); ++i) {
     rows.push_back(repo::project_row(m, result, i));
@@ -346,20 +340,20 @@ Json pg_rows(const meta::EntityMeta& m, const std::string& where, const std::str
   return rows;
 }
 
-std::string pg_where(DataSource ds, const std::string& start, const std::string& end,
-                     const FuzzyFields& fuzzy, bool translate) {
-  std::string where;
+repo::SqlFragment pg_where(DataSource ds, const std::string& start, const std::string& end,
+                           const FuzzyFields& fuzzy, bool translate) {
+  repo::SqlFragment f;
   const std::string tf = time_field(ds);
-  if (!start.empty()) where += " AND " + tf + " >= " + sql_literal(start);
-  if (!end.empty()) where += " AND " + tf + " <= " + sql_literal(end);
+  if (!start.empty()) f.sql += " AND " + tf + " >= " + repo::bind_param(f.params, start);
+  if (!end.empty()) f.sql += " AND " + tf + " <= " + repo::bind_param(f.params, end);
   for (const auto& kv : fuzzy) {
     if (kv.second.empty()) continue;
     // 标识符必须命中白名单（guard_query_field 未命中抛 BindError(400)），
-    // 杜绝把 fuzzyFields.<key> 的 key 拼进 SQL；值继续走字面量转义。
+    // 杜绝把 fuzzyFields.<key> 的 key 拼进 SQL；值走参数绑定。
     std::string field = guard_query_field(ds, kv.first, translate);
-    where += " AND " + field + " LIKE " + like_literal(kv.second);
+    f.sql += " AND " + field + " LIKE " + repo::bind_param(f.params, "%" + kv.second + "%");
   }
-  return where;
+  return f;
 }
 
 // ---------------------------------------------------------------------------
@@ -599,7 +593,7 @@ void execute_unified_export_pg(const std::shared_ptr<ExportTaskStatus>& task) {
   const meta::EntityMeta& m = entity_meta(ds);
   const std::vector<std::string> columns = export_columns(ds);
   const long long batch = std::max(1, opt.export_scroll_batch);
-  std::string where = pg_where(ds, task->start_time, task->end_time, task->fuzzy, true);
+  repo::SqlFragment where = pg_where(ds, task->start_time, task->end_time, task->fuzzy, true);
 
   long long total = 0;
   long long offset = 0;
@@ -746,7 +740,7 @@ void execute_large_export_pg(const std::shared_ptr<ExportTaskStatus>& task) {
   const std::string idf = id_field(ds);
   const std::string pf = plate_field(ds);
   const long long batch = std::max(1, opt.export_scroll_batch);
-  std::string where = pg_where(ds, task->start_time, task->end_time, task->fuzzy, false);
+  repo::SqlFragment where = pg_where(ds, task->start_time, task->end_time, task->fuzzy, false);
   const std::string order = tf + " DESC";
 
   long long total = 0;
@@ -828,12 +822,14 @@ std::string normalize_time(const std::string& value) {
 
 Json cursor_batch(const SyncTarget& t, const std::string& start, const std::string& end,
                   const std::string& cursor_time, const std::string& cursor_id, int limit) {
-  std::string where = " AND " + time_field(t.ds) + " >= " + sql_literal(start) +
-                      " AND " + time_field(t.ds) + " < " + sql_literal(end);
+  repo::SqlFragment where;
+  where.sql = " AND " + time_field(t.ds) + " >= " + repo::bind_param(where.params, start) +
+              " AND " + time_field(t.ds) + " < " + repo::bind_param(where.params, end);
   if (!cursor_time.empty()) {
-    where += " AND (" + time_field(t.ds) + " > " + sql_literal(cursor_time) + " OR (" +
-             time_field(t.ds) + " = " + sql_literal(cursor_time) + " AND " + id_field(t.ds) +
-             " > " + sql_literal(cursor_id) + "))";
+    std::string cursor_time_ph = repo::bind_param(where.params, cursor_time);
+    where.sql += " AND (" + time_field(t.ds) + " > " + cursor_time_ph + " OR (" +
+                 time_field(t.ds) + " = " + cursor_time_ph + " AND " + id_field(t.ds) + " > " +
+                 repo::bind_param(where.params, cursor_id) + "))";
   }
   std::string order = time_field(t.ds) + " ASC, " + id_field(t.ds) + " ASC";
   return pg_rows(*t.meta, where, order, limit, 0);
@@ -955,10 +951,11 @@ void sync_table(const SyncTarget& t, const std::string& start, const std::string
 
 long long count_gauss(DataSource ds, const std::string& start, const std::string& end) {
   const meta::EntityMeta& m = entity_meta(ds);
+  repo::SqlFragment where;
   std::string sql = "SELECT count(1) AS c FROM " + m.table + " WHERE " + time_field(ds) +
-                    " >= " + sql_literal(start) + " AND " + time_field(ds) + " <= " +
-                    sql_literal(end);
-  auto r = db::PgPool::instance().query(sql);
+                    " >= " + repo::bind_param(where.params, start) + " AND " + time_field(ds) +
+                    " <= " + repo::bind_param(where.params, end);
+  auto r = db::PgPool::instance().query(sql, where.params);
   if (r.empty()) return 0;
   auto v = r.get(0, "c");
   if (!v) return 0;
@@ -1247,11 +1244,11 @@ Json LargeScaleQueryService::aggregation_stats(const std::string& type,
   CM_LOG_WARN("optimization.query")
       << "[环境差异] 统计查询 " << type << " 的 ES 调用不可用，降级为 PostgreSQL 等价查询";
   // PG 降级路径：group_by/count_field 已在入口过白名单，此处只用解析后的物理列。
-  std::string sql = "SELECT " + group_col + " AS k, " + count_expr +
-                    " AS c FROM " + entity_meta(ds).table + " WHERE 1=1" +
-                    pg_where(ds, start_time, end_time, fuzzy, false) + " GROUP BY " +
-                    group_col + " ORDER BY c DESC LIMIT " + std::to_string(top_n);
-  auto result = db::PgPool::instance().query(sql);
+  repo::SqlFragment where = pg_where(ds, start_time, end_time, fuzzy, false);
+  std::string sql = "SELECT " + group_col + " AS k, " + count_expr + " AS c FROM " +
+                    entity_meta(ds).table + " WHERE 1=1" + where.sql + " GROUP BY " + group_col +
+                    " ORDER BY c DESC LIMIT " + std::to_string(top_n);
+  auto result = db::PgPool::instance().query(sql, where.params);
   Json out = Json::object();
   for (std::size_t i = 0; i < result.rows.size(); ++i) {
     auto k = result.get(i, "k");
@@ -1402,12 +1399,15 @@ ProgressiveQueryResult placeholder_result() {
   return r;
 }
 
-std::string snapshot_filters(const ProgressiveQueryRequest& req) {
-  std::string where;
-  if (req.start_time) where += " AND snapshottime >= " + sql_literal(*req.start_time);
-  if (req.end_time) where += " AND snapshottime <= " + sql_literal(*req.end_time);
+repo::SqlFragment snapshot_filters(const ProgressiveQueryRequest& req) {
+  repo::SqlFragment f;
+  if (req.start_time)
+    f.sql += " AND snapshottime >= " + repo::bind_param(f.params, *req.start_time);
+  if (req.end_time)
+    f.sql += " AND snapshottime <= " + repo::bind_param(f.params, *req.end_time);
   auto add_like = [&](const std::optional<std::string>& v, const char* col) {
-    if (v && !v->empty()) where += " AND " + std::string(col) + " LIKE " + like_literal(*v);
+    if (v && !v->empty())
+      f.sql += " AND " + std::string(col) + " LIKE " + repo::bind_param(f.params, "%" + *v + "%");
   };
   add_like(req.platenumber, "platenumber");
   add_like(req.gantryname, "gantryname");
@@ -1415,7 +1415,7 @@ std::string snapshot_filters(const ProgressiveQueryRequest& req) {
   add_like(req.sectionname, "sectionname");
   add_like(req.orgname, "orgname");
   add_like(req.tollname, "tollname");
-  return where;
+  return f;
 }
 
 ProgressiveQueryResult snapshot_phase1(const ProgressiveQueryRequest& req) {
@@ -1446,9 +1446,10 @@ ProgressiveQueryResult snapshot_phase2(const ProgressiveQueryRequest& req) {
   }
 
   const auto& m = meta::odsRtSzdnSnapshotFlowAddcode;
-  std::string where = " AND snapshottime >= " + sql_literal(*req.start_time) +
-                      " AND snapshottime <= " + sql_literal(*req.end_time) +
-                      " AND snapshottime > " + sql_literal(*req.cursor);
+  repo::SqlFragment where;
+  where.sql = " AND snapshottime >= " + repo::bind_param(where.params, *req.start_time) +
+              " AND snapshottime <= " + repo::bind_param(where.params, *req.end_time) +
+              " AND snapshottime > " + repo::bind_param(where.params, *req.cursor);
   Json rows = pg_rows(m, where, "snapshottime ASC, datauuid ASC", req.page_size, 0);
   ProgressiveQueryResult r;
   r.data = rows;
@@ -1458,8 +1459,9 @@ ProgressiveQueryResult snapshot_phase2(const ProgressiveQueryRequest& req) {
 }
 
 ProgressiveQueryResult fee_phase1(const ProgressiveQueryRequest& req) {
-  std::string where;
-  if (req.platenumber) where += " AND vehicleplate = " + sql_literal(*req.platenumber);
+  repo::SqlFragment where;
+  if (req.platenumber)
+    where.sql += " AND vehicleplate = " + repo::bind_param(where.params, *req.platenumber);
   Json rows = pg_rows(meta::odsLwzxsfsjFeeRecords01, where, "", -1, 0);
   ProgressiveQueryResult r;
   r.data = rows;
@@ -1469,13 +1471,15 @@ ProgressiveQueryResult fee_phase1(const ProgressiveQueryRequest& req) {
 }
 
 ProgressiveQueryResult trail_phase1(const ProgressiveQueryRequest& req) {
-  std::string where;
+  repo::SqlFragment where;
   auto check_time = [](const std::string& v) {
     if (v.empty()) throw std::invalid_argument("时间格式不正确: ");
     return v;
   };
-  if (req.start_time) where += " AND entime = " + sql_literal(check_time(*req.start_time));
-  if (req.end_time) where += " AND extime = " + sql_literal(check_time(*req.end_time));
+  if (req.start_time)
+    where.sql += " AND entime = " + repo::bind_param(where.params, check_time(*req.start_time));
+  if (req.end_time)
+    where.sql += " AND extime = " + repo::bind_param(where.params, check_time(*req.end_time));
   Json rows = pg_rows(meta::zdataTrailFitting, where, "", -1, 0);
   ProgressiveQueryResult r;
   r.data = rows;

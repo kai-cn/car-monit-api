@@ -10,6 +10,7 @@
 #include "common/worker_pool.h"
 #include "config/config.h"
 #include "db/auth_guard.h"
+#include "db/dao.h"
 #include "db/pg.h"
 #include "handler/handlers.h"
 #include "http/cors.h"
@@ -112,50 +113,37 @@ static void test_crypto() {
   CHECK(dk_hex == "120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b");
 }
 
-static std::string to_hex(const std::vector<uint8_t>& in) {
-  const char* hx = "0123456789abcdef";
-  std::string out;
-  for (auto b : in) {
-    out.push_back(hx[b >> 4]);
-    out.push_back(hx[b & 0xF]);
-  }
-  return out;
-}
-
-// openGauss / PostgreSQL 认证算法回归向量（免密、无需 DB 即可运行）。
-static void test_pg_auth() {
+// PG 连接串构造与建连错误归类（不涉及真实数据库）。
+static void test_pg_conninfo_and_error_mapping() {
   using namespace cm::db;
-  CHECK(parse_auth_mode("auto") == PgAuthMode::Auto);
-  CHECK(parse_auth_mode("md5") == PgAuthMode::Md5);
-  CHECK(parse_auth_mode("openGauss-SHA256") == PgAuthMode::OpenGaussSha256);
-  CHECK(parse_auth_mode("scram-sha-256") == PgAuthMode::ScramSha256);
-  CHECK(parse_auth_mode("unknown") == PgAuthMode::Auto);
+  PgConnOptions o;
+  o.host = "db.example";
+  o.port = 15432;
+  o.user = "gaussdb";
+  o.password = "p'w\\x";
+  o.database = "RuoYi";
+  o.sslmode = "verify-full";
+  o.sslrootcert = "C:\\certs\\ca.pem";
+  o.connect_timeout_ms = 4500;
+  const std::string ci = build_conninfo(o);
+  CHECK(ci.find("host='db.example'") != std::string::npos);
+  CHECK(ci.find("port=15432") != std::string::npos);
+  CHECK(ci.find("user='gaussdb'") != std::string::npos);
+  // 单引号与反斜杠按 libpq conninfo 规则转义。
+  CHECK(ci.find("password='p\\'w\\\\x'") != std::string::npos);
+  CHECK(ci.find("dbname='RuoYi'") != std::string::npos);
+  CHECK(ci.find("sslmode='verify-full'") != std::string::npos);
+  CHECK(ci.find("sslrootcert='C:\\\\certs\\\\ca.pem'") != std::string::npos);
+  CHECK(ci.find("connect_timeout=5") != std::string::npos); // 4.5s 向上取整
 
-  // PostgreSQL/openGauss MD5：md5( md5(password+user) + salt )
-  std::string salt4;
-  salt4.push_back(char(1));
-  salt4.push_back(char(2));
-  salt4.push_back(char(3));
-  salt4.push_back(char(4));
-  CHECK(pg_md5_auth_response("dummy-password-123", "gaussdb", salt4) ==
-        "md56f9f9a135e0e8ae020b4c188507b227b");
-
-  // openGauss sha256：SHA256(SHA256(password) || salt)
-  std::vector<uint8_t> salt16;
-  for (int i = 0; i < 16; ++i) salt16.push_back(uint8_t(i));
-  auto salted = opengauss_salted_password("dummy-password-123", salt16);
-  CHECK(to_hex(salted) == "2ca504263c3c1455d3a77b074a5acd1d0fde2513757d9831fd8bd7ed59a625cd");
-
-  // 完整 SCRAM 交换（RFC 5802 流程 + openGauss 派生）
-  auto proof = compute_scram_proof(salted, "n=,r=abcdefghijklmnopqrstuvwx",
-                                   "r=abcdefghijklmnopqrstuvwxyz012345,"
-                                   "s=AAECAwQFBgcICQoLDA0ODw==,i=4096",
-                                   "abcdefghijklmnopqrstuvwxyz012345");
-  CHECK(proof.client_final ==
-        "c=biws,r=abcdefghijklmnopqrstuvwxyz012345,"
-        "p=MNGvFFLa8PT/IHEw405eMI3w/2lPd5R7in/kkXfDb7A=");
-  CHECK(proof.server_signature_b64 == "4q6H3eCqWzM0t5l3z3U1hMlduiCocFUoijy8qSN359U=");
+  // SQLSTATE 归类：认证/锁定/网络失败。
+  CHECK(classify_connect_error("FATAL:  password authentication failed for user \"gaussdb\"") ==
+        "28P01");
+  CHECK(classify_connect_error("FATAL: The account has been locked.") == "28000");
+  CHECK(classify_connect_error("FATAL: no pg_hba.conf entry for host \"127.0.0.1\"") == "28000");
+  CHECK(classify_connect_error("could not connect to server: Connection refused") == "08001");
 }
+
 
 static void test_result() {
   cm::Json ok = cm::ajax_ok();
@@ -461,9 +449,18 @@ static void test_db_optional() {
     std::cout << "跳过 DB 冒烟：" << credential.problem << std::endl;
     return;
   }
-  cm::db::PgPool::instance().init(cfg.pg().host, cfg.pg().port, cfg.pg().user, cfg.pg().password,
-                                  cfg.pg().database, cfg.pg().max_conns, cfg.pg().min_idle,
-                                  cfg.pg().connect_timeout_ms, cfg.pg().auth_mode);
+  cm::db::PgConnOptions pg_options;
+  pg_options.host = cfg.pg().host;
+  pg_options.port = cfg.pg().port;
+  pg_options.user = cfg.pg().user;
+  pg_options.password = cfg.pg().password;
+  pg_options.database = cfg.pg().database;
+  pg_options.sslmode = cfg.pg().sslmode;
+  pg_options.sslrootcert = cfg.pg().sslrootcert;
+  pg_options.connect_timeout_ms = cfg.pg().connect_timeout_ms;
+  pg_options.statement_timeout_ms = cfg.pg().statement_timeout_ms;
+  cm::db::PgPool::instance().init(pg_options, cfg.pg().max_conns, cfg.pg().min_idle,
+                                  cfg.pg().max_wait_ms);
   try {
     auto r = cm::db::PgPool::instance().query("SELECT 1 AS one");
     CHECK(!r.rows.empty());
@@ -739,8 +736,15 @@ static void test_pg_pool_connect_breaker() {
   // 连一个必然拒绝的本地端口（127.0.0.1:1，无监听、不涉及真实数据库认证，
   // 不会产生失败登录）。连续 3 次建连失败后进入 30s 熔断，快速失败。
   auto& pool = cm::db::PgPool::instance();
-  pool.init("127.0.0.1", 1, "probe-user", "probe-password-not-a-real-login", "probe", 2, 0, 500,
-            "auto", 2000);
+  cm::db::PgConnOptions options;
+  options.host = "127.0.0.1";
+  options.port = 1;
+  options.user = "probe-user";
+  options.password = "probe-password-not-a-real-login";
+  options.database = "probe";
+  options.connect_timeout_ms = 500;
+  options.statement_timeout_ms = 0;
+  pool.init(options, 2, 0, 2000);
   auto expect_db_error = [&](const char* needle) {
     try {
       pool.query("SELECT 1");
@@ -764,6 +768,54 @@ static void test_pg_pool_connect_breaker() {
   // 第 4 次：熔断冷却中（不真正发起建连，立即失败）。
   expect_db_error("熔断冷却");
   pool.shutdown();
+}
+
+static void test_pg_pool_config_bounds() {
+  // 池上限/懒建连/空口令拒绝初始化：均不发起真实连接。
+  auto& pool = cm::db::PgPool::instance();
+  cm::db::PgConnOptions options;
+  options.host = "127.0.0.1";
+  options.user = "u";
+  options.password = "non-empty-placeholder";
+  options.database = "d";
+  pool.init(options, 2, 0, 500);
+  CHECK(pool.available());
+  CHECK(pool.max_connections() == 2);
+  CHECK(pool.live_connections() == 0); // init 不建立物理连接
+  options.password = "   ";            // 空白口令：拒绝初始化
+  pool.init(options, 2, 0, 500);
+  CHECK(!pool.available());
+  pool.shutdown();
+}
+
+static void test_dao_param_binding() {
+  // 通用查询层不再把用户输入拼进 SQL：值走 $1..$n 绑定。
+  cm::meta::EntityMeta m;
+  m.name = "probe";
+  m.table = "jl_data01.t";
+  m.select_sql = "id";
+  m.filters.push_back({"carNo", "envehicleid", cm::meta::FOp::Eq});
+  m.filters.push_back({"section", "sectioncode", cm::meta::FOp::In});
+  m.filters.push_back({"name", "stationname", cm::meta::FOp::Like});
+  cm::http::Request req;
+  req.params_all["carNo"] = {"A' OR 1=1 --"};
+  req.params_all["section"] = {"S1,S2"};
+  req.params_all["name"] = {"50%_off"};
+  auto f = cm::repo::where_from_filters(m, req);
+  CHECK(f.sql.find("envehicleid = $1") != std::string::npos);
+  CHECK(f.sql.find("sectioncode IN ($2,$3)") != std::string::npos);
+  CHECK(f.sql.find("stationname LIKE $4") != std::string::npos);
+  CHECK(f.sql.find("A' OR 1=1") == std::string::npos); // SQL 文本不含用户值
+  CHECK(f.params.size() == 4);
+  CHECK(f.params[0].value_or("") == "A' OR 1=1 --");
+  CHECK(f.params[1].value_or("") == "S1");
+  CHECK(f.params[2].value_or("") == "S2");
+  CHECK(f.params[3].value_or("") == "%50\\%_off%"); // % 已转义
+
+  // 编号随 params 连续递增；空 IN 列表退化为 NULL。
+  CHECK(cm::repo::bind_param(f.params, std::string("x")) == "$5");
+  cm::db::PgParams empty;
+  CHECK(cm::repo::bind_in(empty, {}) == "(NULL)");
 }
 
 static void test_redis_reconnect_no_deadlock() {
@@ -878,7 +930,7 @@ int main() {
   test_utils();
   test_datetime();
   test_crypto();
-  test_pg_auth();
+  test_pg_conninfo_and_error_mapping();
   test_result();
   test_decimal();
   test_router();
@@ -886,6 +938,8 @@ int main() {
   test_kafka_no_broker();
   test_reliability_timeout();
   test_worker_pool();
+  test_pg_pool_config_bounds();
+  test_dao_param_binding();
   test_pg_pool_connect_breaker();
   test_redis_reconnect_no_deadlock();
   test_auth_guard();

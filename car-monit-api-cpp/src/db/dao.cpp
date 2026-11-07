@@ -95,20 +95,50 @@ std::optional<std::string> lookup(const db::PgResult& r, std::size_t row,
 
 } // namespace
 
-std::string quote(const std::string& value) {
-  return "'" + utils::replace_all(value, "'", "''") + "'";
+std::string bind_param(db::PgParams& params, const std::string& value) {
+  params.emplace_back(value);
+  return "$" + std::to_string(params.size());
 }
 
-std::string in_list(const std::vector<std::string>& values) {
-  std::string out;
-  for (std::size_t i = 0; i < values.size(); ++i) {
-    std::string v = utils::trim(values[i]);
-    if (v.empty()) continue;
-    if (!out.empty()) out += ",";
-    out += quote(v);
+std::string bind_param(db::PgParams& params, const std::optional<std::string>& value) {
+  params.push_back(value);
+  return "$" + std::to_string(params.size());
+}
+
+std::string bind_in(db::PgParams& params, const std::vector<std::string>& values) {
+  if (values.empty()) return "(NULL)";
+  std::string out = "(";
+  bool first = true;
+  for (const auto& v : values) {
+    if (!first) out += ",";
+    first = false;
+    out += bind_param(params, v);
   }
-  if (out.empty()) out = "''";
-  return "(" + out + ")";
+  out += ")";
+  return out;
+}
+
+void append_fragment(SqlFragment& out, const SqlFragment& extra) {
+  const std::size_t offset = out.params.size();
+  std::string renumbered;
+  renumbered.reserve(extra.sql.size());
+  for (std::size_t i = 0; i < extra.sql.size();) {
+    if (extra.sql[i] == '$' && i + 1 < extra.sql.size() &&
+        std::isdigit(static_cast<unsigned char>(extra.sql[i + 1]))) {
+      std::size_t j = i + 1;
+      long long n = 0;
+      while (j < extra.sql.size() && std::isdigit(static_cast<unsigned char>(extra.sql[j]))) {
+        n = n * 10 + (extra.sql[j] - '0');
+        ++j;
+      }
+      renumbered += "$" + std::to_string(offset + static_cast<std::size_t>(n));
+      i = j;
+    } else {
+      renumbered.push_back(extra.sql[i++]);
+    }
+  }
+  out.sql += renumbered;
+  out.params.insert(out.params.end(), extra.params.begin(), extra.params.end());
 }
 
 PageInfo resolve_page(const http::Request& req) {
@@ -140,45 +170,46 @@ Json project_row(const meta::EntityMeta& meta, const db::PgResult& result, std::
   return obj;
 }
 
-std::string where_from_filters(const meta::EntityMeta& meta, const http::Request& req,
+SqlFragment where_from_filters(const meta::EntityMeta& meta, const http::Request& req,
                                const std::vector<std::pair<std::string, std::string>>& extra) {
-  std::string where;
+  SqlFragment out;
   for (const auto& f : meta.filters) {
     auto v = req.get(f.json);
     if (!v || v->empty()) continue;
-    std::string value = *v;
     switch (f.op) {
       case meta::FOp::Eq:
-        where += " AND " + f.column + " = " + quote(value);
+        out.sql += " AND " + f.column + " = " + bind_param(out.params, *v);
         break;
       case meta::FOp::Like: {
-        std::string esc = utils::replace_all(value, "'", "''");
+        // 保留原语义：转义 % 与反斜杠，前后加通配符；值本身走参数绑定。
+        std::string esc = utils::replace_all(*v, "\\", "\\\\");
         esc = utils::replace_all(esc, "%", "\\%");
-        where += " AND " + f.column + " LIKE '%" + esc + "%'";
+        out.sql += " AND " + f.column + " LIKE " + bind_param(out.params, "%" + esc + "%");
         break;
       }
       case meta::FOp::ILike:
-        where += " AND " + f.column + " ILIKE '%" + utils::replace_all(value, "'", "''") + "%'";
+        out.sql += " AND " + f.column + " ILIKE " + bind_param(out.params, "%" + *v + "%");
         break;
       case meta::FOp::In:
-        where += " AND " + f.column + " IN " + in_list(utils::split_csv(value));
+        out.sql += " AND " + f.column + " IN " + bind_in(out.params, utils::split_csv(*v));
         break;
       case meta::FOp::Gte:
-        where += " AND " + f.column + " >= " + quote(value);
+        out.sql += " AND " + f.column + " >= " + bind_param(out.params, *v);
         break;
       case meta::FOp::Lte:
-        where += " AND " + f.column + " <= " + quote(value);
+        out.sql += " AND " + f.column + " <= " + bind_param(out.params, *v);
         break;
       case meta::FOp::Gt:
-        where += " AND " + f.column + " > " + quote(value);
+        out.sql += " AND " + f.column + " > " + bind_param(out.params, *v);
         break;
       case meta::FOp::Lt:
-        where += " AND " + f.column + " < " + quote(value);
+        out.sql += " AND " + f.column + " < " + bind_param(out.params, *v);
         break;
     }
   }
-  for (const auto& kv : extra) where += " AND " + kv.first + " " + kv.second;
-  return where;
+  // extra 由调用方构造，限定为排序/固定表达式片段，不含用户输入的值。
+  for (const auto& kv : extra) out.sql += " AND " + kv.first + " " + kv.second;
+  return out;
 }
 
 Json select_list_raw(const std::string& base_sql, const http::Request& req) {
@@ -212,12 +243,14 @@ Json select_list_raw(const std::string& base_sql, const http::Request& req) {
   return rows; // 调用方自行处理 total
 }
 
-long long count_rows(const std::string& from_and_where) {
+long long count_rows(const std::string& from_and_where) { return count_rows(from_and_where, {}); }
+
+long long count_rows(const std::string& from_and_where, const db::PgParams& params) {
   std::string body = from_and_where;
   // 去掉已有的 limit/offset 和 order by，用子查询计数最稳妥。
   std::string sql = "SELECT count(1) AS cnt FROM (" + body + ") _c";
   try {
-    auto r = db::PgPool::instance().query(sql);
+    auto r = db::PgPool::instance().query(sql, params);
     if (!r.rows.empty() && r.rows[0][0]) return std::stoll(*r.rows[0][0]);
   } catch (const std::exception& e) {
     CM_LOG_WARN("db.dao") << "count 失败: " << e.what();
@@ -226,18 +259,18 @@ long long count_rows(const std::string& from_and_where) {
 }
 
 Json select_list(const meta::EntityMeta& meta, const http::Request& req,
-                 const std::string& extra_where,
-                 const std::optional<std::string>& columns_override) {
+                 const SqlFragment& extra, const std::optional<std::string>& columns_override) {
   std::string columns = columns_override ? *columns_override : meta.select_sql;
   std::string sql = "SELECT " + columns + " FROM " + meta.table + " WHERE 1=1";
-  sql += where_from_filters(meta, req);
-  sql += extra_where;
+  SqlFragment where = where_from_filters(meta, req);
+  append_fragment(where, extra);
+  sql += where.sql;
   if (!meta.order_sql.empty()) sql += " ORDER BY " + meta.order_sql;
 
   PageInfo page = resolve_page(req);
   long long total = 0;
   if (page.paged) {
-    total = count_rows(sql);
+    total = count_rows(sql, where.params);
     long long pages = page.page_size > 0 ? (total + page.page_size - 1) / page.page_size : 0;
     if (page.page_num < 1) page.page_num = 1;
     if (page.page_num > pages && pages > 0) page.page_num = int(pages);
@@ -253,7 +286,7 @@ Json select_list(const meta::EntityMeta& meta, const http::Request& req,
   }
 
   CM_LOG_DEBUG("db.dao") << "SQL: " << sql;
-  auto result = db::PgPool::instance().query(sql);
+  auto result = db::PgPool::instance().query(sql, where.params);
   Json rows = Json::array();
   for (std::size_t i = 0; i < result.rows.size(); ++i)
     rows.push_back(project_row(meta, result, i));
@@ -278,10 +311,11 @@ static std::string physical_pk_column(const meta::EntityMeta& meta) {
 Json select_by_id(const meta::EntityMeta& meta, const std::string& id) {
   std::string pk_column = physical_pk_column(meta);
   if (pk_column.empty()) return Json(nullptr);
+  db::PgParams params;
   std::string sql = "SELECT " + meta.select_sql + " FROM " + meta.table + " WHERE " + pk_column +
-                    " = " + quote(id);
+                    " = " + bind_param(params, id);
   CM_LOG_DEBUG("db.dao") << "SQL: " << sql;
-  auto result = db::PgPool::instance().query(sql);
+  auto result = db::PgPool::instance().query(sql, params);
   if (result.rows.empty()) return Json(nullptr);
   return project_row(meta, result, 0);
 }
@@ -292,10 +326,11 @@ Json select_by_ids(const meta::EntityMeta& meta, const std::string& ids) {
   if (pk_column.empty()) return rows;
   auto values = utils::split_csv(ids);
   if (values.empty()) return rows;
+  db::PgParams params;
   std::string sql = "SELECT " + meta.select_sql + " FROM " + meta.table + " WHERE " + pk_column +
-                    " IN " + in_list(values);
+                    " IN " + bind_in(params, values);
   CM_LOG_DEBUG("db.dao") << "SQL: " << sql;
-  auto result = db::PgPool::instance().query(sql);
+  auto result = db::PgPool::instance().query(sql, params);
   for (std::size_t i = 0; i < result.rows.size(); ++i)
     rows.push_back(project_row(meta, result, i));
   return rows;

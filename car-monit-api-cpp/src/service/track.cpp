@@ -537,16 +537,18 @@ Json load_record(const std::string& redis_key, const cm::meta::EntityMeta& m,
     }
   }
 
-  std::string sql = "SELECT * FROM " + table + " WHERE " + id_col + " = " + cm::repo::quote(uuid);
+  cm::db::PgParams params;
+  std::string sql = "SELECT * FROM " + table + " WHERE " + id_col + " = " +
+                    cm::repo::bind_param(params, uuid);
   if (!time_col.empty() && !apply1.empty() && !apply2.empty()) {
-    sql += " AND " + time_col + " >= to_timestamp(" + cm::repo::quote(apply1) +
-           ",'YYYY-MM-DD HH24:MI:SS') AND " + time_col +
-           " <= to_timestamp(" + cm::repo::quote(apply2) + ",'YYYY-MM-DD HH24:MI:SS')";
+    sql += " AND " + time_col + " >= to_timestamp(" + cm::repo::bind_param(params, apply1) +
+           ",'YYYY-MM-DD HH24:MI:SS') AND " + time_col + " <= to_timestamp(" +
+           cm::repo::bind_param(params, apply2) + ",'YYYY-MM-DD HH24:MI:SS')";
   }
   sql += " LIMIT 1";
 
   Json obj;
-  auto r = cm::db::PgPool::instance().query(sql);
+  auto r = cm::db::PgPool::instance().query(sql, params);
   if (r.rows.empty()) {
     // Java 未命中时缓存一个只带查询键的占位对象
     obj = Json::object();
@@ -722,47 +724,52 @@ std::string history_select() {
          " t.trailpoints AS trailpoints FROM jl_data01.zdata_trail_fitting t";
 }
 
-std::string history_where(const Para& p) {
-  std::string w = " WHERE 1=1";
-  if (!p.car_no.empty()) w += " AND t.envehicleid = " + cm::repo::quote(p.car_no);
+cm::repo::SqlFragment history_where(const Para& p) {
+  cm::repo::SqlFragment f;
+  f.sql = " WHERE 1=1";
+  if (!p.car_no.empty())
+    f.sql += " AND t.envehicleid = " + cm::repo::bind_param(f.params, p.car_no);
   if (!p.apply1.empty())
-    w += " AND t.extime >= to_timestamp(" + cm::repo::quote(p.apply1) +
-         ",'YYYY-MM-DD HH24:MI:SS')";
+    f.sql += " AND t.extime >= to_timestamp(" + cm::repo::bind_param(f.params, p.apply1) +
+             ",'YYYY-MM-DD HH24:MI:SS')";
   if (!p.apply2.empty())
-    w += " AND t.extime <= to_timestamp(" + cm::repo::quote(p.apply2) +
-         ",'YYYY-MM-DD HH24:MI:SS')";
-  if (p.flag == "bannian") w += " AND t.extime >= now()-180 AND t.extime <= now()";
-  if (p.flag == "yiyue") w += " AND t.extime >= now()-3 AND t.extime <= now()";
-  if (!p.car_no_list.empty()) w += " AND t.envehicleid IN " + cm::repo::in_list(p.car_no_list);
-  return w;
+    f.sql += " AND t.extime <= to_timestamp(" + cm::repo::bind_param(f.params, p.apply2) +
+             ",'YYYY-MM-DD HH24:MI:SS')";
+  if (p.flag == "bannian") f.sql += " AND t.extime >= now()-180 AND t.extime <= now()";
+  if (p.flag == "yiyue") f.sql += " AND t.extime >= now()-3 AND t.extime <= now()";
+  if (!p.car_no_list.empty())
+    f.sql += " AND t.envehicleid IN " + cm::repo::bind_in(f.params, p.car_no_list);
+  return f;
 }
 
 std::string latest_select() {
   return history_select() + ", t.trailtype AS trailtype";
 }
 
-std::string latest_where(const Para& p) {
-  std::string w = " WHERE 1=1";
+cm::repo::SqlFragment latest_where(const Para& p) {
+  cm::repo::SqlFragment f;
+  f.sql = " WHERE 1=1";
   if (p.flag == "jiandong") {
-    w += " AND EXISTS (SELECT 1 FROM jl_data01.ods_szdn_toll sip WHERE (sip.toll_code ="
-         " t.entollstationid OR sip.toll_code = t.extollstationid)"
-         " AND sip.org_code = '030000011')";
+    f.sql += " AND EXISTS (SELECT 1 FROM jl_data01.ods_szdn_toll sip WHERE (sip.toll_code ="
+             " t.entollstationid OR sip.toll_code = t.extollstationid)"
+             " AND sip.org_code = '030000011')";
   }
-  if (p.flag == "ksqcpb") w += " AND t.trailtype = 0";
+  if (p.flag == "ksqcpb") f.sql += " AND t.trailtype = 0";
   if (p.flag == "ldtf") {
-    w += " AND t.trailtype = 1";
+    f.sql += " AND t.trailtype = 1";
     if (!p.section_list.empty()) {
-      w += " AND EXISTS (SELECT 1 FROM UNNEST(t.trailpoints) AS elem"
-           " WHERE (elem::json->>'sectionCode') IN " + cm::repo::in_list(p.section_list) + ")";
+      f.sql += " AND EXISTS (SELECT 1 FROM UNNEST(t.trailpoints) AS elem"
+               " WHERE (elem::json->>'sectionCode') IN " +
+               cm::repo::bind_in(f.params, p.section_list) + ")";
     }
   }
   if (!p.apply1.empty())
-    w += " AND t.extime >= to_timestamp(" + cm::repo::quote(p.apply1) +
-         ",'YYYY-MM-DD HH24:MI:SS')";
+    f.sql += " AND t.extime >= to_timestamp(" + cm::repo::bind_param(f.params, p.apply1) +
+             ",'YYYY-MM-DD HH24:MI:SS')";
   if (!p.apply2.empty())
-    w += " AND t.extime <= to_timestamp(" + cm::repo::quote(p.apply2) +
-         ",'YYYY-MM-DD HH24:MI:SS')";
-  return w;
+    f.sql += " AND t.extime <= to_timestamp(" + cm::repo::bind_param(f.params, p.apply2) +
+             ",'YYYY-MM-DD HH24:MI:SS')";
+  return f;
 }
 
 Json num_or_null_from_row(const cm::db::PgResult& r, std::size_t row, const char* col) {
@@ -798,12 +805,12 @@ Json tracks_from_row(const cm::db::PgResult& r, std::size_t row) {
   return o;
 }
 
-std::vector<Json> query_tracks(const std::string& select, const std::string& where,
+std::vector<Json> query_tracks(const std::string& select, const cm::repo::SqlFragment& where,
                                const std::string& order, long long limit, long long offset) {
-  std::string sql = select + where;
+  std::string sql = select + where.sql;
   if (!order.empty()) sql += " ORDER BY " + order;
   sql += " LIMIT " + std::to_string(limit) + " OFFSET " + std::to_string(offset);
-  auto r = cm::db::PgPool::instance().query(sql);
+  auto r = cm::db::PgPool::instance().query(sql, where.params);
   std::vector<Json> out;
   out.reserve(r.rows.size());
   for (std::size_t i = 0; i < r.rows.size(); ++i) out.push_back(tracks_from_row(r, i));
@@ -811,8 +818,9 @@ std::vector<Json> query_tracks(const std::string& select, const std::string& whe
 }
 
 long long count_history(const Para& p) {
+  auto where = history_where(p);
   auto r = cm::db::PgPool::instance().query(
-      "SELECT count(1) AS c FROM jl_data01.zdata_trail_fitting t" + history_where(p));
+      "SELECT count(1) AS c FROM jl_data01.zdata_trail_fitting t" + where.sql, where.params);
   if (r.rows.empty()) return 0;
   try {
     return std::stoll(r.rows[0][0].value_or("0"));
@@ -827,12 +835,13 @@ std::vector<Json> history_tracks(const Para& p, const PageReq& page, long long& 
   long long num = page.num;
   if (pages > 0 && num > pages) num = pages; // 与项目 PageHelper reasonable 语义一致
 
-  std::string sql = history_select() + history_where(p);
+  auto where = history_where(p);
+  std::string sql = history_select() + where.sql;
   if (!page.order_by.empty()) sql += " ORDER BY " + page.order_by;
   long long offset = (num - 1) * page.size;
   sql += " LIMIT " + std::to_string(page.size) + " OFFSET " + std::to_string(offset);
 
-  auto r = cm::db::PgPool::instance().query(sql);
+  auto r = cm::db::PgPool::instance().query(sql, where.params);
   std::vector<Json> out;
   out.reserve(r.rows.size());
   for (std::size_t i = 0; i < r.rows.size(); ++i) out.push_back(tracks_from_row(r, i));
@@ -1261,10 +1270,11 @@ void sync_suspicious_car(int index) {
     if (jstr(kv.second, "sectionCode") == kIndexSectionCode) section_list.push_back(kIndexSectionCode);
   }
 
-  const std::string date_filter =
-      " AND t.snapshottime >= to_timestamp(" + cm::repo::quote(query_start) +
+  cm::repo::SqlFragment date_filter;
+  date_filter.sql =
+      " AND t.snapshottime >= to_timestamp(" + cm::repo::bind_param(date_filter.params, query_start) +
       ",'YYYY-MM-DD HH24:MI:SS') AND t.snapshottime <= to_timestamp(" +
-      cm::repo::quote(query_end) + ",'YYYY-MM-DD HH24:MI:SS')";
+      cm::repo::bind_param(date_filter.params, query_end) + ",'YYYY-MM-DD HH24:MI:SS')";
 
   auto save_suspicious = [&](Json tracks, const std::string& remark,
                              const std::string& escaped_tfcj) {
@@ -1287,12 +1297,17 @@ void sync_suspicious_car(int index) {
     if (i <= 0) continue;
 
     // ---- 门架牌识流水 -> js_car_snapshot<date>:<sectioncode>@@<plate>
+    cm::repo::SqlFragment snapshot_where = date_filter;
     std::string snapshot_sql =
-        "SELECT * FROM jl_data01.ods_rt_szdn_snapshot_flow_addcode t WHERE 1=1" + date_filter;
-    if (!section_list.empty()) snapshot_sql += " AND t.sectioncode IN " + cm::repo::in_list(section_list);
-    snapshot_sql += " ORDER BY t.snapshottime LIMIT 2000 OFFSET " + std::to_string((i - 1) * 2000);
+        "SELECT * FROM jl_data01.ods_rt_szdn_snapshot_flow_addcode t WHERE 1=1" +
+        snapshot_where.sql;
+    if (!section_list.empty())
+      snapshot_sql +=
+          " AND t.sectioncode IN " + cm::repo::bind_in(snapshot_where.params, section_list);
+    snapshot_sql += " ORDER BY t.snapshottime LIMIT 2000 OFFSET " +
+                    std::to_string((i - 1) * 2000);
 
-    auto snapshot_result = cm::db::PgPool::instance().query(snapshot_sql);
+    auto snapshot_result = cm::db::PgPool::instance().query(snapshot_sql, snapshot_where.params);
     for (std::size_t row = 0; row < snapshot_result.rows.size(); ++row) {
       Json rowj = cm::repo::project_row(cm::meta::odsRtSzdnSnapshotFlowAddcode, snapshot_result, row);
       if (jblank(rowj, "platenumber") || jstr(rowj, "snapshottime").empty()) continue;
@@ -1302,21 +1317,23 @@ void sync_suspicious_car(int index) {
     }
 
     // ---- 门架交易流水 -> js_car_reerecords<date>:<sectioncode>@@<plate>
-    std::string fee_sql =
-        "SELECT * FROM jl_data01.ods_lwzxsfsj_fee_records_01 t WHERE t.transtime >= to_timestamp(" +
-        cm::repo::quote(query_start) +
+    cm::repo::SqlFragment fee_where;
+    fee_where.sql =
+        " WHERE t.transtime >= to_timestamp(" +
+        cm::repo::bind_param(fee_where.params, query_start) +
         ",'YYYY-MM-DD HH24:MI:SS') AND t.transtime <= to_timestamp(" +
-        cm::repo::quote(query_end) + ",'YYYY-MM-DD HH24:MI:SS')";
+        cm::repo::bind_param(fee_where.params, query_end) + ",'YYYY-MM-DD HH24:MI:SS')";
     if (!section_list.empty()) {
-      fee_sql += " AND t.gantryid IN (SELECT g.gantry_code FROM jl_data01.ods_szdn_gantry g"
-                 " WHERE g.section_code IN " +
-                 cm::repo::in_list(section_list) + ")";
+      fee_where.sql += " AND t.gantryid IN (SELECT g.gantry_code FROM jl_data01.ods_szdn_gantry g"
+                       " WHERE g.section_code IN " +
+                       cm::repo::bind_in(fee_where.params, section_list) + ")";
     }
     // Java 侧 feeRecords.setPlateColor("_1")：车牌字段带颜色后缀
+    std::string fee_sql = "SELECT * FROM jl_data01.ods_lwzxsfsj_fee_records_01 t" + fee_where.sql;
     fee_sql += " AND t.vehicleplate LIKE '%_1' ORDER BY t.transtime LIMIT 2000 OFFSET " +
                std::to_string((i - 1) * 2000);
 
-    auto fee_result = cm::db::PgPool::instance().query(fee_sql);
+    auto fee_result = cm::db::PgPool::instance().query(fee_sql, fee_where.params);
     for (std::size_t row = 0; row < fee_result.rows.size(); ++row) {
       Json rowj = cm::repo::project_row(cm::meta::odsLwzxsfsjFeeRecords01, fee_result, row);
       const std::string plate = jstr(rowj, "vehicleplate");

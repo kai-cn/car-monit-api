@@ -47,8 +47,13 @@ struct PgOptions {
   int max_wait_ms = 60000;
   // 认证失败后允许连接池重建连接的次数；默认 0 = 关闭自动重连（熔断）。
   int reconnect_after_auth_failure = 0;
-  // auto / md5 / opengauss-sha256 / scram-sha-256，对应 openGauss password_encryption_type
-  std::string auth_mode = "auto";
+  // libpq sslmode：disable / allow / prefer / require / verify-ca / verify-full。
+  // 默认 prefer 与 libpq 一致；生产建议 require，内网可 verify-full。
+  std::string sslmode = "prefer";
+  // verify-ca / verify-full 的 CA 路径；为空使用系统默认 CA。
+  std::string sslrootcert;
+  // 语句超时（毫秒；0 = 不设置），防止单条慢 SQL 长期占用连接。
+  int statement_timeout_ms = 30000;
 };
 
 // HTTP 服务安全选项（审阅 §5.1 #6）。鉴权与限流是**新增能力**：Java 的

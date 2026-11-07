@@ -19,7 +19,8 @@ using http::Request;
 using http::Response;
 
 // 对应 BaseController#getDataTable / startPage。
-Json list_response(const meta::EntityMeta& m, const Request& req, const std::string& extra_where,
+Json list_response(const meta::EntityMeta& m, const Request& req,
+                   const repo::SqlFragment& extra_where,
                    const std::function<void(Json&, bool)>& decorate, bool for_export) {
   Json env = repo::select_list(m, req, extra_where);
   Json& rows = env["rows"];
@@ -64,21 +65,21 @@ struct Spec {
   bool numeric = false;    // @PathVariable Long
   bool list_all = false;
   bool exportable = false;
-  std::function<std::string(const Request&)> prepare;
+  std::function<repo::SqlFragment(const Request&)> prepare;
   std::function<void(Json&, bool)> decorate;
 };
 
 void register_spec(http::Router& r, const Spec& s) {
   // /list
   r.add("GET", s.base + "/list", [s](Request& req) -> Response {
-    std::string extra = s.prepare ? s.prepare(req) : "";
+    repo::SqlFragment extra = s.prepare ? s.prepare(req) : repo::SqlFragment{};
     return Response::ok(list_response(*s.meta, req, extra, s.decorate, false));
   });
 
   // /listToExport
   if (s.exportable) {
     r.add("GET", s.base + "/listToExport", [s](Request& req) -> Response {
-      std::string extra = s.prepare ? s.prepare(req) : "";
+      repo::SqlFragment extra = s.prepare ? s.prepare(req) : repo::SqlFragment{};
       return Response::ok(list_response(*s.meta, req, extra, s.decorate, true));
     });
   }
@@ -87,7 +88,7 @@ void register_spec(http::Router& r, const Spec& s) {
   if (s.list_all) {
     r.add("GET", s.base + "/listAll", [s](Request& req) -> Response {
       Request clean = without_paging(req);
-      return Response::ok(list_response(*s.meta, clean, "", s.decorate, true));
+      return Response::ok(list_response(*s.meta, clean, repo::SqlFragment{}, s.decorate, true));
     });
   }
 
@@ -120,7 +121,7 @@ void decorate_fee_gantry(Json& rows, bool) {
   for (auto& row : rows) row["id"] = utils::uuid32();
 }
 
-std::string fee_records_prepare(const Request& req) {
+repo::SqlFragment fee_records_prepare(const Request& req) {
   // 对应 OdsLwzxsfsjFeeRecords01Controller#list 的 JiAnDong / 区间逻辑：
   // Java 里这些条件被塞进实体的 sectionList/codeList，但 Mapper XML 并未使用，
   // 因此这里只保留“未带车牌时告警”的日志行为，不生成额外 SQL 条件。
@@ -128,7 +129,7 @@ std::string fee_records_prepare(const Request& req) {
   if (!query_all && utils::is_blank(req.str("vehicleplate"))) {
     CM_LOG_INFO("feeRecords") << "查询未指定车牌，返回全部车牌数据（与 Java 行为一致）";
   }
-  return "";
+  return {};
 }
 
 void decorate_fee_records(Json& rows, bool) {
@@ -157,17 +158,19 @@ void decorate_fee_records(Json& rows, bool) {
   }
 }
 
-std::string snapshotflow_prepare(const Request& req) {
-  std::string extra;
+repo::SqlFragment snapshotflow_prepare(const Request& req) {
+  repo::SqlFragment f;
   // OdsRtSzdnSnapshotFlowAddcodeMapper.xml: flag=JiAnDong -> orgcode = '030000011'
-  if (req.str("flag") == "JiAnDong") extra += " AND orgcode = '030000011'";
+  if (req.str("flag") == "JiAnDong") f.sql += " AND orgcode = '030000011'";
 
   std::string sections = utils::delete_end(req.str("sectionCodeStr"));
-  if (!sections.empty()) extra += " AND sectioncode IN " + repo::in_list(utils::split_csv(sections));
+  if (!sections.empty())
+    f.sql += " AND sectioncode IN " + repo::bind_in(f.params, utils::split_csv(sections));
 
   std::string codes = utils::delete_end(req.str("code"));
-  if (!codes.empty()) extra += " AND gantrycode IN " + repo::in_list(utils::split_csv(codes));
-  return extra;
+  if (!codes.empty())
+    f.sql += " AND gantrycode IN " + repo::bind_in(f.params, utils::split_csv(codes));
+  return f;
 }
 
 void decorate_snapshotflow(Json& rows, bool for_export) {

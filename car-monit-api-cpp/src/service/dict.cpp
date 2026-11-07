@@ -142,10 +142,11 @@ Json weight_capture_map(const std::string& query_uuids) {
         CM_LOG_WARN("dict") << "称重缓存反序列化失败: " << key;
       }
     }
+    db::PgParams params;
     std::string sql = "SELECT " + meta::odsSzdnProvinceBorderVehicleWeightNewstructure.select_sql +
                       " FROM " + meta::odsSzdnProvinceBorderVehicleWeightNewstructure.table +
-                      " WHERE datauuid = " + repo::quote(uuid) + " LIMIT 1";
-    auto result = db::PgPool::instance().query(sql);
+                      " WHERE datauuid = " + repo::bind_param(params, uuid) + " LIMIT 1";
+    auto result = db::PgPool::instance().query(sql, params);
     if (!result.rows.empty()) {
       Json row = repo::project_row(meta::odsSzdnProvinceBorderVehicleWeightNewstructure, result, 0);
       map[uuid] = row;
