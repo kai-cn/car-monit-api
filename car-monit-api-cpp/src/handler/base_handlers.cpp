@@ -61,7 +61,6 @@ struct Spec {
   const meta::EntityMeta* meta = nullptr;
   std::string base;
   std::string id_param;
-  bool flat = false;       // getXxx 直接返回实体（而不是包装）
   bool numeric = false;    // @PathVariable Long
   bool list_all = false;
   bool exportable = false;
@@ -95,16 +94,20 @@ void register_spec(http::Router& r, const Spec& s) {
   // /{id}
   if (!s.id_param.empty()) {
     std::string pattern = s.base + "/{" + s.id_param + "}";
-    r.add("GET", pattern, [s](Request& req) -> Response {
+    // getInfo 返回形态以 info_returns_raw_entity 为唯一权威：16 个控制器是
+    // AjaxResult.success(entity) 信封（查不到时 {"msg":"操作成功","code":200}，
+    // data 键省略），仅 feeGantry/feerecords/snapshotflow 直接返回实体。
+    const bool raw = info_returns_raw_entity(s.base);
+    r.add("GET", pattern, [s, raw](Request& req) -> Response {
       auto id = req.path_param(s.id_param);
       if (!id) throw BindError(400, "缺少路径参数 " + s.id_param);
       if (s.numeric && !numeric_id(*id)) bad_id(s.id_param);
-      if (s.flat) {
-        Json row = repo::select_by_id(*s.meta, *id);
+      Json row = repo::select_by_id(*s.meta, *id);
+      if (raw) {
+        // Java 直接 return entity：查不到时 Spring 输出空 body（HTTP 200）。
         if (row.is_null()) return Response::raw(200, "", "application/json;charset=UTF-8");
         return Response::ok(row);
       }
-      Json row = repo::select_by_id(*s.meta, *id);
       if (row.is_null()) return Response::ok(ajax_ok());
       return Response::ok(ajax_ok_data(row));
     });
@@ -183,13 +186,22 @@ void decorate_snapshotflow(Json& rows, bool for_export) {
 
 } // namespace
 
+bool info_returns_raw_entity(const std::string& base_path) {
+  // Java 19 个实体控制器中仅 3 个 getInfo 直接 return entity：
+  //   OdsLwzxsfsjFeeGantryFusion01Controller（/base/feeGantry）
+  //   OdsLwzxsfsjFeeRecords01Controller（/base/feerecords）
+  //   OdsRtSzdnSnapshotFlowAddcodeController（/base/snapshotflow）
+  // 其余 16 个返回 AjaxResult.success(entity) 信封（审阅报告 §3.3 R1）。
+  return base_path == "/base/feeGantry" || base_path == "/base/feerecords" ||
+         base_path == "/base/snapshotflow";
+}
+
 void register_base(http::Router& r) {
   // 1. /base/fwqjcxx
   Spec fwqjcxx;
   fwqjcxx.meta = &meta::dwdLcztFwqjcxx;
   fwqjcxx.base = "/base/fwqjcxx";
   fwqjcxx.id_param = "agentPk";
-  fwqjcxx.flat = true;
   fwqjcxx.numeric = true;
   fwqjcxx.list_all = true;
   register_spec(r, fwqjcxx);
@@ -211,7 +223,6 @@ void register_base(http::Router& r) {
   fwqclls.meta = &meta::odsCxztFwqclls;
   fwqclls.base = "/manager/fwqclls";
   fwqclls.id_param = "bigId";
-  fwqclls.flat = true;
   fwqclls.numeric = true;
   register_spec(r, fwqclls);
 
@@ -220,7 +231,6 @@ void register_base(http::Router& r) {
   fee_gantry.meta = &meta::odsLwzxsfsjFeeGantryFusion01;
   fee_gantry.base = "/base/feeGantry";
   fee_gantry.id_param = "bigId";
-  fee_gantry.flat = true;
   fee_gantry.numeric = true;
   fee_gantry.decorate = decorate_fee_gantry;
   register_spec(r, fee_gantry);
@@ -230,7 +240,6 @@ void register_base(http::Router& r) {
   fee_records.meta = &meta::odsLwzxsfsjFeeRecords01;
   fee_records.base = "/base/feerecords";
   fee_records.id_param = "bigId";
-  fee_records.flat = true;
   fee_records.numeric = true;
   fee_records.exportable = true;
   fee_records.prepare = fee_records_prepare;
@@ -242,7 +251,6 @@ void register_base(http::Router& r) {
   enter.meta = &meta::odsLwzxsfsjFeeStationEnter01;
   enter.base = "/base/feeStationEnter";
   enter.id_param = "bigId";
-  enter.flat = true;
   enter.numeric = true;
   register_spec(r, enter);
 
@@ -251,7 +259,6 @@ void register_base(http::Router& r) {
   exit.meta = &meta::odsLwzxsfsjFeeStationExit01;
   exit.base = "/base/feestationexit";
   exit.id_param = "bigId";
-  exit.flat = true;
   exit.numeric = true;
   register_spec(r, exit);
 
@@ -260,7 +267,6 @@ void register_base(http::Router& r) {
   snapshot.meta = &meta::odsRtSzdnSnapshotFlowAddcode;
   snapshot.base = "/base/snapshotflow";
   snapshot.id_param = "bigId";
-  snapshot.flat = true;
   snapshot.numeric = true;
   snapshot.exportable = true;
   snapshot.prepare = snapshotflow_prepare;
@@ -272,7 +278,6 @@ void register_base(http::Router& r) {
   prov.meta = &meta::odsRtSzdnSnapshotFlowProvcaptureAddcode;
   prov.base = "/base/provcapture";
   prov.id_param = "bigId";
-  prov.flat = true;
   prov.numeric = true;
   register_spec(r, prov);
 
@@ -281,7 +286,6 @@ void register_base(http::Router& r) {
   station.meta = &meta::odsRtSzdnSnapshotFlowStationcaptureAddcode;
   station.base = "/base/stationcapture";
   station.id_param = "bigId";
-  station.flat = true;
   station.numeric = true;
   register_spec(r, station);
 
@@ -290,7 +294,6 @@ void register_base(http::Router& r) {
   gantry.meta = &meta::odsSzdnGantry;
   gantry.base = "/base/gantry";
   gantry.id_param = "id";
-  gantry.flat = true;
   gantry.numeric = true;
   gantry.list_all = true;
   register_spec(r, gantry);
@@ -300,7 +303,6 @@ void register_base(http::Router& r) {
   gantry_ip.meta = &meta::odsSzdnGantryIp;
   gantry_ip.base = "/base/gantryIp";
   gantry_ip.id_param = "id";
-  gantry_ip.flat = true;
   gantry_ip.numeric = true;
   register_spec(r, gantry_ip);
 
@@ -309,7 +311,6 @@ void register_base(http::Router& r) {
   weight.meta = &meta::odsSzdnProvinceBorderVehicleWeightNewstructure;
   weight.base = "/base/vehicleweight";
   weight.id_param = "dataSource"; // 方法名 selectById(dataSource)，传入的是主键
-  weight.flat = true;
   register_spec(r, weight);
   r.add("GET", "/base/vehicleweight/map", [](Request& req) -> Response {
     return Response::ok(service::weight_capture_map(req.str("queryUuids")));
@@ -320,7 +321,6 @@ void register_base(http::Router& r) {
   section.meta = &meta::odsSzdnSection;
   section.base = "/base/section";
   section.id_param = "id";
-  section.flat = true;
   section.numeric = true;
   section.list_all = true;
   register_spec(r, section);
@@ -330,7 +330,6 @@ void register_base(http::Router& r) {
   toll.meta = &meta::odsSzdnToll;
   toll.base = "/base/toll";
   toll.id_param = "id";
-  toll.flat = true;
   toll.numeric = true;
   toll.list_all = true;
   register_spec(r, toll);
@@ -340,7 +339,6 @@ void register_base(http::Router& r) {
   toll_ip.meta = &meta::odsSzdnTollStationIp;
   toll_ip.base = "/base/tollStationIp";
   toll_ip.id_param = "id";
-  toll_ip.flat = true;
   toll_ip.numeric = true;
   register_spec(r, toll_ip);
 
@@ -349,7 +347,6 @@ void register_base(http::Router& r) {
   org.meta = &meta::odsYhglVBaseOrg;
   org.base = "/base/org";
   org.id_param = "bigId";
-  org.flat = true;
   org.numeric = true;
   org.list_all = true;
   register_spec(r, org);
@@ -359,7 +356,6 @@ void register_base(http::Router& r) {
   trail.meta = &meta::zdataTrailTracks;
   trail.base = "/base/trailtracks";
   trail.id_param = "uuid";
-  trail.flat = true;
   register_spec(r, trail);
 }
 

@@ -10,6 +10,7 @@
 | 端口 / context-path | `9901`，`/` | `configs/config.yaml` 的 `server.port`，路由不含前缀 | ✅ |
 | 路由总数 | 85 | 85 + `/health`（本工程新增的健康检查） | ✅（新增项已标注） |
 | `AjaxResult` | `{msg,code,data}`；`data == null` 时**键消失** | 同键序、同省略规则 | ✅ |
+| `/{id}` 详情（getInfo） | 19 个实体控制器中 16 个返回 `AjaxResult.success(entity)`；查不到返回 `{"msg":"操作成功","code":200}`（data 键省略）。仅 feeGantry/feerecords/snapshotflow 3 个直接返回实体，查不到时空 body（HTTP 200） | 同（`info_returns_raw_entity` 为唯一权威映射，`base_handlers.cpp`；16/3 逐端点核对过 Java 控制器返回类型） | ✅ |
 | `TableDataInfo` | `{total,rows,code,msg}` | 同键序（`total` 为数字，非字符串） | ✅ |
 | void 控制器方法 | HTTP 200 + 空 body（`application/json;charset=UTF-8`） | `Response::raw(200,"")` | ✅ |
 | 业务异常 | HTTP 200 + `{"msg":"...","code":500}` | 同 | ✅ |
