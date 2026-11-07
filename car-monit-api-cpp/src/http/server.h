@@ -9,12 +9,35 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace cm::http {
 
 using Handler = std::function<Response(Request&)>;
+
+// ---------------------------------------------------------------------------
+// 安全加固（审阅 §5.1 #6，均为新增能力、默认关闭以对齐 Java 生产行为——
+// Java 的 SecurityInterceptor 在 WebConfig.java 中被整体注释，运行实例无鉴权）。
+// ---------------------------------------------------------------------------
+
+// API-Key 校验（server.auth.enabled 开启时生效）：
+// 接受 X-API-Key: <key> 或 Authorization: Bearer <key>。
+// api_key 为空时返回 false（fail-closed：开启鉴权但未配置密钥 = 全部拒绝）。
+bool check_api_key(const Request& req, const std::string& api_key);
+
+// 按客户端 IP 的固定窗口限流器（server.rate-limit.enabled 开启时生效）。
+class RateLimiter {
+public:
+  // limit_per_minute <= 0 视为全部拒绝。
+  bool allow(const std::string& ip, int limit_per_minute);
+
+private:
+  std::mutex mu_;
+  std::unordered_map<std::string, std::pair<long long, int>> windows_; // ip -> {分钟, 计数}
+};
 
 class Router {
 public:

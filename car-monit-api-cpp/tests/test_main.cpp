@@ -771,6 +771,47 @@ static void test_redis_reconnect_no_deadlock() {
   CHECK(!v.has_value());
 }
 
+static void test_server_security() {
+  // 安全加固（审阅 §5.1 #6）：鉴权与限流为新增能力（默认关闭，对齐 Java 生产
+  // 实例——SecurityInterceptor 被整体注释）；开启后的判定逻辑在此覆盖。
+  cm::http::Request req;
+  auto key_ok = [&](const std::string& key) { return cm::http::check_api_key(req, key); };
+  // 未配置密钥：fail-closed。
+  CHECK(!key_ok(""));
+  // X-API-Key 命中/不命中。
+  req.headers_lower["x-api-key"] = "secret-1";
+  CHECK(key_ok("secret-1"));
+  CHECK(!key_ok("secret-2"));
+  // Authorization: Bearer（scheme 大小写不敏感）。
+  req.headers_lower.clear();
+  req.headers_lower["authorization"] = "Bearer secret-1";
+  CHECK(key_ok("secret-1"));
+  req.headers_lower["authorization"] = "bearer secret-1";
+  CHECK(key_ok("secret-1"));
+  // 非 Bearer scheme / 无凭证。
+  req.headers_lower["authorization"] = "Basic secret-1";
+  CHECK(!key_ok("secret-1"));
+  req.headers_lower.clear();
+  CHECK(!key_ok("secret-1"));
+
+  // 固定窗口限流：同一 IP 每分钟 3 次，第 4 次拒绝；其它 IP 独立计数。
+  cm::http::RateLimiter limiter;
+  CHECK(limiter.allow("10.0.0.1", 3));
+  CHECK(limiter.allow("10.0.0.1", 3));
+  CHECK(limiter.allow("10.0.0.1", 3));
+  CHECK(!limiter.allow("10.0.0.1", 3));
+  CHECK(limiter.allow("10.0.0.2", 3));
+  CHECK(!limiter.allow("10.0.0.1", 0)); // limit<=0 视为全拒
+
+  // 配置解析：安全键与默认值。
+  auto& cfg = cm::config::Config::instance();
+  CHECK(!cfg.server_security().auth_enabled);      // 默认关闭（对齐 Java）
+  CHECK(!cfg.server_security().rate_limit_enabled);
+  CHECK(cfg.server_security().max_payload_bytes == 1048576); // config.yaml 1MB
+  CHECK(cfg.server_security().read_timeout_ms == 30000);
+  CHECK(cfg.server_security().write_timeout_ms == 30000);
+}
+
 int main() {
   test_utils();
   test_datetime();
@@ -790,6 +831,7 @@ int main() {
   test_query_field_whitelist();
   test_info_envelope_contract();
   test_cron_spring_semantics();
+  test_server_security();
   test_db_optional();
   if (g_fail == 0) {
     std::cout << "ALL TESTS PASSED" << std::endl;
