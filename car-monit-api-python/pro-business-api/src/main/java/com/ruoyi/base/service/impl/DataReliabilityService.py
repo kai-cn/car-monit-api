@@ -739,6 +739,10 @@ class DataReliabilityService(object):
         def _cleanup_task() -> None:
             try:
                 # 延迟1小时清理，确保不会被误删
+                # TODO(V2/P2-14，报告 Q14)：Java 原缺陷——每条消息占用一个 4 线程池的
+                # 工作线程睡 1 小时，第 5 条起清理任务排队。Java 侧亦如此（忠实保留），
+                # 生产启用本服务前应改为 ScheduledExecutorService.schedule(1h)，
+                # 属行为变更需业务确认。
                 Thread.sleep(3600000)
                 self.redisTemplate.delete(self.MSG_CONTENT_PREFIX + messageId)
                 self.redisTemplate.delete(self.MSG_STATUS_PREFIX + messageId)

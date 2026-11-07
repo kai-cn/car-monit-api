@@ -28,6 +28,7 @@ from typing import Any, Callable, Iterable, Optional
 from app.db.engine import Database, get_database
 from app.db.snowflake import assign_uuid, next_id
 from app.db.xml_mapper import map_row
+from app.runtime import reject_shim_operation
 
 log = logging.getLogger(__name__)
 
@@ -216,6 +217,10 @@ def _select_list(self: Any, query: Any = None) -> list[Any]:
     elif callable(query) and not hasattr(query, "_tableFields"):
         # A bare predicate cannot be pushed down; the ported in-memory filter is
         # the only faithful option, so the whole table is read once.
+        # P2-4：prod 模式拒绝——真实库上这是无界全表扫描（报告 Q12）。
+        reject_shim_operation(
+            "BaseMapper.selectList(<predicate>)",
+            "（谓词无法下推，会整表读取后在 Python 过滤；请改写为 Wrapper/XML 条件。）")
         log.warning("%s.selectList(<predicate>) reads the full table", type(self).__name__)
         return [row for row in _query(self, _select_list_sql(self), {}) if query(row)]
     else:
@@ -238,6 +243,10 @@ def _select_count(self: Any, query: Any = None) -> int:
         if clauses:
             sql += " WHERE " + " AND ".join(clauses)
     elif callable(query) and not hasattr(query, "_tableFields"):
+        # P2-4：同 selectList——prod 模式拒绝无界全表扫描。
+        reject_shim_operation(
+            "BaseMapper.selectCount(<predicate>)",
+            "（谓词无法下推，会整表读取后在 Python 计数；请改写为 Wrapper/XML 条件。）")
         log.warning("%s.selectCount(<predicate>) reads the full table", type(self).__name__)
         return sum(1 for row in _query(self, _select_list_sql(self), {}) if query(row))
     else:
