@@ -46,6 +46,7 @@ import (
 	"github.com/ruoyi/car-monit-api-go/internal/router"
 	"github.com/ruoyi/car-monit-api-go/internal/scheduler"
 	"github.com/ruoyi/car-monit-api-go/internal/service"
+	"github.com/ruoyi/car-monit-api-go/internal/utils"
 )
 
 // 进程内固定版本号（Java 侧对应 pom.xml 的 <version>，这里用 ldflags 注入：
@@ -173,7 +174,7 @@ func run(configPath string) error {
 		cfg: cfg, bus: bus, producer: producer, snapshotSync: snapshotSync, largeSync: syncSvc,
 		consumer: dataConsumer, dict: dict, multiSource: multiSource,
 		loss: lossDetect, delay: delayMonitor, reliability: reliability, consistency: consistency,
-		sysUtil: sysUtil,
+		sysUtil: sysUtil, export: exportSvc, largeQuery: largeQuery,
 	})
 
 	// ---- 9. HTTP Server ----
@@ -346,20 +347,35 @@ type startDeps struct {
 	delay        *service.DelayMonitoringService
 	reliability  *service.DataReliabilityService
 	consistency  *service.GaussEsConsistencyService
+	// export / largeQuery 只在 shutdown 时使用：它们持有在途导出任务的 WaitGroup
+	export     *service.UnifiedExportService
+	largeQuery *service.LargeScaleQueryService
 	// sysUtil 对应 TrackTask 里的 @Autowired ISysUtilService（syncCurrentTrack / syncHistroyTrack 两个任务）
 	sysUtil *service.SysUtilService
 }
 
 // backgroundTasks 持有所有需要显式关闭的后台组件。
+//
+// 报告 01 Q8/Q9：导出服务与 LargeScaleQueryService 之前没有接入 shutdown，
+// 在途 CSV 会被硬截断；同步任务则可能无限等待。现在统一在此登记并加超时。
 type backgroundTasks struct {
-	scheduler *scheduler.Scheduler
-	producer  *service.KafkaProducerService
-	sync      *service.SnapshotFlowSyncService
-	largeSync *service.LargeScaleSyncService
+	scheduler  *scheduler.Scheduler
+	producer   *service.KafkaProducerService
+	sync       *service.SnapshotFlowSyncService
+	largeSync  *service.LargeScaleSyncService
+	consumer   *service.SnapshotFlowConsumer
+	bus        *mq.KafkaBus
+	export     *service.UnifiedExportService
+	largeQuery *service.LargeScaleQueryService
 }
 
 func startBackground(ctx context.Context, d startDeps) *backgroundTasks {
-	tasks := &backgroundTasks{largeSync: d.largeSync}
+	tasks := &backgroundTasks{
+		largeSync:  d.largeSync,
+		bus:        d.bus,
+		export:     d.export,
+		largeQuery: d.largeQuery,
+	}
 
 	// 生产者重试扫描（@PostConstruct 里启动的 retryExecutor）
 	if d.producer != nil {
@@ -376,6 +392,7 @@ func startBackground(ctx context.Context, d startDeps) *backgroundTasks {
 	// MQ 消费端（SnapshotFlowPulsarConsumer 的目标）
 	if d.consumer != nil {
 		d.consumer.Start(ctx)
+		tasks.consumer = d.consumer
 	}
 
 	// 字典/设备/延迟监控的进程内状态初始化（对应 Java 的 @PostConstruct init()）
@@ -411,29 +428,68 @@ func shutdown(srv *http.Server, tasks *backgroundTasks, dbc *db.Client, cacheCli
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		errs = append(errs, fmt.Errorf("关闭 HTTP 服务: %w", err))
 	}
+
+	// 后台组件统一用"总预算 60s + 逐项扣减"的等待策略。
+	//
+	// 报告 01 Q9：全量同步/导出使用 context.WithoutCancel（或进程级 ctx），
+	// 关停时若直接 Wait() 会被在途的大任务挂住数小时；反过来若不等，CSV 会被截断（Q8）。
+	// 这里的取舍是：给每个组件一个明确上限，超时记录 WARN + 汇总到返回值，
+	// 让进程按 K8s 的 terminationGracePeriodSeconds 正常退出。
+	deadline := time.Now().Add(60 * time.Second)
+	wait := func(name string, fn func()) {
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			msg := "关闭 " + name + " 跳过：关闭总预算（60s）已用尽"
+			slog.Warn(msg)
+			errs = append(errs, errors.New(msg))
+			return
+		}
+		if !utils.WaitTimeout(remaining, fn) {
+			msg := fmt.Sprintf("关闭 %s 超时（剩余预算 %.1fs），继续关闭后续组件", name, remaining.Seconds())
+			slog.Warn(msg)
+			errs = append(errs, errors.New(msg))
+		}
+	}
+
 	if tasks != nil {
 		if tasks.scheduler != nil {
-			tasks.scheduler.Stop()
+			wait("定时任务调度器", tasks.scheduler.Stop)
+		}
+		if tasks.consumer != nil {
+			wait("MQ 消费者", tasks.consumer.Close)
 		}
 		if tasks.sync != nil {
-			tasks.sync.Close()
+			wait("快照同步", tasks.sync.Close)
+		}
+		if tasks.export != nil {
+			wait("统一导出服务", tasks.export.Close)
+		}
+		if tasks.largeQuery != nil {
+			wait("大表导出服务", tasks.largeQuery.Close)
 		}
 		if tasks.largeSync != nil {
-			tasks.largeSync.Close()
+			wait("GaussDB→ES 同步", tasks.largeSync.Close)
 		}
 		if tasks.producer != nil {
-			tasks.producer.Close()
+			wait("Kafka 生产者", tasks.producer.Close)
+		}
+		if tasks.bus != nil {
+			wait("Kafka 总线", func() { _ = tasks.bus.Close() })
 		}
 	}
 	if cacheClient != nil {
-		if err := cacheClient.Close(); err != nil {
-			errs = append(errs, fmt.Errorf("关闭 Redis: %w", err))
-		}
+		wait("Redis", func() {
+			if err := cacheClient.Close(); err != nil {
+				errs = append(errs, fmt.Errorf("关闭 Redis: %w", err))
+			}
+		})
 	}
 	if dbc != nil {
-		if err := dbc.Close(); err != nil {
-			errs = append(errs, fmt.Errorf("关闭 GaussDB: %w", err))
-		}
+		wait("GaussDB", func() {
+			if err := dbc.Close(); err != nil {
+				errs = append(errs, fmt.Errorf("关闭 GaussDB: %w", err))
+			}
+		})
 	}
 	slog.Info("应用已退出")
 	return errors.Join(errs...)

@@ -34,6 +34,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ruoyi/car-monit-api-go/internal/cache"
@@ -65,6 +66,8 @@ type SnapshotFlowConsumer struct {
 	cache     *cache.Client
 	ttl       time.Duration
 	consumerT string
+	// wg 追踪消费循环，供 Close() 等待退出（ctx 取消后 FetchMessage 最多 1s 感知）。
+	wg sync.WaitGroup
 }
 
 // NewSnapshotFlowConsumer 构造。
@@ -98,7 +101,9 @@ func (s *SnapshotFlowConsumer) Start(ctx context.Context) {
 		slog.Warn("[快照消费者] 未配置消息总线，消费端不启动")
 		return
 	}
+	s.wg.Add(1)
 	go func() {
+		defer s.wg.Done()
 		defer func() {
 			if r := recover(); r != nil {
 				slog.Error("[快照消费者] 消费循环 panic 退出", "panic", r)
@@ -123,6 +128,17 @@ func (s *SnapshotFlowConsumer) Start(ctx context.Context) {
 		}
 		slog.Info("[快照消费者] 消费循环已退出")
 	}()
+}
+
+// Close 等待消费循环退出（调用方需先取消启动时传入的 ctx）。
+//
+// 对应 @PreDestroy：Java 侧容器关闭会等待 in-flight 消息处理完；这里靠
+// Consume 的『当前消息处理完才退出』语义 + wg 等待达到同样效果。
+func (s *SnapshotFlowConsumer) Close() {
+	if s == nil {
+		return
+	}
+	s.wg.Wait()
 }
 
 // Healthy 返回消费端是否健康（供 /readyz 与指标使用）。

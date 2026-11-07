@@ -60,17 +60,23 @@ type LargeScaleQueryService struct {
 	tasks map[string]*ExportTaskStatus
 	sem   chan struct{}
 	wg    sync.WaitGroup
+	// baseCtx/baseCancel：导出任务跨请求存活，但 Close() 时必须能取消（同 UnifiedExportService）
+	baseCtx    context.Context
+	baseCancel context.CancelFunc
 }
 
 // NewLargeScaleQueryService 构造（对应 @Autowired EsIndexManageService + @Value export.dir）
 func NewLargeScaleQueryService(esClient *es.Client, query *UnifiedQueryService,
 	cfg config.OptimizationConfig) *LargeScaleQueryService {
+	baseCtx, baseCancel := context.WithCancel(context.Background())
 	return &LargeScaleQueryService{
-		es:    esClient,
-		query: query,
-		cfg:   cfg,
-		tasks: make(map[string]*ExportTaskStatus),
-		sem:   make(chan struct{}, 4), // 对应 Java 线程池核心线程数 4
+		es:         esClient,
+		query:      query,
+		cfg:        cfg,
+		tasks:      make(map[string]*ExportTaskStatus),
+		sem:        make(chan struct{}, 4), // 对应 Java 线程池核心线程数 4
+		baseCtx:    baseCtx,
+		baseCancel: baseCancel,
 	}
 }
 
@@ -259,7 +265,7 @@ func (s *LargeScaleQueryService) AggregationStats(ctx context.Context, ds DataSo
 // DIFF: Java 把任务丢进 ThreadPoolExecutor（队列满时 CallerRunsPolicy 会阻塞调用线程）；
 // Go 侧用 goroutine + 信号量，信号量满时同样阻塞提交方——行为对齐，但需要 WaitGroup
 // 保证进程退出前把文件写完（否则 CSV 会被截断）。
-func (s *LargeScaleQueryService) SubmitExport(ctx context.Context, ds DataSource,
+func (s *LargeScaleQueryService) SubmitExport(_ context.Context, ds DataSource,
 	startTime, endTime string, fuzzy map[string]string) (string, error) {
 
 	if s.es == nil {
@@ -275,7 +281,8 @@ func (s *LargeScaleQueryService) SubmitExport(ctx context.Context, ds DataSource
 	s.tasks[taskID] = st
 	s.mu.Unlock()
 
-	taskCtx := context.WithoutCancel(ctx) // HTTP 返回后任务继续跑
+	// 进程级 context：HTTP 返回后任务继续跑，Close() 时统一取消。
+	taskCtx := s.baseCtx
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
@@ -305,8 +312,13 @@ func (s *LargeScaleQueryService) GetExportStatus(taskID string) *ExportTaskStatu
 	return &cp
 }
 
-// Close 对应 @PreDestroy destroy()（L105-110）：等待在途导出结束。
-func (s *LargeScaleQueryService) Close() { s.wg.Wait() }
+// Close 对应 @PreDestroy destroy()（L105-110）：取消并等待在途导出结束。
+func (s *LargeScaleQueryService) Close() {
+	if s.baseCancel != nil {
+		s.baseCancel()
+	}
+	s.wg.Wait()
+}
 
 // detailExport 对应 executeExportScroll（L350-431）。
 //
