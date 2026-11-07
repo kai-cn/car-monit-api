@@ -1,0 +1,66 @@
+name: car-monit-api-go CI
+
+# 报告 02 P0-6：把 gofmt / vet / build / test 纳入门禁，摆脱「本地 Windows bat 单点」。
+# 只对 car-monit-api-go 子目录生效（仓库里还有其他语言版本的迁移目录）。
+
+on:
+  push:
+    paths:
+      - "car-monit-api-go/**"
+      - ".github/workflows/car-monit-api-go-ci.yml"
+  pull_request:
+    paths:
+      - "car-monit-api-go/**"
+      - ".github/workflows/car-monit-api-go-ci.yml"
+  workflow_dispatch: {}
+
+defaults:
+  run:
+    working-directory: car-monit-api-go
+
+jobs:
+  build-test:
+    name: build / vet / test / gofmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: car-monit-api-go/go.mod
+          cache-dependency-path: car-monit-api-go/go.sum
+
+      - name: gofmt（只检查，不改写）
+        run: |
+          out=$(gofmt -l cmd internal)
+          if [ -n "$out" ]; then
+            echo "以下文件未格式化："
+            echo "$out"
+            exit 1
+          fi
+
+      - name: go build
+        run: go build ./...
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test
+        run: go test ./... -count=1
+
+  govulncheck:
+    name: govulncheck（依赖安全）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: car-monit-api-go/go.mod
+          cache-dependency-path: car-monit-api-go/go.sum
+
+      - name: 安装 govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: 扫描
+        run: govulncheck ./...
