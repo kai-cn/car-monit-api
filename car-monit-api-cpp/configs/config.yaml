@@ -4,6 +4,19 @@ server:
   port: 9901
   servlet:
     context-path: /
+  # ---- 安全加固（审阅 §5.1 #6）。鉴权/限流为新增能力，默认关闭以对齐 Java
+  # 生产实例（Java 的 SecurityInterceptor 在 WebConfig.java 中被整体注释）。
+  # 请求体上限与读写超时为安全收紧（原实现 64MB 且无超时）。
+  # TLS：本服务监听明文 HTTP，生产由前置网关（Nginx/Envoy）终结 TLS（审阅 §5.4）。
+  max-payload-bytes: 1048576   # 1MB
+  read-timeout-ms: 30000
+  write-timeout-ms: 30000
+  auth:
+    enabled: false             # true 时校验 X-API-Key / Authorization: Bearer
+    # api-key: <密钥>          # 建议写入 config.local.yaml；为空时 fail-closed（全部 401）
+  rate-limit:
+    enabled: false             # true 时按客户端 IP 固定窗口限流（429）
+    requests-per-minute: 600
 spring:
   datasource:
     dynamic:

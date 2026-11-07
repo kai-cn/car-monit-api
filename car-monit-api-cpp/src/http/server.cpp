@@ -10,10 +10,15 @@
 #include "httplib.h"
 
 #include <algorithm>
+#include <chrono>
 #include <sstream>
 
 namespace cm::http {
 namespace {
+
+// 进程级 IP 限流器（server.rate-limit.enabled 开启时使用）。
+// 放在文件作用域：static 局部变量不能被 lambda 简单捕获（C3495）。
+RateLimiter g_rate_limiter;
 
 std::vector<std::string> split_path(const std::string& path) {
   std::vector<std::string> segs;
@@ -160,11 +165,73 @@ bool Router::dispatch(Request& req, Response& out) const {
   return true;
 }
 
+bool check_api_key(const Request& req, const std::string& api_key) {
+  // fail-closed：开启鉴权但未配置密钥 = 全部拒绝。
+  if (api_key.empty()) return false;
+  auto it = req.headers_lower.find("x-api-key");
+  if (it != req.headers_lower.end() && it->second == api_key) return true;
+  auto authz = req.headers_lower.find("authorization");
+  if (authz != req.headers_lower.end()) {
+    const std::string prefix = "bearer ";
+    if (authz->second.size() > prefix.size()) {
+      std::string scheme = utils::to_lower(authz->second.substr(0, prefix.size()));
+      if (scheme == prefix && authz->second.substr(prefix.size()) == api_key) return true;
+    }
+  }
+  return false;
+}
+
+bool RateLimiter::allow(const std::string& ip, int limit_per_minute) {
+  if (limit_per_minute <= 0) return false;
+  const long long minute = std::chrono::duration_cast<std::chrono::minutes>(
+                               std::chrono::system_clock::now().time_since_epoch())
+                               .count();
+  std::lock_guard<std::mutex> lock(mu_);
+  auto it = windows_.find(ip);
+  if (it == windows_.end() || it->second.first != minute) {
+    // 容量保护：窗口表过大时清理过期项，防止长期运行无界增长。
+    if (windows_.size() > 65536) {
+      for (auto w = windows_.begin(); w != windows_.end();) {
+        if (w->second.first != minute) {
+          w = windows_.erase(w);
+        } else {
+          ++w;
+        }
+      }
+    }
+    windows_[ip] = {minute, 1};
+    return true;
+  }
+  if (it->second.second >= limit_per_minute) return false;
+  ++it->second.second;
+  return true;
+}
+
 int run_server(int port, const Router& router, int /*thread_count*/) {
   httplib::Server svr;
-  svr.set_payload_max_length(64LL * 1024 * 1024);
+  const auto& sec = config::Config::instance().server_security();
+  // 安全加固（审阅 §5.1 #6）：请求体上限（原 64MB）与读写超时（原无超时）。
+  svr.set_payload_max_length(static_cast<size_t>(sec.max_payload_bytes > 0
+                                                     ? sec.max_payload_bytes
+                                                     : 1LL * 1024 * 1024));
+  svr.set_read_timeout(std::chrono::milliseconds(sec.read_timeout_ms > 0 ? sec.read_timeout_ms
+                                                                         : 30000));
+  svr.set_write_timeout(std::chrono::milliseconds(sec.write_timeout_ms > 0 ? sec.write_timeout_ms
+                                                                           : 30000));
+  if (sec.auth_enabled) {
+    if (sec.api_key.empty()) {
+      CM_LOG_ERROR("http") << "server.auth.enabled=true 但未配置 server.auth.api-key："
+                              "鉴权将以 fail-closed 方式拒绝全部请求";
+    }
+    CM_LOG_WARN("http") << "API-Key 鉴权已开启（X-API-Key / Authorization: Bearer；"
+                           "/health 与 CORS 预检豁免）——新增能力，Java 生产实例无鉴权";
+  }
+  if (sec.rate_limit_enabled) {
+    CM_LOG_WARN("http") << "IP 限流已开启：每分钟 " << sec.requests_per_minute
+                        << " 次/客户端——新增能力，Java 生产实例无限流";
+  }
 
-  auto handler = [&router](const httplib::Request& raw, httplib::Response& res) {
+  auto handler = [&router, &sec](const httplib::Request& raw, httplib::Response& res) {
     Request req;
     req.method = raw.method;
     req.path = raw.path;
@@ -228,6 +295,23 @@ int run_server(int port, const Router& router, int /*thread_count*/) {
       }
       default: {
         Response routed;
+        // 鉴权与限流（默认关闭；CORS 预检与 /health 探活豁免）。
+        const bool exempt = req.method == "OPTIONS" || req.path == "/health";
+        if (!exempt && sec.auth_enabled && !check_api_key(req, sec.api_key)) {
+          routed = build_error_response(401, "Unauthorized", "Invalid or missing API key",
+                                        raw.path);
+          merge_headers(routed, out);
+          out = std::move(routed);
+          break;
+        }
+        if (!exempt && sec.rate_limit_enabled &&
+            !g_rate_limiter.allow(req.remote_addr, sec.requests_per_minute)) {
+          routed =
+              build_error_response(429, "Too Many Requests", "Rate limit exceeded", raw.path);
+          merge_headers(routed, out);
+          out = std::move(routed);
+          break;
+        }
         if (req.method == "OPTIONS") {
           routed = options_response(req.path);
         } else {

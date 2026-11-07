@@ -51,6 +51,24 @@ struct PgOptions {
   std::string auth_mode = "auto";
 };
 
+// HTTP 服务安全选项（审阅 §5.1 #6）。鉴权与限流是**新增能力**：Java 的
+// SecurityInterceptor 在 WebConfig.java 中被整体注释（生产无鉴权），为保持
+// 行为一致两者默认关闭；请求体上限与读写超时为安全收紧（原 64MB 无超时）。
+struct ServerSecurityOptions {
+  // 鉴权：开启后校验 X-API-Key / Authorization: Bearer <key>（401 拒绝）。
+  // api_key 为空时 fail-closed（全部 401）。/health 与 CORS 预检豁免。
+  bool auth_enabled = false;
+  std::string api_key;
+  // 限流：按客户端 IP 的固定窗口（429 拒绝）。0 或负数视为全部拒绝。
+  bool rate_limit_enabled = false;
+  int requests_per_minute = 600;
+  // 请求体上限（默认 1MB；原实现 64MB，DoS 面）。
+  long long max_payload_bytes = 1LL * 1024 * 1024;
+  // 读写超时（毫秒；原实现无超时，慢客户端可占满线程）。
+  int read_timeout_ms = 30000;
+  int write_timeout_ms = 30000;
+};
+
 struct RedisOptions {
   std::string host = "127.0.0.1";
   int port = 6379;
@@ -79,6 +97,8 @@ public:
   const std::string& local_override_path() const { return local_override_path_; }
 
   int server_port() const { return server_port_; }
+
+  const ServerSecurityOptions& server_security() const { return server_security_; }
   std::string context_path() const { return context_path_; }
 
   const PgOptions& pg() const { return pg_; }
@@ -208,6 +228,7 @@ private:
   Yaml yaml_;
   std::string local_override_path_;
   int server_port_ = 9901;
+  ServerSecurityOptions server_security_;
   std::string context_path_ = "/";
   PgOptions pg_;
   RedisOptions redis_;

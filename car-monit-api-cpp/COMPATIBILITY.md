@@ -22,6 +22,10 @@
 | 未分页时 | `TableDataInfo.total` 仍返回总行数 | 同（先 `count_rows`） | ✅ |
 | CORS 响应头 | Java **源码无全局 CORS 配置**；运行实例存在 CORS 处理器：跨域预检被拒返回 `403 Invalid CORS request`，实际跨域请求继续且不带 ACAO，响应带 `Vary` | 按 Spring `CorsConfiguration`/`DefaultCorsProcessor` 语义实现（见 §6.2），默认等价 `applyPermitDefaultValues()`；预检通过 200、白名单不匹配 403、`*`+credentials 返回 500 | ✅ 语义一致（配置可覆盖） |
 | `Content-Type` | `application/json`（错误信封）/`application/json;charset=UTF-8`（控制器） | 同 | ✅ |
+| 鉴权 | Java 的 SecurityInterceptor 在 WebConfig.java 中被**整体注释**——生产实例无鉴权 | **新增可选能力（默认关闭，对齐 Java）**：`server.auth.enabled=true` 时校验 `X-API-Key` 或 `Authorization: Bearer`（401 拒绝；未配置密钥 fail-closed；`/health` 与 CORS 预检豁免），`server.auth.api-key` 建议放 `config.local.yaml` | ⚠️ 新增（默认行为与 Java 一致） |
+| 限流 | Java 无 | **新增可选能力（默认关闭）**：`server.rate-limit.enabled=true` 按客户端 IP 固定窗口限流（429；`requests-per-minute` 可配） | ⚠️ 新增（默认行为与 Java 一致） |
+| 请求体上限 / 读写超时 | Spring/Tomcat 未显式配置（表单默认 2MB；JSON 无限制；连接超时 20s） | `server.max-payload-bytes` 默认 1MB（原实现 64MB）、`read/write-timeout-ms` 默认 30s（原无超时）——安全收紧 | ⚠️ 有意的安全收紧 |
+| TLS | Java 侧 useSSL=false（明文） | 同为明文 HTTP；生产由前置网关（Nginx/Envoy）终结 TLS（审阅 §5.4 建议）；自研 PG 客户端不支持 SSL | ⚠️ 部署约束（文档已注明） |
 
 ## 2. 序列化（Jackson → nlohmann/json）
 

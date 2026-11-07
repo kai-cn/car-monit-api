@@ -183,6 +183,20 @@ bool Config::load(const std::string& path) {
 void Config::refresh_business() {
   server_port_ = yaml_.get_int("server.port", 9901);
   context_path_ = yaml_.get_str("server.servlet.context-path", "/");
+  // 安全选项：鉴权/限流默认关闭（对齐 Java 生产行为），详见 config.h 注释。
+  server_security_.auth_enabled =
+      yaml_.get_bool("server.auth.enabled", server_security_.auth_enabled);
+  server_security_.api_key = yaml_.get_str("server.auth.api-key", server_security_.api_key);
+  server_security_.rate_limit_enabled =
+      yaml_.get_bool("server.rate-limit.enabled", server_security_.rate_limit_enabled);
+  server_security_.requests_per_minute = yaml_.get_int(
+      "server.rate-limit.requests-per-minute", server_security_.requests_per_minute);
+  server_security_.max_payload_bytes =
+      yaml_.get_long("server.max-payload-bytes", server_security_.max_payload_bytes);
+  server_security_.read_timeout_ms =
+      yaml_.get_int("server.read-timeout-ms", server_security_.read_timeout_ms);
+  server_security_.write_timeout_ms =
+      yaml_.get_int("server.write-timeout-ms", server_security_.write_timeout_ms);
 
   std::string url = yaml_.get_str("spring.datasource.dynamic.datasource.master.url", "");
   if (!url.empty()) {
