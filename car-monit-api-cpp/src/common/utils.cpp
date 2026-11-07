@@ -129,6 +129,21 @@ std::string replace_all(std::string s, std::string_view from, std::string_view t
   return s;
 }
 
+std::string to_under_score(std::string_view s) {
+  std::string out;
+  out.reserve(s.size() * 2);
+  for (std::size_t i = 0; i < s.size(); ++i) {
+    char c = s[i];
+    if (std::isupper(static_cast<unsigned char>(c))) {
+      if (i > 0 && out.back() != '_') out.push_back('_');
+      out.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+    } else {
+      out.push_back(c);
+    }
+  }
+  return out;
+}
+
 std::string uuid4() {
   static thread_local std::mt19937_64 rng{std::random_device{}()};
   uint64_t a = rng(), b = rng();
@@ -140,6 +155,12 @@ std::string uuid4() {
                 static_cast<unsigned>(a & 0xFFFF), static_cast<unsigned>(b >> 48),
                 static_cast<unsigned long long>(b & 0xFFFFFFFFFFFFULL));
   return buf;
+}
+
+std::string uuid32() {
+  std::string s = uuid4();
+  s.erase(std::remove(s.begin(), s.end(), '-'), s.end());
+  return s;
 }
 
 std::string url_decode(std::string_view s) {
