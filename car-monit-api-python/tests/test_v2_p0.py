@@ -400,3 +400,74 @@ def test_dataprocess_service_commits_when_es_succeeds(monkeypatch) -> None:
     data.setId("tx-2")
     service.process(data)  # shim 模式：内存 Mapper + 内存 ES 均成功
     assert events == ["begin", "commit"]
+
+
+# ---------------------------------------------------------------- P0-5 fail-fast
+def test_startup_fail_fast_default_and_optout(monkeypatch) -> None:
+    from app.runtime import startup_fail_fast
+
+    monkeypatch.delenv("CAR_MONIT_STARTUP_FAIL_FAST", raising=False)
+    assert startup_fail_fast() is True
+    for value in ("false", "0", "no", "off"):
+        monkeypatch.setenv("CAR_MONIT_STARTUP_FAIL_FAST", value)
+        assert startup_fail_fast() is False
+
+
+def test_known_missing_whitelist_covers_the_java_gaps() -> None:
+    from app.db.registry import KNOWN_MISSING_STATEMENTS
+
+    assert len(KNOWN_MISSING_STATEMENTS) == 6  # TODO(V2/决策①)：补 SQL 后同步删条目
+    assert ("com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper"
+            "#selectOdsLwzxsfsjFeeRecords01List") in KNOWN_MISSING_STATEMENTS
+    assert ("com.ruoyi.base.mapper.ZdataTrailFittingMapper"
+            "#selectZdataTrailFittingList") in KNOWN_MISSING_STATEMENTS
+
+
+class _FakeMapperReport:
+    mappers = statements = patched_methods = 23, 58, 58
+
+    def __init__(self, missing: list[str], failed_files: list[str] | None = None) -> None:
+        self.missing_statements = missing
+        self.failed_files = failed_files or []
+        self.orphan_statements: list[str] = []
+        self.annotated_statements: list[str] = []
+
+    def summary(self) -> str:
+        return "fake report"
+
+
+def test_install_persistence_fails_on_unexpected_missing(monkeypatch) -> None:
+    import app.db.registry as registry_mod
+    from app.main import _install_persistence
+
+    monkeypatch.delenv("CAR_MONIT_STARTUP_FAIL_FAST", raising=False)
+    monkeypatch.setattr(registry_mod, "install_mappers",
+                        lambda: _FakeMapperReport(["com.ruoyi.base.mapper.FooMapper#bar"]))
+    with pytest.raises(RuntimeError, match="unexpected_missing"):
+        _install_persistence()
+
+
+def test_install_persistence_fails_on_install_error(monkeypatch) -> None:
+    import app.db.registry as registry_mod
+    from app.main import _install_persistence
+
+    monkeypatch.delenv("CAR_MONIT_STARTUP_FAIL_FAST", raising=False)
+
+    def _boom():
+        raise RuntimeError("no mapper XML was loaded")
+
+    monkeypatch.setattr(registry_mod, "install_mappers", _boom)
+    with pytest.raises(RuntimeError, match="no mapper XML"):
+        _install_persistence()
+
+
+def test_install_persistence_whitelisted_missing_only_warns(monkeypatch, caplog) -> None:
+    import app.db.registry as registry_mod
+    from app.main import _install_persistence
+
+    monkeypatch.delenv("CAR_MONIT_STARTUP_FAIL_FAST", raising=False)
+    monkeypatch.setattr(
+        registry_mod, "install_mappers",
+        lambda: _FakeMapperReport(
+            ["com.ruoyi.base.mapper.ZdataTrailFittingMapper#selectZdataTrailFittingList"]))
+    assert _install_persistence() == "fake report"  # 白名单内：仅告警不抛错

@@ -38,7 +38,21 @@ from app.db.xml_mapper import (
 
 log = logging.getLogger(__name__)
 
-__all__ = ["MapperRegistry", "InstallReport", "get_registry", "install_mappers"]
+__all__ = ["MapperRegistry", "InstallReport", "get_registry", "install_mappers",
+           "KNOWN_MISSING_STATEMENTS"]
+
+#: TODO(V2/决策①)：Java 侧同样缺失 XML 的 6 个 Mapper 方法（调用即
+#: ``BindingException`` → HTTP 500，见 docs/迁移审阅报告.md §2.4/§6.2 D1）。
+#: 是"补 SQL 恢复 4 个接口"还是"保留与 Java 一致的 500"属业主拍板项，
+#: 在此白名单化以免 P0-5 的 fail-fast 误杀启动；拍板补 SQL 后请同步删条目。
+KNOWN_MISSING_STATEMENTS = frozenset({
+    "com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectGantryNum",
+    "com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01ById",
+    "com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01List",
+    "com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper#selectOdsLwzxsfsjFeeRecords01ListNew",
+    "com.ruoyi.base.mapper.ZdataTrailFittingMapper#selectZdataTrailFittingById",
+    "com.ruoyi.base.mapper.ZdataTrailFittingMapper#selectZdataTrailFittingList",
+})
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 # XML 的唯一真相是 Java 源码树；Python 发布物通过 tools/sync_mapper_xml.py

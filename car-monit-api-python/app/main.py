@@ -32,7 +32,7 @@ from app import __version__
 from app.health import health_payload
 from app.logging_config import configure_logging
 from app.routes import register_routes
-from app.runtime import runtime_mode
+from app.runtime import runtime_mode, startup_fail_fast
 from app.settings import settings
 from app.web.binding import BindingError
 from app.web.errors import basic_error_endpoint_response, error_response
@@ -59,21 +59,38 @@ def _register_health_probes() -> None:
 
 
 def _install_persistence() -> str:
-    """MyBatis' ``SqlSessionFactoryBean`` + ``MapperScannerConfigurer``.
+    """MyBatis' ``SqlSessionFactoryBean`` + ``MapperScannerConfigurer``。
 
-    Until this runs, every mapper answers from the in-memory implementation
-    written by the port -- which silently returns ``[]`` instead of querying
-    GaussDB, the exact divergence a migration must not hide.
+    P0-5 起与 Spring 一致地 fail-fast（此前只记日志继续跑，报告 B5）：
+
+    * install 抛错（含 P0-1 的 0-XML 守卫）→ 启动失败；
+    * ``failed_files`` / 白名单**外**的缺失 statement → 启动失败；
+    * 白名单内的 6 个缺失 statement → WARNING + TODO(V2/决策①)（Java 侧同样缺失，
+      见 ``app/db/registry.KNOWN_MISSING_STATEMENTS``）；
+    * 逃生口：``CAR_MONIT_STARTUP_FAIL_FAST=false`` 恢复旧的仅日志行为。
     """
-    try:
-        from app.db.registry import install_mappers
+    from app.db.registry import KNOWN_MISSING_STATEMENTS, install_mappers
 
+    try:
         report = install_mappers()
-    except Exception as error:  # noqa: BLE001 - keep serving, report loudly
-        log.exception("mapper registry failed to install")
+    except Exception as error:  # noqa: BLE001
+        if startup_fail_fast():
+            raise
+        log.exception("mapper registry failed to install (fail-fast disabled)")
         return f"failed: {error}"
-    for item in report.missing_statements:
-        log.error("mapper method without statement: %s", item)
+
+    whitelisted = [item for item in report.missing_statements
+                   if item in KNOWN_MISSING_STATEMENTS]
+    unexpected = [item for item in report.missing_statements
+                  if item not in KNOWN_MISSING_STATEMENTS]
+    for item in whitelisted:
+        log.warning("mapper method without statement (whitelisted, TODO 决策①): %s", item)
+    if report.failed_files or unexpected:
+        problem = ("mapper install incomplete: failed_files=%s unexpected_missing=%s"
+                   % (report.failed_files, unexpected))
+        if startup_fail_fast():
+            raise RuntimeError(problem)
+        log.error("%s (fail-fast disabled)", problem)
     return report.summary()
 
 
@@ -90,7 +107,10 @@ async def lifespan(_: FastAPI):
 
             count = start_scheduler()
             scheduler_note = f"{count} task(s)"
-        except Exception as error:  # noqa: BLE001 - 与 Spring 一致：Bean 起不来就启动失败
+        except Exception as error:  # noqa: BLE001
+            # P0-5：与 Spring 一致——Bean 起不来容器就启动失败（此前只记日志）
+            if startup_fail_fast():
+                raise
             scheduler_note = f"failed: {error}"
 
     # P0-3：@Service#@PostConstruct 的后台 Bean（默认关闭，TODO 决策②③，见 app/beans.py）
@@ -144,6 +164,18 @@ def health() -> dict[str, Any]:
 
 _ROUTE_COUNT = register_routes(app)
 log.info("Registered %s controller route(s)", _ROUTE_COUNT)
+
+# P0-5：路由注册不完整 → 与 Spring 的容器 refresh 失败一致，直接抛错退出
+# （此前仅记 error 日志继续跑，报告 B5）。逃生口同上：CAR_MONIT_STARTUP_FAIL_FAST=false。
+_route_report = getattr(app.state, "route_report", None)
+if _route_report is not None and startup_fail_fast():
+    _route_problems = {name: getattr(_route_report, name) for name in (
+        "unavailable", "skipped", "missing_methods",
+        "signature_mismatches", "base_path_mismatches", "duplicates")}
+    _route_problems = {name: values for name, values in _route_problems.items() if values}
+    if _route_problems:
+        raise RuntimeError(
+            "route registration incomplete (Spring would fail startup): %s" % _route_problems)
 
 
 # Java 侧这个路由来自 Spring Boot 自带的 ``BasicErrorController``（不是业务代码），

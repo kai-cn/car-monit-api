@@ -37,10 +37,20 @@ def main() -> int:
 
     report = get_registry().install()
     print(f"bound methods    : {report.patched_methods}")
+    exit_code = 0
     if report.missing_statements:
-        print(f"without XML      : {len(report.missing_statements)}")
+        from app.db.registry import KNOWN_MISSING_STATEMENTS
+
+        unexpected = [item for item in report.missing_statements
+                      if item not in KNOWN_MISSING_STATEMENTS]
+        print(f"without XML      : {len(report.missing_statements)} "
+              f"(whitelisted: {len(report.missing_statements) - len(unexpected)})")
         for item in report.missing_statements:
-            print(f"    {item}")
+            marker = "" if item in KNOWN_MISSING_STATEMENTS else "  <-- NOT WHITELISTED"
+            print(f"    {item}{marker}")
+        if unexpected:
+            print(f"unexpected missing statements: {len(unexpected)} -> exit 1")
+            exit_code = 1
     if report.orphan_statements:
         print(f"orphan statements: {len(report.orphan_statements)}")
         for item in report.orphan_statements:
@@ -57,7 +67,9 @@ def main() -> int:
         print(result.stdout.rstrip())
     if result.stderr:
         print(result.stderr.rstrip(), file=sys.stderr)
-    return int(result.returncode)
+    if result.returncode != 0:
+        exit_code = 1
+    return exit_code
 
 
 if __name__ == "__main__":

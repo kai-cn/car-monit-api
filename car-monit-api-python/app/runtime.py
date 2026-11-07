@@ -27,10 +27,13 @@ from __future__ import annotations
 import os
 
 __all__ = ["RUNTIME_ENV", "ShimOperationError", "runtime_mode", "is_strict",
-           "reject_shim_operation"]
+           "reject_shim_operation", "startup_fail_fast"]
 
 #: 环境变量名（Python 宿主层新增，与 CAR_MONIT_* 系列同族，见 README_PY）
 RUNTIME_ENV = "CAR_MONIT_RUNTIME"
+
+#: 启动期 fail-fast 开关（P0-5）：默认开启，'false'/'0'/'no'/'off' 关闭
+FAIL_FAST_ENV = "CAR_MONIT_STARTUP_FAIL_FAST"
 
 #: prod 的别名（宽松解析，避免拼写踩坑）
 _STRICT_ALIASES = {"prod", "production", "strict"}
@@ -52,6 +55,18 @@ def runtime_mode() -> str:
 def is_strict() -> bool:
     """是否运行在 prod（严格）模式。"""
     return runtime_mode() == "prod"
+
+
+def startup_fail_fast() -> bool:
+    """启动期 fail-fast 开关（P0-5，报告 B5）。
+
+    Spring 的行为是容器 refresh 失败即退出；此前 Python 侧对 Controller 缺失、
+    Mapper 安装失败、statement 缺失都只记日志继续跑。默认恢复 Spring 语义
+    （失败即抛错退出）；显式 ``CAR_MONIT_STARTUP_FAIL_FAST=false`` 可退回旧行为
+    （仅日志，供应急排障）。
+    """
+    value = (os.environ.get(FAIL_FAST_ENV) or "").strip().lower()
+    return value not in {"false", "0", "no", "off"}
 
 
 def reject_shim_operation(operation: str, remedy: str = "") -> None:
