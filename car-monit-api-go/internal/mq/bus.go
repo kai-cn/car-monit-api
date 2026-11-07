@@ -69,6 +69,14 @@ type Consumer interface {
 	Close() error
 }
 
+// HealthChecker 是消费端的可选扩展：报告运行时心跳是否健康。
+//
+// DIFF: Java 由容器托管 consumer 的存活状态；Go 侧必须自己记录（见 mq.Heartbeat）。
+// 只有实现了该接口的 Consumer 才能被 /readyz 真实探活，未实现者按"已启动即健康"处理。
+type HealthChecker interface {
+	Healthy() bool
+}
+
 // Bus 同时具备生产与消费能力。
 type Bus interface {
 	Publisher

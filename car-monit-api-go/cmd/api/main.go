@@ -32,7 +32,6 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -157,21 +156,22 @@ func run(configPath string) error {
 	selfTestDeps := &handler.SelfTestDeps{Dict: dict, SysUtil: sysUtil}
 
 	// ---- 7. Router ----
-	var consumerUp atomic.Bool
+	// R2 修复：consumerUp 由"启动过一次"改为"读消费循环的真实心跳"（见 mq.Heartbeat）。
+	// 未配置 Kafka 时 dataConsumer.Healthy() 恒为 false，/readyz 会显示 mqConsumer=DOWN。
 	engine := router.New(router.Options{
 		Config: cfg, Base: baseDeps, Query: queryDeps, SysUtil: sysUtilDeps, SelfTest: selfTestDeps,
 		Health: &router.Health{
 			DB:       func(c context.Context) error { return pingDB(c, dbClient) },
 			Cache:    func(c context.Context) error { return cacheClient.Raw().Ping(c).Err() },
 			ES:       func(c context.Context) error { return pingES(c, esClient) },
-			Consumer: consumerUp.Load,
+			Consumer: dataConsumer.Healthy,
 		},
 	})
 
 	// ---- 8. 后台任务（@PostConstruct 的等价物）----
 	tasks := startBackground(ctx, startDeps{
 		cfg: cfg, bus: bus, producer: producer, snapshotSync: snapshotSync, largeSync: syncSvc,
-		consumer: dataConsumer, consumerUp: &consumerUp, dict: dict, multiSource: multiSource,
+		consumer: dataConsumer, dict: dict, multiSource: multiSource,
 		loss: lossDetect, delay: delayMonitor, reliability: reliability, consistency: consistency,
 		sysUtil: sysUtil,
 	})
@@ -340,7 +340,6 @@ type startDeps struct {
 	snapshotSync *service.SnapshotFlowSyncService
 	largeSync    *service.LargeScaleSyncService
 	consumer     *service.SnapshotFlowConsumer
-	consumerUp   *atomic.Bool
 	dict         *service.DictRegistry
 	multiSource  *service.MultiSourceDataFlowService
 	loss         *service.DataLossDetectionService
@@ -377,9 +376,6 @@ func startBackground(ctx context.Context, d startDeps) *backgroundTasks {
 	// MQ 消费端（SnapshotFlowPulsarConsumer 的目标）
 	if d.consumer != nil {
 		d.consumer.Start(ctx)
-		if d.consumerUp != nil {
-			d.consumerUp.Store(true)
-		}
 	}
 
 	// 字典/设备/延迟监控的进程内状态初始化（对应 Java 的 @PostConstruct init()）

@@ -105,22 +105,64 @@ func (s *SnapshotFlowConsumer) Start(ctx context.Context) {
 			}
 		}()
 		slog.Info("[快照消费者] 消费循环已启动")
-		if err := s.bus.Consume(ctx, s.Handle); err != nil && ctx.Err() == nil {
-			slog.Error("[快照消费者] 消费循环异常退出", "err", err)
-			s.retryAfterDelay(ctx)
+		// DIFF（R2 关联）: Java 的 while(true) 在 catch 后 sleep(5s) 再进入下一轮，永不放弃；
+		// 旧 Go 实现只重试一次就退出，导致消费端"静默死亡"且探针仍为 UP。这里改为循环重试。
+		for ctx.Err() == nil {
+			err := s.bus.Consume(ctx, s.Handle)
+			if ctx.Err() != nil {
+				break
+			}
+			if err == nil {
+				// Consume 只在 ctx 取消时返回 nil，正常退出。
+				break
+			}
+			slog.Error("[快照消费者] 消费循环异常退出，5 秒后重启", "err", err)
+			if !s.retryAfterDelay(ctx) {
+				break
+			}
 		}
 		slog.Info("[快照消费者] 消费循环已退出")
 	}()
+}
+
+// Healthy 返回消费端是否健康（供 /readyz 与指标使用）。
+//
+// 未配置消息总线（本地降级模式）→ false；实现了 mq.HealthChecker 的总线
+// 按真实心跳判定；其他实现退回"已启动即健康"。
+func (s *SnapshotFlowConsumer) Healthy() bool {
+	if s == nil || s.bus == nil {
+		return false
+	}
+	if hc, ok := s.bus.(interface{ Healthy() bool }); ok {
+		return hc.Healthy()
+	}
+	return true
+}
+
+// HealthSnapshot 透传总线的心跳明细；总线不支持时返回零值。
+func (s *SnapshotFlowConsumer) HealthSnapshot() (registered, running bool, lastTick time.Time, consecutiveErrors int, lastErr string) {
+	if s == nil || s.bus == nil {
+		return false, false, time.Time{}, 0, ""
+	}
+	if hb, ok := s.bus.(interface {
+		HealthSnapshot() (bool, bool, time.Time, int, string)
+	}); ok {
+		return hb.HealthSnapshot()
+	}
+	return true, true, time.Time{}, 0, ""
 }
 
 // retryAfterDelay 对应 catch 块里的 TimeUnit.SECONDS.sleep(5)（L224-229）。
 //
 // PARITY: Java 在这里固定睡 5 秒再重新进入循环；Go 的 Consume 自己会重建 reader，
 // 所以这 5 秒只是"不要立刻重连"的退避，语义与 Java 一致。
-func (s *SnapshotFlowConsumer) retryAfterDelay(ctx context.Context) {
+// 返回 false 表示 ctx 已取消，调用方应退出重试循环。
+func (s *SnapshotFlowConsumer) retryAfterDelay(ctx context.Context) bool {
 	select {
 	case <-ctx.Done():
+		return false
 	case <-time.After(5 * time.Second):
+		return true
 	}
 }
 
