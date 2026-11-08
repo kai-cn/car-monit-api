@@ -1167,6 +1167,102 @@ static void test_server_security() {
   CHECK(cfg.server_security().write_timeout_ms == 30000);
 }
 
+static void test_negative_inputs() {
+  // 1) SQL 标识符白名单：超长/内嵌 NUL/非法 UTF-8/关键字/带引号/CRLF 全部拒绝。
+  using cm::service::DataSource;
+  auto rejected = [](const std::string& f) {
+    try {
+      cm::service::guard_query_field(DataSource::Snapshot, f, true);
+      return false;
+    } catch (const cm::BindError& e) {
+      return e.status() == 400;
+    } catch (...) {
+      return false;
+    }
+  };
+  CHECK(rejected(std::string(10000, 'a')));
+  CHECK(rejected(std::string("envehicleid\0", 13)));
+  CHECK(rejected("\xFF\xFE"));
+  CHECK(rejected("select"));
+  CHECK(rejected("\"envehicleid\""));
+  CHECK(rejected("envehicleid --"));
+  CHECK(rejected("envehicleid\r\n"));
+
+  // 2) 请求体解析：非法 JSON 返回 400；超深嵌套/超长字符串不应崩溃。
+  cm::http::Request req;
+  req.body = "{invalid";
+  bool threw = false;
+  try {
+    (void)req.json();
+  } catch (const cm::BindError& e) {
+    threw = e.status() == 400;
+  }
+  CHECK(threw);
+  req.body = "null";
+  CHECK(req.json().is_null());
+  req.body = std::string(1000, '[') + std::string(1000, ']');
+  try {
+    auto deep = req.json();
+    CHECK(deep.is_array());
+  } catch (...) {
+    std::cerr << "FAIL 合法深嵌套 JSON 被拒绝" << std::endl;
+    ++g_fail;
+  }
+  req.body = "{\"s\":\"" + std::string(200000, 'x') + "\"}";
+  try {
+    auto big = req.json();
+    CHECK(big["s"].get<std::string>().size() == 200000);
+  } catch (...) {
+    std::cerr << "FAIL 超长字符串 JSON 被拒绝" << std::endl;
+    ++g_fail;
+  }
+
+  // 3) CORS：头部注入/超长/不透明 origin 不得回显到响应头。
+  cm::config::Config::CorsCfg cors;
+  cors.allowed_origins = {"http://localhost:3000"};
+  cors.allowed_methods = {"GET", "POST"};
+  cors.allowed_headers = {"*"};
+  {
+    auto r = make_request("OPTIONS", "/api/x", "127.0.0.1:9901", "http://localhost:3000",
+                          "POST", "Content-Type\r\nX-Evil: 1");
+    cm::http::Response out;
+    CHECK(cm::http::apply_cors(cors, r, out) == cm::http::CorsDecision::PreflightRejected);
+    CHECK(header_value(out, "Access-Control-Allow-Headers").empty());
+  }
+  {
+    auto r = make_request("GET", "/api/x", "127.0.0.1:9901",
+                          std::string("http://localhost:3000\r\nX-Evil: 1"));
+    cm::http::Response out;
+    auto d = cm::http::apply_cors(cors, r, out);
+    CHECK(d == cm::http::CorsDecision::ActualRejected || d == cm::http::CorsDecision::NotCors);
+    CHECK(header_value(out, "Access-Control-Allow-Origin").empty());
+  }
+  {
+    auto r = make_request("OPTIONS", "/api/x", "127.0.0.1:9901", "null", "GET", "X-Token");
+    cm::http::Response out;
+    CHECK(cm::http::apply_cors(cors, r, out) == cm::http::CorsDecision::PreflightRejected);
+  }
+  {
+    auto r = make_request("GET", "/api/x", "127.0.0.1:9901",
+                          "http://" + std::string(5000, 'a') + ".example.com");
+    cm::http::Response out;
+    CHECK(cm::http::apply_cors(cors, r, out) == cm::http::CorsDecision::ActualRejected);
+  }
+
+  // 4) 认证头边界：超长/缺 token/多空格/CRLF 注入均不得通过。
+  cm::http::Request areq;
+  auto key_ok = [&](const std::string& key) { return cm::http::check_api_key(areq, key); };
+  areq.headers_lower["x-api-key"] = std::string(100000, 'a');
+  CHECK(!key_ok("secret-1"));
+  areq.headers_lower.clear();
+  areq.headers_lower["authorization"] = "Bearer";
+  CHECK(!key_ok("secret-1"));
+  areq.headers_lower["authorization"] = "Bearer  secret-1";
+  CHECK(!key_ok("secret-1"));
+  areq.headers_lower["authorization"] = "Bearer secret-1\r\nX-Evil: 1";
+  CHECK(!key_ok("secret-1"));
+}
+
 static void test_health_and_metrics() {
   // /health 汇总各依赖连接状态（不主动建连/认证——探活不得变成失败登录）。
   auto router = cm::router::build_routes();
@@ -1297,6 +1393,7 @@ int main() {
   test_info_envelope_contract();
   test_cron_spring_semantics();
   test_server_security();
+  test_negative_inputs();
   test_health_and_metrics();
   test_log_json_and_request_id();
   test_log_rotation();
