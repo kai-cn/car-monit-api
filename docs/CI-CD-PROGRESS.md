@@ -19,7 +19,7 @@
 | 9 | K8s 部署：deploy.yml（kubectl set image + rollout + imagePullSecret 校验） | 完成 | f43e6c1 |
 | 10 | CD 实跑验证（需集群/凭据） | **未验证** | - |
 | 11 | Actions 首轮失败静态修复（Mapper XML/golden、Kafka 镜像、CGO、extra-tag、基础镜像固定） | 完成 | 15e4ef1 / 465aeba |
-| 12 | 修复后复跑 Actions | **未验证**（无凭据读日志） | - |
+| 12 | 修复后复跑 Actions | **完成**：master run 42491418177 / 42491455889 均 success | - |
 
 ## 分支推送记录（2026-11-08）
 

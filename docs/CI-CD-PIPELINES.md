@@ -64,8 +64,8 @@ PR / 主分支 / 发布三套入口只负责触发、路径分诊与汇总，不
 | 项 | 状态 |
 | --- | --- |
 | YAML 语法 | 本机 PyYAML 解析通过；actionlint 0 findings（10 个 workflow，含常量 `if` 检查） |
-| GitHub 实跑 | **未确认**：`master` 已推送（`5c8b89a`）；Actions API 在无凭据下 404（私有仓库），无法确认是否触发/通过 |
-| 本地长构建/全量测试 | **未执行**（按用户要求，重启前不做） |
+| GitHub 实跑 | **已验证**：`master` run `42491418177`（`465aeba`）与 `42491455889`（`a6b6398`）均 success；java/go/python gates+integration、image-java/python/go 全绿，cpp/rust 按预期 skip |
+| 本地长构建/全量测试 | Python/Go/Java 已本地验证（见 §12.4）；镜像构建以 GitHub runner 为准 |
 | Rust 流水线 | 已写好；`master` 上目录未入库 → 跳过；分支已推送但为旧快照（见 §11） |
 | CD | **已实现（GHCR + K8s），未实跑**：无 K8s 集群/凭据，`kubectl` 步骤未验证 |
 
@@ -217,3 +217,18 @@ kubectl -n "$K8S_NAMESPACE" patch deployment "$K8S_DEPLOYMENT" --type=merge \
 | Python 业务覆盖率 | 67.6%（≥65% 门禁） |
 | Go `gofmt` / `go vet` / `go build` / `go test` | 全部通过（race 因本机无 gcc 未跑） |
 | Java `mvn compile`（JDK 8 / Maven 3.9.9） | BUILD SUCCESS |
+
+### 12.5 GitHub Actions 实测结果（只读 PAT，2026-11-08）
+
+| workflow / 运行 | 分支 / SHA | 结论 | 说明 |
+| --- | --- | --- | --- |
+| `master` | master `465aeba`（run 42491418177） | **success** | presence、java、go、python gates、python integration、image-java/python/go、Master Gate 全绿；cpp/rust 及对应镜像 skip |
+| `master` | master `a6b6398`（run 42491455889） | **success** | 同上，缓存后耗时明显下降 |
+| `pr` | — | **未运行** | 仓库暂无 PR |
+| `release` | — | **未运行** | 暂无 `v*.*.*` tag |
+| `deploy` | — | **未运行** | 仅手动触发 |
+| `C++ CI`（分支自带旧 workflow） | `car-monit-api-cpp` `63bb3c9` | **failure** | cppcheck 退出 1；linux-clang / ASan+UBSan 因 `-Wgnu-statement-expression-from-macro-expansion` 失败；linux-gcc、windows-msvc 通过 |
+| `car-monit-api-go CI`（分支自带旧 workflow） | `car-monit-api-go-V2` `ed6a281` | **failure** | `govulncheck` 报告 53 个可达漏洞（4 模块 + 标准库），退出 3 |
+| `ci`（旧 Python-only workflow，java-fix 分支） | `car-monit-api-java-fix` `913981e` | **failure** | 旧分支未包含本轮修复：pytest golden 失配 + `bitnami/kafka:3.7` 拉取失败 |
+
+> 首轮 `master` 失败根因（真实日志）：① `test_sql_golden` 与 Mapper XML 不同步；② `bitnami/kafka:3.7` manifest unknown。其余语言 job 当轮即为 success，并非"全部语言都挂"。
