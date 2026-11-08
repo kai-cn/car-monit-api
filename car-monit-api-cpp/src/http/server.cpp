@@ -562,6 +562,8 @@ int run_server(int port, const Router& router, int /*thread_count*/, int shutdow
     if (shutdown_timeout_ms > 0) {
       // 硬超时：httplib 的 stop() 会等待线程池任务排空；若慢请求超过该时限，
       // 强制退出（日志为逐行 flush，不会丢失已写内容）。
+      // 硬超时看门线程：故意 detach——它必须在主线程被慢请求阻塞时仍能强制退出，
+      // 因此不能由任何线程 join。
       std::thread([shutdown_timeout_ms] {
         std::this_thread::sleep_for(std::chrono::milliseconds(shutdown_timeout_ms));
         CM_LOG_WARN("http") << "优雅停机超时（" << shutdown_timeout_ms
