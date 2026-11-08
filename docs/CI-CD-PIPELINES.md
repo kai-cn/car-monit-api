@@ -15,7 +15,7 @@
 | Rust 目录 | 仍被根 [.gitignore L77](../.gitignore) `car-monit-api-rust/` **整体忽略**，`git ls-files` 为空 → 该语言流水线**当前不会在 GitHub 触发**（代码写好后需先取消忽略并入库） |
 | C# / Kotlin | `car-monit-api-csharp`、`car-monit-api-kotlin` 内只有迁移提示词 `.md`，无可构建代码 → 不建流水线 |
 | 现有 workflow | 本次重构前仅根 `.github/workflows/ci.yml`（Python 专用）。现已替换为 10 个统一风格 workflow，详见下表 |
-| 构建工具链 | Maven（Spring Boot 2.4.5 / source-target 1.8，2 模块，`packaging=pom` + `pro-business-api` repackage）；CMake 3.20 + C++20 + MSVC（无 `CMakePresets.json`）；Go 1.24.1（module `github.com/ruoyi/car-monit-api-go`，入口 `./cmd/api`）；Python 3.12（`requirements.txt` + `requirements.lock.txt`，pytest/coverage，`Dockerfile`，`docker-compose.integration.yml`）；Rust 1.90.0（`Cargo.toml` 单 crate，`rust-toolchain.toml` 已锁 1.90.0 + rustfmt + clippy） |
+| 构建工具链 | Maven（Spring Boot 2.4.5 / source-target 1.8，2 模块，`packaging=pom` + `pro-business-api` repackage）；CMake 3.20 + C++20 + MSVC（无 `CMakePresets.json`）；Go 1.26.10（module `github.com/ruoyi/car-monit-api-go`，入口 `./cmd/api`）；Python 3.12（`requirements.txt` + `requirements.lock.txt`，pytest/coverage，`Dockerfile`，`docker-compose.integration.yml`）；Rust 1.90.0（`Cargo.toml` 单 crate，`rust-toolchain.toml` 已锁 1.90.0 + rustfmt + clippy） |
 | 测试现状 | Java 无 `src/test`；C++ 有 `tests/test_main.cpp`（ctest）；Go 有 8 个 `*_test.go`；Python 有完整 pytest + tools 门禁；Rust 有 `tests/parity_test.rs`、`router_test.rs` |
 
 ## 2. 流水线矩阵
@@ -194,7 +194,7 @@ kubectl -n "$K8S_NAMESPACE" patch deployment "$K8S_DEPLOYMENT" --type=merge \
 | Python 集成 Kafka 拉不起来 | `bitnami/kafka:3.7` 在 2025 年后已下架/迁移到 legacy，私有 runner 上会 ImagePull 失败 | 换 `apache/kafka:3.9.1`（KRaft 单节点 + 官方健康检查路径） |
 | Go `-race` 可能在 runner 上失败 | 未显式设置 `CGO_ENABLED`，若环境默认 0 则 `-race requires cgo` | test step 显式 `CGO_ENABLED=1` |
 | 镜像额外 tag 解析 | `type=raw,value=,enable=false` 的空 value 在 metadata-action 上是脆弱写法 | 删除 `extra-tag`，deploy 固定使用 `sha-<7位短哈希>` |
-| 基础镜像浮动 tag 漂移 | `maven:3.9-...`、`golang:1.24-...`、`rust:1.90-...` 可能指向不同 patch | 固定 `maven:3.9.9-eclipse-temurin-8`、`golang:1.24.1-bookworm`、`rust:1.90.0-slim-bookworm` |
+| 基础镜像浮动 tag 漂移 | `maven:3.9-...`、`golang:1.24-...`、`rust:1.90-...` 可能指向不同 patch | 固定 `maven:3.9.9-eclipse-temurin-8`、`golang:1.26.10-bookworm`、`rust:1.90.0-slim-bookworm` |
 | 手动 dispatch 的 PR 流程跑 C++ | master 只有 11 个 C++ 文件，手动触发会直接失败 | `pr.yml` 增加 `cpp-present` 检查，缺失时跳过 |
 
 ### 12.3 只是不规范 / 需说明
