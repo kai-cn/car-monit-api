@@ -58,6 +58,7 @@ public class ExportTaskService {
 
     private static final List<String> SNAPSHOT_COLUMNS = Arrays.asList(
             "big_id", "snapshottime", "platenumber", "platecolor", "platecolorcode",
+            "plate_color_name",
             "orgcode", "orgname", "sectioncode", "sectionname", "roadcode", "roadname",
             "gantrycode", "gantryname", "tollcode", "tollname", "direction", "pileno",
             "lon", "lat", "cartype", "cartypecode", "carcolor", "snappicturepath");
@@ -118,6 +119,9 @@ public class ExportTaskService {
 
     private ExportTask submit(String mode, ExportRequest request) {
         TrafficTable table = TrafficTable.fromParam(request.getTable());
+        if ("DISPLAY".equals(mode)) {
+            validateDisplayFields(table, request);
+        }
         long now = System.currentTimeMillis();
         Long start = TrafficTimeUtils.parse(request.getStartTime(), false);
         Long end = TrafficTimeUtils.parse(request.getEndTime(), true);
@@ -252,7 +256,7 @@ public class ExportTaskService {
                 for (Map<String, Object> row : result.getRows()) {
                     List<String> values = new ArrayList<>(columns.size());
                     for (DisplayColumn column : columns) {
-                        values.add(displayValue(column, row));
+                        values.add(displayValue(task.getTable(), column, row));
                     }
                     csv.writeRow(values);
                 }
@@ -471,6 +475,14 @@ public class ExportTaskService {
         result.put("multiValueDimensionFilters", true);
         result.put("plateColorName", true);
         result.put("plateColorNameField", "plate_color_name");
+        Map<String, Object> plateColorNameByTable = new LinkedHashMap<>();
+        plateColorNameByTable.put("snapshot", true);
+        plateColorNameByTable.put("fee", true);
+        plateColorNameByTable.put("trail", false);
+        result.put("plateColorNameByTable", plateColorNameByTable);
+        Map<String, Object> unsupportedFields = new LinkedHashMap<>();
+        unsupportedFields.put("trail", Arrays.asList("plate_color_name"));
+        result.put("unsupportedDisplayFields", unsupportedFields);
         result.put("nameFilters", Arrays.asList(
                 "orgname", "sectionname", "roadname", "gantryname", "tollname"));
         Map<String, Object> dimensionFilters = new LinkedHashMap<>();
@@ -520,6 +532,21 @@ public class ExportTaskService {
         DISPLAY_ALIASES.put("fentollstationname", "entollstationname");
     }
 
+    /**
+     * 同步校验展示字段：不支持的表/字段直接拒绝并返回 400，而不是异步任务静默失败。
+     */
+    private void validateDisplayFields(TrafficTable table, ExportRequest request) {
+        if (request.getFields() == null || request.getFields().isEmpty()) {
+            return;
+        }
+        for (String alias : request.getFields()) {
+            String field = resolveDisplayField(alias);
+            if ("plate_color_name".equals(field) && table == TrafficTable.TRAIL) {
+                throw new IllegalArgumentException("表 trail 不支持展示字段 plate_color_name");
+            }
+        }
+    }
+
     private List<DisplayColumn> resolveColumns(TrafficTable table, List<String> requested) {
         List<DisplayColumn> columns = new ArrayList<>();
         if (requested == null || requested.isEmpty()) {
@@ -529,10 +556,15 @@ public class ExportTaskService {
             return columns;
         }
         for (String alias : requested) {
-            columns.add(new DisplayColumn(alias, resolveDisplayField(alias)));
+            String field = resolveDisplayField(alias);
+            // 不支持的表显式拒绝，避免“请求成功但字段被忽略”
+            if ("plate_color_name".equals(field) && table == TrafficTable.TRAIL) {
+                throw new IllegalArgumentException("表 trail 不支持展示字段 plate_color_name");
+            }
+            columns.add(new DisplayColumn(alias, field));
         }
-        // fee 展示字段固定补齐 plate_color_name：旧同步 Excel 有该列，backend 字段清单可能未包含
-        if (table == TrafficTable.FEE) {
+        // 抓拍/收费展示字段固定补齐 plate_color_name：旧同步 Excel 有该列，backend 字段清单可能未包含
+        if (table == TrafficTable.FEE || table == TrafficTable.SNAPSHOT) {
             boolean present = false;
             for (DisplayColumn column : columns) {
                 if ("plate_color_name".equals(column.field)) {
@@ -591,11 +623,14 @@ public class ExportTaskService {
     }
 
     @SuppressWarnings("unchecked")
-    private String displayValue(DisplayColumn column, Map<String, Object> row) {
+    private String displayValue(TrafficTable table, DisplayColumn column, Map<String, Object> row) {
         if ("plate_color_name".equals(column.field)) {
             Object existing = row.get("plate_color_name");
             if (existing != null) {
                 return String.valueOf(existing);
+            }
+            if (table == TrafficTable.SNAPSHOT) {
+                return snapshotColorName(row);
             }
             Object code = row.get("plate_color_code");
             Object raw = row.get("plate_color_raw");
@@ -610,6 +645,21 @@ public class ExportTaskService {
             return colorDictionary.displayName(c, raw == null ? null : String.valueOf(raw));
         }
         return displayValue(column.field, column.field == null ? null : row.get(column.field));
+    }
+
+    /**
+     * 抓拍表颜色：platecolor 是可直接展示的文本（如“黄色”“渐变绿底黑字”），
+     * 其 platecolorcode 与收费表字典码不同源，不能直接套用；这里用文本回查字典做规范化，
+     * 文本无法匹配时原样展示，空值展示“未知”。
+     */
+    private String snapshotColorName(Map<String, Object> row) {
+        Object raw = row.get("platecolor");
+        if (raw == null || String.valueOf(raw).trim().isEmpty()) {
+            return "未知";
+        }
+        String text = String.valueOf(raw).trim();
+        int code = colorDictionary.codeForWord(text);
+        return code >= 0 ? colorDictionary.displayName(code) : text;
     }
 
     @SuppressWarnings("unchecked")
