@@ -8,10 +8,14 @@
 #include "common/json.h"
 #include "meta/entity_meta.h"
 
+#include <functional>
 #include <map>
+#include <memory>
 #include <string>
 
 namespace cm::service {
+
+using DictMap = std::map<std::string, Json>;
 
 // 常量（Constants.java）
 inline constexpr const char* kCarListJC = "car_list_jc";
@@ -31,6 +35,14 @@ Json dict_list_cached(const std::string& key, const meta::EntityMeta& m);
 
 // 清空进程内字典缓存（TTL 之外的显式失效入口；测试/运维重载使用）。
 void invalidate_dict_cache();
+
+// 进程内字典 memo（P4）：同 key 在 TTL 内复用；build 抛异常不会写入缓存。
+// 并发未命中时允许重复构建（结果一致），构建完成后以最后一次为准。
+std::shared_ptr<const DictMap> memoize_dict_map(
+    const std::string& cache_id, const std::function<void(DictMap&)>& build);
+
+// 覆盖进程内字典缓存 TTL（毫秒），返回旧值；0 表示立即过期（测试/运维使用）。
+int set_dict_local_ttl_ms(int ttl_ms);
 
 std::map<std::string, Json> gantry_map();        // key = gantryCode
 std::map<std::string, Json> toll_map();          // key = tollCode / stateCodeMerge

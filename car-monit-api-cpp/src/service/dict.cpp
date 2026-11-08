@@ -8,6 +8,7 @@
 #include "meta/entities_generated.h"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <functional>
@@ -27,40 +28,49 @@ std::string s(const Json& row, const char* key) {
   return it->dump();
 }
 
-using MapJson = std::map<std::string, Json>;
+using MapJson = DictMap;
 
 // 进程内字典缓存（P4：消除按行重复读取字典的 N+1）。
 // Java 侧字典由 Redis 缓存；C++ 侧在其上再加一层短 TTL 的进程内缓存，
 // 避免 track 处理每个点位时都做一次 Redis GET + JSON 解析 + map 重建。
-// 失效策略：TTL 300s；或显式 invalidate_dict_cache()（测试/运维重载）。
-// 与 Java 的差异：Java 实例间共享 Redis 缓存，C++ 进程内缓存最多滞后 5 分钟。
+// 失效策略：TTL（默认 300s，可通过 set_dict_local_ttl_ms 调整）；
+// 或显式 invalidate_dict_cache()（测试/运维重载）。
+// 与 Java 的差异：Java 实例间共享 Redis 缓存，C++ 进程内缓存最多滞后一个 TTL。
 std::mutex g_local_mu;
 struct LocalEntry {
   std::shared_ptr<const MapJson> map;
   std::chrono::steady_clock::time_point expires;
 };
 std::map<std::string, LocalEntry> g_local;
-constexpr std::chrono::seconds kLocalTtl{300};
+std::atomic<long long> g_ttl_ms{300000};
 
-std::shared_ptr<const MapJson> memo_map(const std::string& cache_id,
-                                        const std::function<void(MapJson&)>& build) {
+} // namespace
+
+std::shared_ptr<const MapJson> memoize_dict_map(
+    const std::string& cache_id, const std::function<void(MapJson&)>& build) {
   {
     std::lock_guard<std::mutex> lock(g_local_mu);
     auto it = g_local.find(cache_id);
     if (it != g_local.end() && it->second.expires > std::chrono::steady_clock::now())
       return it->second.map;
   }
+  // 构建在锁外进行（可能包含 Redis/DB IO）；失败直接抛出且不写缓存。
   MapJson built;
   build(built);
   auto shared = std::make_shared<const MapJson>(std::move(built));
-  {
+  const long long ttl = g_ttl_ms.load();
+  if (ttl > 0) {
     std::lock_guard<std::mutex> lock(g_local_mu);
-    g_local[cache_id] = LocalEntry{shared, std::chrono::steady_clock::now() + kLocalTtl};
+    g_local[cache_id] =
+        LocalEntry{shared, std::chrono::steady_clock::now() + std::chrono::milliseconds(ttl)};
   }
   return shared;
 }
 
-} // namespace
+int set_dict_local_ttl_ms(int ttl_ms) {
+  const long long old = g_ttl_ms.exchange(ttl_ms > 0 ? ttl_ms : 0);
+  return static_cast<int>(old);
+}
 
 void invalidate_dict_cache() {
   std::lock_guard<std::mutex> lock(g_local_mu);
@@ -89,7 +99,7 @@ Json dict_list_cached(const std::string& key, const meta::EntityMeta& m) {
 }
 
 std::map<std::string, Json> gantry_map() {
-  auto cached = memo_map("gantry", [](MapJson& out) {
+  auto cached = memoize_dict_map("gantry", [](MapJson& out) {
     Json list = dict_list_cached(kGantryList, meta::odsSzdnGantry);
     for (const auto& row : list) out[s(row, "gantryCode")] = row;
   });
@@ -97,7 +107,7 @@ std::map<std::string, Json> gantry_map() {
 }
 
 std::map<std::string, Json> toll_map() {
-  auto cached = memo_map("toll", [](MapJson& out) {
+  auto cached = memoize_dict_map("toll", [](MapJson& out) {
     Json list = dict_list_cached(kStationInfo, meta::odsSzdnToll);
     for (const auto& row : list) {
       out[s(row, "tollCode")] = row;
@@ -108,7 +118,7 @@ std::map<std::string, Json> toll_map() {
 }
 
 std::map<std::string, Json> section_map() {
-  auto cached = memo_map("section", [](MapJson& out) {
+  auto cached = memoize_dict_map("section", [](MapJson& out) {
     Json list = dict_list_cached(kSectionRoadMap, meta::odsSzdnSection);
     for (const auto& row : list) out[s(row, "sectionCode")] = row;
   });
@@ -116,7 +126,7 @@ std::map<std::string, Json> section_map() {
 }
 
 std::map<std::string, Json> location_dict_map() {
-  auto cached = memo_map("location", [](MapJson& out) {
+  auto cached = memoize_dict_map("location", [](MapJson& out) {
     Json list = dict_list_cached(kDevPost, meta::zdataLocationDict);
     for (const auto& row : list) out[s(row, "rawCode")] = row;
   });
@@ -124,7 +134,7 @@ std::map<std::string, Json> location_dict_map() {
 }
 
 std::map<std::string, Json> gantry_ip_map() {
-  auto cached = memo_map("gantry_ip", [](MapJson& out) {
+  auto cached = memoize_dict_map("gantry_ip", [](MapJson& out) {
     Json gantries = dict_list_cached(kGantryList, meta::odsSzdnGantry);
     std::map<std::string, Json> by_code;
     for (const auto& g : gantries) by_code[s(g, "gantryCode")] = g;
@@ -148,7 +158,7 @@ std::map<std::string, Json> gantry_ip_map() {
 }
 
 std::map<std::string, Json> station_ip_map() {
-  auto cached = memo_map("station_ip", [](MapJson& out) {
+  auto cached = memoize_dict_map("station_ip", [](MapJson& out) {
     Json tolls = dict_list_cached(kStationInfo, meta::odsSzdnToll);
     std::map<std::string, Json> by_code;
     for (const auto& t : tolls) by_code[s(t, "tollCode")] = t;
@@ -213,7 +223,15 @@ Json weight_capture_map(const std::string& query_uuids) {
     db::PgParams params;
     std::string sql = "SELECT " + meta::select_columns(m) + " FROM " + m.table +
                       " WHERE datauuid IN " + repo::bind_in(params, chunk);
-    auto result = db::PgPool::instance().query(sql, params);
+    db::PgResult result;
+    try {
+      result = db::PgPool::instance().query(sql, params);
+    } catch (const std::exception& e) {
+      // 回源失败降级：保留已有结果，本次 chunk 不写缓存，下次请求可重试。
+      CM_LOG_WARN("dict") << "称重字典批量回源失败（" << chunk.size() << " 个 uuid）: "
+                          << e.what();
+      continue;
+    }
     for (std::size_t i = 0; i < result.rows.size(); ++i) {
       auto uuid = result.get(i, "datauuid");
       if (!uuid) continue;
