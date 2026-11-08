@@ -103,7 +103,7 @@ grep -m1 '^JDBC_URL=' "$SETUP" > "$TMP/jdbc.sh"
 
 {
   printf '%s\n' \
-    'DB_NAME="RuoYi"' 'DB_USER="gaussdb"' 'DB_PASSWORD="OpenGauss@123"' \
+    'DB_NAME="RuoYi"' 'DB_USER="gaussdb"' 'DB_PASSWORD="${SELFTEST_DB_PASSWORD:-}"' \
     'DB_HOST="127.0.0.1"' 'DB_PORT="5432"' \
     'REDIS_HOST="127.0.0.1"' 'REDIS_PORT="6379"' 'REDIS_PASSWORD=""'
   cat "$TMP/jdbc.sh"
@@ -137,7 +137,7 @@ usr="$( ( . "$TMP/.env.runtime"; printf '%s' "$SPRING_DATASOURCE_DYNAMIC_DATASOU
 [ "$usr" = "gaussdb" ] && ok "username=gaussdb" || bad "username 错误: [$usr]"
 
 pwd_="$( ( . "$TMP/.env.runtime"; printf '%s' "$SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD" ) )"
-[ "$pwd_" = "OpenGauss@123" ] && ok "password=OpenGauss@123" || bad "password 错误: [$pwd_]"
+[ "$pwd_" = "" ] && ok "password 为空（由外部环境变量注入）" || bad "password 应为空（占位符化后不得内置明文）: [$pwd_]"
 
 for _ in 1; do
   # URL 里的 & 必须被单引号保护住，否则 source 时会被当成后台执行符

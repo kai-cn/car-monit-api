@@ -9,8 +9,8 @@ spring:
     host: 127.0.0.1
     port: 9200
     scheme: http
-    username: elastic
-    password: changeme
+    username: ${ELASTICSEARCH_USERNAME:}
+    password: ${ELASTICSEARCH_PASSWORD:}
     connection-timeout: 30000
     socket-timeout: 30000
 
