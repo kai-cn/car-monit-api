@@ -295,12 +295,25 @@ public class ExportTaskService {
         args.add(TrafficTimeUtils.toDbTimestamp(task.getStartMillis()));
         args.add(TrafficTimeUtils.toDbTimestamp(task.getEndMillis()));
 
-        // 车牌精确/前缀下推：抓拍/轨迹完整车牌；收费原始列带 _颜色码，使用前缀匹配
+        // 车牌过滤：与展示路径（ES plate_norm.ngram 包含匹配）保持同一语义。
+        // 完整车牌：收费按“核心+颜色后缀”前缀，抓拍/轨迹按核心等值（与原行为一致）；
+        // 片段车牌：三表统一为包含匹配，避免 display 命中而 full 导出漏数据。
         if (request.getPlate() != null && !request.getPlate().trim().isEmpty()) {
             PlateParseResult parsed = plateParser.parse(request.getPlate());
             String core = parsed.getPlateCore();
             if (core != null && !core.isEmpty()) {
-                if (table == TrafficTable.FEE) {
+                if (!plateParser.isFullPlate(core)) {
+                    String column;
+                    if (table == TrafficTable.FEE) {
+                        column = "t.vehicleplate";
+                    } else if (table == TrafficTable.TRAIL) {
+                        column = "t.envehicleid";
+                    } else {
+                        column = "t.platenumber";
+                    }
+                    sql.append(" AND ").append(column).append(" LIKE ? ESCAPE '\\'");
+                    args.add("%" + escapeLike(core) + "%");
+                } else if (table == TrafficTable.FEE) {
                     sql.append(" AND t.vehicleplate LIKE ?");
                     args.add(core + "%");
                 } else if (table == TrafficTable.TRAIL) {
@@ -623,6 +636,11 @@ public class ExportTaskService {
             sb.append(Character.toLowerCase(c));
         }
         return sb.toString();
+    }
+
+    /** LIKE 通配符转义（配合 ESCAPE '\\'），防止片段车牌里的 %/_ 扩大匹配范围。 */
+    private String escapeLike(String value) {
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     private static class DisplayColumn {
