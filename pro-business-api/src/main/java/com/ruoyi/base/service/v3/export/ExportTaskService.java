@@ -12,6 +12,7 @@ import com.ruoyi.base.service.v3.query.TrafficTimeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PreDestroy;
@@ -32,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +42,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPOutputStream;
 
@@ -232,6 +235,7 @@ public class ExportTaskService {
         String pitId = null;
         List<Object> searchAfter = new ArrayList<>();
         long exported = 0;
+        long deadline = deadlineMillis();
         List<DisplayColumn> columns = resolveColumns(task.getTable(), request.getFields());
 
         try (Writer writer = openGzipWriter(task.getFilePath());
@@ -241,7 +245,7 @@ public class ExportTaskService {
                 headers.add(column.header);
             }
             csv.writeRow(headers);
-            while (!task.isCancelRequested()) {
+            while (!task.isCancelRequested() && System.currentTimeMillis() < deadline) {
                 req.setPitId(pitId);
                 req.setSearchAfter(searchAfter);
                 req.setNeedTotal(pitId == null);
@@ -250,9 +254,6 @@ public class ExportTaskService {
                 if (pitId == null) {
                     pitId = result.getPitId();
                     task.setTotalRows(result.getTotal());
-                }
-                if (result.isEmpty()) {
-                    break;
                 }
                 for (Map<String, Object> row : result.getRows()) {
                     List<String> values = new ArrayList<>(columns.size());
@@ -265,6 +266,7 @@ public class ExportTaskService {
                 task.setExportedRows(exported);
                 searchAfter = result.getSearchAfter() == null
                         ? new ArrayList<>() : new ArrayList<>(result.getSearchAfter());
+                // 结束条件以 hasMore 为准（空页不代表没有更多，可能全部被页内复核过滤）
                 if (!result.isHasMore() || searchAfter.isEmpty()) {
                     break;
                 }
@@ -274,6 +276,7 @@ public class ExportTaskService {
                 searchService.closePit(pitId);
             }
         }
+        checkTimeout(deadline);
         log.info("[V3导出] 展示字段完成 taskId={}, rows={}", task.getTaskId(), exported);
     }
 
@@ -364,6 +367,8 @@ public class ExportTaskService {
         }
 
         long exported = 0;
+        long deadline = deadlineMillis();
+        final boolean[] timedOut = {false};
         try (Writer writer = openGzipWriter(task.getFilePath())) {
             final long[] count = {0};
             jdbc.execute((ConnectionCallback<Void>) conn -> {
@@ -390,6 +395,10 @@ public class ExportTaskService {
                         }
                         csv.writeRow(header);
                         while (rs.next() && !task.isCancelRequested()) {
+                            if (System.currentTimeMillis() >= deadline) {
+                                timedOut[0] = true;
+                                break;
+                            }
                             List<String> values = new ArrayList<>(columnCount + (addColorName ? 1 : 0));
                             for (int i = 1; i <= columnCount; i++) {
                                 values.add(displayValue(meta.getColumnLabel(i), rs.getObject(i)));
@@ -411,6 +420,7 @@ public class ExportTaskService {
                 return null;
             });
             exported = count[0];
+            checkTimeout(deadline, timedOut[0]);
             task.setExportedRows(exported);
         }
         log.info("[V3导出] 全字段完成 taskId={}, rows={}", task.getTaskId(), exported);
@@ -650,6 +660,88 @@ public class ExportTaskService {
         private DisplayColumn(String header, String field) {
             this.header = header;
             this.field = field;
+        }
+    }
+
+    /** 任务截止时间；maxHours<=0 表示不限制。 */
+    private long deadlineMillis() {
+        int maxHours = properties.getExport().getMaxHours();
+        return maxHours <= 0
+                ? Long.MAX_VALUE
+                : System.currentTimeMillis() + TimeUnit.HOURS.toMillis(maxHours);
+    }
+
+    private void checkTimeout(long deadline) {
+        checkTimeout(deadline, System.currentTimeMillis() >= deadline);
+    }
+
+    private void checkTimeout(long deadline, boolean timedOut) {
+        if (timedOut) {
+            throw new IllegalStateException("导出超过 " + properties.getExport().getMaxHours()
+                    + " 小时，任务已中止（请缩小时间范围或拆分导出）");
+        }
+    }
+
+    /**
+     * 导出任务与临时文件生命周期：超过 retentionHours 的已结束任务从内存移除，
+     * 对应文件先截断再删除；目录中不再被任何任务引用的过期孤儿文件同样清理。
+     */
+    @Scheduled(fixedDelayString = "${traffic.export.cleanup-interval-ms:600000}")
+    public void cleanupExpiredTasks() {
+        int retentionHours = Math.max(1, properties.getExport().getRetentionHours());
+        long retentionMs = TimeUnit.HOURS.toMillis(retentionHours);
+        long now = System.currentTimeMillis();
+
+        Set<String> referenced = new HashSet<>();
+        Iterator<Map.Entry<String, ExportTask>> it = tasks.entrySet().iterator();
+        while (it.hasNext()) {
+            ExportTask task = it.next().getValue();
+            String path = task.getFilePath();
+            if (isFinished(task) && task.getFinishedAt() != null
+                    && now - task.getFinishedAt().getTime() >= retentionMs) {
+                deleteQuietly(path);
+                it.remove();
+            } else if (path != null) {
+                referenced.add(new File(path).getName());
+            }
+        }
+
+        File dir = new File(properties.getExport().getDir());
+        File[] files = dir.listFiles();
+        if (files == null) {
+            return;
+        }
+        for (File file : files) {
+            if (!file.isFile() || referenced.contains(file.getName())) {
+                continue;
+            }
+            if (now - file.lastModified() >= retentionMs) {
+                deleteQuietly(file.getAbsolutePath());
+            }
+        }
+    }
+
+    private boolean isFinished(ExportTask task) {
+        String status = task.getStatus();
+        return "done".equals(status) || "failed".equals(status) || "canceled".equals(status);
+    }
+
+    /** 先截断到 0 字节再删除，避免回收站/延迟释放占盘。 */
+    private void deleteQuietly(String path) {
+        if (path == null) {
+            return;
+        }
+        File file = new File(path);
+        if (!file.isFile()) {
+            return;
+        }
+        try (FileOutputStream ignored = new FileOutputStream(file, false)) {
+            // 打开即截断
+        } catch (Exception e) {
+            log.debug("[V3导出] 截断文件失败: {}", e.getMessage());
+        }
+        if (!file.delete()) {
+            log.warn("[V3导出] 删除过期导出文件失败: {}", path);
         }
     }
 

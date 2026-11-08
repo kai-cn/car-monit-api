@@ -8,8 +8,9 @@ import java.util.Date;
 /**
  * 导出任务模型。
  *
- * <p>状态机：pending -> running -> done/failed/canceled；断点续传字段
- * （lastSort/lastPartition）在骨架阶段预留，后续接入对象存储时补齐。</p>
+ * <p>状态机：pending -> running -> done/failed/canceled。当前<b>不支持断点续传</b>：
+ * 任务状态只存在内存，API 重启后任务丢失（已完成的文件仍可通过 taskId 探测下载），
+ * 需要断点续传能力时再引入持久化任务表与 lastSort/lastPartition 字段。</p>
  */
 @Data
 public class ExportTask {

@@ -134,8 +134,10 @@ public class TrafficV3Properties {
         private int workers = 2;
         /** 单次拉取行数 */
         private int pageSize = 1000;
-        /** 任务最长运行小时数 */
+        /** 任务最长运行小时数（<=0 表示不限制） */
         private int maxHours = 24;
+        /** 已完成任务与临时文件的保留小时数，超期由定时清理删除 */
+        private int retentionHours = 24;
     }
 
     @Data

@@ -48,8 +48,7 @@ public class BigScreenWarningV3Controller {
         try {
             // 兼容旧前端的“抓拍类型哨兵”：type 选中但未选具体编码时，
             // backend 会把哨兵放在 tollCode/gantryCode/fwqbm 位置上。
-            List<String> captureTypes = new ArrayList<>();
-            addCaptureTypes(captureTypes, captureType);
+            List<String> captureTypes = parseCaptureTypes(captureType);
             tollCode = stripCaptureTypeSentinel(tollCode, captureTypes);
             gantryCode = stripCaptureTypeSentinel(gantryCode, captureTypes);
             fwqbm = stripCaptureTypeSentinel(fwqbm, captureTypes);
@@ -97,6 +96,32 @@ public class BigScreenWarningV3Controller {
             }
         }
         return keep.isEmpty() ? null : String.join(",", keep);
+    }
+
+    /**
+     * 显式 captureType 参数只接受三种哨兵；非法值直接 400，
+     * 避免“传错值 -> 不加过滤 -> 返回全量”的静默行为。
+     */
+    private List<String> parseCaptureTypes(String captureType) {
+        List<String> result = new ArrayList<>();
+        if (captureType == null || captureType.trim().isEmpty()) {
+            return result;
+        }
+        for (String item : captureType.split(",")) {
+            String token = item == null ? "" : item.trim();
+            if (token.isEmpty()) {
+                continue;
+            }
+            if (!isCaptureType(token)) {
+                throw TrafficQueryException.badRequest(
+                        "captureType 非法: " + token
+                                + "，允许值: StationCapture/GantryCapture/ServiceAreaCapture");
+            }
+            if (!result.contains(token)) {
+                result.add(token);
+            }
+        }
+        return result;
     }
 
     private void addCaptureTypes(List<String> captureTypes, String value) {
