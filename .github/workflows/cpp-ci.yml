@@ -26,6 +26,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # CMake 的 Ninja 生成器需要 cl.exe/INCLUDE/LIB 已注入当前 shell；
+      # GitHub runner 默认不加载 VS 开发环境，必须显式初始化。
+      - name: 配置 MSVC 开发环境
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
       - name: 缓存 librdkafka（FetchContent）
         uses: actions/cache@v4
         with:

@@ -82,9 +82,9 @@ Linux 构建与单测（PG/Redis 协议栈已改用 libpqxx/hiredis，平台差�
 #         cmake --build build-linux --parallel && ctest --test-dir build-linux --output-on-failure
 ```
 
-> 状态说明：本轮修复在 Windows/MSVC+Ninja 上验证构建与测试全绿；Linux 分支
-> 按标准 POSIX 接口修复并提供了上述脚本，但尚未在 Linux 机器/CI 上跑过，
-> 上 Linux 前请先执行 `scripts/ci-linux.sh` 确认。
+> 状态说明：Windows/MSVC+Ninja 与 openEuler 24.03 WSL（GCC 12.3.1 + libpq 15）
+> 均已验证构建与 ctest 全绿；CI 工作流 `.github/workflows/cpp-ci.yml`
+> 覆盖 Windows MSVC、Linux GCC/Clang、ASan/UBSan、cppcheck 与增量格式检查。
 
 运行测试：
 
@@ -93,7 +93,17 @@ ctest --test-dir build --output-on-failure
 # 或直接： .\build\carmonit_tests.exe
 ```
 
-> 源码通过 `file(GLOB_RECURSE ... CONFIGURE_DEPENDS)` 收集 `src/{common,config,db,cache,es,meta,repo,service,handler,scheduler,mq,router,http}/*.cpp`。
+测试用例清单（ctest 只有一个 `carmonit_tests` 可执行文件，内部按函数分组）：
+
+| 分组 | 用例 | 外部依赖 |
+|---|---|---|
+| 纯离线单测 | `test_utils`、`test_datetime`、`test_crypto`、`test_result`、`test_decimal`、`test_router`、`test_cors`、`test_auth_guard`、`test_query_field_whitelist`、`test_info_envelope_contract`、`test_cron_spring_semantics`、`test_worker_pool`、`test_background_pool_batch`、`test_dao_param_binding`、`test_entity_select_columns`、`test_pagination_bounds`、`test_dict_cache_boundaries`、`test_contract_routes_golden`、`test_local_config_override`、`test_log_json_and_request_id`、`test_log_rotation`、`test_leader_election_failure_paths` | 无 |
+| 本地端口/失败路径（不依赖真实服务） | `test_kafka_no_broker`、`test_reliability_timeout`、`test_redis_reconnect_no_deadlock`、`test_pg_pool_connect_breaker`、`test_pg_pool_config_bounds`、`test_pg_conninfo_and_error_mapping`、`test_server_security`、`test_negative_inputs`、`test_health_and_metrics` | 仅 localhost 回环 |
+| 条件执行 | `test_db_optional`（需 `CM_TEST_DB=1` + 可用 GaussDB/PostgreSQL）；`test_leader_election_optional_redis`（需 `CM_TEST_REDIS=1` + 可用 Redis） | 真实 DB / Redis |
+
+> CI 无 DB/Redis/Kafka 时，条件用例自动跳过，其余全部执行。
+
+> 源码通过 `file(GLOB_RECURSE ... CONFIGURE_DEPENDS)` 收集 `src/{common,config,db,cache,cluster,es,meta,repo,service,handler,scheduler,mq,router,http}/*.cpp`。
 > **新增 .cpp 后无需改 CMakeLists**，重新构建会自动重新 glob（若 IDE 未触发，重跑一次 `cmake -S . -B build`）。
 
 ## 4. 配置准备
