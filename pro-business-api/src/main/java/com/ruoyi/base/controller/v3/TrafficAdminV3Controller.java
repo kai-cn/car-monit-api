@@ -24,7 +24,11 @@ import java.util.Map;
 
 /**
  * V3 运维接口：ES 初始化、回灌、对账、Outbox relay 手动触发。
- * 仅内网/运维使用，生产需网关鉴权。
+ *
+ * <p><b>安全警告（P1-12）：本类端点当前无鉴权</b>（工程内 SecurityInterceptor/WebConfig
+ * 仍被注释，见 docs/v3-auth-options.md）。这些端点可切换查询引擎、触发重负载回灌、
+ * 删除 ES 孤儿文档，<b>禁止在对内网以外的任何网络暴露</b>；生产必须先做网络隔离
+ * （内网绑定/安全组/网关认证）再上线。</p>
  */
 @Slf4j
 @RestController
