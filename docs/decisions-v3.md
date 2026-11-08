@@ -183,9 +183,13 @@
   - `modes=["display","full"]`、`tables=["snapshot","fee","trail"]`；
   - `fullDimensionFilters=true`、`multiValueDimensionFilters=true`、`plateColorName=true`、`plateColorNameField=plate_color_name`；
   - `dimensionFilters={snapshot:[orgcode,sectioncode,roadcode,tollcode,gantrycode], fee:[...], trail:[]}`；
+  - `plateColorNameByTable={snapshot:true, fee:true, trail:false}`、`unsupportedDisplayFields={trail:[plate_color_name]}`；
   - `nameFilters=[orgname,sectionname,roadname,gantryname,tollname]`；
   - `displayFields={snapshot:[...],fee:[...],trail:[...]}`、`displayAliases={camelCase→snake_case}`、`fullFields=all_columns`。
-- 决策：display 路径 fee 表始终输出 `plate_color_name`；full 路径维度过滤多值走 `IN`；`trail` 不支持维度过滤（无对应列）。
+- 决策：display 路径 fee/snapshot 表始终输出 `plate_color_name`；full 路径维度过滤多值走 `IN`；`trail` 不支持维度过滤（无对应列）。
+- snapshot 颜色来源：表内 `platecolor` 文本（如“黄色”“渐变绿底黑字”），经 MySQL 字典回查规范化后输出；
+  其 `platecolorcode`（样本 2/94）与收费表字典码不同源，不直接套用。
+- `trail` 显式请求 `plate_color_name` 时同步返回 400，不允许“请求成功但字段被忽略”。
 - 影响：backend 可直接读取该元数据放开 `full-dimension-filters` 与字段白名单，删除硬编码判断；backend `application.yml` 已改为 `full-dimension-filters: true`（backend 分支单独提交）。
 
 ### D18 warning/list 的 captureType 与多值维度
@@ -464,7 +468,7 @@ launcher 关键参数：`java -Xms512m -Xmx1g -Dserver.port=9902 -jar pro-busine
 - backend 的下载令牌/HMAC/归属校验仍在 backend 侧完成；api 下载端点不重复鉴权，仅内网可达。
 - `fields`（display）支持：backend camelCase 逻辑字段映射到 ES 文档字段（如 `bigId→big_id`、
   `plateColor→plate_color_raw`、`plateColorName→plate_color_name`、`enterTime→entime`）；未知字段输出空列，不报错。
-  **fee 表 display 固定补齐 `plate_color_name`**（即使 `fields` 未包含）。
+  **fee/snapshot 表 display 固定补齐 `plate_color_name`**（即使 `fields` 未包含）。
   `full` 路径忽略 `fields`，按 GaussDB `SELECT *` 全字段输出，并在 fee 末尾追加 `plate_color_name`。
 - `fuzzyFields.*`：车牌类透传；编码类直接作为过滤（多值逗号拆分为 `IN`）；名称类先经码表解析为编码，
   解析不到直接返回业务码 400，避免“名称被忽略导致导出全量”。
@@ -716,6 +720,9 @@ DWS 覆盖：escape 2025-07-04~2026-02-05、income 2025-10-22~2026-02-03、warni
   `plateColorNameField=plate_color_name`、`dimensionFilters`、`displayFields`、`displayAliases`。
 - display（fee）仅请求 `fields=[vehicleplate,transtime]`：CSV 表头变为
   `vehicleplate,transtime,plate_color_name`，1016 行，强制补齐列生效。
+- display（snapshot）仅请求 `fields=[platenumber]`：表头 `platenumber,plate_color_name`，900 行，
+  首行颜色“黄色”；显式 `fields=[platenumber,plateColorName]` 同样输出“黄色”。
+- display（trail）显式请求 `plateColorName`：同步返回 `code=400`（表不支持），不再静默忽略。
 - full（fee）`dimensionCodes.sectioncode=[200R500450649000,200R515170829000]`：导出 253 行
   （= ES 聚合 139+114），`status=done`，无 SQL 错误。
 - full（snapshot）`dimensionCodes.orgcode=[030000011,030000006]`：导出 383 行（= ES 聚合 251+132）。
@@ -757,5 +764,7 @@ DWS 覆盖：escape 2025-07-04~2026-02-05、income 2025-10-22~2026-02-03、warni
 | `e907238` | feat(v3-bigscreen)：DWS 统计/ETL、warning 多值/captureType、运维接口 |
 | `3a71f7f` | fix(sync)：Redis 水位类型兼容，修复 fullSync 强转异常 |
 | `41e5c08` | docs(v3)：本决策文档与演练结果 |
+| `9987060` | docs(v3)：补充分支提交记录 |
+| `c93b1d5` | feat(v3-export)：snapshot 展示补齐 `plate_color_name`（颜色能力矩阵 + trail 显式拒绝） |
 
 
