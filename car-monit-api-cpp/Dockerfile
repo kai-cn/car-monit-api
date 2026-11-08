@@ -63,6 +63,8 @@ RUN cmake -S . -B build -G Ninja \
 # -----------------------------------------------------------------------------
 FROM debian:${DEBIAN_RELEASE}-slim AS runtime
 
+# 全局 ARG 在 FROM 之后不自动进入本阶段作用域，需重新声明供 LABEL 使用。
+ARG DEBIAN_RELEASE=12
 ARG VERSION=dev
 ARG GIT_SHA=unknown
 
