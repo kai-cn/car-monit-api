@@ -26,6 +26,8 @@ struct PageInfo {
 };
 
 // BaseController.startPage() 的等价实现。
+// pageNum/pageSize 任一存在即视为分页；非法/越界值按安全上限收敛
+// （pageNum 1..10000、pageSize 1..500），避免超大 OFFSET/LIMIT 拖垮数据库。
 PageInfo resolve_page(const http::Request& req);
 
 // 单行 -> JSON（字段顺序由 EntityMeta 决定；未出现在结果集的列输出 null）。

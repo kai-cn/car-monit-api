@@ -54,7 +54,7 @@
 | `agent_pk` 主键 | Java XML 用 `t.agent_pk` 过滤，但物理列是 `id` | ✅ 取 `filters` 的物理列（与 Go/Python 的修正一致） |
 | 查询列 | Java 用 `<include refid="selectXxxVo"/>` 列清单 | ✅ `meta::select_columns` 在运行期把 20 个 `*` 实体按 resultMap 物理列展开（去重、跳过 Java-only 字段）；`test_entity_select_columns` 断言每个映射列都出现在列清单中，漏列会直接测试失败 |
 | 字典读取 | Java 每请求经 Redis 读取整表字典 | ✅ 在 Redis 之上增加进程内字典缓存（TTL 300s，`invalidate_dict_cache()` 可显式失效）；`weight_capture_map` 改为 Redis 预检 + 每 100 个 uuid 批量回源，消除 N+1。⚠️ 与 Java 差异：进程内缓存最多滞后 5 分钟；未知 uuid 的占位缓存有 60s TTL |
-| 深翻页 | PageHelper `LIMIT/OFFSET` | ⚠️ 与 Java 一致使用 OFFSET；深翻页仍是 O(offset) 扫描，属已知限制。已优化 count 查询不再包含 `ORDER BY` |
+| 深翻页 | PageHelper `LIMIT/OFFSET` | ⚠️ 与 Java 一致使用 OFFSET；深翻页仍是 O(offset) 扫描。已加固：`pageNum 1..10000`、`pageSize 1..500`，非数字/溢出返回 400，count 不含 ORDER BY（成本模型见 DECISIONS D-016；本机无库未实测毫秒数） |
 | 事务 | Spring `@Transactional`（本项目实际未使用） | ⚠️ 无声明式事务；`PgConn::transaction` / `PgPool::transaction` 提供显式事务（失败整体回滚），写操作仍以单条语句为主 |
 | 隔离级别 | 默认 `READ_COMMITTED`（服务端默认） | ✅ 未显式设置 |
 | 主键类型 | 一律按字符串读取，避免精度丢失 | ✅ |

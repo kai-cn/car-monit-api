@@ -967,6 +967,60 @@ static void test_background_pool_batch() {
   CHECK(cm::background_pool().pending() == 0);
 }
 
+static void test_pagination_bounds() {
+  using cm::repo::resolve_page;
+  cm::http::Request req;
+  // 越界值收敛：负页码 -> 1，超大 pageSize -> 500。
+  req.params_all["pageNum"] = {"-5"};
+  req.params_all["pageSize"] = {"999999"};
+  auto p = resolve_page(req);
+  CHECK(p.paged);
+  CHECK(p.page_num == 1);
+  CHECK(p.page_size == 500);
+
+  // 超大页码 -> 10000；pageSize<=0 -> 默认 10。
+  req.params_all["pageNum"] = {"99999"};
+  req.params_all["pageSize"] = {"0"};
+  p = resolve_page(req);
+  CHECK(p.paged);
+  CHECK(p.page_num == 10000);
+  CHECK(p.page_size == 10);
+
+  // 非数字/超出 int 范围：直接 400（不退化成全表/默认值）。
+  req.params_all["pageNum"] = {"999999999999999999999999"};
+  bool threw = false;
+  try {
+    (void)resolve_page(req);
+  } catch (const cm::BindError&) {
+    threw = true;
+  }
+  CHECK(threw);
+
+  // 只给 pageNum 也视为分页（避免退化成全表返回）。
+  req = cm::http::Request();
+  req.params_all["pageNum"] = {"3"};
+  p = resolve_page(req);
+  CHECK(p.paged);
+  CHECK(p.page_num == 3);
+  CHECK(p.page_size == 10);
+
+  // 两者都不给：不分页。
+  req = cm::http::Request();
+  p = resolve_page(req);
+  CHECK(!p.paged);
+
+  // orderByColumn 注入/非法值必须被忽略。
+  req.params_all["pageNum"] = {"1"};
+  req.params_all["pageSize"] = {"10"};
+  req.params_all["orderByColumn"] = {"id; DROP TABLE t"};
+  p = resolve_page(req);
+  CHECK(p.order_by.empty());
+  req.params_all["orderByColumn"] = {"envehicleid"};
+  req.params_all["isAsc"] = {"desc"};
+  p = resolve_page(req);
+  CHECK(p.order_by == "envehicleid desc");
+}
+
 static void test_redis_reconnect_no_deadlock() {
   // Redis 重连路径（审阅 §3.3 R7 + 代码复查，改用 hiredis 后保持覆盖）：
   // 1) 连接失败后不得泄漏 fd（hiredis redisFree 负责关闭）；
@@ -1149,6 +1203,7 @@ int main() {
   test_background_pool_batch();
   test_pg_pool_config_bounds();
   test_dao_param_binding();
+  test_pagination_bounds();
   test_entity_select_columns();
   test_contract_routes_golden();
   test_pg_pool_connect_breaker();
