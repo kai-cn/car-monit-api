@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -107,6 +108,17 @@ public class DimensionCodeResolver {
         if (value == null || value.trim().isEmpty()) {
             return Collections.emptyList();
         }
+        List<OdsSzdnGantry> list = loadGantries();
+        String q = normalize(value);
+        return list.stream()
+                .filter(g -> contains(g.getGantryName(), q) || equalsCode(g.getGantryCode(), q))
+                .map(OdsSzdnGantry::getGantryCode)
+                .filter(this::notBlank)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    private List<OdsSzdnGantry> loadGantries() {
         List<OdsSzdnGantry> list = gantryCache == null ? null : gantryCache.value;
         if (list == null || gantryCache.expired()) {
             try {
@@ -118,16 +130,90 @@ public class DimensionCodeResolver {
             gantryCache = new Cache<>(list == null ? Collections.emptyList() : list,
                     System.currentTimeMillis() + CACHE_TTL_MS);
         }
-        if (list == null) {
-            list = Collections.emptyList();
+        return list == null ? Collections.emptyList() : list;
+    }
+
+    /**
+     * 收费表维度下推修正（P1-1/P1-2）。
+     *
+     * <p>收费事实表只有 {@code gantryid}，没有 {@code orgcode/roadcode/tollcode}
+     * 物理列，ES 文档也不写这三列。若把 org/road/toll 编码直接下推为 terms，
+     * {@code dynamic: strict} 下会静默命中 0 条。这里改为经门架码表把这三个维度
+     * 翻译成门架编码集合，再按 {@code gantrycode}（收费表映射到 gantryid）过滤。</p>
+     *
+     * <p>直接就地修改 {@code codes}：移除 orgcode/roadcode/tollcode；
+     * {@code sectioncode} 保留（回灌 SQL 已补该列，可直接过滤）。</p>
+     *
+     * @return false 表示维度组合在码表中无匹配，调用方应直接返回空结果
+     */
+    public boolean translateFeeDimensions(Map<String, List<String>> codes) {
+        if (codes == null || codes.isEmpty()) {
+            return true;
         }
-        String q = normalize(value);
-        return list.stream()
-                .filter(g -> contains(g.getGantryName(), q) || equalsCode(g.getGantryCode(), q))
+        List<String> org = codes.remove("orgcode");
+        List<String> road = codes.remove("roadcode");
+        List<String> toll = codes.remove("tollcode");
+        if (isEmpty(org) && isEmpty(road) && isEmpty(toll)) {
+            return true;
+        }
+
+        List<String> derived = loadGantries().stream()
+                .filter(g -> matchCode(g.getOrgCode(), org)
+                        && matchCode(g.getRoadCode(), road)
+                        && matchCode(g.getTollCode(), toll))
                 .map(OdsSzdnGantry::getGantryCode)
                 .filter(this::notBlank)
                 .distinct()
                 .collect(Collectors.toList());
+        if (derived.isEmpty()) {
+            return false;
+        }
+
+        List<String> explicit = codes.get("gantrycode");
+        if (!isEmpty(explicit)) {
+            List<String> intersect = explicit.stream()
+                    .filter(v -> containsCodeIgnoreCase(derived, v))
+                    .collect(Collectors.toList());
+            if (intersect.isEmpty()) {
+                return false;
+            }
+            codes.put("gantrycode", intersect);
+        } else {
+            codes.put("gantrycode", derived);
+        }
+        return true;
+    }
+
+    private boolean isEmpty(List<String> values) {
+        return values == null || values.isEmpty();
+    }
+
+    /** 维度未指定时视为匹配；指定时按编码大小写不敏感匹配。 */
+    private boolean matchCode(String code, List<String> values) {
+        if (isEmpty(values)) {
+            return true;
+        }
+        if (code == null) {
+            return false;
+        }
+        for (String value : values) {
+            if (value != null && code.trim().equalsIgnoreCase(value.trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean containsCodeIgnoreCase(List<String> codes, String value) {
+        if (value == null) {
+            return false;
+        }
+        for (String code : codes) {
+            if (code != null && code.trim().equalsIgnoreCase(value.trim())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public List<String> resolveRoadCodes(String value) {

@@ -57,15 +57,18 @@ public class TrafficSearchService {
     private final TrafficEsIndexService indexService;
     private final PlateNumberParser plateParser;
     private final TrafficV3Properties properties;
+    private final DimensionCodeResolver dimensionResolver;
 
     public TrafficSearchService(RestHighLevelClient esClient,
                                 TrafficEsIndexService indexService,
                                 PlateNumberParser plateParser,
-                                TrafficV3Properties properties) {
+                                TrafficV3Properties properties,
+                                DimensionCodeResolver dimensionResolver) {
         this.esClient = esClient;
         this.indexService = indexService;
         this.plateParser = plateParser;
         this.properties = properties;
+        this.dimensionResolver = dimensionResolver;
     }
 
     /**
@@ -93,6 +96,14 @@ public class TrafficSearchService {
         String timeField = table.getTimeField();
         String pkField = table.getPkField();
         int size = req.getPageSize();
+
+        // P2：未知维度键显式 400，避免拼到不存在的字段后静默命中 0 条
+        validateDimensionKeys(table, req.getDimensionCodes());
+        // P1-1/P1-2：收费表无 org/road/toll 物理列，翻译为门架编码集合再过滤
+        if (table == TrafficTable.FEE
+                && !dimensionResolver.translateFeeDimensions(req.getDimensionCodes())) {
+            return emptyResult();
+        }
 
         BoolQueryBuilder bool = QueryBuilders.boolQuery();
         bool.filter(QueryBuilders.rangeQuery(timeField)
@@ -295,6 +306,49 @@ public class TrafficSearchService {
             return "gantryid";
         }
         return logicalField;
+    }
+
+    /**
+     * 维度键白名单：未知键直接 400，不再“拼字段名后静默命中 0 条”。
+     * 收费表允许 org/road/toll（由 translateFeeDimensions 翻译），轨迹表无维度。
+     */
+    private void validateDimensionKeys(TrafficTable table, Map<String, List<String>> codes) {
+        if (codes == null || codes.isEmpty()) {
+            return;
+        }
+        java.util.Set<String> allowed;
+        if (table == TrafficTable.TRAIL) {
+            allowed = java.util.Collections.emptySet();
+        } else {
+            allowed = new java.util.HashSet<>(Arrays.asList(
+                    "orgcode", "sectioncode", "roadcode", "gantrycode", "tollcode"));
+        }
+        Map<String, List<String>> normalized = new java.util.LinkedHashMap<>();
+        for (Map.Entry<String, List<String>> entry : codes.entrySet()) {
+            String key = entry.getKey() == null ? "" : entry.getKey().trim().toLowerCase();
+            if (!allowed.contains(key)) {
+                throw TrafficQueryException.badRequest("不支持的维度字段: " + entry.getKey()
+                        + "，允许值: " + allowed);
+            }
+            List<String> values = normalized.get(key);
+            if (values == null) {
+                values = new ArrayList<>();
+                normalized.put(key, values);
+            }
+            if (entry.getValue() != null) {
+                values.addAll(entry.getValue());
+            }
+        }
+        codes.clear();
+        codes.putAll(normalized);
+    }
+
+    private TrafficSearchResult emptyResult() {
+        TrafficSearchResult result = new TrafficSearchResult();
+        result.setTotal(0);
+        result.setHasMore(false);
+        result.setRows(new ArrayList<>());
+        return result;
     }
 
     private String openPit(String indexOrAlias) throws IOException {

@@ -66,7 +66,7 @@ public class ExportTaskService {
     private static final List<String> FEE_COLUMNS = Arrays.asList(
             "big_id", "vehicleplate", "plate_core", "plate_color_code", "plate_color_raw",
             "plate_color_name", "plate_parse_status", "transtime", "gantryid", "gantryname",
-            "sectioncode", "sectionname", "orgcode", "orgname", "fee", "payfee", "axlecount",
+            "sectioncode", "fee", "payfee", "axlecount",
             "passstate", "entollstationid", "extollstationid");
 
     private static final List<String> TRAIL_COLUMNS = Arrays.asList(
@@ -122,6 +122,7 @@ public class ExportTaskService {
         if ("DISPLAY".equals(mode)) {
             validateDisplayFields(table, request);
         }
+        validateDimensionCodes(table, request);
         long now = System.currentTimeMillis();
         Long start = TrafficTimeUtils.parse(request.getStartTime(), false);
         Long end = TrafficTimeUtils.parse(request.getEndTime(), true);
@@ -534,15 +535,40 @@ public class ExportTaskService {
 
     /**
      * 同步校验展示字段：不支持的表/字段直接拒绝并返回 400，而不是异步任务静默失败。
+     * 收费表 ES 文档没有 orgcode/orgname/sectionname 等列，已从白名单移除，
+     * 继续请求这些字段会显式报错，避免“声明支持却永远输出空列”。
      */
     private void validateDisplayFields(TrafficTable table, ExportRequest request) {
         if (request.getFields() == null || request.getFields().isEmpty()) {
             return;
         }
+        List<String> supported = displayColumns(table);
         for (String alias : request.getFields()) {
             String field = resolveDisplayField(alias);
-            if ("plate_color_name".equals(field) && table == TrafficTable.TRAIL) {
-                throw new IllegalArgumentException("表 trail 不支持展示字段 plate_color_name");
+            if ("plate_color_name".equals(field)) {
+                if (table == TrafficTable.TRAIL) {
+                    throw new IllegalArgumentException("表 trail 不支持展示字段 plate_color_name");
+                }
+                continue;
+            }
+            if (field == null || !supported.contains(field)) {
+                throw new IllegalArgumentException("表 " + table.getParamName()
+                        + " 不支持展示字段: " + alias);
+            }
+        }
+    }
+
+    /** 导出维度键白名单：未知键直接 400，避免 SQL/ES 侧静默忽略。 */
+    private void validateDimensionCodes(TrafficTable table, ExportRequest request) {
+        if (request.getDimensionCodes() == null || request.getDimensionCodes().isEmpty()) {
+            return;
+        }
+        java.util.Set<String> allowed = new java.util.HashSet<>(fullDimensionFieldsFor(table));
+        for (String key : request.getDimensionCodes().keySet()) {
+            String normalized = key == null ? "" : key.trim().toLowerCase();
+            if (!allowed.contains(normalized)) {
+                throw new IllegalArgumentException("表 " + table.getParamName()
+                        + " 不支持维度过滤: " + key + "，允许值: " + allowed);
             }
         }
     }
