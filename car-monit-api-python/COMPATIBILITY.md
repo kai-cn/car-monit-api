@@ -165,7 +165,7 @@ Python 版不提供该能力。若必须用 Python，需要独立引入 `pyflink
 | RabbitMQ | **无替身**（Java 侧只有配置、零代码使用） |
 | Forest HTTP | `httpx` 直连 |
 
-**规避方式**：生产按 §10 上线清单设置 URL 与 fallback=error；离线回归保持未设置
+**规避方式**：生产按 `README_PY.md` §10 上线检查清单设置 URL 与 fallback=error；离线回归保持未设置
 （或跑 `tools/run_checks.ps1`，冒烟脚本会主动清空 `CAR_MONIT_*_URL` 隔离真实集群）。
 真实环境接口对等结果见 §0，连通性检查见 `tools/check_middleware.py`。
 
