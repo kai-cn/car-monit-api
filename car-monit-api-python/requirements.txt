@@ -1,6 +1,10 @@
 # Runtime dependencies of the Python 3.12 port.
 # Mirrors pyproject.toml. Install with:
 #   D:\Python\Python312\python.exe -m pip install -r requirements.txt
+#
+# P1-8：可复现构建请用 requirements.lock.txt（由 6 个运行时依赖的闭包
+# 精确锁定，不含 dev/本机多余包）：
+#   pip install -r requirements.lock.txt
 
 fastapi>=0.115,<1.0
 uvicorn[standard]>=0.30,<1.0
@@ -8,13 +12,17 @@ SQLAlchemy>=2.0.30,<2.1
 psycopg[binary]>=3.1,<4.0
 httpx>=0.27,<1.0
 orjson>=3.10,<4.0
+# P2：真实中间件适配（CAR_MONIT_REDIS_URL / CAR_MONIT_ES_URL /
+# CAR_MONIT_KAFKA_URL 启用；elasticsearch 锁定 7.x 客户端以匹配 ES 7.15 服务端）
+redis>=5.0,<7.0
+elasticsearch>=7.17,<8.0
+confluent-kafka>=2.3,<3.0
 
 # dev / verification only
 pytest>=8.0
 pytest-mock>=3.14
+pytest-cov>=7.0
 
 # Deliberately NOT declared (verified unused; the Java side is emulated in-process):
-#   redis        -> com/ruoyi/common/core/redis/RedisCache.py (in-memory shim)
-#   elasticsearch-> org/elasticsearch/*                      (in-memory shim)
 #   APScheduler  -> org/springframework/scheduling/*         (CronExpression + ThreadPoolTaskScheduler)
 #   PyYAML       -> org/springframework/core/env/Environment.py (hand-written flat YAML reader)

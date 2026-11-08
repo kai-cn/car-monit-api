@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+from decimal import Decimal
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
@@ -40,16 +42,16 @@ class OdsLwzxsfsjFeeRecords01(JavaBean, Custom):
     axlecount: Optional[int] = None  # Java: private Long axlecount; // 车轴数
 
     # @Excel(name = "交易后余额")
-    balanceafter: Optional[float] = None  # Java: private BigDecimal balanceafter; // 交易后余额
+    balanceafter: Optional[Decimal] = None  # Java: private BigDecimal balanceafter; // 交易后余额
 
     # @Excel(name = "交易前余额")
-    balancebefore: Optional[float] = None  # Java: private BigDecimal balancebefore; // 交易前余额
+    balancebefore: Optional[Decimal] = None  # Java: private BigDecimal balancebefore; // 交易前余额
 
     # @Excel(name = "本次交易后卡片累计金额")
-    cardfeesumafter: Optional[float] = None  # Java: private BigDecimal cardfeesumafter; // 本次交易后卡片累计金额
+    cardfeesumafter: Optional[Decimal] = None  # Java: private BigDecimal cardfeesumafter; // 本次交易后卡片累计金额
 
     # @Excel(name = "本次交易前卡片累计金额")
-    cardfeesumbefore: Optional[float] = None  # Java: private BigDecimal cardfeesumbefore; // 本次交易前卡片累计金额
+    cardfeesumbefore: Optional[Decimal] = None  # Java: private BigDecimal cardfeesumbefore; // 本次交易前卡片累计金额
 
     # @Excel(name = "控制器序号")
     computerorder: Optional[str] = None  # Java: private String computerorder; // 控制器序号
@@ -88,7 +90,7 @@ class OdsLwzxsfsjFeeRecords01(JavaBean, Custom):
     dealstatus: Optional[str] = None  # Java: private String dealstatus; // 处理状态
 
     # @Excel(name = "优惠金额")
-    discountfee: Optional[float] = None  # Java: private BigDecimal discountfee; // 优惠金额
+    discountfee: Optional[Decimal] = None  # Java: private BigDecimal discountfee; // 优惠金额
 
     # @Excel(name = "优惠金额组合")
     discountfeegroup: Optional[str] = None  # Java: private String discountfeegroup; // 优惠金额组合
@@ -106,7 +108,7 @@ class OdsLwzxsfsjFeeRecords01(JavaBean, Custom):
     entollstationhex: Optional[str] = None  # Java: private String entollstationhex; // 进站收费站hex编码
 
     # @Excel(name = "费用")
-    fee: Optional[float] = None  # Java: private BigDecimal fee; // 费用
+    fee: Optional[Decimal] = None  # Java: private BigDecimal fee; // 费用
 
     # @Excel(name = "计费模块响应计费结果")
     feecalcresult: Optional[str] = None  # Java: private String feecalcresult; // 计费模块响应计费结果 0 成功 1 失败
@@ -130,7 +132,7 @@ class OdsLwzxsfsjFeeRecords01(JavaBean, Custom):
     feeinfo3: Optional[str] = None  # Java: private String feeinfo3; // 计费信息3
 
     # @Excel(name = "收费里程")
-    feemileage: Optional[float] = None  # Java: private BigDecimal feemileage; // 收费里程
+    feemileage: Optional[Decimal] = None  # Java: private BigDecimal feemileage; // 收费里程
 
     # @Excel(name = "本省计费起点")
     feeprovbeginhex: Optional[str] = None  # Java: private String feeprovbeginhex; // 本省计费起点
@@ -193,10 +195,10 @@ class OdsLwzxsfsjFeeRecords01(JavaBean, Custom):
     obuenddate: Optional[str] = None  # Java: private String obuenddate; // OBU/CPC截止日期
 
     # @Excel(name = "本次交易后标签累计实收金额")
-    obufeesumafter: Optional[float] = None  # Java: private BigDecimal obufeesumafter; // 本次交易后标签累计实收金额
+    obufeesumafter: Optional[Decimal] = None  # Java: private BigDecimal obufeesumafter; // 本次交易后标签累计实收金额
 
     # @Excel(name = "本次交易前标签累计实收金额")
-    obufeesumbefore: Optional[float] = None  # Java: private BigDecimal obufeesumbefore; // 本次交易前标签累计实收金额
+    obufeesumbefore: Optional[Decimal] = None  # Java: private BigDecimal obufeesumbefore; // 本次交易前标签累计实收金额
 
     # @Excel(name = "读取标签入口信息类型")
     obuinfotyperead: Optional[str] = None  # Java: private String obuinfotyperead; // 读取标签入口信息类型
@@ -217,31 +219,31 @@ class OdsLwzxsfsjFeeRecords01(JavaBean, Custom):
     obumac: Optional[str] = None  # Java: private String obumac; // OBU /CPC物理地址
 
     # @Excel(name = "本次交易后标签累计里程")
-    obumileageafter: Optional[float] = None  # Java: private BigDecimal obumileageafter; // 本次交易后标签累计里程
+    obumileageafter: Optional[Decimal] = None  # Java: private BigDecimal obumileageafter; // 本次交易后标签累计里程
 
     # @Excel(name = "本次交易前标签累计里程")
-    obumileagebefore: Optional[float] = None  # Java: private BigDecimal obumileagebefore; // 本次交易前标签累计里程
+    obumileagebefore: Optional[Decimal] = None  # Java: private BigDecimal obumileagebefore; // 本次交易前标签累计里程
 
     # @Excel(name = "标签入口状态")
     obupassstate: Optional[str] = None  # Java: private String obupassstate; // 标签入口状态
 
     # @Excel(name = "本次交易后标签累计应收金额")
-    obupayfeesumafter: Optional[float] = None  # Java: private BigDecimal obupayfeesumafter; // 本次交易后标签累计应收金额
+    obupayfeesumafter: Optional[Decimal] = None  # Java: private BigDecimal obupayfeesumafter; // 本次交易后标签累计应收金额
 
     # @Excel(name = "本次交易前标签累计应收金额")
-    obupayfeesumbefore: Optional[float] = None  # Java: private BigDecimal obupayfeesumbefore; // 本次交易前标签累计应收金额
+    obupayfeesumbefore: Optional[Decimal] = None  # Java: private BigDecimal obupayfeesumbefore; // 本次交易前标签累计应收金额
 
     # @Excel(name = "本次交易后标签累计金额", readConverterExp = "省=内")
-    obuprovfeesumafter: Optional[float] = None  # Java: private BigDecimal obuprovfeesumafter; // 本次交易后标签累计金额（省内）
+    obuprovfeesumafter: Optional[Decimal] = None  # Java: private BigDecimal obuprovfeesumafter; // 本次交易后标签累计金额（省内）
 
     # @Excel(name = "本次交易前标签累计金额 ", readConverterExp = "省=内")
-    obuprovfeesumbefore: Optional[float] = None  # Java: private BigDecimal obuprovfeesumbefore; // 本次交易前标签累计金额 （省内）
+    obuprovfeesumbefore: Optional[Decimal] = None  # Java: private BigDecimal obuprovfeesumbefore; // 本次交易前标签累计金额 （省内）
 
     # @Excel(name = "本次交易后标签累计应收金额", readConverterExp = "省=内")
-    obuprovpayfeesumafter: Optional[float] = None  # Java: private BigDecimal obuprovpayfeesumafter; // 本次交易后标签累计应收金额（省内）
+    obuprovpayfeesumafter: Optional[Decimal] = None  # Java: private BigDecimal obuprovpayfeesumafter; // 本次交易后标签累计应收金额（省内）
 
     # @Excel(name = "本次交易前标签累计应收金额", readConverterExp = "省=内")
-    obuprovpayfeesumbefore: Optional[float] = None  # Java: private BigDecimal obuprovpayfeesumbefore; // 本次交易前标签累计应收金额（省内）
+    obuprovpayfeesumbefore: Optional[Decimal] = None  # Java: private BigDecimal obuprovpayfeesumbefore; // 本次交易前标签累计应收金额（省内）
 
     # @Excel(name = "省内本次交易后标签累计写入成功数量")
     obuprovtradesuccnumafter: Optional[int] = None  # Java: private Long obuprovtradesuccnumafter; // 省内本次交易后标签累计写入成功数量
@@ -292,7 +294,7 @@ class OdsLwzxsfsjFeeRecords01(JavaBean, Custom):
     pathfitflag: Optional[str] = None  # Java: private String pathfitflag; // 本次计费拟合结果标识
 
     # @Excel(name = "应收金额")
-    payfee: Optional[float] = None  # Java: private BigDecimal payfee; // 应收金额
+    payfee: Optional[Decimal] = None  # Java: private BigDecimal payfee; // 应收金额
 
     # @Excel(name = "应收金额组合")
     payfeegroup: Optional[str] = None  # Java: private String payfeegroup; // 应收金额组合
@@ -301,7 +303,7 @@ class OdsLwzxsfsjFeeRecords01(JavaBean, Custom):
     pcrsuversion: Optional[str] = None  # Java: private String pcrsuversion; // PC-RSU接口协议版本号
 
     # @Excel(name = "本省累计通行金额参考")
-    provminfee: Optional[float] = None  # Java: private BigDecimal provminfee; // 本省累计通行金额参考
+    provminfee: Optional[Decimal] = None  # Java: private BigDecimal provminfee; // 本省累计通行金额参考
 
     # @Excel(name = "本次交易后累计省份数量")
     provincenumafter: Optional[int] = None  # Java: private Long provincenumafter; // 本次交易后累计省份数量
@@ -355,7 +357,7 @@ class OdsLwzxsfsjFeeRecords01(JavaBean, Custom):
     tollintervalsign: Optional[str] = None  # Java: private String tollintervalsign; // 收费单元处理标识
 
     # @Excel(name = "车货总重")
-    totalweight: Optional[float] = None  # Java: private BigDecimal totalweight; // 车货总重
+    totalweight: Optional[Decimal] = None  # Java: private BigDecimal totalweight; // 车货总重
 
     # @Excel(name = "计费交易编号")
     tradeid: Optional[str] = None  # Java: private String tradeid; // 计费交易编号
@@ -373,7 +375,7 @@ class OdsLwzxsfsjFeeRecords01(JavaBean, Custom):
     tradewriteciphertext: Optional[str] = None  # Java: private String tradewriteciphertext; // 本次交易生成的EF04加密摘要
 
     # @Excel(name = "卡面扣费金额")
-    transfee: Optional[float] = None  # Java: private BigDecimal transfee; // 卡面扣费金额
+    transfee: Optional[Decimal] = None  # Java: private BigDecimal transfee; // 卡面扣费金额
 
     # @Excel(name = "IC卡交易序号")
     transno: Optional[str] = None  # Java: private String transno; // IC卡交易序号
@@ -391,10 +393,10 @@ class OdsLwzxsfsjFeeRecords01(JavaBean, Custom):
     vehicleclass: Optional[str] = None  # Java: private String vehicleclass; // 车种
 
     # @Excel(name = "车高")
-    vehiclehight: Optional[float] = None  # Java: private BigDecimal vehiclehight; // 车高
+    vehiclehight: Optional[Decimal] = None  # Java: private BigDecimal vehiclehight; // 车高
 
     # @Excel(name = "车长")
-    vehiclelength: Optional[float] = None  # Java: private BigDecimal vehiclelength; // 车长
+    vehiclelength: Optional[Decimal] = None  # Java: private BigDecimal vehiclelength; // 车长
 
     # @Excel(name = "车牌号+类型")
     vehicleplate: Optional[str] = None  # Java: private String vehicleplate; // 车牌号+类型
@@ -412,7 +414,7 @@ class OdsLwzxsfsjFeeRecords01(JavaBean, Custom):
     vehicleusertype: Optional[str] = None  # Java: private String vehicleusertype; // 车辆用户类型
 
     # @Excel(name = "车宽")
-    vehiclewidth: Optional[float] = None  # Java: private BigDecimal vehiclewidth; // 车宽
+    vehiclewidth: Optional[Decimal] = None  # Java: private BigDecimal vehiclewidth; // 车宽
 
     # @Excel(name = "校验码")
     verifycode: Optional[str] = None  # Java: private String verifycode; // 校验码

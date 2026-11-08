@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.base.mapper.ZdataTrailFittingMapper">
+
+    <resultMap type="com.ruoyi.base.domain.ZdataTrailFitting" id="ZdataTrailFittingResult">
+        <result property="cid"    column="cid"    />
+        <result property="enaxlecount"    column="enaxlecount"    />
+        <result property="entime"    column="entime"    />
+        <result property="entolllaneid"    column="entolllaneid"    />
+        <result property="entollstationid"    column="entollstationid"    />
+        <result property="entollstationname"    column="entollstationname"    />
+        <result property="envehicleclass"    column="envehicleclass"    />
+        <result property="envehicleid"    column="envehicleid"    />
+        <result property="envehicletype"    column="envehicletype"    />
+        <result property="enweight"    column="enweight"    />
+        <result property="extime"    column="extime"    />
+        <result property="extolllaneid"    column="extolllaneid"    />
+        <result property="extollstationid"    column="extollstationid"    />
+        <result property="extollstationname"    column="extollstationname"    />
+        <result property="exvehicleclass"    column="exvehicleclass"    />
+        <result property="exvehicleid"    column="exvehicleid"    />
+        <result property="exvehicletype"    column="exvehicletype"    />
+        <result property="exweight"    column="exweight"    />
+        <result property="trailpoints"    column="trailpoints"    />
+
+    </resultMap>
+
+    <sql id="selectZdataTrailFittingVo">
+        t.cid,
+        t.enaxlecount,
+        t.entime,
+        t.entolllaneid,
+        t.entollstationid,
+        t.entollstationname,
+        t.envehicleclass,
+        t.envehicleid,
+        t.envehicletype,
+        t.enweight,
+        t.extime,
+        t.extolllaneid,
+        t.extollstationid,
+        t.extollstationname,
+        t.exvehicleclass,
+        t.exvehicleid,
+        t.exvehicletype,
+        t.exweight,
+        t.trailpoints
+    </sql>
+
+
+    <select id="selectZdataTrailFittingList" parameterType="com.ruoyi.base.domain.ZdataTrailFitting" resultMap="ZdataTrailFittingResult">
+        SELECT
+        <include refid="selectZdataTrailFittingVo"/>
+        FROM jl_data01.zdata_trail_fitting t
+        WHERE 1=1
+        <if test="id != null  and id != ''"> and t.id = #{id}</if>
+        <if test="enaxlecount != null "> and t.enaxlecount = #{enaxlecount}</if>
+        <if test="entime != null "> and t.entime = #{entime}</if>
+        <if test="entolllaneid != null  and entolllaneid != ''"> and t.entolllaneid = #{entolllaneid}</if>
+        <if test="entollstationid != null  and entollstationid != ''"> and t.entollstationid = #{entollstationid}</if>
+        <if test="entollstationname != null  and entollstationname != ''"> and t.entollstationname like concat('%', #{entollstationname}, '%')</if>
+        <if test="envehicleclass != null "> and t.envehicleclass = #{envehicleclass}</if>
+        <if test="envehicleid != null  and envehicleid != ''"> and t.envehicleid = #{envehicleid}</if>
+        <if test="envehicletype != null "> and t.envehicletype = #{envehicletype}</if>
+        <if test="enweight != null "> and t.enweight = #{enweight}</if>
+        <if test="extime != null "> and t.extime = #{extime}</if>
+        <if test="extolllaneid != null  and extolllaneid != ''"> and t.extolllaneid = #{extolllaneid}</if>
+        <if test="extollstationid != null  and extollstationid != ''"> and t.extollstationid = #{extollstationid}</if>
+        <if test="extollstationname != null  and extollstationname != ''"> and t.extollstationname like concat('%', #{extollstationname}, '%')</if>
+        <if test="exvehicleclass != null "> and t.exvehicleclass = #{exvehicleclass}</if>
+        <if test="exvehicleid != null  and exvehicleid != ''"> and t.exvehicleid = #{exvehicleid}</if>
+        <if test="exvehicletype != null "> and t.exvehicletype = #{exvehicletype}</if>
+        <if test="exweight != null "> and t.exweight = #{exweight}</if>
+        <if test="trailpoints != null  and trailpoints != ''"> and t.trailpoints = #{trailpoints}</if>
+    </select>
+
+    <select id="selectZdataTrailFittingById" parameterType="String" resultMap="ZdataTrailFittingResult">
+         select
+         <include refid="selectZdataTrailFittingVo"/>
+         from jl_data01.zdata_trail_fitting t
+         where t.cid = #{cid}
+    </select>
+
+
+    <!--
+        游标分页（Keyset Pagination）查询：用于车辆轨迹大规模同步到 ES
+        Keyset pagination for trail-fitting large-scale sync to ES.
+
+        设计要点 / Design notes:
+        1) 强依赖 (extime, cid) 联合索引（GaussDB/PostgreSQL）
+           Relies on a composite index on (extime, cid)
+        2) 首次调用 cursorTime/cursorUuid 为 null；后续用上一批最后一条推进
+           First call passes null cursors; subsequent batches advance by last row
+        3) 使用 ORDER BY + LIMIT，复杂度 O(total)，避免 OFFSET 深翻页
+           ORDER BY + LIMIT, O(total), avoids O(offset) deep pagination
+        4) SELECT t.* 配合 mapUnderscoreToCamelCase 自动映射到领域对象
+           SELECT t.* with auto-mapping populates the domain object
+    -->
+    <select id="selectByCursorShard" resultType="com.ruoyi.base.domain.ZdataTrailFitting">
+        SELECT t.*
+        FROM jl_data01.zdata_trail_fitting t
+        <where>
+            and t.extime >= to_timestamp(#{startTime},'yyyy-mm-dd HH24:MI:SS')
+            and t.extime <![CDATA[<]]> to_timestamp(#{endTime},'yyyy-mm-dd HH24:MI:SS')
+            <if test="cursorTime != null and cursorTime != ''">
+                and (
+                t.extime > to_timestamp(#{cursorTime},'yyyy-mm-dd HH24:MI:SS')
+                or (
+                t.extime = to_timestamp(#{cursorTime},'yyyy-mm-dd HH24:MI:SS')
+                <if test="cursorUuid != null and cursorUuid != ''">
+                    and t.cid > #{cursorUuid}
+                </if>
+                )
+                )
+            </if>
+        </where>
+        ORDER BY t.extime ASC, t.cid ASC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

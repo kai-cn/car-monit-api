@@ -25,6 +25,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from org.apache.pulsar.client.api.MessageId import MessageId
 from org.apache.pulsar.client.api.TypedMessageBuilder import TypedMessageBuilder
 
+from app.runtime import reject_shim_operation
+
 __all__ = ["Producer"]
 
 
@@ -73,6 +75,10 @@ class Producer(object):
         【Java→Python】真实 Pulsar 发送失败会抛 `PulsarClientException`；这里用
         RuntimeError 表达，异常会通过 CompletableFuture 传递到 `exceptionally`。
         """
+        # P0-2：prod 模式下拒绝“假成功”发送（send/sendAsync/TypedMessageBuilder 均收口于此）。
+        reject_shim_operation(
+            "Pulsar Producer.send/sendAsync",
+            "（真实 Pulsar 适配器未实现，消息不会写入 BookKeeper。）")
         error = self._next_error()
         if error is not None:
             raise error

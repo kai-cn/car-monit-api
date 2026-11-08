@@ -297,6 +297,20 @@ check(_data_service.getTableName(None)
       == "ods_rt_szdn_snapshot_flow_addcode_" + datetime.now().strftime("%Y%m"),
       "getTableName(null) → 回退到当前月份")
 
+# 与真实 GaussDB 解耦：process() 的 @Transactional 语义由 app.db.engine 提供
+# 真实事务，需要一条可达的数据库连接；冒烟环境（CI / 本机无 DB）只验证编排
+# 顺序（内存 mapper + shim ES/Redis），这里把 get_database 换成空事务替身。
+import contextlib  # noqa: E402
+import app.db.engine as _engine_mod  # noqa: E402
+
+
+class _NoopDatabase(object):
+    @contextlib.contextmanager
+    def transaction(self):
+        yield
+
+
+_engine_mod.get_database = lambda: _NoopDatabase()
 _data_service.process(_entity)
 _docs = RestHighLevelClient.documents("snapshot_flow")
 check("501" in _docs, "process → 写入 ES 索引 snapshot_flow（id=501）")

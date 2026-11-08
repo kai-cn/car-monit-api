@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+from decimal import Decimal
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
@@ -79,10 +81,10 @@ class OdsRtSzdnSnapshotFlowAddcode(JavaBean, Custom):
     pileno: Optional[str] = None  # Java: private String pileno; // 桩号
 
     # @Excel(name = "经度")
-    lon: Optional[float] = None  # Java: private BigDecimal lon; // 经度
+    lon: Optional[Decimal] = None  # Java: private BigDecimal lon; // 经度
 
     # @Excel(name = "纬度")
-    lat: Optional[float] = None  # Java: private BigDecimal lat; // 纬度
+    lat: Optional[Decimal] = None  # Java: private BigDecimal lat; // 纬度
 
     # @Excel(name = "设备IP")
     deviceip: Optional[str] = None  # Java: private String deviceip; // 设备IP

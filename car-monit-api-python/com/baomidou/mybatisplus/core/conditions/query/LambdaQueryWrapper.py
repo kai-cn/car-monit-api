@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import re
 from datetime import date, datetime, time
+from decimal import Decimal, InvalidOperation
 from typing import Any, Callable, Generic, List, Optional, Sequence, Tuple, TypeVar
 
 T = TypeVar("T")
@@ -35,6 +36,27 @@ T = TypeVar("T")
 __all__ = ["AbstractWrapper", "QueryWrapper", "LambdaQueryWrapper"]
 
 _LIMIT_PATTERN = re.compile(r"^\s*LIMIT\s+(\d+)\s*(?:,\s*(\d+))?\s*$", re.IGNORECASE)
+
+
+def _num_pair(left: Any, right: Any) -> Tuple[Any, Any]:
+    """P1-1：Decimal 字段与 str/int/float 值比较前对齐类型。
+
+    Java 侧把字符串参数交给 JDBC，由数据库做隐式数值转换（BigDecimal 列 vs
+    "1.5" 可以比较）；Python 的 Decimal 不支持与 str 直接比较，这里还原 DB
+    的转换语义。转换失败（非数字字符串）保持原值，让比较抛 TypeError
+    （等价 DB 的类型错误）。
+    """
+    if isinstance(left, Decimal) and isinstance(right, (str, int, float)):
+        try:
+            return left, Decimal(str(right))
+        except InvalidOperation:
+            return left, right
+    if isinstance(right, Decimal) and isinstance(left, (str, int, float)):
+        try:
+            return Decimal(str(left)), right
+        except InvalidOperation:
+            return left, right
+    return left, right
 
 
 def _comparable(value: Any) -> Any:
@@ -198,7 +220,7 @@ class AbstractWrapper(Generic[T]):
                 # 其余比较：任一侧 NULL 都是 UNKNOWN
                 if actual is None or value1 is None:
                     return False
-                current, target = _comparable(actual), _comparable(value1)
+                current, target = _num_pair(_comparable(actual), _comparable(value1))
                 if op == "eq" and not current == target:
                     return False
                 elif op == "ne" and current == target:

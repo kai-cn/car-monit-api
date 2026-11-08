@@ -36,6 +36,36 @@ _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+# P0-2：冒烟固定 shim 模式（替身可用）。
+os.environ.setdefault("CAR_MONIT_RUNTIME", "shim")
+# M2：冒烟必须隔离真实 ES/Kafka/Redis——否则开发机设了 CAR_MONIT_*_URL 时
+# 会把种子文档写进真实集群（甚至污染业务索引）。集成测试走 tests/business。
+for _backend_env in ("CAR_MONIT_REDIS_URL", "CAR_MONIT_ES_URL",
+                     "CAR_MONIT_KAFKA_URL"):
+    os.environ.pop(_backend_env, None)
+# 低危复核：DB/JSON/集成开关也不得从开发环境泄漏进冒烟
+for _env_name in list(os.environ):
+    if _env_name.startswith(("CAR_MONIT_DB_", "CAR_MONIT_JSON_",
+                             "CAR_MONIT_TEST_")):
+        os.environ.pop(_env_name, None)
+
+# P1-4：targeted 导出用例的前置条件（同 scripts/smoke_test.py）。
+import tempfile as _tempfile
+
+os.environ.setdefault("OPTIMIZATION_EXPORT_DIR",
+                      _tempfile.mkdtemp(prefix="car-monit-export-"))
+
+
+def _seed_es() -> None:
+    # P2-3：改经业务链路（EsIndexManageService + IndexRequest）种子化——
+    # shim 模式写进程内替身；设了 CAR_MONIT_ES_URL 时写真实集群（同一条代码路径）。
+    from tools.smoke_seed import seed_es_via_business_chain
+
+    seed_es_via_business_chain()
+
+
+_seed_es()
+
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.main import app  # noqa: E402  (importing registers every route)

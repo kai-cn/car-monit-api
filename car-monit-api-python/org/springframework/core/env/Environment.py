@@ -31,6 +31,10 @@ __all__ = ["Environment", "getEnvironment"]
 # ${key:default}；默认值可省略。key 内允许中划线/点号。
 _PLACEHOLDER_PATTERN = re.compile(r"^\$\{([^:}]+)(?::(.*))?\}$", re.DOTALL)
 
+# P0-6：属性**值**里的嵌套占位符（如 `password: ${DB_PASSWORD:}`），
+# 对应 Spring 的 PropertySourcesPlaceholderConfigurer 对属性值的递归解析。
+_PLACEHOLDER_VALUE_RE = re.compile(r"\$\{([^:}]+)(?::([^}]*))?\}")
+
 # 进程级单例：等价 Spring 容器内唯一的 Environment Bean
 _DEFAULT_ENVIRONMENT: Optional["Environment"] = None
 
@@ -76,6 +80,18 @@ def _parse_scalar(raw: str) -> Any:
     except ValueError:
         pass
     return text
+
+
+def _stringify_scalar(value: Any) -> str:
+    """属性值 → 占位符替换文本（对齐 Spring 的 ``String.valueOf`` 语义）。
+
+    yml 的 ``true``/``false`` 解析成 Python bool，但 Java 的 Boolean 文本是
+    小写 ``true``/``false``；``null`` 属性在 Spring 里视为"未解析"，由默认值
+    兜底，而不是字符串 ``"None"``。
+    """
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
 
 
 def _load_yaml_flat(path: str) -> Dict[str, Any]:
@@ -127,9 +143,21 @@ class Environment:
         【Java→Python】`config_files=None` 时**默认加载工程的 application.yml**：
         Spring Boot 启动时 Environment 天然包含 application.yml，服务里 `new Environment()`
         等价于取容器内的 Environment，而不是一个“空配置”。若传空列表 [] 则不加载任何文件。
+
+        P0-6：默认还会叠加同目录的 ``application-local.yml``（gitignored）作为
+        最高优先级的**文件**源——真实口令等敏感值写在里面，仓库里的
+        application.yml 只保留 ``${ENV:}`` 占位符（对应 Spring 的 profile 覆盖
+        语义）。环境变量优先级仍高于一切文件。
         """
         self._properties: Dict[str, Any] = {}
         files = _DEFAULT_CONFIG_FILES if config_files is None else config_files
+        if config_files is None:
+            local_overlays = [
+                os.path.join(os.path.dirname(path), "application-local.yml")
+                for path in files
+                if os.path.isfile(os.path.join(os.path.dirname(path), "application-local.yml"))
+            ]
+            files = files + local_overlays
         for path in files:
             for key, value in _load_yaml_flat(path).items():
                 # 后加载的覆盖先加载的（等价 Spring 的 PropertySource 顺序）
@@ -137,13 +165,44 @@ class Environment:
 
     # ------------------------------------------------------------------ 取值
     def getProperty(self, key: str, default: Any = None) -> Any:
-        """等价 environment.getProperty(key)：环境变量优先，其次配置文件。"""
+        """等价 environment.getProperty(key)：环境变量优先，其次配置文件。
+
+        P0-6：配置文件值里的 ``${KEY:default}`` 占位符会按 Spring 的占位符
+        解析语义展开（环境变量 > 已加载属性 > 默认值，最多递归 5 层）。
+
+        B1（2026-11-08 审阅）：环境变量分支必须**原样返回字符串**。
+        Spring 的 ``SystemEnvironmentPropertySource`` 永远返回 String，从不把
+        环境变量当 YAML 标量解析；此前这里调用了 ``_parse_scalar``，导致当
+        占位符名恰好等于松弛名（如 ``...MASTER_PASSWORD``）时口令被改写：
+        ``00123`` → ``123``、``true`` → ``True``、``null`` → 空串、
+        含 ``" #"`` 的值被截断。类型转换统一交给 ``value()`` 的目标类型完成。
+        """
         for candidate in _relaxed_names(key):
             if candidate in os.environ:
-                return _parse_scalar(os.environ[candidate])
+                return os.environ[candidate]
         if key in self._properties:
-            return self._properties[key]
+            return self._resolve_placeholders(self._properties[key])
         return default
+
+    def _resolve_placeholders(self, value: Any, depth: int = 0) -> Any:
+        """展开属性值里的嵌套 ``${KEY:default}``（P0-6）。"""
+        if not isinstance(value, str) or "${" not in value or depth > 5:
+            return value
+
+        def _replace(match: Any) -> str:
+            key = match.group(1).strip()
+            default_text = match.group(2)
+            for candidate in _relaxed_names(key):
+                if candidate in os.environ:
+                    return os.environ[candidate]
+            if key in self._properties and self._properties[key] is not None:
+                return _stringify_scalar(self._properties[key])
+            if default_text is not None:
+                return default_text
+            return match.group(0)  # 解析不到且无默认：保留原文，问题对调用方可见
+
+        return self._resolve_placeholders(_PLACEHOLDER_VALUE_RE.sub(_replace, value),
+                                           depth + 1)
 
     def value(self, placeholder: str, target_type: Callable[[Any], Any] = str) -> Any:
         """解析 `@Value` 表达式。
@@ -163,7 +222,9 @@ class Environment:
             if default_text is None:
                 # 与 Spring 一致：无默认值且解析不到 → 启动失败
                 raise KeyError("无法解析占位符 ${%s}：配置项缺失且无默认值" % key)
-            raw = _parse_scalar(default_text)
+            # 低危复核：字符串目标的默认值必须原样保留（`${x:00123}` → "00123"），
+            # 只有显式数值/布尔目标才按标量解析。
+            raw = default_text if target_type is str else _parse_scalar(default_text)
         return self._convert(raw, target_type)
 
     @staticmethod

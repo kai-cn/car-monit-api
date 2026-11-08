@@ -22,10 +22,10 @@
 7) `BigDecimal` → `java.math.BigDecimal` 替身（内部为 decimal.Decimal）：
    `compareTo` 忽略 scale，`divide(divisor, scale, ROUND_HALF_UP)` 精确到指定小数位；
    `BigDecimal.ROUND_HALF_UP` 保留为 **int 常量 4**（Java 8 的旧常量），替身同时接受 int 与枚举名。
-8) **t05 已把实体的 BigDecimal 字段统一映射为 float**（TrailBo.lon/lat、
-   ZdataTrailTracks.startLonDec 等）。本文件在赋值处用 `_bdFloat()`：先按 BigDecimal
-   计算/校验，再落成 float。Java 侧保留 BigDecimal 精度，Python 侧是 double 近似，
-   属于既定映射差异（比较与格式化结果可能有末位差异）。
+8) **实体 BigDecimal 字段统一映射为 `decimal.Decimal`**（TrailBo.lon/lat、
+   ZdataTrailTracks.startLonDec 等）。本文件在赋值处用 `_bdDecimal()`：先按
+   BigDecimal 语义校验，再落成 Decimal，保留与 Java 一致的十进制精度
+   （H1：此前 `_bdDecimal()` 会先把值降成 double，1.50 变 1.5、大数丢精度）。
 9) `Map<ZdataTrailTracks, List<TrailBo>>` 的 key 在 Java 里靠 Lombok `@Data` 的
    `hashCode/equals`（字段比较）；Python dataclass 默认 `__hash__ = None` **不可哈希**，
    不能直接当 dict key。本文件该方法只返回空 HashMap（原文如此），如需真做 key
@@ -91,6 +91,7 @@ from __future__ import annotations
 import logging
 import traceback
 from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import Any, List, Optional
 
 import com.ruoyi.common.utils.CommonUtil as CommonUtil
@@ -212,14 +213,14 @@ def _bd(value: Any) -> BigDecimal:
     return BigDecimal(value)
 
 
-def _bdFloat(value: Any) -> float:
-    """BigDecimal 结果落到 float 字段（t05 的统一映射：BigDecimal → float）。
+def _bdDecimal(value: Any) -> Decimal:
+    """BigDecimal 结果落到 Decimal 字段（H1：不再经过 float）。
 
-    【Java→Python】Java 的实体字段是 BigDecimal，赋值不丢精度；
-    Python 侧实体字段已声明为 float，这里显式转换，避免把 BigDecimal 对象塞进 float 字段
-    导致后续 JSON 序列化出现非预期结构。
+    【Java→Python】Java 的实体字段是 BigDecimal；Python 侧实体字段同为
+    ``decimal.Decimal``。这里先按 ``java.math.BigDecimal`` 语义校验/构造，
+    再取出内部的 Decimal —— 保留 scale 与大数精度（1.50 不会变成 1.5）。
     """
-    return float(BigDecimal(value))
+    return BigDecimal(value)._value
 
 
 def _javaDateToString(value: Optional[datetime]) -> str:
@@ -462,9 +463,9 @@ class SysUtilServiceImpl(ISysUtilService):
                         lat = jsonObj.getString("latitude")
 
                         if CommonUtil.isNotBlank(lon):
-                            trailBo.setLon(_bdFloat(lon))
+                            trailBo.setLon(_bdDecimal(lon))
                         if CommonUtil.isNotBlank(lat):
-                            trailBo.setLat(_bdFloat(lat))
+                            trailBo.setLat(_bdDecimal(lat))
 
                         trailBo.setDevCode(trailBo.getStandardCode())
                         trailBo.setDevName(trailBo.getLocationName())
@@ -636,12 +637,12 @@ class SysUtilServiceImpl(ISysUtilService):
                         if lon is None:
                             # 经度
                             if CommonUtil.isNotBlank(odsSzdnToll.getLongitude()):
-                                trailBo.setLon(_bdFloat(odsSzdnToll.getLongitude()))
+                                trailBo.setLon(_bdDecimal(odsSzdnToll.getLongitude()))
 
                         if lat is None:
                             # 纬度（原文注释写"经度"，沿用原写法）
                             if CommonUtil.isNotBlank(odsSzdnToll.getLatitude()):
-                                trailBo.setLat(_bdFloat(odsSzdnToll.getLatitude()))
+                                trailBo.setLat(_bdDecimal(odsSzdnToll.getLatitude()))
 
                         if CommonUtil.isBlank(roadCode):
                             # 路线编号
@@ -682,12 +683,12 @@ class SysUtilServiceImpl(ISysUtilService):
                         if lon is None:
                             # 经度
                             if CommonUtil.isNotBlank(odsSzdnGantry.getLon()):
-                                trailBo.setLon(_bdFloat(odsSzdnGantry.getLon()))
+                                trailBo.setLon(_bdDecimal(odsSzdnGantry.getLon()))
 
                         if lat is None:
                             # 纬度（原文注释写"经度"）
                             if CommonUtil.isNotBlank(odsSzdnGantry.getLat()):
-                                trailBo.setLat(_bdFloat(odsSzdnGantry.getLat()))
+                                trailBo.setLat(_bdDecimal(odsSzdnGantry.getLat()))
 
                         if CommonUtil.isBlank(roadCode):
                             # 路线编号
@@ -867,15 +868,15 @@ class SysUtilServiceImpl(ISysUtilService):
                                     tracks.setEndLat(odsSzdnGantry.getLat())  # 纬度
                             tracks.setExtollstationid(CommonUtil.isNull(gantryIpBO.getGantryCode()))
 
-        # 【Java→Python】new BigDecimal(String) → 先 _bd 校验，再落 float 字段
+        # 【Java→Python】new BigDecimal(String) → 先 _bd 校验，再落 Decimal 字段
         if CommonUtil.isNotBlank(tracks.getStartLon()):
-            tracks.setStartLonDec(_bdFloat(tracks.getStartLon()))
+            tracks.setStartLonDec(_bdDecimal(tracks.getStartLon()))
         if CommonUtil.isNotBlank(tracks.getStratLat()):
-            tracks.setStratLatDec(_bdFloat(tracks.getStratLat()))
+            tracks.setStratLatDec(_bdDecimal(tracks.getStratLat()))
         if CommonUtil.isNotBlank(tracks.getEndLon()):
-            tracks.setEndLonDec(_bdFloat(tracks.getEndLon()))
+            tracks.setEndLonDec(_bdDecimal(tracks.getEndLon()))
         if CommonUtil.isNotBlank(tracks.getEndLat()):
-            tracks.setEndLatDec(_bdFloat(tracks.getEndLat()))
+            tracks.setEndLatDec(_bdDecimal(tracks.getEndLat()))
 
         trailInfo.setTracks(tracks)
         trailInfo.setTrailList(josnList)
@@ -1789,7 +1790,7 @@ class SysUtilServiceImpl(ISysUtilService):
         2) 【忠实保留的缺陷】只有 `captureTime` 含 "T" 时才用
            `SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")` 解析并**回写** captureTime；
            普通 `"yyyy-MM-dd HH:mm:ss"` 格式的时间会被**直接丢弃**（trailBo.captureTime 为 null）。
-        3) `new BigDecimal(lon)` → `_bdFloat(lon)`（实体字段已映射为 float）。
+        3) `new BigDecimal(lon)` → `_bdDecimal(lon)`（实体字段已映射为 float）。
         4) 末尾统一走 `mapTrailBoList` 做 4 分钟合并。
         """
         trailBoList: List[TrailBo] = []
@@ -1829,9 +1830,9 @@ class SysUtilServiceImpl(ISysUtilService):
                     trailBo.setOrgCode(orgCode)
                     trailBo.setPileno(pileNo)
                     if CommonUtil.isNotBlank(lon):
-                        trailBo.setLon(_bdFloat(lon))
+                        trailBo.setLon(_bdDecimal(lon))
                     if CommonUtil.isNotBlank(lat):
-                        trailBo.setLat(_bdFloat(lat))
+                        trailBo.setLat(_bdDecimal(lat))
                     trailBoList.append(trailBo)
             except Exception as e:
                 # Java: catch (Exception e) { e.printStackTrace(); log.error("解析错误！" + trailPoints); }
@@ -2182,15 +2183,15 @@ class SysUtilServiceImpl(ISysUtilService):
 
                         tracks.setExvehicleid(carNo)  # 车牌号
 
-                        # 【Java→Python】BigDecimal → float 字段，先 _bd 校验再落 float
+                        # 【Java→Python】BigDecimal → Decimal 字段，先 _bd 校验再落 Decimal
                         if CommonUtil.isNotBlank(tracks.getStartLon()):
-                            tracks.setStartLonDec(_bdFloat(tracks.getStartLon()))
+                            tracks.setStartLonDec(_bdDecimal(tracks.getStartLon()))
                         if CommonUtil.isNotBlank(tracks.getStratLat()):
-                            tracks.setStratLatDec(_bdFloat(tracks.getStratLat()))
+                            tracks.setStratLatDec(_bdDecimal(tracks.getStratLat()))
                         if CommonUtil.isNotBlank(tracks.getEndLon()):
-                            tracks.setEndLonDec(_bdFloat(tracks.getEndLon()))
+                            tracks.setEndLonDec(_bdDecimal(tracks.getEndLon()))
                         if CommonUtil.isNotBlank(tracks.getEndLat()):
-                            tracks.setEndLatDec(_bdFloat(tracks.getEndLat()))
+                            tracks.setEndLatDec(_bdDecimal(tracks.getEndLat()))
 
                         # -------------- 车辆轨迹点
                         josnList: List[TrailBo] = []
@@ -2218,9 +2219,9 @@ class SysUtilServiceImpl(ISysUtilService):
 
                                 trailBo.setPileno(odsSzdnGantry.getPileNo())  # 桩号
                                 if CommonUtil.isNotBlank(lon):
-                                    trailBo.setLon(_bdFloat(lon))
+                                    trailBo.setLon(_bdDecimal(lon))
                                 if CommonUtil.isNotBlank(lat):
-                                    trailBo.setLat(_bdFloat(lat))
+                                    trailBo.setLat(_bdDecimal(lat))
 
                                 trailBo.setDevName(odsSzdnGantry.getGantryName())  # 设备名称
 

@@ -1,0 +1,61 @@
+name: _cpp
+
+# 可复用 workflow：C++ 迁移实现（CMake 3.20+ / C++20 / MSVC）。
+# MSVC 专属构建，固定 windows-latest；librdkafka 由 CMake FetchContent 拉取。
+#
+# 已知缺口：仓库无 .clang-format / .clang-tidy，MSVC 仅有 /W3，
+# PR 门禁为"配置 + 编译 + ctest"，格式/静态检查未纳入。
+on:
+  workflow_call:
+    inputs:
+      mode:
+        description: "pr | master | release"
+        required: false
+        type: string
+        default: pr
+      build-type:
+        description: "CMake 构建类型"
+        required: false
+        type: string
+        default: Release
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: cpp (MSVC 2022 / C++20)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: car-monit-api-cpp
+    steps:
+      - uses: actions/checkout@v4
+
+      # librdkafka 首次 configure 从 codeload.github.com 下载并编译，缓存源码/构建目录降低 PR 耗时。
+      - name: 缓存 FetchContent 依赖
+        uses: actions/cache@v4
+        with:
+          path: car-monit-api-cpp/build/_deps
+          key: cpp-deps-${{ runner.os }}-${{ hashFiles('car-monit-api-cpp/CMakeLists.txt') }}
+          restore-keys: |
+            cpp-deps-${{ runner.os }}-
+
+      - name: Configure（CMake + VS2022）
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCM_WITH_KAFKA=ON
+
+      - name: Build
+        run: cmake --build build --config ${{ inputs.build-type }} --parallel
+
+      - name: 单元测试（ctest）
+        run: ctest --test-dir build -C ${{ inputs.build-type }} --output-on-failure
+
+      - name: 上传二进制（Windows x64）
+        if: inputs.mode != 'pr'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpp-windows-x64-${{ github.sha }}
+          path: car-monit-api-cpp/build/${{ inputs.build-type }}/car-monit-api.exe
+          if-no-files-found: error
+          retention-days: 14

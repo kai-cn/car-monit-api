@@ -1,0 +1,25 @@
+# Java 镜像使用仓库根目录作为构建上下文，排除其它语言与本地产物，避免上下文过大。
+.git
+.github
+.idea
+.vscode
+.gradle
+**/target
+**/build
+**/node_modules
+**/.venv
+**/__pycache__
+**/*.log
+docs
+logs
+_probe
+_probe_go
+_probe_bin
+debezium
+python
+car-monit-api-cpp
+car-monit-api-go
+car-monit-api-python
+car-monit-api-rust
+car-monit-api-csharp
+car-monit-api-kotlin

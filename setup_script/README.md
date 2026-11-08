@@ -101,7 +101,7 @@ bash setup_script/start-java.sh        # 原始 Spring Boot 版，端口 9901
 
 | 参数 | 默认值 | 说明 |
 |------|--------|------|
-| `--db-password <pw>` | `OpenGauss@123` | 数据库密码，同时同步到 Java 与 Python 两侧 |
+| `--db-password <pw>` | *(必须显式提供)* | 数据库密码，同时同步到 Java 与 Python 两侧；禁止写入仓库默认值 |
 | `--db-host <host>` | `127.0.0.1` | 数据库地址 |
 | `--db-port <port>` | `5432` | 数据库端口 |
 | `--db-name <name>` | `RuoYi` | 库名（大小写敏感） |
@@ -122,9 +122,9 @@ bash setup_script/start-java.sh        # 原始 Spring Boot 版，端口 9901
 | 配置项 | 出处 |
 |--------|------|
 | `jdbc:postgresql://192.168.56.10:5432/RuoYi` | `pro-business-api/src/main/resources/application.yml` |
-| `username: gaussdb` / `password: OpenGauss@123` | 同上 |
+| `username: gaussdb` / `password: ${DB_PASSWORD}` | 同上（口令经环境变量注入） |
 | `spring.redis.host=127.0.0.1` `port=6379` `database=0` | 同上 |
-| Redis 无密码 | 同文件 `# password: redis321` 是注释状态 |
+| Redis 无密码 | 真实口令经 `SPRING_REDIS_PASSWORD` 注入，仓库不保留明文 |
 
 脚本只把 `192.168.56.10` 换成了本机 `127.0.0.1`（云端没有那个网段的虚机），
 其余凭据一字不改。
@@ -192,7 +192,7 @@ mvn -v                   # 期望 Java version: 1.8
 python3.12 --version
 
 # 2) 数据库
-PGPASSWORD='OpenGauss@123' psql -h 127.0.0.1 -U gaussdb -d RuoYi \
+PGPASSWORD="${DB_PASSWORD:?}" psql -h 127.0.0.1 -U gaussdb -d RuoYi \
   -c "SELECT count(*) FROM information_schema.tables WHERE table_schema='jl_data01'"
 # 期望核心 3 表 + 归档 3 表 + kafka_message_record 共 7 张
 

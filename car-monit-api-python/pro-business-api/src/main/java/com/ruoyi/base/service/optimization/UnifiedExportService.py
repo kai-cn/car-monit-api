@@ -262,6 +262,11 @@ class UnifiedExportService(object):
 
         建议由定时任务每天调用一次，清理超过 7 天的已完成任务。
 
+        TODO(V2/P2-15，报告 Q15)：本方法**当前无任何调用方**——taskStatusMap 只增不减，
+        长期运行内存无界增长；且导出队列满时 CallerRunsPolicy 会在 HTTP 线程同步执行
+        整段导出（Java 同缺陷，忠实保留）。启用 Bean 生命周期（app/beans.py）后应把
+        本方法挂到调度器并评估拒绝策略，属行为变更需业务确认。
+
         【Java→Python】`entrySet().removeIf(...)` → 先取 key 快照再逐个删除
         （详见文件头第 7 条）。
         """
