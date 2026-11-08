@@ -113,6 +113,27 @@ bool contains_ci(const std::vector<std::string>& list, const std::string& value)
   });
 }
 
+// 响应头注入防护：拒绝含 CR/LF/控制字符的 origin 与原样回显的请求头名。
+bool has_control_chars(const std::string& s) {
+  for (unsigned char c : s) {
+    if (c < 0x20 || c == 0x7f) return true;
+  }
+  return false;
+}
+
+// RFC 7230 token：请求头名只能包含 tchar。
+bool valid_header_token(const std::string& s) {
+  if (s.empty() || s.size() > 256) return false;
+  for (unsigned char c : s) {
+    const bool ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                    (c >= '0' && c <= '9') || c == '!' || c == '#' || c == '$' || c == '%' ||
+                    c == '&' || c == '\'' || c == '*' || c == '+' || c == '-' || c == '.' ||
+                    c == '^' || c == '_' || c == '`' || c == '|' || c == '~';
+    if (!ok) return false;
+  }
+  return true;
+}
+
 // CorsConfiguration#checkOrigin：返回 nullopt 表示 origin 不被允许。
 // wildcard 且 allowCredentials=true 时 Spring 抛 IllegalArgumentException，这里映射为 ConfigError。
 struct OriginCheck {
@@ -122,6 +143,8 @@ struct OriginCheck {
 
 OriginCheck check_origin(const config::Config::CorsCfg& cfg, const std::string& origin) {
   OriginCheck r;
+  // 防止把含 CR/LF 或超长的 Origin 回显到响应头（响应头注入）。
+  if (origin.size() > 2048 || has_control_chars(origin)) return r;
   if (contains_ci(cfg.allowed_origins, "*")) {
     if (cfg.allow_credentials) r.config_error = true;
     r.allow_origin = "*";
@@ -153,7 +176,15 @@ std::vector<std::string> split_headers(const std::string& value) {
 std::optional<std::vector<std::string>> check_headers(const config::Config::CorsCfg& cfg,
                                                       const std::vector<std::string>& requested) {
   if (cfg.allowed_headers.empty()) return std::nullopt;
-  if (contains_ci(cfg.allowed_headers, "*")) return requested;
+  if (contains_ci(cfg.allowed_headers, "*")) {
+    // 原样回显前过滤非法头名（含 CR/LF、非 token 字符、超长）。
+    std::vector<std::string> echoed;
+    for (const auto& h : requested) {
+      if (valid_header_token(h)) echoed.push_back(h);
+    }
+    if (echoed.empty()) return std::nullopt;
+    return echoed;
+  }
   std::vector<std::string> allowed;
   for (const auto& h : requested) {
     if (contains_ci(cfg.allowed_headers, h)) allowed.push_back(h);
