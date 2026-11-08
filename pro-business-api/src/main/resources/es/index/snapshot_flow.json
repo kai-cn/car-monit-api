@@ -1,5 +1,4 @@
 {
-  "_doc": {
     "settings": {
       "number_of_shards": __NUMBER_OF_SHARDS__,
       "number_of_replicas": __NUMBER_OF_REPLICAS__,
@@ -82,5 +81,4 @@
         "snapshottimeunix": { "type": "long" }
       }
     }
-  }
 }

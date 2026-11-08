@@ -3,22 +3,18 @@ package com.ruoyi.base.service.optimization;
 import com.alibaba.fastjson2.JSON;
 import com.ruoyi.base.domain.*;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.HttpHost;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -61,16 +57,10 @@ import java.util.stream.Collectors;
 public class ElasticsearchQueryService {
 
     /**
-     * ES主机地址
+     * ES高级客户端（复用全局 Bean，账号密码与连接池统一由 ElasticsearchConfig 管理）
      */
-    @Value("${elasticsearch.host:127.0.0.1}")
-    private String esHost;
-
-    /**
-     * ES端口
-     */
-    @Value("${elasticsearch.port:9200}")
-    private int esPort;
+    @Autowired
+    private RestHighLevelClient client;
 
     /**
      * ES快照流量索引名
@@ -89,34 +79,6 @@ public class ElasticsearchQueryService {
      */
     @Value("${elasticsearch.index.trail:zdata_trail_fitting}")
     private String trailIndex;
-
-    /**
-     * ES高级客户端
-     */
-    private RestHighLevelClient client;
-
-    /**
-     * 初始化 ES 客户端
-     */
-    @PostConstruct
-    public void init() {
-        log.info("[ES查询服务] 初始化 Elasticsearch 客户端，host={}, port={}", esHost, esPort);
-        this.client = new RestHighLevelClient(
-                RestClient.builder(new HttpHost(esHost, esPort, "http"))
-        );
-    }
-
-    @PreDestroy
-    public void destroy() {
-        try {
-            if (client != null) {
-                client.close();
-                log.info("[ES查询服务] ES 客户端已关闭");
-            }
-        } catch (IOException e) {
-            log.error("[ES查询服务] 关闭客户端异常", e);
-        }
-    }
 
     /**
      * 门架抓拍流水 ES 查询（模糊查询 + 时间范围查询

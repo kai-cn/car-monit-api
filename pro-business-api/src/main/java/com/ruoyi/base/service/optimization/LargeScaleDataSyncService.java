@@ -8,7 +8,6 @@ import com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper;
 import com.ruoyi.base.mapper.OdsRtSzdnSnapshotFlowAddcodeMapper;
 import com.ruoyi.base.mapper.ZdataTrailFittingMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.HttpHost;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.bulk.*;
 import org.elasticsearch.action.index.IndexRequest;
@@ -58,12 +57,6 @@ import java.util.function.Function;
 @Service
 public class LargeScaleDataSyncService {
 
-    @Value("${elasticsearch.host:127.0.0.1}")
-    private String esHost;
-
-    @Value("${elasticsearch.port:9200}")
-    private int esPort;
-
     @Value("${sync.shard.hours:1}")
     private int shardHours;
 
@@ -73,7 +66,7 @@ public class LargeScaleDataSyncService {
     /** 增量水位向后缓冲秒数（规避 GaussDB 写入延迟造成漏读） / watermark back-off seconds */
     private static final int WATERMARK_BACKOFF_SECONDS = 10;
 
-    private RestHighLevelClient client;
+    private final RestHighLevelClient client;
     private BulkProcessor bulkProcessor;
 
     /** 三表 Mapper / mappers for the 3 tables */
@@ -112,36 +105,29 @@ public class LargeScaleDataSyncService {
                                      OdsLwzxsfsjFeeRecords01Mapper feeMapper,
                                      ZdataTrailFittingMapper trailMapper,
                                      RedisTemplate redisTemplate,
-                                     EsIndexManageService indexManageService) {
+                                     EsIndexManageService indexManageService,
+                                     RestHighLevelClient client) {
         this.snapshotMapper = snapshotMapper;
         this.feeMapper = feeMapper;
         this.trailMapper = trailMapper;
         this.redisTemplate = redisTemplate;
         this.indexManageService = indexManageService;
+        this.client = client;
     }
 
     /**
-     * 在所有依赖（含 @Value）注入完成后再创建 ES 客户端与 BulkProcessor。
-     * Initialize ES client & BulkProcessor after @Value fields have been injected.
+     * 初始化 BulkProcessor；ES 客户端由 ElasticsearchConfig 统一创建并复用。
      */
     @PostConstruct
     public void init() {
-        this.client = new RestHighLevelClient(
-                RestClient.builder(new HttpHost(esHost, esPort, "http"))
-                        .setRequestConfigCallback(builder -> builder
-                                .setConnectTimeout(10000)
-                                .setSocketTimeout(120000)
-                                .setConnectionRequestTimeout(10000))
-        );
         this.bulkProcessor = buildBulkProcessor();
-        log.info("[数据同步服务] 初始化完成, ES={}:{}", esHost, esPort);
+        log.info("[数据同步服务] 初始化完成，复用全局 ES 客户端");
     }
 
     @PreDestroy
     public void destroy() {
         try {
             if (bulkProcessor != null) { bulkProcessor.awaitClose(30, TimeUnit.SECONDS); }
-            if (client != null) { client.close(); }
         } catch (Exception e) {
             log.error("[数据同步服务] 关闭异常", e);
         }

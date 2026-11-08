@@ -2,7 +2,6 @@ package com.ruoyi.base.service.optimization;
 
 import com.alibaba.fastjson2.JSON;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.HttpHost;
 import org.elasticsearch.action.search.*;
 import org.elasticsearch.client.*;
 import org.elasticsearch.core.TimeValue;
@@ -54,13 +53,9 @@ import java.util.stream.Collectors;
 @Service
 public class LargeScaleQueryService {
 
+    /** 全局复用的 ES 客户端 / shared RestHighLevelClient bean */
+    @Autowired
     private RestHighLevelClient client;
-
-    @Value("${elasticsearch.host:127.0.0.1}")
-    private String esHost;
-
-    @Value("${elasticsearch.port:9200}")
-    private int esPort;
 
     /** 导出文件根目录 / export file root dir */
     @Value("${optimization.export.dir:/data/export}")
@@ -91,21 +86,13 @@ public class LargeScaleQueryService {
 
     @PostConstruct
     public void init() {
-        log.info("[大规模查询服务] 初始化 ES 客户端 host={}, port={}", esHost, esPort);
-        this.client = new RestHighLevelClient(
-                RestClient.builder(new HttpHost(esHost, esPort, "http"))
-                        .setRequestConfigCallback(builder -> builder
-                                .setConnectTimeout(10000)
-                                .setSocketTimeout(60000)
-                                .setConnectionRequestTimeout(10000))
-        );
+        // ES 客户端由 ElasticsearchConfig 统一创建（含账号密码与连接池），此处不再重复创建
+        log.info("[大规模查询服务] 初始化完成，复用全局 ES 客户端");
     }
 
     @PreDestroy
     public void destroy() {
-        try { if (client != null) client.close(); } catch (IOException e) {
-            log.error("[大规模查询服务] 关闭客户端异常", e);
-        }
+        // 全局 ES 客户端由 Spring 容器统一关闭，这里只回收本服务自己的线程池
         queryExecutor.shutdown();
     }
 
