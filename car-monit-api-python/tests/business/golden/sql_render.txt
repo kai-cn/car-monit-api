@@ -350,6 +350,43 @@ SELECT t.*
             and t.transtime < to_timestamp(:p1,'yyyy-mm-dd HH24:MI:SS') ORDER BY t.transtime ASC, t.big_id ASC
         LIMIT :p2
 
+-- com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper.selectGantryNum
+SELECT
+         count(1)
+        FROM jl_data01.ods_lwzxsfsj_fee_records_01 t
+        where  t.gantryid = :p0
+
+-- com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper.selectOdsLwzxsfsjFeeRecords01ById
+select t.big_id,
+        t.vehicleplate,
+        t.axlecount,
+        t.vehiclehight,
+        t.transtime,
+        t.lastgantrytime,
+        t.gantryid,
+        t.cid,
+        t.passstate,
+        t.fee from jl_data01.ods_lwzxsfsj_fee_records_01 t
+         where t.big_id = :p0
+
+-- com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper.selectOdsLwzxsfsjFeeRecords01List
+SELECT t.big_id,
+        t.vehicleplate,
+        t.axlecount,
+        t.vehiclehight,
+        t.transtime,
+        t.lastgantrytime,
+        t.gantryid,
+        t.cid,
+        t.passstate,
+        t.fee FROM jl_data01.ods_lwzxsfsj_fee_records_01 t
+        left join jl_data01.ods_szdn_gantry g ON t.gantryid = g.gantry_code order by t.transtime desc
+
+-- com.ruoyi.base.mapper.OdsLwzxsfsjFeeRecords01Mapper.selectOdsLwzxsfsjFeeRecords01ListNew
+SELECT  g.section_code sectioncode,t.vehicleplate,t.transtime,t.fee,t.cid
+        FROM jl_data01.ods_lwzxsfsj_fee_records_01 t
+        left join jl_data01.ods_szdn_gantry g ON t.gantryid = g.gantry_code
+
 -- com.ruoyi.base.mapper.OdsLwzxsfsjFeeStationEnter01Mapper.selectOdsLwzxsfsjFeeStationEnter01ById
 select t.big_id,
         t.cardid,
@@ -1375,6 +1412,50 @@ SELECT t.*
         FROM jl_data01.zdata_trail_fitting t WHERE  t.extime >= to_timestamp(:p0,'yyyy-mm-dd HH24:MI:SS')
             and t.extime < to_timestamp(:p1,'yyyy-mm-dd HH24:MI:SS') ORDER BY t.extime ASC, t.cid ASC
         LIMIT :p2
+
+-- com.ruoyi.base.mapper.ZdataTrailFittingMapper.selectZdataTrailFittingById
+select t.cid,
+        t.enaxlecount,
+        t.entime,
+        t.entolllaneid,
+        t.entollstationid,
+        t.entollstationname,
+        t.envehicleclass,
+        t.envehicleid,
+        t.envehicletype,
+        t.enweight,
+        t.extime,
+        t.extolllaneid,
+        t.extollstationid,
+        t.extollstationname,
+        t.exvehicleclass,
+        t.exvehicleid,
+        t.exvehicletype,
+        t.exweight,
+        t.trailpoints from jl_data01.zdata_trail_fitting t
+         where t.cid = :p0
+
+-- com.ruoyi.base.mapper.ZdataTrailFittingMapper.selectZdataTrailFittingList
+SELECT t.cid,
+        t.enaxlecount,
+        t.entime,
+        t.entolllaneid,
+        t.entollstationid,
+        t.entollstationname,
+        t.envehicleclass,
+        t.envehicleid,
+        t.envehicletype,
+        t.enweight,
+        t.extime,
+        t.extolllaneid,
+        t.extollstationid,
+        t.extollstationname,
+        t.exvehicleclass,
+        t.exvehicleid,
+        t.exvehicletype,
+        t.exweight,
+        t.trailpoints FROM jl_data01.zdata_trail_fitting t
+        WHERE 1=1
 
 -- com.ruoyi.base.mapper.ZdataTrailTracksMapper.getHistoryTrail
 select
