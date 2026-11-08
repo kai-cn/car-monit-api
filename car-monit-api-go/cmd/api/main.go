@@ -205,7 +205,7 @@ func run(configPath string) error {
 		cfg: cfg, bus: bus, producer: producer, snapshotSync: snapshotSync, largeSync: syncSvc,
 		consumer: dataConsumer, dict: dict, multiSource: multiSource,
 		loss: lossDetect, delay: delayMonitor, reliability: reliability, consistency: consistency,
-		sysUtil: sysUtil, export: exportSvc, largeQuery: largeQuery,
+		sysUtil: sysUtil, export: exportSvc, largeQuery: largeQuery, cache: cacheClient,
 	})
 
 	// ---- 9. HTTP Server ----
@@ -383,6 +383,8 @@ type startDeps struct {
 	largeQuery *service.LargeScaleQueryService
 	// sysUtil 对应 TrackTask 里的 @Autowired ISysUtilService（syncCurrentTrack / syncHistroyTrack 两个任务）
 	sysUtil *service.SysUtilService
+	// cache 供调度器的分布式租约锁使用（nil = Redis 不可用，此时开启锁会让全部任务跳过）
+	cache *cache.Client
 }
 
 // backgroundTasks 持有所有需要显式关闭的后台组件。
@@ -436,6 +438,18 @@ func startBackground(ctx context.Context, d startDeps) *backgroundTasks {
 
 	// 定时任务
 	sched := scheduler.New(time.Local)
+	// 分布式租约锁（可选，默认关闭）：多副本部署时置 scheduler.distributed-lock.enabled=true，
+	// 让写共享状态的 job 只在一个实例上执行。单副本（当前基线）保持关闭时行为与 V1 一致。
+	if lc := d.cfg.Scheduler.DistributedLock; lc.Enabled {
+		lockCfg := scheduler.LockConfig{Enabled: true, KeyPrefix: lc.KeyPrefix, TTL: lc.TTL}
+		if d.cache != nil {
+			sched.SetLocker(scheduler.NewRedisLocker(d.cache.Raw(), lockCfg), lockCfg.Normalized().TTL)
+			slog.Info("[定时任务] 分布式租约锁已启用", "prefix", lockCfg.Normalized().KeyPrefix,
+				"ttl", lockCfg.Normalized().TTL.String())
+		} else {
+			slog.Error("[定时任务] 已开启分布式锁但 Redis 不可用，所有任务将无法抢锁（会全部跳过）")
+		}
+	}
 	if _, err := scheduler.RegisterAll(sched, d.cfg, &scheduler.Jobs{
 		Dict: d.dict, MultiSource: d.multiSource, Loss: d.loss,
 		Delay: d.delay, Reliability: d.reliability, Consistency: d.consistency,

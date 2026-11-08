@@ -151,6 +151,12 @@ monitoring:
   end-to-end-threshold-ms: 30000                  # application.yml:294
   stats-window-minutes: 10                        # application.yml:296
 
+scheduler:
+  distributed-lock:
+    enabled: false                              # 单副本校验场景保持关闭
+    key-prefix: "scheduler:lock:"
+    ttl: 5m
+
 logging:
   level: info                                     # application.yml:125（root: INFO）
   format: text                                    # Go 侧新增：text | json（logback-spring.xml 的等价开关）

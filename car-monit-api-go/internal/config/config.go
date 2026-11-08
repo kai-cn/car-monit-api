@@ -45,9 +45,25 @@ type Config struct {
 	Monitoring    MonitoringConfig   `mapstructure:"monitoring"`
 	Logging       LoggingConfig      `mapstructure:"logging"`
 	App           AppConfig          `mapstructure:"app"`
+	Scheduler     SchedulerConfig    `mapstructure:"scheduler"`
 
 	// loadedOverride 记录本次实际合并的本地覆盖文件（不参与 mapstructure 解析）。
 	loadedOverride string
+}
+
+// SchedulerConfig 是 Go 侧新增（Java 无对应）：定时任务的部署形态开关。
+//
+// 默认 DistributedLock.Enabled=false → 单副本部署行为与 V1 完全一致。
+// 多副本部署必须置 true，否则每个副本都会执行写共享状态的 job（报告 02 R5）。
+type SchedulerConfig struct {
+	DistributedLock DistributedLockConfig `mapstructure:"distributed-lock"`
+}
+
+// DistributedLockConfig 对应 scheduler/lock.go 的 LockConfig。
+type DistributedLockConfig struct {
+	Enabled   bool          `mapstructure:"enabled"`
+	KeyPrefix string        `mapstructure:"key-prefix"`
+	TTL       time.Duration `mapstructure:"ttl"`
 }
 
 // ServerConfig 对应 application.yml:1-4
@@ -354,6 +370,10 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("monitoring.stats-window-minutes", 10)
 	v.SetDefault("pulsar.idempotent-ttl-seconds", 86400)
 	v.SetDefault("pulsar.max-retry-times", 3)
+	// 定时任务分布式锁：默认关闭（单副本部署零影响）；多副本必须显式开启。
+	v.SetDefault("scheduler.distributed-lock.enabled", false)
+	v.SetDefault("scheduler.distributed-lock.key-prefix", "scheduler:lock:")
+	v.SetDefault("scheduler.distributed-lock.ttl", "5m")
 
 	// 环境变量：APP_SERVER_PORT 覆盖 server.port（对应 Spring 的 relaxed binding）
 	//

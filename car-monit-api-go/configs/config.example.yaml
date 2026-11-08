@@ -63,6 +63,12 @@ optimization:
   export:
     dir: /data/export              # 非 local 环境必须是绝对路径
 
+scheduler:
+  distributed-lock:
+    enabled: false                 # 多副本部署必须置 true
+    key-prefix: "scheduler:lock:"
+    ttl: 5m
+
 logging:
   level: info
   format: text

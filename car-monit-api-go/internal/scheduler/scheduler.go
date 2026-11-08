@@ -59,6 +59,9 @@ type Scheduler struct {
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 	loc    *time.Location
+	// locker 为 nil 表示不启用分布式锁（单副本默认形态，行为与 V1 完全一致）。
+	locker Locker
+	lockTTL time.Duration
 }
 
 // New 构造调度器。loc 传 nil 时使用本地时区（与 JVM 的 serverTimezone=Asia/Shanghai 对齐）。
@@ -67,6 +70,19 @@ func New(loc *time.Location) *Scheduler {
 		loc = time.Local
 	}
 	return &Scheduler{loc: loc}
+}
+
+// SetLocker 启用任务级分布式租约锁（默认不启用，见 lock.go 头部的语义与失效场景）。
+//
+// 只在 Start 之前调用有效；ttl<=0 时取 5 分钟默认值。
+func (s *Scheduler) SetLocker(l Locker, ttl time.Duration) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if ttl <= 0 {
+		ttl = 5 * time.Minute
+	}
+	s.locker = l
+	s.lockTTL = ttl
 }
 
 // Add 登记一条 cron 任务；表达式非法时立刻返回错误。
@@ -209,7 +225,28 @@ func (s *Scheduler) runCron(ctx context.Context, j *Job) {
 //
 // PARITY: Java 的 @Scheduled 方法抛异常由 TaskUtils 记日志后继续下次调度——进程不会退出；
 // Go 里 goroutine panic 会杀掉整个进程，所以 recover 是**必需**的。
+//
+// 分布式锁（可选，默认关闭）：抢到租约才执行；抢不到说明别的副本正在跑，本次触发跳过。
+// 这一层对单副本部署完全透明（locker == nil 时直接执行）。
 func (s *Scheduler) run(ctx context.Context, j *Job) {
+	s.mu.Lock()
+	locker := s.locker
+	lockTTL := s.lockTTL
+	s.mu.Unlock()
+
+	if locker != nil {
+		release, ok, err := locker.TryLock(ctx, j.Name, lockTTL)
+		if err != nil {
+			slog.Warn("[定时任务] 抢占租约失败，本次触发跳过", "job", j.Name, "err", err)
+			return
+		}
+		if !ok {
+			slog.Debug("[定时任务] 其他副本持有租约，本次触发跳过", "job", j.Name)
+			return
+		}
+		defer release()
+	}
+
 	start := time.Now()
 	defer func() {
 		if r := recover(); r != nil {

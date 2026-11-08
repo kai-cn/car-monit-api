@@ -159,6 +159,21 @@ monitoring:
   end-to-end-threshold-ms: 30000                  # application.yml:294
   stats-window-minutes: 10                        # application.yml:296
 
+# Go 侧新增（报告 02 R5）：定时任务分布式租约锁。
+#
+# 默认关闭 —— 单副本部署（deploy/k8s.yaml 的 replicas: 1 + Recreate）行为与 V1 完全一致。
+# 多副本部署必须置 true，否则每个副本都会执行 syncTrack / 增量同步 / 补偿等写共享状态的 job。
+#
+# 语义：每次触发前 SET NX PX 抢 `key-prefix + jobName`，抢到才执行，抢不到跳过；
+#      执行期间每 ttl/3 续约，结束后 compare-and-delete。
+# 失效场景：续约失败时租约到期可被其他副本抢占（日志会打「租约续期失败」）；
+#          Redis 不可用时所有 job 都抢不到锁 → 全部跳过（宁可漏跑不重复跑）。
+scheduler:
+  distributed-lock:
+    enabled: false                              # 多副本部署改为 true
+    key-prefix: "scheduler:lock:"               # Redis 键前缀
+    ttl: 5m                                     # 单次租约有效期，需 > 最慢 job 的常规耗时
+
 logging:
   level: info                                     # application.yml:125（root: INFO）
   format: text                                    # Go 侧新增：text | json（logback-spring.xml 的等价开关）
