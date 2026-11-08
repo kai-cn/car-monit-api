@@ -141,6 +141,15 @@ rediscluster:
 isLocalhost: local # 是否本地 prod生成
 sysbaseUrl: http://223.84.150.189:26066/prod-api
 
+# ==================== API 访问鉴权配置 ====================
+# 共享令牌鉴权：调用方需在请求头中携带令牌；建议通过环境变量 API_SECURITY_TOKEN 注入，
+# 不要将真实令牌写入版本库。令牌未配置时所有受保护接口一律拒绝（失败关闭）。
+api:
+  security:
+    enabled: true
+    header: X-API-Token
+    token: ${API_SECURITY_TOKEN:}
+
 
 kafka:
   topic:
