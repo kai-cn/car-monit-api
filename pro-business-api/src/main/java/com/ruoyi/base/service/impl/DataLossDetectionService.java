@@ -54,10 +54,10 @@ public class DataLossDetectionService {
     private int windowSizeMinutes;
 
     /**
-     * 检测间隔（分钟）
+     * 检测间隔（毫秒）
      */
-    @Value("${detection.interval-minutes:30}")
-    private int intervalMinutes;
+    @Value("${detection.interval-millis:1800000}")
+    private long intervalMillis;
 
     /**
      * 丢失率告警阈值（百分比）
@@ -96,7 +96,7 @@ public class DataLossDetectionService {
     public void init() {
         detectionExecutor = Executors.newFixedThreadPool(4);
         log.info("[数据丢失检测] 初始化完成，窗口大小: {}分钟, 检测间隔: {}分钟, 告警阈值: {}%",
-                windowSizeMinutes, intervalMinutes, lossThresholdPercent);
+                windowSizeMinutes, intervalMillis / 60000, lossThresholdPercent);
     }
 
     /**
@@ -130,7 +130,7 @@ public class DataLossDetectionService {
      * 3. 对比找出丢失的数据
      * 4. 生成检测报告
      */
-    @Scheduled(fixedRateString = "${detection.interval-minutes:30}", timeUnit = TimeUnit.MINUTES)
+    @Scheduled(fixedRateString = "${detection.interval-millis:1800000}")
     public void scheduledDetection() {
         detectionExecutor.submit(() -> {
             try {

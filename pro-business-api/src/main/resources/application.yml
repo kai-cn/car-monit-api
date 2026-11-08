@@ -287,8 +287,10 @@ reliability:
 detection:
   # 检测窗口大小（分钟）
   window-size-minutes: 60
-  # 检测间隔（分钟）
-  interval-minutes: 30
+  # 检测间隔（毫秒），默认 30 分钟；原 interval-minutes 拼接写法实际为 30 秒
+  interval-millis: 1800000
+  # 普通记录单次最大加载行数，防止异常窗口内存膨胀
+  max-window-records: 200000
   # 丢失率告警阈值（百分比）
   loss-threshold-percent: 5
 
