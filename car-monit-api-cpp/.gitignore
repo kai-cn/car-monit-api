@@ -17,9 +17,10 @@ configs/config.local.yaml
 configs/*.bak
 configs/*.secret
 
-# 环境变量文件
+# 环境变量文件（.env.example 是占位模板，允许入库）
 .env
 .env.*
+!.env.example
 
 # 控制台重定向产物（同上，可能含连接串）
 run.out
