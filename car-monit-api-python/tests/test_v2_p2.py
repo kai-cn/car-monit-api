@@ -53,11 +53,71 @@ def test_codec_scalar_decimal_datetime() -> None:
     assert restored.getTranstime() == stamp
 
 
-def test_codec_non_json_passthrough() -> None:
+def test_codec_unrecognized_returns_miss() -> None:
+    """H3：无法识别的内容返回未命中（None），不能把原始字符串当缓存值。"""
     from app.middleware.real_redis import decode
 
-    assert decode(b"not-json") == "not-json"
+    assert decode(b"not-json") is None
+    assert decode(b"") is None
     assert decode(None) is None
+
+
+def test_codec_fastjson_long_and_dates() -> None:
+    """H3：FastJson 的 123L、毫秒时间戳、文本日期都能还原到实体字段类型。"""
+    import datetime as _dt
+
+    from app.middleware.real_redis import decode
+
+    from com.ruoyi.base.domain.OdsSzdnProvinceBorderVehicleWeightNewstructure import (
+        OdsSzdnProvinceBorderVehicleWeightNewstructure,
+    )
+    from com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowAddcode import (
+        OdsRtSzdnSnapshotFlowAddcode,
+    )
+
+    # 真实 Java Redis 里的非标准 JSON：52650L
+    weight = decode(
+        b'{"@type":"com.ruoyi.base.domain.'
+        b'OdsSzdnProvinceBorderVehicleWeightNewstructure","vehicleWeight":52650L}')
+    assert isinstance(weight, OdsSzdnProvinceBorderVehicleWeightNewstructure)
+    assert weight.getVehicleWeight() == 52650
+
+    # 毫秒时间戳（fastjson 默认 Date 写法）+ 文本日期（yyyy-MM-dd HH:mm:ss）
+    snapshot = decode(
+        '{"@type":"com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowAddcode",'
+        '"snapshottime":1699999999999,'
+        '"receivedtime":"2026-01-02 03:04:05"}')
+    assert isinstance(snapshot, OdsRtSzdnSnapshotFlowAddcode)
+    assert snapshot.getSnapshottime() == _dt.datetime.fromtimestamp(1699999999.999)
+    assert snapshot.getReceivedtime() == _dt.datetime(2026, 1, 2, 3, 4, 5)
+
+    # 裸标量写法
+    assert decode(b"123L") == 123
+    assert decode(b"new Date(1699999999999)") == _dt.datetime.fromtimestamp(1699999999.999)
+
+
+def test_codec_type_whitelist_blocks_arbitrary_reflection(monkeypatch) -> None:
+    """H3：@type 反射只允许 com.ruoyi / org.springframework，白名单外只返回 dict。"""
+    import dataclasses
+    import sys
+    import types
+
+    from app.middleware.real_redis import decode
+
+    module = types.ModuleType("evil_redis_payload")
+
+    @dataclasses.dataclass
+    class Evil:
+        pwned: str = ""
+
+    Evil.__module__ = "evil_redis_payload"
+    module.Evil = Evil
+    monkeypatch.setitem(sys.modules, "evil_redis_payload", module)
+
+    restored = decode(b'{"@type":"evil_redis_payload.Evil","pwned":"yes"}')
+    assert isinstance(restored, dict)
+    assert not isinstance(restored, Evil)
+    assert restored == {"pwned": "yes"}  # @type 被剥离
 
 
 # ------------------------------------------------------------------ fallback

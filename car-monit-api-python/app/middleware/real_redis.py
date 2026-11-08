@@ -45,6 +45,7 @@ import importlib
 import json
 import logging
 import os
+import re
 import typing
 from decimal import Decimal
 from enum import Enum
@@ -64,6 +65,65 @@ log = logging.getLogger(__name__)
 _DATETIME_TEXT = "%Y-%m-%d %H:%M:%S"
 #: 熔断后多久半开重试真实 Redis（秒）
 _RETRY_SECONDS = 60.0
+
+#: H3：``@type`` 反射白名单，与 Java ``FastJson2JsonRedisSerializer`` 的
+#: ``autoTypeFilter``（``org.springframework`` / ``com.ruoyi``）保持一致。
+#: 不在白名单的类名只还原为普通 dict，**绝不** import/实例化。
+_TYPE_WHITELIST = ("com.ruoyi", "org.springframework")
+
+
+def _allows_type(fqcn: Any) -> bool:
+    return (isinstance(fqcn, str)
+            and any(fqcn.startswith(prefix) for prefix in _TYPE_WHITELIST))
+
+
+def _normalize_fastjson(text: str) -> str:
+    """把 FastJson 的非标准 JSON 写法收敛为合法 JSON。
+
+    真实 Java 侧 Redis 里存在 ``"vehicleWeight":52650L``（``L`` 后缀不是合法
+    JSON，见 ``_RespClient`` 的实测样例）。这里用状态机只在**字符串外**去掉
+    数字尾部的 ``L``，不会破坏字符串值里的 ``"123L"``。
+    """
+    out: list[str] = []
+    in_string = False
+    escaped = False
+    index = 0
+    length = len(text)
+    while index < length:
+        char = text[index]
+        if in_string:
+            out.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            index += 1
+            continue
+        if char == '"':
+            in_string = True
+            out.append(char)
+            index += 1
+            continue
+        if char in "-+0123456789":
+            end = index
+            while end < length and text[end] in "0123456789+-.eE":
+                end += 1
+            if end < length and text[end] in "Ll":
+                out.append(text[index:end])  # 去掉 L 后缀
+                index = end + 1
+                continue
+            out.append(text[index:end])
+            index = end
+            continue
+        out.append(char)
+        index += 1
+    return "".join(out)
+
+
+_FASTJSON_LONG = re.compile(r"^[-+]?\d+[Ll]$")
+_FASTJSON_NEW_DATE = re.compile(r"^new\s+Date\(\s*(\d+)\s*\)$")
 
 
 def redis_fallback_policy() -> str:
@@ -134,21 +194,47 @@ def _inner(hint: Any) -> Any:
     return hint
 
 
+def _parse_datetime(value: Any) -> Any:
+    """FastJson 兼容的时间还原：毫秒时间戳 → datetime；文本日期按常见格式解析。"""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        # fastjson 默认把 java.util.Date 写成毫秒时间戳
+        return _dt.datetime.fromtimestamp(value / 1000.0)
+    if isinstance(value, str):
+        text = value.strip()
+        if text.endswith("L") and text[:-1].isdigit():
+            return _dt.datetime.fromtimestamp(int(text[:-1]) / 1000.0)
+        try:
+            return _dt.datetime.fromisoformat(text)
+        except ValueError:
+            pass
+        for pattern in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S.%f",
+                        "%Y/%m/%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
+            try:
+                return _dt.datetime.strptime(text, pattern)
+            except ValueError:
+                continue
+    return value
+
+
 def _coerce(value: Any, hint: Any) -> Any:
     target = _inner(hint)
     if value is None:
         return None
     try:
-        if target is _dt.datetime and isinstance(value, str):
-            return _dt.datetime.fromisoformat(value)
-        if target is _dt.date and isinstance(value, str):
-            return _dt.date.fromisoformat(value)
+        if target is _dt.datetime:
+            return _parse_datetime(value)
+        if target is _dt.date:
+            parsed = _parse_datetime(value)
+            return parsed.date() if isinstance(parsed, _dt.datetime) else parsed
         if target is Decimal and isinstance(value, (str, int, float)):
             return Decimal(str(value))
         if target is float and isinstance(value, (int, str)):
-            return float(value)
+            text = value[:-1] if isinstance(value, str) and value.endswith("L") else value
+            return float(text)
         if target is int and isinstance(value, str):
-            return int(value)
+            return int(value[:-1] if value.endswith("L") else value)
     except (ValueError, ArithmeticError):
         return value  # 与 MyBatis 的宽松转换一致：转不动就原样交给调用方
     return value
@@ -186,26 +272,45 @@ def _rebuild(cls: type, data: dict[str, Any]) -> Any:
 def _dec(data: Any) -> Any:
     if isinstance(data, dict):
         fqcn = data.get("@type")
-        if isinstance(fqcn, str):
+        if _allows_type(fqcn):
             cls = _resolve_class(fqcn)
             if cls is not None and dataclasses.is_dataclass(cls):
                 return _rebuild(cls, data)
-        return {k: _dec(v) for k, v in data.items()}
+        # H3：白名单外（或类不存在）只还原为普通 dict，并去掉 @type，
+        # 避免把类型元数据泄漏给业务、也避免任意 import/实例化。
+        return {k: _dec(v) for k, v in data.items() if k != "@type"}
     if isinstance(data, list):
         return [_dec(v) for v in data]
     return data
 
 
 def decode(raw: Any) -> Any:
-    """FastJson 兼容字节 → Python 值；非 JSON 原样返回字符串。"""
+    """FastJson 兼容字节 → Python 值。
+
+    H3 修正：
+    * ``52650L`` / ``new Date(1699999999999)`` 等 FastJson 写法可识别；
+    * **无法识别**的内容返回 ``None``（= 缓存未命中），不再把原始字符串
+      交给业务（字符串会被当成有效的缓存值，导致类型错乱）。
+    """
     if raw is None:
         return None
-    if isinstance(raw, bytes):
-        raw = raw.decode("utf-8")
+    if isinstance(raw, (bytes, bytearray)):
+        raw = raw.decode("utf-8", "replace")
+    if not isinstance(raw, str):
+        return _dec(raw)  # 已是 dict/list（测试或内存路径直传）
+    text = raw.strip()
+    if not text:
+        return None  # Java 的 null 序列化为 b""，读回即未命中
     try:
-        return _dec(json.loads(raw))
+        return _dec(json.loads(_normalize_fastjson(text), parse_float=Decimal))
     except (ValueError, TypeError):
-        return raw
+        matched = _FASTJSON_LONG.match(text)
+        if matched:
+            return int(text[:-1])
+        matched = _FASTJSON_NEW_DATE.match(text)
+        if matched:
+            return _dt.datetime.fromtimestamp(int(matched.group(1)) / 1000.0)
+        return None
 
 
 def _ttl_kwargs(timeout: Optional[int], time_unit: Optional[Any]) -> dict[str, Any]:
