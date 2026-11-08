@@ -1,0 +1,33 @@
+{
+  "policy": {
+    "phases": {
+      "hot": {
+        "min_age": "0d",
+        "actions": {
+          "set_priority": { "priority": 100 }
+        }
+      },
+      "warm": {
+        "min_age": "40d",
+        "actions": {
+          "forcemerge": { "max_num_segments": 1 },
+          "set_priority": { "priority": 50 },
+          "allocate": { "require": { "data": "warm" } }
+        }
+      },
+      "cold": {
+        "min_age": "365d",
+        "actions": {
+          "set_priority": { "priority": 0 },
+          "allocate": { "require": { "data": "cold" } }
+        }
+      },
+      "delete": {
+        "min_age": "1095d",
+        "actions": {
+          "delete": {}
+        }
+      }
+    }
+  }
+}

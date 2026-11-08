@@ -1,0 +1,107 @@
+{
+  "index_patterns": ["snapshot-flow-*"],
+  "priority": 100,
+  "version": 3,
+  "_meta": {
+    "description": "V3 snapshot flow monthly index: dimension codes + plate ngram + display fields",
+    "source_table": "jl_data01.ods_rt_szdn_snapshot_flow_addcode",
+    "design": "architecture-traffic-query-design.md v1.3 §5.3 / §8.2"
+  },
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1,
+      "refresh_interval": "5s",
+      "index.codec": "best_compression",
+      "index.max_result_window": 10000,
+      "index.mapping.total_fields.limit": 200,
+      "index.lifecycle.name": "traffic_hot_warm_cold",
+      "analysis": {
+        "tokenizer": {
+          "plate_ngram_tokenizer": {
+            "type": "ngram",
+            "min_gram": 2,
+            "max_gram": 3,
+            "token_chars": ["letter", "digit"]
+          }
+        },
+        "analyzer": {
+          "plate_ngram": {
+            "type": "custom",
+            "tokenizer": "plate_ngram_tokenizer",
+            "filter": ["lowercase"]
+          }
+        }
+      }
+    },
+    "mappings": {
+      "dynamic": "strict",
+      "date_detection": false,
+      "numeric_detection": false,
+      "properties": {
+        "big_id": { "type": "keyword" },
+        "datauuid": { "type": "keyword" },
+        "snapshottime": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "snapshottimeunix": { "type": "long" },
+        "receivedtime": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "receivedtimeunix": { "type": "long" },
+        "loadtime": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "orgcode": { "type": "keyword" },
+        "sectioncode": { "type": "keyword" },
+        "roadcode": { "type": "keyword" },
+        "gantrycode": { "type": "keyword" },
+        "tollcode": { "type": "keyword" },
+        "hexcode": { "type": "keyword" },
+        "pileno": { "type": "keyword" },
+        "deviceid": { "type": "keyword" },
+        "deviceip": { "type": "keyword" },
+        "datasource": { "type": "keyword" },
+        "cameratype": { "type": "keyword" },
+        "siteid": { "type": "integer" },
+        "laneid": { "type": "short" },
+        "direction": { "type": "short" },
+        "lon": { "type": "double", "index": false },
+        "lat": { "type": "double", "index": false },
+        "plate_norm": {
+          "type": "keyword",
+          "fields": {
+            "ngram": {
+              "type": "text",
+              "analyzer": "plate_ngram"
+            }
+          }
+        },
+        "platenumber": { "type": "keyword", "index": false, "doc_values": false },
+        "plate_raw": { "type": "keyword", "index": false, "doc_values": false },
+        "platecolor": { "type": "keyword" },
+        "platecolorcode": { "type": "short" },
+        "platetype": { "type": "keyword" },
+        "platetypecode": { "type": "short" },
+        "plateconfidence": { "type": "short" },
+        "carbrand": { "type": "keyword" },
+        "carcolor": { "type": "keyword" },
+        "carcolorcode": { "type": "short" },
+        "cartype": { "type": "keyword" },
+        "cartypecode": { "type": "short" },
+        "cardirection": { "type": "keyword" },
+        "gradelevel": { "type": "short" },
+        "reserve3": { "type": "keyword" },
+        "snappicturepath": { "type": "keyword", "index": false, "doc_values": false },
+        "orgname": { "type": "keyword", "index": false, "doc_values": false },
+        "sectionname": { "type": "keyword", "index": false, "doc_values": false },
+        "roadname": { "type": "keyword", "index": false, "doc_values": false },
+        "gantryname": { "type": "keyword", "index": false, "doc_values": false },
+        "tollname": { "type": "keyword", "index": false, "doc_values": false }
+      }
+    }
+  }
+}
