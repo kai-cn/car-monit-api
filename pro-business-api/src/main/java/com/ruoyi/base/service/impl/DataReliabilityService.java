@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.concurrent.ListenableFutureCallback;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -24,7 +25,12 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 数据上报可靠性保障服务
@@ -120,15 +126,57 @@ public class DataReliabilityService {
     private ExecutorService compensationExecutor;
 
     /**
+     * 定时调度器：承接超时检测、延迟清理、退避重试等定时动作，不占用重试线程
+     */
+    private ScheduledExecutorService timeoutScheduler;
+
+    /**
      * 本地缓存：存储待确认消息，用于快速查找
      */
     private final ConcurrentHashMap<String, MessageMeta> pendingMessages = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void init() {
-        retryExecutor = Executors.newFixedThreadPool(4);
-        compensationExecutor = Executors.newFixedThreadPool(2);
+        retryExecutor = new ThreadPoolExecutor(4, 4, 0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(2000),
+                daemonThreadFactory("reliability-retry"),
+                new ThreadPoolExecutor.CallerRunsPolicy());
+        compensationExecutor = new ThreadPoolExecutor(2, 2, 0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(1000),
+                daemonThreadFactory("reliability-compensation"),
+                new ThreadPoolExecutor.CallerRunsPolicy());
+        timeoutScheduler = Executors.newScheduledThreadPool(2, daemonThreadFactory("reliability-timeout"));
         log.info("[可靠性服务] 初始化完成，消息超时时间: {}ms, 最大重试次数: {}", messageTimeoutMs, maxRetryCount);
+    }
+
+    @PreDestroy
+    public void destroy() {
+        shutdown(retryExecutor);
+        shutdown(compensationExecutor);
+        if (timeoutScheduler != null) {
+            timeoutScheduler.shutdownNow();
+        }
+    }
+
+    private void shutdown(ExecutorService executor) {
+        if (executor == null) {
+            return;
+        }
+        executor.shutdownNow();
+        try {
+            executor.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private static ThreadFactory daemonThreadFactory(String prefix) {
+        AtomicInteger sequence = new AtomicInteger(1);
+        return runnable -> {
+            Thread thread = new Thread(runnable, prefix + "-" + sequence.getAndIncrement());
+            thread.setDaemon(true);
+            return thread;
+        };
     }
 
     // ==================== 核心方法：消息发送与确认 ====================
@@ -236,13 +284,27 @@ public class DataReliabilityService {
                     messageId, meta.getRetryCount(), error);
 
             if (meta.getRetryCount() < maxRetryCount) {
-                // 重试发送
-                retryExecutor.submit(() -> retrySend(messageId));
+                // 指数退避后重试：由调度器延时触发，不阻塞任何工作线程
+                scheduleRetry(messageId, meta.getRetryCount());
             } else {
                 // 超过最大重试次数，加入死信队列
                 markAsDeadLetter(messageId, error);
             }
         }
+    }
+
+    /**
+     * 按指数退避延时提交重试，延时等待由调度器承担，避免占用重试线程
+     */
+    private void scheduleRetry(String messageId, int retryCount) {
+        long delay = (long) Math.pow(2, retryCount) * 1000;
+        timeoutScheduler.schedule(() -> {
+            try {
+                retryExecutor.submit(() -> retrySend(messageId));
+            } catch (Exception e) {
+                log.warn("[可靠性服务] 提交重试任务失败: messageId={}", messageId, e);
+            }
+        }, delay, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -258,20 +320,23 @@ public class DataReliabilityService {
             }
 
             ReliableMessageWrapper wrapper = JSON.parseObject(messageJson, ReliableMessageWrapper.class);
-            String topic = pendingMessages.get(messageId).getTopic();
-
-            // 退避重试：指数退避策略
             MessageMeta meta = pendingMessages.get(messageId);
-            long delay = (long) Math.pow(2, meta.getRetryCount()) * 1000;
-            Thread.sleep(delay);
+            if (meta == null) {
+                log.warn("[可靠性服务] 重试跳过：本地消息元数据不存在: messageId={}", messageId);
+                return;
+            }
+            String topic = meta.getTopic();
+            if (topic == null || topic.isEmpty()) {
+                log.error("[可靠性服务] 重试跳过：消息主题缺失: messageId={}", messageId);
+                return;
+            }
 
-            // 重新发送
+            // 重新发送（退避等待已由调度器完成）
             sendToKafka(wrapper, topic, messageId);
-            log.info("[可靠性服务] 重试消息: messageId={}, retryCount={}, delay={}ms",
-                    messageId, meta.getRetryCount(), delay);
+            log.info("[可靠性服务] 重试消息: messageId={}, retryCount={}", messageId, meta.getRetryCount());
 
         } catch (Exception e) {
-            log.error("[可靠性服务] 重试异常: messageId={}, error={}", messageId, e.getMessage());
+            log.error("[可靠性服务] 重试异常: messageId={}", messageId, e);
         }
     }
 
@@ -345,10 +410,8 @@ public class DataReliabilityService {
      * 启动超时检测定时器
      */
     private void scheduleTimeoutCheck(String messageId) {
-        retryExecutor.submit(() -> {
+        timeoutScheduler.schedule(() -> {
             try {
-                Thread.sleep(messageTimeoutMs);
-
                 // 检查消息状态
                 String statusStr = (String) redisTemplate.opsForValue().get(MSG_STATUS_PREFIX + messageId);
                 MessageStatus status = statusStr != null ? MessageStatus.valueOf(statusStr) : null;
@@ -357,10 +420,10 @@ public class DataReliabilityService {
                 if (status != MessageStatus.CONFIRMED) {
                     handleMessageTimeout(messageId, status);
                 }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                log.error("[可靠性服务] 超时检测异常: messageId={}", messageId, e);
             }
-        });
+        }, messageTimeoutMs, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -403,6 +466,12 @@ public class DataReliabilityService {
                     String statusStr = (String) redisTemplate.opsForValue().get(MSG_STATUS_PREFIX + messageId);
                     MessageStatus status = statusStr != null ? MessageStatus.valueOf(statusStr) : null;
 
+                    // 状态缺失（Redis 已过期）时无法判定补偿动作，跳过并记录
+                    if (status == null) {
+                        log.warn("[可靠性服务] 补偿跳过：消息状态缺失: messageId={}", messageId);
+                        continue;
+                    }
+
                     // 根据状态进行不同的补偿处理
                     switch (status) {
                         case PENDING:
@@ -441,10 +510,15 @@ public class DataReliabilityService {
             }
 
             ReliableMessageWrapper wrapper = JSON.parseObject(messageJson, ReliableMessageWrapper.class);
+            String topic = pendingMessages.getOrDefault(messageId, new MessageMeta()).getTopic();
+            if (topic == null || topic.isEmpty()) {
+                log.error("[可靠性服务] 重发跳过：消息主题缺失: messageId={}", messageId);
+                return;
+            }
             MessageMeta meta = new MessageMeta();
             meta.setMessageId(messageId);
             meta.setDataId(wrapper.getDataId());
-            meta.setTopic(pendingMessages.getOrDefault(messageId, new MessageMeta()).getTopic());
+            meta.setTopic(topic);
             meta.setChecksum(wrapper.getChecksum());
             meta.setCreateTime(System.currentTimeMillis());
             meta.setStatus(MessageStatus.PENDING);
@@ -508,6 +582,26 @@ public class DataReliabilityService {
             }
         } catch (Exception e) {
             log.error("[可靠性服务] 设备离线检测异常", e);
+        }
+    }
+
+    // ==================== 本地缓存清理 ====================
+
+    /**
+     * 本地消息元数据保留时长（毫秒）：超过该时长仍未确认的元数据不再参与重试，直接清理
+     */
+    private static final long PENDING_META_RETENTION_MS = 3600000L;
+
+    /**
+     * 定期清理本地消息元数据，避免消息丢失/消费者未回调时 Map 无限增长
+     */
+    @Scheduled(fixedRate = 600000)
+    public void cleanupPendingMessages() {
+        try {
+            long threshold = System.currentTimeMillis() - PENDING_META_RETENTION_MS;
+            pendingMessages.entrySet().removeIf(entry -> entry.getValue().getCreateTime() < threshold);
+        } catch (Exception e) {
+            log.error("[可靠性服务] 本地消息元数据清理异常", e);
         }
     }
 
@@ -597,17 +691,16 @@ public class DataReliabilityService {
      * 延迟清理缓存
      */
     private void scheduleCacheCleanup(String messageId) {
-        retryExecutor.submit(() -> {
+        timeoutScheduler.schedule(() -> {
             try {
                 // 延迟1小时清理，确保不会被误删
-                Thread.sleep(3600000);
                 redisTemplate.delete(MSG_CONTENT_PREFIX + messageId);
                 redisTemplate.delete(MSG_STATUS_PREFIX + messageId);
                 log.debug("[可靠性服务] 清理消息缓存: messageId={}", messageId);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                log.warn("[可靠性服务] 清理消息缓存失败: messageId={}", messageId, e);
             }
-        });
+        }, 1, TimeUnit.HOURS);
     }
 
     /**
