@@ -157,10 +157,17 @@ class Environment:
 
         P0-6：配置文件值里的 ``${KEY:default}`` 占位符会按 Spring 的占位符
         解析语义展开（环境变量 > 已加载属性 > 默认值，最多递归 5 层）。
+
+        B1（2026-11-08 审阅）：环境变量分支必须**原样返回字符串**。
+        Spring 的 ``SystemEnvironmentPropertySource`` 永远返回 String，从不把
+        环境变量当 YAML 标量解析；此前这里调用了 ``_parse_scalar``，导致当
+        占位符名恰好等于松弛名（如 ``...MASTER_PASSWORD``）时口令被改写：
+        ``00123`` → ``123``、``true`` → ``True``、``null`` → 空串、
+        含 ``" #"`` 的值被截断。类型转换统一交给 ``value()`` 的目标类型完成。
         """
         for candidate in _relaxed_names(key):
             if candidate in os.environ:
-                return _parse_scalar(os.environ[candidate])
+                return os.environ[candidate]
         if key in self._properties:
             return self._resolve_placeholders(self._properties[key])
         return default

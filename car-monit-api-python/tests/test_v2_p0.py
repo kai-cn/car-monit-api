@@ -508,6 +508,35 @@ def test_environment_resolves_value_placeholders(tmp_path, monkeypatch) -> None:
     assert env.getProperty("db.password") == "s3cret"  # 环境变量最高优先
 
 
+def test_environment_env_values_are_never_yaml_parsed(monkeypatch) -> None:
+    """B1 回归：Spring 环境变量永远是原始字符串，不得按 YAML 标量改写。
+
+    典型受害场景是口令占位符名恰好等于松弛名
+    （``SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD``）：
+    ``00123`` 被改成 ``123``、``true`` 变 ``True``、``null`` 变空串、
+    含 ``" #"`` 被截断。这里逐一覆盖。
+    """
+    from org.springframework.core.env.Environment import Environment
+
+    env = Environment([])
+    cases = {
+        "00123": "00123",
+        "true": "true",
+        "null": "null",
+        "p@ss #word": "p@ss #word",
+        "  spaced  ": "  spaced  ",  # 环境变量值两端空格同样不得 trim
+    }
+    for raw, expected in cases.items():
+        monkeypatch.setenv("APP_PROBE_PASSWORD", raw)
+        assert env.getProperty("app.probe.password") == expected
+    # 目标类型转换仍按 @Value 语义工作（字符串原样、布尔/整数再转换）
+    monkeypatch.setenv("APP_PROBE_PASSWORD", "true")
+    assert env.value("${app.probe.password:false}", str) == "true"
+    assert env.value("${app.probe.password:false}", bool) is True
+    monkeypatch.setenv("APP_PROBE_PASSWORD", "00123")
+    assert env.value("${app.probe.password:0}", int) == 123
+
+
 def test_environment_local_overlay(tmp_path) -> None:
     from org.springframework.core.env.Environment import Environment
 
