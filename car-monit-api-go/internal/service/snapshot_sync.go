@@ -21,7 +21,6 @@ package service
 
 import (
 	"context"
-	"github.com/ruoyi/car-monit-api-go/internal/model"
 	"log/slog"
 	"strconv"
 	"sync"
@@ -29,6 +28,7 @@ import (
 
 	"github.com/ruoyi/car-monit-api-go/internal/cache"
 	"github.com/ruoyi/car-monit-api-go/internal/config"
+	"github.com/ruoyi/car-monit-api-go/internal/model"
 	"github.com/ruoyi/car-monit-api-go/internal/repo"
 	"github.com/ruoyi/car-monit-api-go/internal/utils"
 )

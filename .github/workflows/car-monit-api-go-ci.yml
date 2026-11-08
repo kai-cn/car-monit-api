@@ -1,7 +1,10 @@
 name: car-monit-api-go CI
 
-# 报告 02 P0-6：把 gofmt / vet / build / test 纳入门禁，摆脱「本地 Windows bat 单点」。
-# 只对 car-monit-api-go 子目录生效（仓库里还有其他语言版本的迁移目录）。
+# 报告 02 P0-6 + 本轮收尾：把 gofmt / goimports / vet / build / test / race / govulncheck
+# 全部纳入门禁，任一失败即阻断。只对 car-monit-api-go 子目录生效。
+#
+# 换行口径：Linux runner 以 LF 检出，gofmt/goimports 无假失败；
+# 本地 Windows 若 core.autocrlf=true，check.bat 会跳过 gofmt 并以本流水线为准。
 
 on:
   push:
@@ -19,8 +22,8 @@ defaults:
     working-directory: car-monit-api-go
 
 jobs:
-  build-test:
-    name: build / vet / test / gofmt
+  lint-build-test:
+    name: gofmt / goimports / vet / build / test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +37,17 @@ jobs:
         run: |
           out=$(gofmt -l cmd internal)
           if [ -n "$out" ]; then
-            echo "以下文件未格式化："
+            echo "::error::以下文件未格式化（本地执行 gofmt -w 修复）："
+            echo "$out"
+            exit 1
+          fi
+
+      - name: goimports（import 分组/未使用 import）
+        run: |
+          go install golang.org/x/tools/cmd/goimports@v0.30.0
+          out=$(goimports -l cmd internal)
+          if [ -n "$out" ]; then
+            echo "::error::以下文件 import 未整理（本地执行 goimports -w 修复）："
             echo "$out"
             exit 1
           fi
@@ -46,7 +59,24 @@ jobs:
         run: go vet ./...
 
       - name: go test
-        run: go test ./... -count=1
+        run: go test ./... -count=1       
+
+  race:
+    name: go test -race（并发关键路径）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: car-monit-api-go/go.mod
+          cache-dependency-path: car-monit-api-go/go.sum
+
+      # race detector 需要 cgo；ubuntu-latest 自带 gcc。
+      - name: go test -race
+        env:
+          CGO_ENABLED: "1"
+        run: go test -race ./... -count=1
 
   govulncheck:
     name: govulncheck（依赖安全）
@@ -62,5 +92,5 @@ jobs:
       - name: 安装 govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
 
-      - name: 扫描
+      - name: 扫描（发现可达漏洞即失败）
         run: govulncheck ./...

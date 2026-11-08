@@ -6,8 +6,6 @@ package model
 // 关键映射: 纯 POJO（无 @TableName）→ 无 gorm tag 的普通 struct；@Data → 导出字段；
 // DIFF: Lombok @Data 的 getter/setter 不再生成；Go 侧字段直接导出，JSON 名与 Java 字段名保持一致。
 
-import ()
-
 // CarParaVO 对应 Java 类 CarParaVO
 type CarParaVO struct {
 	Carlist      []CarVO    `json:"carlist"`      // JAVA L14 List<...> → slice

@@ -6,8 +6,6 @@ package model
 // 关键映射: @TableName(value='kafka_message_record', schema='jl_data01') → TableName()/Schema()；@TableId(id) → primaryKey；
 // DIFF: Lombok @Data 的 getter/setter 不再生成；Go 侧字段直接导出，JSON 名与 Java 字段名保持一致。
 
-import ()
-
 // KafkaMessageRecord 对应 Java 类 KafkaMessageRecord
 type KafkaMessageRecord struct {
 	Id          string     `json:"id" gorm:"column:id;primaryKey"`         // JAVA L29

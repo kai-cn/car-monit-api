@@ -6,8 +6,6 @@ package model
 // 关键映射: @TableName(value='ods_rt_szdn_snapshot_flow_provcapture_addcode', schema=None) → TableName()/Schema()；@TableId(bigId) → primaryKey；
 // DIFF: Lombok @Data 的 getter/setter 不再生成；Go 侧字段直接导出，JSON 名与 Java 字段名保持一致。
 
-import ()
-
 // OdsRtSzdnSnapshotFlowProvcaptureAddcode 对应 Java 类 OdsRtSzdnSnapshotFlowProvcaptureAddcode
 type OdsRtSzdnSnapshotFlowProvcaptureAddcode struct {
 	BigId                    *int64     `json:"bigId" gorm:"column:big_id;primaryKey"`                           // JAVA L30

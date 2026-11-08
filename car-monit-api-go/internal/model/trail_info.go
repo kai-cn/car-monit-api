@@ -12,8 +12,6 @@ package model
 // 这个字段是 ""、不是 null；changeTrailInfo 那条路径（请求体直接反序列化）才是 null。
 // 改成 *string 后赋值点必须显式写 model.Str("") 才能保住 ""。
 
-import ()
-
 // TrailInfo 对应 Java 类 TrailInfo
 type TrailInfo struct {
 	TrailUuid *string           `json:"trailUuid"` // JAVA L14
