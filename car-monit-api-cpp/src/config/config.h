@@ -158,6 +158,16 @@ public:
     std::string cron = "0 30 2 * * ?";
   } consistency;
 
+  // 多实例单活：启动时抢 Redis 分布式锁，只有 leader 执行调度与全量/增量同步。
+  // Redis 不可用时的行为由 fail_open 决定（默认 fail-closed：暂停调度，HTTP 继续服务）。
+  struct Cluster {
+    bool leader_election_enabled = true;
+    std::string leader_lock_key = "car-monit:leader";
+    int leader_ttl_ms = 30000;
+    int leader_renew_ms = 10000;
+    bool leader_fail_open = false;
+  } cluster;
+
   struct Reliability {
     int message_timeout_ms = 30000;
     int max_retry_count = 5;

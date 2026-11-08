@@ -245,6 +245,29 @@
   的线性成本仍存在，已在 COMPATIBILITY 标注为已知限制。
 - **可回退性**：上限常量集中在 `resolve_page`，可单独调整。
 
+## D-017 多实例单活：Redis 分布式锁 + fail-closed 降级
+
+- **决策**：启动时用 `SET key owner NX PX ttl` 抢 Redis 锁；只有 leader 执行
+  TrackTask/DataFlowTask/对账调度、快照全量/增量同步与 Kafka DB 重试扫描；
+  follower 仅提供 HTTP 读写接口，不执行后台任务。续期与释放用 Lua 脚本
+  “先比对 owner 再 PEXPIRE/DEL”，避免锁过期后被误删。
+- **参数**：`cluster.leader-election.enabled`（默认 true）、`key`（默认
+  `car-monit:leader`）、`ttl-ms`（默认 30000）、`renew-ms`（默认 10000，
+  约为 TTL 的 1/3）、`fail-open`（默认 false）。
+- **Redis 不可用时的行为**：
+  - `fail-open=false`（默认，fail-closed）：暂停调度与同步，HTTP 继续服务；
+    Redis 恢复后自动重新抢锁。
+  - `fail-open=true`：降级为单实例调度（多实例同时失联时可能重复执行，仅用于
+    可用性优先场景）。
+  - `enabled=false`：跳过选举，始终按单实例运行（本地开发/明确单机部署）。
+- **崩溃恢复**：进程崩溃不再续期，锁在 TTL 后自动过期；standby 每个续期周期
+  尝试抢锁并接管。收到停机信号时先 join 调度/同步线程，再释放锁。
+- **影响**：多实例部署不再重复触发定时任务与全量同步；HTTP 启动不依赖锁获取
+  成功。代价是 Redis 不可用时（fail-closed）后台任务暂停，且 follower 的
+  就绪检查只能代表 HTTP 可用。
+- **可回退性**：`cluster.leader-election.enabled=false` 即恢复原单实例行为。
+
+
 
 
 

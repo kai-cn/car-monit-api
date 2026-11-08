@@ -1,6 +1,7 @@
 #include "mq/kafka_producer.h"
 
 #include "cache/redis.h"
+#include "cluster/leader.h"
 #include "common/crypto.h"
 #include "common/datetime.h"
 #include "common/logging.h"
@@ -545,6 +546,11 @@ bool KafkaProducer::start(bool start_db_retry) {
     impl_->db_thread = std::thread([this] {
       auto& cfg = config::Config::instance();
       while (impl_->running.load()) {
+        // 多实例单活：DB 重试扫描只由 leader 执行，避免重复投递。
+        if (!cluster::LeaderElector::instance().is_leader()) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+          continue;
+        }
         bool failed = false;
         try {
           // KafkaProducerService#startRetryTask：status IN (0,2) 且 retry_count < max

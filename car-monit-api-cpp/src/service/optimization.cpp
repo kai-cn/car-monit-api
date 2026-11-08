@@ -1,6 +1,7 @@
 #include "service/optimization.h"
 
 #include "cache/redis.h"
+#include "cluster/leader.h"
 #include "common/datetime.h"
 #include "common/error.h"
 #include "common/logging.h"
@@ -1686,6 +1687,8 @@ void ensure_consistency_scheduler() {
         (void)month;
         if (h == hour && m == minute && s == second && day != last_day) {
           last_day = day;
+          // 多实例单活：非 leader 跳过本次对账（避免重复写入/重复告警）。
+          if (!cluster::LeaderElector::instance().is_leader()) continue;
           // detached 常驻线程：异常逃出会 terminate 进程，单次对账失败只记录。
           try {
             consistency_service().consistency_tick();

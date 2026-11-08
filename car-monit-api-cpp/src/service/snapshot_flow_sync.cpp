@@ -1,6 +1,7 @@
 #include "service/snapshot_flow_sync.h"
 
 #include "cache/redis.h"
+#include "cluster/leader.h"
 #include "common/datetime.h"
 #include "common/json.h"
 #include "common/logging.h"
@@ -181,6 +182,11 @@ void full_sync(const meta::EntityMeta& m, int batch_size, const std::string& top
 
     const std::string cols = columns_of(m);
     while (g_sync_running.load()) {
+      // 多实例单活：非 leader 不推进同步（停等，接管后从 Redis 游标继续）。
+      if (!cluster::LeaderElector::instance().is_leader()) {
+        if (!sleep_while_running(1000)) break;
+        continue;
+      }
       db::PgParams params;
       std::string sql = "SELECT " + cols + " FROM " + m.table;
       if (!last_sync_id.empty()) sql += " WHERE big_id > " + repo::bind_param(params, last_sync_id);
@@ -219,6 +225,10 @@ void incremental_sync(const meta::EntityMeta& m, int batch_size, long long inter
   auto& redis = cache::Redis::instance();
   const std::string cols = columns_of(m);
   while (g_sync_running.load()) {
+    if (!cluster::LeaderElector::instance().is_leader()) {
+      if (!sleep_while_running(1000)) break;
+      continue;
+    }
     try {
       std::optional<long long> last_sync_ms;
       if (auto v = redis.get(kLastSyncTimeKey)) last_sync_ms = decode_json_date(*v);

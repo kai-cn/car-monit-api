@@ -3,6 +3,7 @@
 #include "common/datetime.h"
 #include "common/logging.h"
 #include "common/worker_pool.h"
+#include "cluster/leader.h"
 #include "config/config.h"
 #include "scheduler/cron.h"
 #include "service/ops.h"
@@ -159,15 +160,17 @@ void start_schedulers() {
       const long long now = steady_now_ms();
       const scheduler::WallTime w = wall_now();
       const long long sec = timeutil::to_millis(timeutil::now()) / 1000;
+      // 多实例单活：非 leader 只推进时间游标、不执行任务，避免多实例重复触发。
+      const bool leader = cluster::LeaderElector::instance().is_leader();
       for (auto& j : jobs) {
         if (j->fixed_rate) {
           if (now >= j->next_due_ms) {
-            launch(j);
+            if (leader) launch(j);
             j->next_due_ms = now + j->interval_ms;
           }
         } else if (j->last_match != sec && scheduler::cron_match(j->cron, w)) {
           j->last_match = sec;
-          launch(j);
+          if (leader) launch(j);
         }
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(200));

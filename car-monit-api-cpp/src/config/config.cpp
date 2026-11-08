@@ -295,6 +295,17 @@ void Config::refresh_business() {
       yaml_.get_double("consistency.reconcile.drift-ratio", consistency.drift_ratio);
   consistency.cron = yaml_.get_str("consistency.reconcile.cron", consistency.cron);
 
+  cluster.leader_election_enabled = yaml_.get_bool("cluster.leader-election.enabled",
+                                                   cluster.leader_election_enabled);
+  cluster.leader_lock_key =
+      yaml_.get_str("cluster.leader-election.key", cluster.leader_lock_key);
+  cluster.leader_ttl_ms =
+      yaml_.get_int("cluster.leader-election.ttl-ms", cluster.leader_ttl_ms);
+  cluster.leader_renew_ms =
+      yaml_.get_int("cluster.leader-election.renew-ms", cluster.leader_renew_ms);
+  cluster.leader_fail_open =
+      yaml_.get_bool("cluster.leader-election.fail-open", cluster.leader_fail_open);
+
   reliability.message_timeout_ms =
       yaml_.get_int("reliability.message-timeout-ms", reliability.message_timeout_ms);
   reliability.max_retry_count =
@@ -425,6 +436,15 @@ void Config::apply_env_overrides() {
   if (auto v = env("CM_CORS_ALLOW_CREDENTIALS")) {
     std::string s = utils::to_lower(*v);
     cors.allow_credentials = s == "true" || s == "1" || s == "yes" || s == "on";
+  }
+  if (auto v = env("CM_LEADER_ELECTION_ENABLED")) {
+    std::string s = utils::to_lower(*v);
+    cluster.leader_election_enabled = !(s == "false" || s == "0" || s == "no" || s == "off");
+  }
+  if (auto v = env("CM_LEADER_LOCK_KEY")) cluster.leader_lock_key = *v;
+  if (auto v = env("CM_LEADER_FAIL_OPEN")) {
+    std::string s = utils::to_lower(*v);
+    cluster.leader_fail_open = s == "true" || s == "1" || s == "yes" || s == "on";
   }
 
   if (auto v = env("CM_LOG_LEVEL")) {
