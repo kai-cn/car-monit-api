@@ -456,6 +456,16 @@ def shared_redis_template() -> Any:
     return _SHARED_STATE["template"]
 
 
+def close_shared_redis_template() -> None:
+    """H6：关闭并重置进程级 RedisTemplate（应用优雅停机用，幂等）。"""
+    template = _SHARED_STATE.get("template")
+    _SHARED_STATE["url"] = None
+    _SHARED_STATE["template"] = None
+    close = getattr(template, "close", None)
+    if callable(close):
+        close()
+
+
 class RedisCache:
     """spring redis 工具类。
 

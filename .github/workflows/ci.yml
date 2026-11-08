@@ -51,8 +51,8 @@ jobs:
 
   integration:
     # P2：真实中间件集成测试（Redis/ES/Kafka service container；DB 需自备，默认跳过）
+    # H5：集成 job 是门禁，不允许 continue-on-error 掩盖红灯。
     runs-on: ubuntu-latest
-    continue-on-error: true
     services:
       redis:
         image: redis:7

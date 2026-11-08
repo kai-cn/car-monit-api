@@ -36,6 +36,7 @@ def main() -> int:
     env["APP_SCHEDULER_ENABLED"] = "false"
     env.pop("CAR_MONIT_REDIS_URL", None)
     env.pop("CAR_MONIT_ES_URL", None)
+    env.pop("CAR_MONIT_KAFKA_URL", None)
     failures: list[str] = []
     for script in scripts:
         result = subprocess.run(

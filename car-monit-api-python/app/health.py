@@ -22,7 +22,7 @@ from typing import Any, Callable, Optional
 
 log = logging.getLogger(__name__)
 
-__all__ = ["HealthRegistry", "health_registry", "health_verbose"]
+__all__ = ["HealthRegistry", "degraded_probe", "health_registry", "health_verbose"]
 
 STARTED_AT = _dt.datetime.now(tz=_dt.timezone.utc)
 
@@ -39,6 +39,28 @@ def health_verbose() -> bool:
     from app.runtime import runtime_mode
 
     return runtime_mode() != "prod"
+
+
+def degraded_probe(name: str, backend_factory: Callable[[], Any]) -> Callable[[], Any]:
+    """M6：把真实适配器的 ``degraded`` 状态接进健康检查。
+
+    * 后端不存在（未配置 URL）→ ``{"mode": "shim"}``，UP；
+    * 后端是内存实现（无 ``degraded`` 属性）→ ``{"mode": "memory"}``，UP；
+    * 真实后端处于熔断降级 → 抛 ``RuntimeError``（组件 DOWN，readiness 503）。
+    """
+
+    def probe() -> Any:
+        backend = backend_factory()
+        if backend is None:
+            return {"mode": "shim"}
+        if not hasattr(backend, "degraded"):
+            return {"mode": "memory"}
+        if bool(backend.degraded):
+            raise RuntimeError("%s 熔断降级中（真实服务不可用，已回落进程内替身）" % name)
+        return {"mode": "real"}
+
+    probe.__name__ = "%s_probe" % name
+    return probe
 
 
 class HealthRegistry:

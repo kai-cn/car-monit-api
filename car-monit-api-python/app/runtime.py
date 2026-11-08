@@ -27,7 +27,7 @@ from __future__ import annotations
 import os
 
 __all__ = ["RUNTIME_ENV", "ShimOperationError", "runtime_mode", "is_strict",
-           "reject_shim_operation", "startup_fail_fast"]
+           "reject_shim_operation", "startup_fail_fast", "metrics_enabled"]
 
 #: 环境变量名（Python 宿主层新增，与 CAR_MONIT_* 系列同族，见 README_PY）
 RUNTIME_ENV = "CAR_MONIT_RUNTIME"
@@ -43,6 +43,9 @@ _TRUTHY = {"1", "true", "yes", "on"}
 
 #: ``/docs`` 与 ``/openapi.json`` 开关（P0-6）
 DOCS_ENV = "CAR_MONIT_DOCS_ENABLED"
+
+#: ``/metrics`` 开关（M6：prod 默认收敛，避免指标端点裸奔）
+METRICS_ENV = "CAR_MONIT_METRICS_ENABLED"
 
 
 class ShimOperationError(RuntimeError):
@@ -82,6 +85,18 @@ def docs_enabled() -> bool:
     shim 开 / prod 关（Java 侧没有这两个端点，属生产收敛而非契约变更）。
     """
     value = (os.environ.get(DOCS_ENV) or "").strip().lower()
+    if value:
+        return value in _TRUTHY
+    return runtime_mode() != "prod"
+
+
+def metrics_enabled() -> bool:
+    """``/metrics`` 是否开放（M6）。
+
+    显式 ``CAR_MONIT_METRICS_ENABLED=true/false`` 优先；未设置时默认
+    shim 开 / prod 关（与 ``/docs`` 同一生产收敛策略）。关闭时端点返回 404。
+    """
+    value = (os.environ.get(METRICS_ENV) or "").strip().lower()
     if value:
         return value in _TRUTHY
     return runtime_mode() != "prod"

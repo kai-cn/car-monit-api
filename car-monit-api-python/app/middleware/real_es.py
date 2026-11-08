@@ -629,6 +629,14 @@ class RealEsBackend:
 
         return self._run("RestClient.performRequest", real, memory)
 
+    # ------------------------------------------------------------ 生命周期
+    def close(self) -> None:
+        """H6：关闭 elasticsearch-py 连接池。"""
+        try:
+            self.client.close()
+        except Exception:  # noqa: BLE001 - 关闭期尽力而为，不阻断应用退出
+            log.warning("[ES适配] 关闭连接池异常（忽略）", exc_info=True)
+
 
 # -------------------------------------------------------------------- 工厂
 _SHARED_ES: Dict[str, Any] = {"url": None, "backend": None}
@@ -649,3 +657,13 @@ def shared_es_backend() -> Optional[RealEsBackend]:
         _SHARED_ES["url"] = url
         _SHARED_ES["backend"] = RealEsBackend(url)
     return _SHARED_ES["backend"]
+
+
+def close_shared_es_backend() -> None:
+    """H6：关闭并重置进程级 ES 后端（应用优雅停机用，幂等）。"""
+    backend = _SHARED_ES.get("backend")
+    _SHARED_ES["url"] = None
+    _SHARED_ES["backend"] = None
+    close = getattr(backend, "close", None)
+    if callable(close):
+        close()

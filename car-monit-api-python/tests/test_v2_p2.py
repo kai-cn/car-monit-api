@@ -788,6 +788,56 @@ def test_kafka_send_success_future_completes() -> None:
     assert result.getProducerRecord() == ("topic-x", "k", {"a": 1})
 
 
+# ------------------------------------------------------- H6 优雅关闭
+def test_real_adapters_close_underlying_clients() -> None:
+    from app.middleware.real_es import RealEsBackend
+    from app.middleware.real_redis import RealRedisTemplate
+
+    class _Closable:
+        def __init__(self) -> None:
+            self.closed = 0
+
+        def close(self) -> None:
+            self.closed += 1
+
+    redis_client = _Closable()
+    template = RealRedisTemplate("redis://127.0.0.1:1/0", fallback="memory",
+                                 client=redis_client)
+    template.close()
+    template.close()
+    assert redis_client.closed == 2  # 幂等：重复关闭不报错
+
+    es_client = _Closable()
+    backend = RealEsBackend("http://127.0.0.1:1", fallback="memory",
+                            client=es_client)
+    backend.close()
+    assert es_client.closed == 1
+
+
+def test_shutdown_middleware_covers_all_backends(monkeypatch) -> None:
+    """H6：Kafka/ES/Redis/DB 都被关闭，且重复调用安全。"""
+    import app.db.engine as engine
+    import app.middleware as middleware
+    import app.middleware.real_es as real_es
+    import app.middleware.real_kafka as real_kafka
+    import com.ruoyi.common.core.redis.RedisCache as redis_cache
+
+    calls: list[str] = []
+    monkeypatch.setattr(real_kafka, "close_shared_kafka_producer",
+                        lambda: calls.append("kafka"))
+    monkeypatch.setattr(real_es, "close_shared_es_backend",
+                        lambda: calls.append("es"))
+    monkeypatch.setattr(redis_cache, "close_shared_redis_template",
+                        lambda: calls.append("redis"))
+    monkeypatch.setattr(engine, "close_database",
+                        lambda: calls.append("db"))
+
+    middleware.shutdown_middleware()
+    middleware.shutdown_middleware()
+    assert calls == ["kafka", "es", "redis", "db",
+                     "kafka", "es", "redis", "db"]
+
+
 def test_kafka_mount_factory(monkeypatch) -> None:
     from app.middleware.real_kafka import RealKafkaProducer
     from org.springframework.kafka.core.KafkaTemplate import KafkaTemplate

@@ -38,6 +38,11 @@ if str(_ROOT) not in sys.path:
 
 # P0-2：冒烟固定 shim 模式（替身可用）。
 os.environ.setdefault("CAR_MONIT_RUNTIME", "shim")
+# M2：冒烟必须隔离真实 ES/Kafka/Redis——否则开发机设了 CAR_MONIT_*_URL 时
+# 会把种子文档写进真实集群（甚至污染业务索引）。集成测试走 tests/business。
+for _backend_env in ("CAR_MONIT_REDIS_URL", "CAR_MONIT_ES_URL",
+                     "CAR_MONIT_KAFKA_URL"):
+    os.environ.pop(_backend_env, None)
 
 # P1-4：targeted 导出用例的前置条件（同 scripts/smoke_test.py）。
 import tempfile as _tempfile

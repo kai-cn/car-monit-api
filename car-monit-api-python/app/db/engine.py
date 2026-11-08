@@ -290,3 +290,12 @@ def get_database() -> Database:
             if _database is None:
                 _database = Database()
     return _database
+
+
+def close_database() -> None:
+    """H6：释放 SQLAlchemy 连接池（应用优雅停机用，幂等）。"""
+    global _database
+    with _database_lock:
+        database, _database = _database, None
+    if database is not None:
+        database.close()

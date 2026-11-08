@@ -289,3 +289,13 @@ def shared_kafka_producer() -> Optional[RealKafkaProducer]:
         _SHARED_PRODUCER["url"] = url
         _SHARED_PRODUCER["producer"] = RealKafkaProducer(url)
     return _SHARED_PRODUCER["producer"]
+
+
+def close_shared_kafka_producer() -> None:
+    """H6：flush 并重置进程级生产者（应用优雅停机用，幂等）。"""
+    producer = _SHARED_PRODUCER.get("producer")
+    _SHARED_PRODUCER["url"] = None
+    _SHARED_PRODUCER["producer"] = None
+    close = getattr(producer, "close", None)
+    if callable(close):
+        close()

@@ -59,6 +59,22 @@ def _register_health_probes() -> None:
     except Exception as error:  # noqa: BLE001
         log.debug("database probe not registered: %s", error)
 
+    # M6：三个真实适配器的 degraded 状态进入 readiness（熔断中 = 组件 DOWN）
+    try:
+        from app.health import degraded_probe, health_registry
+        from app.middleware.real_es import shared_es_backend
+        from app.middleware.real_kafka import shared_kafka_producer
+        from com.ruoyi.common.core.redis.RedisCache import shared_redis_template
+
+        health_registry.register("redis",
+                                 degraded_probe("redis", shared_redis_template))
+        health_registry.register("elasticsearch",
+                                 degraded_probe("elasticsearch", shared_es_backend))
+        health_registry.register("kafka",
+                                 degraded_probe("kafka", shared_kafka_producer))
+    except Exception as error:  # noqa: BLE001
+        log.debug("middleware probes not registered: %s", error)
+
 
 def _install_persistence() -> str:
     """MyBatis' ``SqlSessionFactoryBean`` + ``MapperScannerConfigurer``。
@@ -153,6 +169,13 @@ async def lifespan(_: FastAPI):
         shutdown_scheduler()
     except Exception:  # noqa: BLE001 - best effort, like a Spring destroy callback
         pass
+    # H6：Kafka/ES/Redis/DB 的连接池与缓冲区优雅释放（等价 @PreDestroy）
+    try:
+        from app.middleware import shutdown_middleware
+
+        shutdown_middleware()
+    except Exception:  # noqa: BLE001 - best effort, like a Spring destroy callback
+        pass
 
 
 app = FastAPI(
@@ -195,9 +218,17 @@ def health_live() -> dict[str, Any]:
 
 @app.get("/metrics", include_in_schema=False)
 def metrics() -> Response:
-    """P1-3：基础指标（Prometheus 文本格式，零依赖实现）。"""
+    """P1-3：基础指标（Prometheus 文本格式，零依赖实现）。
+
+    M6：与 ``/docs`` 同一收敛策略——prod 默认关闭（``CAR_MONIT_METRICS_ENABLED``
+    显式开启），关闭时按 Spring 错误体返回 404。
+    """
     from starlette.responses import PlainTextResponse
 
+    from app.runtime import metrics_enabled
+
+    if not metrics_enabled():
+        raise StarletteHTTPException(status_code=404)
     return PlainTextResponse(metrics_text(), media_type="text/plain; version=0.0.4")
 
 

@@ -44,6 +44,10 @@ if str(_ROOT) not in sys.path:
 
 # P0-2：自检固定 shim 模式（替身可用）；prod 模式守卫由 tests/test_v2_p0.py 覆盖。
 os.environ.setdefault("CAR_MONIT_RUNTIME", "shim")
+# M2：进程内自检必须隔离真实中间件（`--live` 模式只发 HTTP，不受影响）。
+for _backend_env in ("CAR_MONIT_REDIS_URL", "CAR_MONIT_ES_URL",
+                     "CAR_MONIT_KAFKA_URL"):
+    os.environ.pop(_backend_env, None)
 
 # P1-4：导出用例的前置条件——
 # 1) 导出目录指向临时目录（默认 /data/export 在 CI/开发机常不可写）；

@@ -728,3 +728,11 @@ class RealRedisTemplate:
             return self._memory.keys(pattern)  # type: ignore[return-value]
 
         return self._run("keys", real, memory)
+
+    # ------------------------------------------------------------- 生命周期
+    def close(self) -> None:
+        """H6：关闭 redis-py 连接池（容器滚动发布时释放连接）。"""
+        try:
+            self.client.close()
+        except Exception:  # noqa: BLE001 - 关闭期尽力而为，不阻断应用退出
+            log.warning("[Redis适配] 关闭连接池异常（忽略）", exc_info=True)

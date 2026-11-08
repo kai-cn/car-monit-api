@@ -130,6 +130,38 @@ def test_request_id_header_and_metrics_endpoint() -> None:
     assert 'app_responses_total{status="200"}' in text
 
 
+def test_metrics_endpoint_is_closed_in_prod_by_default(monkeypatch) -> None:
+    """M6：/metrics 与 /docs 同一收敛策略——prod 默认 404。"""
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    monkeypatch.delenv("CAR_MONIT_METRICS_ENABLED", raising=False)
+    monkeypatch.setenv("CAR_MONIT_RUNTIME", "prod")
+    client = TestClient(app, raise_server_exceptions=False)
+    assert client.get("/metrics").status_code == 404
+    monkeypatch.setenv("CAR_MONIT_METRICS_ENABLED", "true")
+    assert client.get("/metrics").status_code == 200
+
+
+def test_health_degraded_probe_wires_adapter_state() -> None:
+    """M6：未配置 URL / 内存模式为 UP；真实后端熔断中为 DOWN。"""
+    from app.health import degraded_probe
+
+    assert degraded_probe("redis", lambda: None)() == {"mode": "shim"}
+    assert degraded_probe("redis", lambda: object())() == {"mode": "memory"}
+
+    class _Down:
+        degraded = True
+
+    class _Up:
+        degraded = False
+
+    with pytest.raises(RuntimeError):
+        degraded_probe("redis", lambda: _Down())()
+    assert degraded_probe("es", lambda: _Up())() == {"mode": "real"}
+
+
 def test_metrics_counts_404_and_access_log(caplog) -> None:
     import logging
 
