@@ -33,7 +33,7 @@ public class SnapshotFlowSyncService {
     @Value("${sync.batch-size:1000}")
     private Integer batchSize;
 
-    @Value("${sync.full-sync-enabled:true}")
+    @Value("${sync.full-sync-enabled:false}")
     private Boolean fullSyncEnabled;
 
     @Value("${sync.incremental-sync-interval:60000}")
@@ -65,6 +65,11 @@ public class SnapshotFlowSyncService {
         try {
             // 从Redis获取上次同步的最后一条ID，支持断点续传
             String lastSyncId = (String) redisTemplate.opsForValue().get(LAST_SYNC_ID_KEY);
+            // 无水位说明从未执行过全量同步；此时不能从表头开始重推整张表，需人工通过运维接口初始化
+            if (lastSyncId == null || lastSyncId.trim().isEmpty()) {
+                log.warn("未找到全量同步水位 {}, 跳过启动全量同步；如需初始化请先写入该水位后再触发", LAST_SYNC_ID_KEY);
+                return;
+            }
 
             while (true) {
                 // 创建MyBatis-Plus查询条件构造器

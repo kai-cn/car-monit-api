@@ -249,7 +249,8 @@ mq:
 
 sync:
   batch-size: 1000
-  full-sync-enabled: true
+  # 全量同步属于一次性运维动作，默认关闭，仅在首次初始化时通过接口人工触发
+  full-sync-enabled: false
   incremental-sync-interval: 60000
   # 以下为旧版单表索引名配置，现已统一由 elasticsearch.index.* 解析，保留仅供兼容
   # Legacy single-table index names; now unified via elasticsearch.index.* (kept for compatibility)
