@@ -52,6 +52,8 @@ jobs:
   integration:
     # P2：真实中间件集成测试（Redis/ES/Kafka service container；DB 需自备，默认跳过）
     # H5：集成 job 是门禁，不允许 continue-on-error 掩盖红灯。
+    # 镜像/端口/健康检查与本地 car-monit-api-python/docker-compose.integration.yml
+    # 对齐（见 docs/LOCAL-ENV.md §4）。
     runs-on: ubuntu-latest
     services:
       redis:
@@ -79,6 +81,8 @@ jobs:
           KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://127.0.0.1:9092
           KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
           KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          # M-5：默认 1 分区，保证 key 散列/顺序断言稳定（用例内也会显式建 1 分区主题）
+          KAFKA_CFG_NUM_PARTITIONS: "1"
         options: >-
           --health-cmd "kafka-topics.sh --bootstrap-server 127.0.0.1:9092 --list"
           --health-interval 15s --health-timeout 10s --health-retries 10

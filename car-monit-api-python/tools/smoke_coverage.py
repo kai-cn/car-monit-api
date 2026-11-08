@@ -37,6 +37,10 @@ def main() -> int:
     env.pop("CAR_MONIT_REDIS_URL", None)
     env.pop("CAR_MONIT_ES_URL", None)
     env.pop("CAR_MONIT_KAFKA_URL", None)
+    for name in list(env):
+        if name.startswith(("CAR_MONIT_DB_", "CAR_MONIT_JSON_",
+                            "CAR_MONIT_TEST_")):
+            env.pop(name, None)
     failures: list[str] = []
     for script in scripts:
         result = subprocess.run(

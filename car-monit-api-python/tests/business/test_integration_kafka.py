@@ -33,6 +33,42 @@ PREFIX = "car-monit-p2-it-kafka-"
 RUN = uuid.uuid4().hex[:8]
 
 
+def _admin_client():
+    from confluent_kafka.admin import AdminClient
+
+    return AdminClient({"bootstrap.servers": KAFKA_URL})
+
+
+def _create_single_partition_topic(topic: str) -> None:
+    """M-5：显式建 1 分区主题，避免多分区导致 key 散列/顺序断言不稳定。"""
+    from confluent_kafka.admin import NewTopic
+
+    futures = _admin_client().create_topics(
+        [NewTopic(topic, num_partitions=1, replication_factor=1)])
+    for future in futures.values():
+        try:
+            future.result(timeout=10)
+        except Exception:  # noqa: BLE001 - 已存在时忽略
+            pass
+
+
+def _delete_topic(topic: str) -> None:
+    futures = _admin_client().delete_topics([topic])
+    for future in futures.values():
+        try:
+            future.result(timeout=10)
+        except Exception:  # noqa: BLE001 - 清理尽力而为
+            pass
+
+
+@pytest.fixture()
+def single_partition_topic():
+    topic = PREFIX + "sp-" + uuid.uuid4().hex[:8]
+    _create_single_partition_topic(topic)
+    yield topic
+    _delete_topic(topic)
+
+
 @pytest.fixture()
 def template(monkeypatch):
     monkeypatch.setenv("CAR_MONIT_KAFKA_URL", KAFKA_URL)
@@ -61,9 +97,9 @@ def _consume_all(topic: str, group: str, timeout: float = 15.0):
     return got
 
 
-def test_producer_roundtrip_and_callback(template) -> None:
+def test_producer_roundtrip_and_callback(template, single_partition_topic) -> None:
     """发送回调链路：ListenableFuture 在 broker ack 后完成（真实 offset）。"""
-    topic = PREFIX + "roundtrip-" + RUN
+    topic = single_partition_topic
     offsets, errors = [], []
     for i in range(5):
         template.send(topic, "key-%d" % i, "value-%d" % i).addCallback(
@@ -79,11 +115,11 @@ def test_producer_roundtrip_and_callback(template) -> None:
     assert [k.decode() for k, _, _ in got] == ["key-%d" % i for i in range(5)]
 
 
-def test_json_value_is_fastjson_bytes(template) -> None:
+def test_json_value_is_fastjson_bytes(template, single_partition_topic) -> None:
     """value 序列化与 Java/替身逐字节一致：fastjson camelCase JSON。"""
     from com.ruoyi.base.domain.OdsSzdnGantry import OdsSzdnGantry
 
-    topic = PREFIX + "json-" + RUN
+    topic = single_partition_topic
     entity = OdsSzdnGantry()
     entity.setId("g-1")
     entity.setGantryCode("G001")
@@ -134,7 +170,7 @@ def test_kafka_producer_config_business_chain(monkeypatch) -> None:
     assert errors == []
 
 
-def test_flink_consumer_group_offsets_and_incremental() -> None:
+def test_flink_consumer_group_offsets_and_incremental(single_partition_topic) -> None:
     """FlinkKafkaConsumer 真实路径：消费组 + 手动位点提交 + 二次运行只拿增量。"""
     from confluent_kafka import Consumer, Producer, TopicPartition
 
@@ -148,7 +184,7 @@ def test_flink_consumer_group_offsets_and_incremental() -> None:
         FlinkKafkaConsumer,
     )
 
-    topic = PREFIX + "flink-" + RUN
+    topic = single_partition_topic
     group = "p2-it-kafka-flink-" + RUN
 
     def _produce(values):

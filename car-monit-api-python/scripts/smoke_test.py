@@ -48,6 +48,10 @@ os.environ.setdefault("CAR_MONIT_RUNTIME", "shim")
 for _backend_env in ("CAR_MONIT_REDIS_URL", "CAR_MONIT_ES_URL",
                      "CAR_MONIT_KAFKA_URL"):
     os.environ.pop(_backend_env, None)
+for _env_name in list(os.environ):
+    if _env_name.startswith(("CAR_MONIT_DB_", "CAR_MONIT_JSON_",
+                             "CAR_MONIT_TEST_")):
+        os.environ.pop(_env_name, None)
 
 # P1-4：导出用例的前置条件——
 # 1) 导出目录指向临时目录（默认 /data/export 在 CI/开发机常不可写）；

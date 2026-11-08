@@ -4,7 +4,8 @@
 > 本文件只讲一件事：**怎么把它跑起来，以及你会踩哪些坑。**
 >
 > 设计细节看 [`MIGRATION_GUIDE.md`](MIGRATION_GUIDE.md)；
-> 行为差异看 [`COMPATIBILITY.md`](COMPATIBILITY.md)。
+> 行为差异看 [`COMPATIBILITY.md`](COMPATIBILITY.md)；
+> 本机环境与真实中间件集成测试 runbook 看 [`docs/LOCAL-ENV.md`](docs/LOCAL-ENV.md)。
 
 ---
 
@@ -457,6 +458,19 @@ powershell -ExecutionPolicy Bypass -File tools\run_checks.ps1
 | `tests/business/test_smoke_scripts.py` | 23 个迁移期冒烟脚本（子进程隔离，清空真实中间件 URL） |
 | `tests/business/test_sql_golden.py` | 54 条 statement 渲染 SQL 逐字节锁定 |
 | `tests/business/test_integration_db.py` | 真实 GaussDB 集成（`CAR_MONIT_TEST_DB=1` 开启，默认跳过） |
+
+### 真实中间件集成测试（Redis / ES / Kafka）
+
+默认全部 skip。磁盘、端口与启动顺序见 [`docs/LOCAL-ENV.md`](docs/LOCAL-ENV.md)；
+满足前置条件后一条命令：
+
+```powershell
+$env:CAR_MONIT_IT_DATA_DIR = "E:\car-monit-it-data"   # 剩余 ≥8GB 的卷
+powershell -ExecutionPolicy Bypass -File scripts\run_integration.ps1 -DataDir $env:CAR_MONIT_IT_DATA_DIR
+```
+
+只复用已运行的中间件（不启动容器）：`-SkipStart`；
+测试 Linux VM：`-SkipStart -ServiceHost 192.168.56.10`。
 
 ### 验证工具（比 pytest 更适合"改完看有没有弄坏"）
 

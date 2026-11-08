@@ -15,6 +15,8 @@ param(
 
 $ErrorActionPreference = "Continue"
 $root = Split-Path -Parent $PSScriptRoot
+# 固定独立的覆盖率数据文件，避免与其他会话并发写 .coverage 导致 WinError 32 假红
+$env:COVERAGE_FILE = Join-Path $root ".coverage.trae-local"
 $py = Join-Path $root ".venv\Scripts\python.exe"
 if (-not (Test-Path $py)) {
     # worktree 场景：不另建虚拟环境，回退主仓 .venv（worktree 根 <repo>-V2 与

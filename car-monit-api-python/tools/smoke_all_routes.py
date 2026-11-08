@@ -43,6 +43,11 @@ os.environ.setdefault("CAR_MONIT_RUNTIME", "shim")
 for _backend_env in ("CAR_MONIT_REDIS_URL", "CAR_MONIT_ES_URL",
                      "CAR_MONIT_KAFKA_URL"):
     os.environ.pop(_backend_env, None)
+# 低危复核：DB/JSON/集成开关也不得从开发环境泄漏进冒烟
+for _env_name in list(os.environ):
+    if _env_name.startswith(("CAR_MONIT_DB_", "CAR_MONIT_JSON_",
+                             "CAR_MONIT_TEST_")):
+        os.environ.pop(_env_name, None)
 
 # P1-4：targeted 导出用例的前置条件（同 scripts/smoke_test.py）。
 import tempfile as _tempfile

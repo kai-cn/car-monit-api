@@ -33,6 +33,10 @@ def test_smoke_script_passes(script: Path, tmp_path) -> None:
     env.pop("CAR_MONIT_REDIS_URL", None)       # 不做真实 Redis 穿透
     env.pop("CAR_MONIT_ES_URL", None)           # M2：冒烟不写真实 ES
     env.pop("CAR_MONIT_KAFKA_URL", None)        # M2：冒烟不连真实 Kafka
+    for name in list(env):
+        if name.startswith(("CAR_MONIT_DB_", "CAR_MONIT_JSON_",
+                            "CAR_MONIT_TEST_")):
+            env.pop(name, None)
     result = subprocess.run(
         [sys.executable, str(script)],
         cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8",
