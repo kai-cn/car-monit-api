@@ -32,6 +32,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
 #include <optional>
 #include <thread>
 
@@ -1021,6 +1022,87 @@ static void test_pagination_bounds() {
   CHECK(p.order_by == "envehicleid desc");
 }
 
+static void test_dict_cache_boundaries() {
+  using namespace cm::service;
+  set_dict_local_ttl_ms(300000);
+  invalidate_dict_cache();
+
+  // 命中：同 key 第二次不再构建，且返回同一份只读快照。
+  int builds = 0;
+  auto p1 = memoize_dict_map("unit:key1", [&](DictMap& m) {
+    ++builds;
+    m["a"] = cm::Json(1);
+  });
+  auto p2 = memoize_dict_map("unit:key1", [&](DictMap&) { ++builds; });
+  CHECK(builds == 1);
+  CHECK(p1 == p2);
+  CHECK(p1->count("a") == 1);
+
+  // TTL=0：立即过期，每次都重新构建。
+  set_dict_local_ttl_ms(0);
+  builds = 0;
+  memoize_dict_map("unit:key2", [&](DictMap&) { ++builds; });
+  memoize_dict_map("unit:key2", [&](DictMap&) { ++builds; });
+  CHECK(builds == 2);
+
+  // 显式失效：失效后重新构建。
+  set_dict_local_ttl_ms(300000);
+  invalidate_dict_cache();
+  builds = 0;
+  memoize_dict_map("unit:key3", [&](DictMap&) { ++builds; });
+  invalidate_dict_cache();
+  memoize_dict_map("unit:key3", [&](DictMap&) { ++builds; });
+  CHECK(builds == 2);
+
+  // 构建抛异常不得写入缓存，后续请求可重试成功。
+  invalidate_dict_cache();
+  builds = 0;
+  bool threw = false;
+  try {
+    memoize_dict_map("unit:bad", [&](DictMap&) {
+      ++builds;
+      throw std::runtime_error("boom");
+    });
+  } catch (const std::runtime_error&) {
+    threw = true;
+  }
+  CHECK(threw);
+  auto ok = memoize_dict_map("unit:bad", [&](DictMap& m) {
+    ++builds;
+    m["ok"] = true;
+  });
+  CHECK(builds == 2);
+  CHECK(ok && ok->count("ok") == 1);
+
+  // 并发未命中：允许重复构建，但不得崩溃/数据竞争，所有调用拿到一致结果。
+  invalidate_dict_cache();
+  std::atomic<int> concurrent_builds{0};
+  std::atomic<bool> all_ok{true};
+  std::vector<std::thread> threads;
+  threads.reserve(8);
+  for (int i = 0; i < 8; ++i) {
+    threads.emplace_back([&] {
+      auto m = memoize_dict_map("unit:conc", [&](DictMap& out) {
+        concurrent_builds.fetch_add(1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        out["v"] = 1;
+      });
+      if (!m || m->count("v") != 1) all_ok.store(false);
+    });
+  }
+  for (auto& t : threads) t.join();
+  CHECK(concurrent_builds.load() >= 1);
+  CHECK(all_ok.load());
+
+  // 批量回源失败降级：Redis/DB 均不可用时返回空对象而不是抛异常。
+  auto empty = weight_capture_map("uuid-a,uuid-b");
+  CHECK(empty.is_object());
+  CHECK(empty.empty());
+
+  set_dict_local_ttl_ms(300000);
+  invalidate_dict_cache();
+}
+
 static void test_redis_reconnect_no_deadlock() {
   // Redis 重连路径（审阅 §3.3 R7 + 代码复查，改用 hiredis 后保持覆盖）：
   // 1) 连接失败后不得泄漏 fd（hiredis redisFree 负责关闭）；
@@ -1204,6 +1286,7 @@ int main() {
   test_pg_pool_config_bounds();
   test_dao_param_binding();
   test_pagination_bounds();
+  test_dict_cache_boundaries();
   test_entity_select_columns();
   test_contract_routes_golden();
   test_pg_pool_connect_breaker();
