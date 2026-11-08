@@ -1023,7 +1023,7 @@ void wall_clock(int& year, int& month, int& day, int& hour, int& minute, int& se
 }
 
 std::string month_first_day(int year, int month) {
-  char buf[32];
+  char buf[64];
   std::snprintf(buf, sizeof(buf), "%04d-%02d-01 00:00:00", year, month);
   return std::string(buf);
 }

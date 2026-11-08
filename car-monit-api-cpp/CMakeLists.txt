@@ -33,6 +33,11 @@ if(MSVC)
   endif()
 else()
   set(CM_WARN_OPTIONS -Wall -Wextra -Wpedantic -Wno-unused-parameter -Wno-missing-field-initializers)
+  # GCC 12 的 -Wrestrict 在 libstdc++ 的 std::string 内联路径（insert/replace/assign）
+  # 上存在已知误报，配合 -Werror 会直接阻断 Linux 构建；仅对 GCC<13 关闭该项。
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13)
+    list(APPEND CM_WARN_OPTIONS -Wno-restrict)
+  endif()
   if(CM_WERROR)
     list(APPEND CM_WARN_OPTIONS -Werror)
   endif()
@@ -205,7 +210,15 @@ if(WIN32)
   target_link_libraries(carmonit_core PUBLIC ws2_32 crypt32 secur32)
 endif()
 if(TARGET rdkafka)
-  target_link_libraries(carmonit_core PUBLIC rdkafka)
+  # librdkafka 头文件按 SYSTEM 包含：其 GNU 语句表达式与返回类型限定符告警
+  # 在 GCC -Wpedantic/-Werror 下会阻断构建，且不属于本工程代码。
+  # 链接用 LINK_ONLY 只取库本身，避免 rdkafka 的 INTERFACE 头文件以 -I 传播回来
+  # （清空其 INTERFACE 会破坏 librdkafka++ 自身对 generated 目录的依赖）。
+  get_target_property(CM_RDKAFKA_INCLUDE_DIRS rdkafka INTERFACE_INCLUDE_DIRECTORIES)
+  if(CM_RDKAFKA_INCLUDE_DIRS)
+    target_include_directories(carmonit_core SYSTEM PUBLIC ${CM_RDKAFKA_INCLUDE_DIRS})
+  endif()
+  target_link_libraries(carmonit_core PUBLIC $<LINK_ONLY:rdkafka>)
   target_compile_definitions(carmonit_core PUBLIC CM_WITH_KAFKA=1)
 endif()
 
