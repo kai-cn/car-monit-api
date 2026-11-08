@@ -1,0 +1,63 @@
+name: deploy
+
+# CD 占位：两项决策未确认前不写任何真实部署逻辑，避免凭空编造服务器地址/凭据。
+#
+# 待确认（见 docs/CI-CD-PIPELINES.md §3）：
+#   1) 镜像推送目标：GHCR 还是私有 registry？
+#      - GHCR：用 GITHUB_TOKEN（需 packages: write 权限），镜像名 ghcr.io/<org>/<repo>。
+#      - 私有：需 secrets REGISTRY_HOST / REGISTRY_USERNAME / REGISTRY_PASSWORD。
+#   2) 部署目标形态：
+#      - K8s：需 KUBE_CONFIG_DATA（base64）+ 目标 namespace / workload 名。
+#      - 单机：需 SSH_HOST / SSH_USER / SSH_KEY + 目标目录与 compose 文件。
+#      - 只出 jar 与二进制：本 workflow 可直接删除，由 release.yml 产物替代。
+#
+# 确认后：配置对应 environment 的 secrets，并在仓库/环境 Variables 中显式设置
+#   CD_REGISTRY_CONFIGURED=true / CD_DEPLOY_TARGET_CONFIGURED=true
+# 再把下面两个 job 的 if 换成真实条件并补 steps；在此之前 guard job 会显式失败，
+# 防止误以为已部署。
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "目标环境"
+        required: true
+        type: choice
+        default: staging
+        options: [staging, production]
+      image-tag:
+        description: "要部署的镜像 tag（留空则用当前提交 SHA）"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  push-images:
+    name: push images (placeholder)
+    if: ${{ vars.CD_REGISTRY_CONFIGURED == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: TODO
+        run: echo "registry 未确认：确认后在此增加 docker/login-action + docker push"
+
+  deploy:
+    name: deploy (placeholder)
+    if: ${{ vars.CD_DEPLOY_TARGET_CONFIGURED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: TODO
+        run: echo "部署目标未确认：确认后按 K8s / 单机 / 仅制品 补对应 steps"
+
+  guard:
+    name: deployment blocked
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 说明缺口并阻断
+        shell: bash
+        run: |
+          echo "::error::CD 尚未启用：需要先确认『镜像推送目标』与『部署目标形态』两项决策（见 docs/CI-CD-PIPELINES.md §3）"
+          exit 1

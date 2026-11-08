@@ -41,7 +41,7 @@ PR / 主分支 / 发布三套入口只负责触发、路径分诊与汇总，不
    - 当前处理：只在主分支/发布做 `docker build` 校验，**不推送**。
 2. **部署目标形态**：K8s / 单机（SSH + docker compose / systemd）/ 只出 jar 与二进制不部署？
    - 影响：`KUBE_CONFIG_DATA` 或 `SSH_HOST/SSH_USER/SSH_KEY` 等 secrets、环境（staging/production）与审批策略。
-   - 当前处理：`deploy.yml` 仅占位，未写任何地址、凭据或猜测的部署命令。
+   - 当前处理：`deploy.yml` 仅占位，未写任何地址、凭据或猜测的部署命令；用 `vars.CD_REGISTRY_CONFIGURED` / `vars.CD_DEPLOY_TARGET_CONFIGURED` 作显式启用开关，未设置时占位 job 跳过、guard job 阻止误操作。
 
 ## 4. 现状缺口（不在本任务中顺手修）
 
@@ -63,7 +63,7 @@ PR / 主分支 / 发布三套入口只负责触发、路径分诊与汇总，不
 
 | 项 | 状态 |
 | --- | --- |
-| YAML 语法 | 本机 PyYAML 解析通过（见提交前自检） |
+| YAML 语法 | 本机 PyYAML 解析通过；actionlint 0 findings（9 个 workflow，含常量 `if` 检查） |
 | GitHub 实跑 | **未验证**：未 push，未在远端触发 |
 | 本地长构建/全量测试 | **未执行**（按用户要求，重启前不做） |
 | Rust 流水线 | **已写好但不会触发**（目录被忽略、未入库） |

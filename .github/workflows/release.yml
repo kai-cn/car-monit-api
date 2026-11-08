@@ -1,0 +1,126 @@
+name: release
+
+# 发布流水线：tag v*.*.* 触发，产出可下载制品（jar / Windows exe / Go 与 Rust 二进制 / Python 镜像 tar.gz）。
+# 不推送镜像：registry（GHCR / 私有）尚未确认，见 docs/CI-CD-PIPELINES.md §3。
+on:
+  push:
+    tags: ["v*.*.*"]
+  # 手动触发时请在 UI 里选择 tag 作为 ref，保证各语言 checkout 到同一提交。
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # 仅发布入口需要写 Release；其他入口保持只读
+
+jobs:
+  presence:
+    name: presence
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      rust: ${{ steps.check.outputs.rust }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 检查 car-monit-api-rust 是否已入库
+        id: check
+        shell: bash
+        run: |
+          if [ -d car-monit-api-rust ]; then
+            echo "rust=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "rust=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::car-monit-api-rust 未入库（.gitignore L77），跳过 Rust 发布产物"
+          fi
+
+  java:
+    name: java
+    uses: ./.github/workflows/_java.yml
+    with:
+      mode: release
+      jdk-version: "8"
+
+  cpp:
+    name: cpp
+    uses: ./.github/workflows/_cpp.yml
+    with:
+      mode: release
+
+  go:
+    name: go
+    uses: ./.github/workflows/_go.yml
+    with:
+      mode: release
+
+  python:
+    name: python
+    uses: ./.github/workflows/_python.yml
+    with:
+      mode: release
+      run-integration: true
+
+  rust:
+    name: rust
+    needs: presence
+    if: needs.presence.outputs.rust == 'true'
+    uses: ./.github/workflows/_rust.yml
+    with:
+      mode: release
+
+  publish:
+    name: publish GitHub Release
+    if: always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+    needs: [presence, java, cpp, go, python, rust]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: java-jar-${{ github.sha }}
+          path: staging/java
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: cpp-windows-x64-${{ github.sha }}
+          path: staging/cpp
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: go-linux-amd64-${{ github.sha }}
+          path: staging/go
+
+      - uses: actions/download-artifact@v4
+        if: needs.rust.result == 'success'
+        with:
+          name: rust-linux-amd64-${{ github.sha }}
+          path: staging/rust
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-image-${{ github.sha }}
+          path: staging/python
+
+      - name: 汇总发布文件并生成校验和
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp staging/java/*.jar dist/
+          cp staging/cpp/*.exe dist/
+          cp staging/go/api dist/car-monit-api-go-linux-amd64
+          if [ -f staging/rust/car-monit-api-rust ]; then
+            cp staging/rust/car-monit-api-rust dist/
+          fi
+          cp staging/python/*.tar.gz dist/
+          cd dist && sha256sum * > SHA256SUMS && ls -lh
+
+      - name: 发布到 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          gh release view "$RELEASE_TAG" >/dev/null 2>&1 || gh release create "$RELEASE_TAG" --generate-notes --title "$RELEASE_TAG"
+          gh release upload "$RELEASE_TAG" dist/* --clobber
