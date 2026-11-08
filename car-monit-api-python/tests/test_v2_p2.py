@@ -142,6 +142,30 @@ def test_shared_template_factory_switches_by_env(monkeypatch) -> None:
 
 
 # ============================================================== ES 适配（P2-3）
+def test_es_response_decimals_are_parsed_exactly() -> None:
+    """H1 回归：真实 ES 响应用 parse_float=Decimal，金额不先降成 float。"""
+    from decimal import Decimal
+
+    from app.middleware.real_es import _DECIMAL_SERIALIZER, _build_search_response
+    from com.alibaba.fastjson2.JSON import JSON
+    from com.ruoyi.base.domain.OdsLwzxsfsjFeeRecords01 import OdsLwzxsfsjFeeRecords01
+
+    raw = _DECIMAL_SERIALIZER.loads(
+        '{"hits":{"total":{"value":1},"hits":[{"_index":"fee_records","_id":"1",'
+        '"_score":1.0,"_source":{"fee":1.50,'
+        '"payfee":12345678901234567890.12}}]}}')
+    source_map = raw["hits"]["hits"][0]["_source"]
+    assert isinstance(source_map["fee"], Decimal)
+    assert str(source_map["fee"]) == "1.50"
+
+    response = _build_search_response(raw, with_scroll=False)
+    source_text = response.getHits().getHits()[0].getSourceAsString()
+    assert '"fee":1.50' in source_text
+    entity = JSON.parseObject(source_text, OdsLwzxsfsjFeeRecords01)
+    assert entity.getFee() == Decimal("1.50")
+    assert entity.getPayfee() == Decimal("12345678901234567890.12")
+
+
 def test_es_translate_query_tree() -> None:
     from app.middleware.real_es import translate_query
     from org.elasticsearch.index.query.QueryBuilders import QueryBuilders

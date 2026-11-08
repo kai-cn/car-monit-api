@@ -87,7 +87,9 @@ class JSON(object):
             return JSONObject(dict(text))
         if isinstance(text, (list, tuple)):
             return JSONArray(list(text))
-        raw = _json.loads(text)
+        # P1-1/H1：fastjson 默认把小数解析为 BigDecimal；用 parse_float=Decimal
+        # 从文本层就保住 scale（1.50 不会先变成 float 1.5 再还原）。
+        raw = _json.loads(text, parse_float=Decimal)
         if isinstance(raw, dict):
             return JSONObject(raw)
         if isinstance(raw, list):
@@ -102,7 +104,7 @@ class JSON(object):
         if isinstance(text, (dict, JSONObject)):
             raw = dict(text)
         else:
-            raw = _json.loads(text)
+            raw = _json.loads(text, parse_float=Decimal)
         if clazz is None:
             return JSONObject(raw) if isinstance(raw, dict) else raw
         return _convert(raw, clazz)
@@ -112,7 +114,7 @@ class JSON(object):
         """等价 `parseArray(String)` / `parseArray(String, Class<T>)`。"""
         if text is None:
             return JSONArray()
-        raw = _json.loads(text) if isinstance(text, str) else list(text)
+        raw = _json.loads(text, parse_float=Decimal) if isinstance(text, str) else list(text)
         if clazz is None:
             return JSONArray(raw)
         return JSONArray(_convert(item, clazz) for item in raw)
@@ -233,6 +235,19 @@ def _convert(value: Any, target: Any) -> Any:
         if isinstance(value, bool):
             return value
         return str(value).strip().lower() in ("true", "1", "y", "yes")
+
+    if target is Decimal:
+        # H1：fastjson 的 BigDecimal 目标类型。json.loads 已用 parse_float=Decimal
+        # 保住文本 scale；整数/字符串同样按十进制精确构造（float 仅作最后兜底，
+        # 因为它在进入本函数前已经丢失精度）。
+        if isinstance(value, Decimal):
+            return value
+        if isinstance(value, bool):
+            return value  # Java 不支持 boolean → BigDecimal，保持宽松（见模块注释第 5 条）
+        try:
+            return Decimal(str(value))
+        except (ArithmeticError, TypeError, ValueError):
+            return value
 
     if target in (int, float, str):
         if isinstance(value, target):

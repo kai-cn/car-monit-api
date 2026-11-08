@@ -47,6 +47,23 @@ def test_fastjson_writes_exact_decimal_text() -> None:
     assert '"fee":1.50' in text, text
 
 
+def test_fastjson_json_entity_json_roundtrip_is_byte_identical() -> None:
+    """H1 回归：JSON 文本 → 实体 → JSON 文本必须逐字节一致。
+
+    覆盖两类此前会失真的形态：带 scale 的小数（``1.50`` 不能变 ``1.5``）
+    与超出 double 精度的大数（不能变科学计数法）。
+    """
+    from com.alibaba.fastjson2.JSON import JSON
+    from com.ruoyi.base.domain.OdsLwzxsfsjFeeRecords01 import OdsLwzxsfsjFeeRecords01
+
+    text = '{"fee":1.50,"payfee":12345678901234567890.12}'
+    entity = JSON.parseObject(text, OdsLwzxsfsjFeeRecords01)
+    assert isinstance(entity.getFee(), Decimal)
+    assert str(entity.getFee()) == "1.50"          # scale 保留
+    assert str(entity.getPayfee()) == "12345678901234567890.12"
+    assert JSON.toJSONString(entity) == text        # 逐字节一致
+
+
 def test_bigdecimal_result_type_maps_to_decimal() -> None:
     from app.db.proxy import resolve_type
     from app.db.xml_mapper import coerce_value

@@ -55,10 +55,12 @@ import logging
 import os
 import re
 import time
+from decimal import Decimal
 from typing import Any, Callable, Dict, List, Optional
 
 import elasticsearch as es_py
 import elasticsearch.exceptions as es_exceptions
+from elasticsearch.serializer import JSONSerializer
 
 from org.elasticsearch.ElasticsearchException import index_not_found_exception
 from org.elasticsearch.action.bulk.BulkItemResponse import BulkItemResponse
@@ -106,6 +108,34 @@ log = logging.getLogger(__name__)
 
 #: 熔断后多久半开重试真实 ES（秒）
 _RETRY_SECONDS = 60.0
+
+
+class _DecimalJSONSerializer(JSONSerializer):
+    """H1：响应解析阶段保留十进制精度。
+
+    elasticsearch-py 默认 ``json.loads`` 会把 ``1.50`` 变成 float ``1.5``；
+    金额字段在重建 ``SearchHit`` 之前就已丢 scale。这里只在**读响应**时启用
+    ``parse_float=Decimal``，写请求仍走父类（Decimal 由父类 default 转 float）。
+    """
+
+    def loads(self, s: Any) -> Any:
+        try:
+            return json.loads(s, parse_float=Decimal)
+        except (ValueError, TypeError) as error:
+            raise es_exceptions.SerializationError(s, error)
+
+
+#: 进程共享的响应反序列化器（无状态，可安全复用）
+_DECIMAL_SERIALIZER = _DecimalJSONSerializer()
+
+
+def _dump_source(value: Any) -> str:
+    """``_source`` → JSON 文本；Decimal 输出精确十进制（不降级为 float）。"""
+    from com.alibaba.fastjson2.JSON import JSON
+
+    return JSON.toJSONString(value)
+
+
 #: ``no such index [xxx]`` 的 reason 解析（保持替身的异常消息逐字一致）
 _NO_SUCH_INDEX = re.compile(r"no such index \[([^\]]+)\]")
 
@@ -246,7 +276,7 @@ def _build_search_response(raw: Dict[str, Any],
     inner_hits = hits_raw.get("hits") or []
     hits = [
         SearchHit(hit.get("_index", ""), str(hit.get("_id")),
-                  json.dumps(hit.get("_source") or {}, ensure_ascii=False),
+                  _dump_source(hit.get("_source") or {}),
                   hit.get("_score") if hit.get("_score") is not None else 1.0)
         for hit in inner_hits
     ]
@@ -329,7 +359,8 @@ class RealEsBackend:
         self._url = url
         self._fallback = fallback or es_fallback_policy()
         self.client = client or es_py.Elasticsearch(
-            [url], timeout=30, max_retries=0, retry_on_timeout=False)
+            [url], timeout=30, max_retries=0, retry_on_timeout=False,
+            serializer=_DECIMAL_SERIALIZER)
         self._down = False
         self._down_since = 0.0
 
