@@ -85,7 +85,7 @@ docker push registry.example.com/car-monit-api:<ver>-<sha>
 2. 冒烟：
    - `GET /health` 返回 200，`status=UP`（ES 未接入允许 `UNKNOWN`）；
    - `GET /metrics?format=prometheus` 可抓取；
-   - 非 DB 端点（如 `GET /api/v1/large/scale-level`）返回 200；
+   - 非 DB 端点（如 `GET /progressive/scale-level`）返回 200；
    - 至少一个 DB 列表接口返回数据；
    - 日志无认证失败、无未捕获异常。
 3. 观察 15–30 分钟：错误率、P99、依赖 UP、线程池队列、内存。

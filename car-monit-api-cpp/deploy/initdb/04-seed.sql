@@ -5,9 +5,9 @@
 -- 列名与 02-placeholder-tables.sql 保持一致。
 -- =============================================================================
 
-INSERT INTO jl_data01.ods_szdn_service (agent_pk, fwqbm, fwqmc, business_date)
+INSERT INTO jl_data01.ods_szdn_service (id, service_code, service_name, business_date)
 VALUES ('1', 'SVC001', '本地联调示例服务', CURRENT_TIMESTAMP)
-ON CONFLICT (agent_pk) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO jl_data01.ods_szdn_gantry (id, gantry_code, gantry_name, road_code, section_code)
 VALUES ('gantry-1', 'G001', '示例门架', 'R001', 'S001')
