@@ -28,11 +28,6 @@ on:
         type: choice
         default: java
         options: [java, python, go, cpp, rust]
-      image-tag:
-        description: "镜像 tag；留空则使用 sha-<7位短哈希>"
-        required: false
-        type: string
-        default: ""
 
 permissions:
   contents: read
@@ -82,7 +77,6 @@ jobs:
         shell: bash
         env:
           LANG_INPUT: ${{ inputs.language }}
-          TAG_INPUT: ${{ inputs.image-tag }}
           K8S_NAMESPACE: ${{ vars.K8S_NAMESPACE }}
           K8S_DEPLOYMENT: ${{ vars.K8S_DEPLOYMENT }}
           K8S_CONTAINER: ${{ vars.K8S_CONTAINER }}
@@ -97,10 +91,8 @@ jobs:
             *) echo "::error::未知语言: $LANG_INPUT"; exit 1 ;;
           esac
 
-          tag="$TAG_INPUT"
-          if [ -z "$tag" ]; then
-            tag="sha-${GITHUB_SHA::7}"
-          fi
+          # 固定使用本次提交的短哈希标签，保证部署到可追溯的镜像
+          tag="sha-${GITHUB_SHA::7}"
 
           {
             echo "image=${REGISTRY}/${{ github.repository_owner }}/${name}:${tag}"
@@ -121,7 +113,6 @@ jobs:
     with:
       language: ${{ inputs.language }}
       push: true
-      extra-tag: ${{ needs.precheck.outputs.tag }}
 
   deploy:
     name: deploy to ${{ inputs.environment }}

@@ -9,7 +9,7 @@
 #     避免 Alpine/musl 与 Spring Boot 2.4.5 原生依赖的兼容风险。
 # 运行期配置：application.yml 已打入 jar；口令/连接串由 Spring 环境变量覆盖，
 # 镜像内不写入任何真实凭据。
-FROM maven:3.9-eclipse-temurin-8 AS build
+FROM maven:3.9.9-eclipse-temurin-8 AS build
 
 WORKDIR /build
 

@@ -50,6 +50,8 @@ jobs:
           go build -o bin/api ./cmd/api
 
       - name: go test（race + 覆盖率）
+        env:
+          CGO_ENABLED: "1"   # -race 需要 cgo；GitHub runner 自带 gcc
         run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
 
       - name: 覆盖率摘要

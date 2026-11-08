@@ -13,7 +13,7 @@
 # 由 K8s 挂载到 /app/config/application.yaml，或用 CAR_MONIT_CONFIG 覆盖路径。
 # 注意：car-monit-api-rust/ 当前被根 .gitignore 忽略、未在 master 入库；
 # CI 仅在构建上下文存在时才构建（不存在则显式跳过，不产出假镜像）。
-FROM rust:1.90-slim-bookworm AS build
+FROM rust:1.90.0-slim-bookworm AS build
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \

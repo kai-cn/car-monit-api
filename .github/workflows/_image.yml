@@ -19,11 +19,6 @@ on:
         required: false
         type: boolean
         default: true
-      extra-tag:
-        description: "额外显式 tag（deploy 指定 image-tag 时使用）；留空则不加"
-        required: false
-        type: string
-        default: ""
 
 permissions:
   contents: read
@@ -89,7 +84,6 @@ jobs:
           tags: |
             type=sha,prefix=sha-,format=short
             type=semver,pattern={{version}}
-            type=raw,value=${{ inputs.extra-tag }},enable=${{ inputs.extra-tag != '' }}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
 
       - name: 构建并推送

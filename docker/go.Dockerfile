@@ -10,7 +10,7 @@
 #
 # 运行期配置：镜像不打包 configs/config.yaml（仓库副本含连接信息）。
 # 由 K8s 挂载到 /app/configs/config.yaml；也可用 --config 覆盖。
-FROM golang:1.24-bookworm AS build
+FROM golang:1.24.1-bookworm AS build
 
 ENV CGO_ENABLED=0
 

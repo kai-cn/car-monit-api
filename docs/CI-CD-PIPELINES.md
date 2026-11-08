@@ -9,7 +9,7 @@
 | 项目 | 结论 |
 | --- | --- |
 | 远端 | `origin https://github.com/kai-cn/car-monit-api.git` |
-| 当前分支 | `master`（本地）；已推送到 `origin/master`（`5c8b89a`，快进）。**远端默认分支仍是 `main`**（`git ls-remote --symref origin HEAD`），本机无 gh/凭据无法修改，需在 GitHub Settings 手动改为 `master` |
+| 当前分支 | `master`（本地）；已推送到 `origin/master`（`dc06f3a`，快进）。远端默认分支已由用户在网页改为 **`master`**（`git ls-remote --symref origin HEAD` 已确认），CI 触发/PR 基线口径一致 |
 | 分支口径 | 所有 workflow 的触发/PR 基线统一为 `master`，不再保留 `main` 兼容分支 |
 | 仓库形态 | **单仓库多目录**：`car-monit-api-cpp/go/python/rust` 均无独立 `.git`，非 submodule（无 `.gitmodules`） |
 | Rust 目录 | 仍被根 [.gitignore L77](../.gitignore) `car-monit-api-rust/` **整体忽略**，`git ls-files` 为空 → 该语言流水线**当前不会在 GitHub 触发**（代码写好后需先取消忽略并入库） |
@@ -71,7 +71,7 @@ PR / 主分支 / 发布三套入口只负责触发、路径分诊与汇总，不
 
 ## 7. 启用方式（操作提示）
 
-1. 推送后到仓库 Settings → Branches 将默认分支改为 **`master`**（当前远端 HEAD 指向 `main`），再把必需检查指向 **`PR Gate`**（旧 `ci / gates` 检查名随 `ci.yml` 移除而消失）。
+1. 默认分支已改为 **`master`**（远端 HEAD 已确认）；到 Settings → Branches 给 `master` 配保护规则，必需检查指向 **`PR Gate`**（旧 `ci / gates` 检查名随 `ci.yml` 移除而消失）。
 2. Rust 入库：从 `.gitignore` 删除 L77，`git add car-monit-api-rust`，确认 `Cargo.lock` 一并提交。
 3. CD：在 GitHub Environment 配 `secrets.KUBE_CONFIG` 与 `vars.K8S_NAMESPACE/K8S_DEPLOYMENT/K8S_CONTAINER/K8S_IMAGE_PULL_SECRET`；首次部署先按 §10.2 建 imagePullSecret 并确保 Deployment 引用它。
 
@@ -174,3 +174,46 @@ kubectl -n "$K8S_NAMESPACE" patch deployment "$K8S_DEPLOYMENT" --type=merge \
   1. 把主副本最新修改**逐文件审查后**提交进 `car-monit-api-rust`（注意分支上还有 48 个主副本没有的验证资产，不能整体覆盖）；
   2. 或在文档声明该分支为历史快照，CI 不作为当前实现门禁。
 - 禁止静默覆盖推送。
+
+## 12. Actions 首轮失败修复（2026-11-08，静态定位）
+
+> 无 `gh`、无 `GH_TOKEN`/`GITHUB_TOKEN`、未登录浏览器访问私有仓库 Actions 均为 404，
+> **拿不到 run/job 日志**；以下为本地复现 + workflow 静态审查结果，未编造失败原因。
+
+### 12.1 确定会失败（已修）
+
+| 问题 | 证据 | 修复 |
+| --- | --- | --- |
+| Python `check_mappers` 红 | 本地跑 `tools/check_mappers.py`：`OdsLwzxsfsjFeeRecords01Mapper.xml`、`ZdataTrailFittingMapper.xml` 与 Java 源漂移 | 跑 `tools/sync_mapper_xml.py` 逐字节同步（22 个 XML 一致） |
+| Python `pytest` 红 | `tests/business/test_sql_golden.py` 第 353 行语句顺序/内容不一致（同步 XML 后暴露） | `CAR_MONIT_UPDATE_GOLDEN=1 pytest tests/business/test_sql_golden.py` 重生成 golden 并复跑通过 |
+
+### 12.2 高概率失败（已加固）
+
+| 问题 | 原因 | 修复 |
+| --- | --- | --- |
+| Python 集成 Kafka 拉不起来 | `bitnami/kafka:3.7` 在 2025 年后已下架/迁移到 legacy，私有 runner 上会 ImagePull 失败 | 换 `apache/kafka:3.9.1`（KRaft 单节点 + 官方健康检查路径） |
+| Go `-race` 可能在 runner 上失败 | 未显式设置 `CGO_ENABLED`，若环境默认 0 则 `-race requires cgo` | test step 显式 `CGO_ENABLED=1` |
+| 镜像额外 tag 解析 | `type=raw,value=,enable=false` 的空 value 在 metadata-action 上是脆弱写法 | 删除 `extra-tag`，deploy 固定使用 `sha-<7位短哈希>` |
+| 基础镜像浮动 tag 漂移 | `maven:3.9-...`、`golang:1.24-...`、`rust:1.90-...` 可能指向不同 patch | 固定 `maven:3.9.9-eclipse-temurin-8`、`golang:1.24.1-bookworm`、`rust:1.90.0-slim-bookworm` |
+| 手动 dispatch 的 PR 流程跑 C++ | master 只有 11 个 C++ 文件，手动触发会直接失败 | `pr.yml` 增加 `cpp-present` 检查，缺失时跳过 |
+
+### 12.3 只是不规范 / 需说明
+
+- `paths-filter` 仅用于 `pull_request`，未在 `push` 上使用，不涉及 `fetch-depth: 0` 问题。
+- `services` 其余镜像（`redis:7`、`elasticsearch:7.17.13`）健康检查与端口映射未改；无 MySQL。
+- `PR Gate` / `Master Gate` 只在 `failure`/`cancelled` 时红；skip 视为通过，符合预期。
+- 镜像 job 仍依赖 GHCR `packages: write`；若仓库策略禁止，需管理员放开，否则 master/release 会红。
+- 本地无 Docker，镜像构建仍未实测；Java 本地 `mvn clean` 因 jar 被占用失败，但 `mvn compile` 成功，CI 全新 runner 不受影响。
+
+### 12.4 本地验证结果（修复后）
+
+| 检查 | 结果 |
+| --- | --- |
+| Python `pytest`（含 golden） | 215 passed / 19 skipped |
+| Python `check_mappers` | 22 个 XML 与 Java 源一致 |
+| Python `smoke_coverage` | 23/23 ok |
+| Python `smoke_test` | 28/28 pass |
+| Python `smoke_all_routes` | 85 路由，5xx=0 |
+| Python 业务覆盖率 | 67.6%（≥65% 门禁） |
+| Go `gofmt` / `go vet` / `go build` / `go test` | 全部通过（race 因本机无 gcc 未跑） |
+| Java `mvn compile`（JDK 8 / Maven 3.9.9） | BUILD SUCCESS |

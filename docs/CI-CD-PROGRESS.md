@@ -18,11 +18,12 @@
 | 8 | GHCR 推送：`_image.yml` + master/release 接入，sha/semver/latest | 完成 | 8b547ac |
 | 9 | K8s 部署：deploy.yml（kubectl set image + rollout + imagePullSecret 校验） | 完成 | f43e6c1 |
 | 10 | CD 实跑验证（需集群/凭据） | **未验证** | - |
+| 11 | Actions 首轮失败静态修复（Mapper XML/golden、Kafka 镜像、CGO、extra-tag、基础镜像固定） | 完成 | 本次提交 |
+| 12 | 修复后复跑 Actions | **未验证**（无凭据读日志） | - |
 
 ## 分支推送记录（2026-11-08）
 
-> 远端默认分支实际为 `main`（`origin/HEAD -> main`），与用户口径 `master` 不一致；
-> 需在 GitHub Settings 手动改默认分支，本机无凭据/无 gh CLI 无法修改。
+> 远端默认分支已由用户在网页改为 **`master`**（`git ls-remote --symref origin HEAD` 已确认）。
 
 | 语言 | 本地分支 | 本地/远端 SHA | 远端状态 |
 | --- | --- | --- | --- |
@@ -39,14 +40,14 @@ gh CLI 不可用 → **已推送，未验证 Actions 是否触发**。
 | 项 | 状态 |
 | --- | --- |
 | `origin/master` | `5c8b89a67d46c92ef05e1d7e6a9c95be7e38ce51`（快进，非 force，领先 10 提交、落后 0） |
-| 远端默认分支 | 仍是 `main`；`gh` 未安装、`GH_TOKEN`/`GITHUB_TOKEN` 为空、未认证 API 404（私有仓库）→ 需人工在 `settings/branches` 改为 `master` |
-| Actions 触发 | 无凭据读 `actions/runs`（404），**未确认** |
+| 远端默认分支 | 已是 `master`（用户网页修改后回读确认） |
+| Actions 触发 | 修复前失败原因未知（无凭据读日志）；修复后推送待确认 |
 | `main` 分支 | 独立历史 `cdee15a Initial commit`（仅 README.md 2 行），非 master 祖先；**未删除**，建议改默认分支且 master CI 跑通后再删 |
 
 ## 待确认
 
 1. **Rust 分支同步策略**：主工作区副本比远端分支新（117 个文件不同），需选择"逐文件审查后提交进分支"或"声明为历史快照"。**未执行同步，禁止静默覆盖**（详见 CI-CD-PIPELINES.md §11）。
-2. GitHub 远端默认分支仍为 `main`，需人工改为 `master` 并配置 `PR Gate` 必需检查。
+2. GitHub 远端默认分支已是 `master`；仍需人工配置 `PR Gate` 必需检查。
 
 ## CD 决策（已确认）
 
