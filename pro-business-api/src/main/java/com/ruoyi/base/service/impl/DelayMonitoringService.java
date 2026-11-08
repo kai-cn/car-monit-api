@@ -4,11 +4,16 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -118,12 +123,46 @@ public class DelayMonitoringService {
 
     private ExecutorService statsExecutor;
 
+    /**
+     * 本地时间戳缓存保留时长（毫秒）：超过该时长仍未配对的记录直接清理
+     */
+    private static final long LOCAL_CACHE_RETENTION_MS = 600000L;
+
+    /**
+     * 每个 Redis 延迟列表保留的最大样本数
+     */
+    private static final long DELAY_SAMPLE_LIMIT = 1000L;
+
     @PostConstruct
     public void init() {
         statsExecutor = Executors.newFixedThreadPool(2);
         log.info("[延迟监控] 初始化完成，设备上报阈值: {}ms, 消息传输阈值: {}ms, 数据处理阈值: {}ms, 端到端阈值: {}ms",
                 deviceReportThresholdMs, messageTransferThresholdMs,
                 dataProcessThresholdMs, endToEndThresholdMs);
+    }
+
+    /**
+     * 写入延迟样本：列表只保留最近 N 条，避免单个 key 无限增长
+     */
+    private void recordDelay(String key, long delay) {
+        redisTemplate.opsForList().rightPush(key, delay);
+        redisTemplate.expire(key, 2, TimeUnit.DAYS);
+        redisTemplate.opsForList().trim(key, -DELAY_SAMPLE_LIMIT, -1);
+    }
+
+    /**
+     * 定期清理本地时间戳缓存，避免消息丢失/消费未回调时 Map 无限增长
+     */
+    @Scheduled(fixedRate = 300000)
+    public void cleanupLocalCaches() {
+        try {
+            long threshold = System.currentTimeMillis() - LOCAL_CACHE_RETENTION_MS;
+            messageProduceTimes.entrySet().removeIf(entry -> entry.getValue() < threshold);
+            messageConsumeTimes.entrySet().removeIf(entry -> entry.getValue() < threshold);
+            deviceCaptureTimes.entrySet().removeIf(entry -> entry.getValue() < threshold);
+        } catch (Exception e) {
+            log.error("[延迟监控] 本地缓存清理异常", e);
+        }
     }
 
     // ==================== 设备上报延迟监控 ====================
@@ -157,8 +196,7 @@ public class DelayMonitoringService {
 
             // 记录到Redis
             String key = DEVICE_DELAY_PREFIX + deviceId + ":" + formatDate(new Date());
-            redisTemplate.opsForList().rightPush(key, delay);
-            redisTemplate.expire(key, 2, TimeUnit.DAYS);
+            recordDelay(key, delay);
 
             // 检查是否超过阈值
             if (delay > deviceReportThresholdMs) {
@@ -199,8 +237,7 @@ public class DelayMonitoringService {
 
             // 记录到Redis
             String key = MESSAGE_DELAY_PREFIX + formatDate(new Date());
-            redisTemplate.opsForList().rightPush(key, delay);
-            redisTemplate.expire(key, 2, TimeUnit.DAYS);
+            recordDelay(key, delay);
 
             // 检查是否超过阈值
             if (delay > messageTransferThresholdMs) {
@@ -241,8 +278,7 @@ public class DelayMonitoringService {
 
             // 记录到Redis
             String key = PROCESS_DELAY_PREFIX + formatDate(new Date());
-            redisTemplate.opsForList().rightPush(key, delay);
-            redisTemplate.expire(key, 2, TimeUnit.DAYS);
+            recordDelay(key, delay);
 
             // 检查是否超过阈值
             if (delay > dataProcessThresholdMs) {
@@ -273,8 +309,7 @@ public class DelayMonitoringService {
 
         // 记录到Redis
         String key = E2E_DELAY_PREFIX + deviceId + ":" + formatDate(new Date());
-        redisTemplate.opsForList().rightPush(key, delay);
-        redisTemplate.expire(key, 2, TimeUnit.DAYS);
+        recordDelay(key, delay);
 
         // 检查是否超过阈值
         if (delay > endToEndThresholdMs) {
@@ -379,17 +414,42 @@ public class DelayMonitoringService {
         List<Long> delays = new ArrayList<>();
         String today = formatDate(new Date());
 
-        Set<String> keys = redisTemplate.keys(prefix + "*:" + today);
-        if (keys != null) {
-            for (String key : keys) {
-                List<Object> values = redisTemplate.opsForList().range(key, 0, -1);
-                if (values != null) {
-                    values.forEach(v -> delays.add((Long) v));
-                }
+        Set<String> keys = scanKeys(prefix + "*:" + today);
+        for (String key : keys) {
+            // 只读取最近 N 条样本，避免单个列表全量加载
+            List<Object> values = redisTemplate.opsForList().range(key, -DELAY_SAMPLE_LIMIT, -1);
+            if (values != null) {
+                values.forEach(v -> {
+                    if (v instanceof Number) {
+                        delays.add(((Number) v).longValue());
+                    }
+                });
             }
         }
 
         return delays;
+    }
+
+    /**
+     * 使用 SCAN 游标匹配 key，避免 KEYS 阻塞 Redis
+     */
+    private Set<String> scanKeys(String pattern) {
+        Set<String> keys = new LinkedHashSet<>();
+        redisTemplate.execute((RedisCallback<Void>) connection -> {
+            Cursor<byte[]> cursor = connection.scan(
+                    ScanOptions.scanOptions().match(pattern).count(1000).build());
+            try {
+                cursor.forEachRemaining(bytes -> keys.add(new String(bytes, StandardCharsets.UTF_8)));
+            } finally {
+                try {
+                    cursor.close();
+                } catch (IOException e) {
+                    log.warn("[延迟监控] 关闭 SCAN 游标异常", e);
+                }
+            }
+            return null;
+        });
+        return keys;
     }
 
     /**
