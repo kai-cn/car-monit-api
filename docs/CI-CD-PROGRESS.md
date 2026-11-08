@@ -13,24 +13,37 @@
 | 3 | 主分支流水线：`master.yml`（全量构建/测试/覆盖率/产物） | 完成 | eeb3573 |
 | 4 | 发布流水线：`release.yml`（tag + Release 资产）、`deploy.yml` 占位 | 完成 | 3de9ab9 |
 | 5 | YAML 自检（PyYAML + actionlint 全绿）；GitHub 实跑未验证 | 完成 | - |
+| 6 | 分支推送到 origin：cpp、cpp-ops、go-V2、python；rust 已存在且无新提交 | 完成 | 见下 |
+| 7 | 镜像构建补全：Java/Go/C++/Rust Dockerfile + 选型说明 | 完成 | 868e23b |
+| 8 | GHCR 推送：`_image.yml` + master/release 接入，sha/semver/latest | 完成 | 8b547ac |
+| 9 | K8s 部署：deploy.yml（kubectl set image + rollout + imagePullSecret 校验） | 完成 | 本次提交 |
+| 10 | CD 实跑验证（需集群/凭据） | **未验证** | - |
 
 ## 分支推送记录（2026-11-08）
 
 > 远端默认分支实际为 `main`（`origin/HEAD -> main`），与用户口径 `master` 不一致；
 > 需在 GitHub Settings 手动改默认分支，本机无凭据/无 gh CLI 无法修改。
 
-| 语言 | 本地分支 | 本地 SHA | 远端状态 |
+| 语言 | 本地分支 | 本地/远端 SHA | 远端状态 |
 | --- | --- | --- | --- |
-| cpp | `car-monit-api-cpp` | 63bb3c9 | 待推送（远端无） |
-| cpp | `car-monit-api-cpp-ops` | 119e438 | 待推送（远端无，第二分支） |
-| go | `car-monit-api-go-V2` | ed6a281 | 待推送（远端无） |
-| rust | `car-monit-api-rust` | 847441d | **远端已存在且一致**，无需推送 |
-| python | 无本地分支 | - | **阻塞**：无分支名可沿用，需决策 |
+| cpp | `car-monit-api-cpp` | 63bb3c9e8ad4ab4a8663a403ce814880643f4b34 | 已推送（新建，非 force） |
+| cpp | `car-monit-api-cpp-ops` | 119e438aaa47ecd6ca80b8dc62d1d51a8372ea28 | 已推送（新建，非 force） |
+| go | `car-monit-api-go-V2` | ed6a28163b49c63c48dfcce7d5b482ddc9d6f485 | 已推送（新建，非 force） |
+| rust | `car-monit-api-rust` | 847441dddc7f3b25d7f8c9d4ba612559c91635b8 | 远端已存在且一致，**无需推送** |
+| python | `car-monit-api-python` | 6fff93ccbd37f006bc8a4b98fff6641729561f7c | 已推送（从 master 新建；master 未推） |
 
-## 待用户确认（阻塞 CD）
+gh CLI 不可用 → **已推送，未验证 Actions 是否触发**。
 
-1. 镜像推送目标：GHCR 还是私有 registry。
-2. 部署目标：K8s / 单机 / 只出制品。
+## 待确认
+
+1. **Rust 分支同步策略**：主工作区副本比远端分支新（117 个文件不同），需选择"逐文件审查后提交进分支"或"声明为历史快照"。**未执行同步，禁止静默覆盖**（详见 CI-CD-PIPELINES.md §11）。
+2. GitHub 远端默认分支仍为 `main`，需人工改为 `master` 并配置 `PR Gate` 必需检查。
+
+## CD 决策（已确认）
+
+- 镜像：GHCR `ghcr.io/kai-cn/<service>`，`GITHUB_TOKEN` + `packages: write`。
+- 部署：K8s 既有 Deployment，`kubectl set image` + `rollout status`，`secrets.KUBE_CONFIG` + `vars.K8S_*`。
+- 首次部署人工 bootstrap（namespace / Deployment / imagePullSecret），命令见方案文档 §10.2。
 
 ## 恢复时注意
 
