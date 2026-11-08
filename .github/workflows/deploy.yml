@@ -141,10 +141,13 @@ jobs:
         run: |
           umask 077
           mkdir -p "$HOME/.kube"
-          if printf '%s' "$KUBE_CONFIG" | head -c 200 | grep -q 'apiVersion'; then
+          if printf '%s' "$KUBE_CONFIG" | grep -q 'apiVersion'; then
             printf '%s' "$KUBE_CONFIG" > "$HOME/.kube/config"
+          elif printf '%s' "$KUBE_CONFIG" | base64 -d > "$HOME/.kube/config" 2>/dev/null; then
+            :
           else
-            printf '%s' "$KUBE_CONFIG" | base64 -d > "$HOME/.kube/config"
+            echo "::error::secrets.KUBE_CONFIG 既不是 kubeconfig 明文（缺 apiVersion），也不是合法 base64"
+            exit 1
           fi
           chmod 600 "$HOME/.kube/config"
 

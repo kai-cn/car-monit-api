@@ -14,7 +14,7 @@
 | 仓库形态 | **单仓库多目录**：`car-monit-api-cpp/go/python/rust` 均无独立 `.git`，非 submodule（无 `.gitmodules`） |
 | Rust 目录 | 仍被根 [.gitignore L77](../.gitignore) `car-monit-api-rust/` **整体忽略**，`git ls-files` 为空 → 该语言流水线**当前不会在 GitHub 触发**（代码写好后需先取消忽略并入库） |
 | C# / Kotlin | `car-monit-api-csharp`、`car-monit-api-kotlin` 内只有迁移提示词 `.md`，无可构建代码 → 不建流水线 |
-| 现有 workflow | 本次重构前仅根 `.github/workflows/ci.yml`（Python 专用）。现已替换为 9 个统一风格 workflow，详见下表 |
+| 现有 workflow | 本次重构前仅根 `.github/workflows/ci.yml`（Python 专用）。现已替换为 10 个统一风格 workflow，详见下表 |
 | 构建工具链 | Maven（Spring Boot 2.4.5 / source-target 1.8，2 模块，`packaging=pom` + `pro-business-api` repackage）；CMake 3.20 + C++20 + MSVC（无 `CMakePresets.json`）；Go 1.24.1（module `github.com/ruoyi/car-monit-api-go`，入口 `./cmd/api`）；Python 3.12（`requirements.txt` + `requirements.lock.txt`，pytest/coverage，`Dockerfile`，`docker-compose.integration.yml`）；Rust 1.90.0（`Cargo.toml` 单 crate，`rust-toolchain.toml` 已锁 1.90.0 + rustfmt + clippy） |
 | 测试现状 | Java 无 `src/test`；C++ 有 `tests/test_main.cpp`（ctest）；Go 有 8 个 `*_test.go`；Python 有完整 pytest + tools 门禁；Rust 有 `tests/parity_test.rs`、`router_test.rs` |
 
@@ -63,7 +63,7 @@ PR / 主分支 / 发布三套入口只负责触发、路径分诊与汇总，不
 
 | 项 | 状态 |
 | --- | --- |
-| YAML 语法 | 本机 PyYAML 解析通过；actionlint 0 findings（9 个 workflow，含常量 `if` 检查） |
+| YAML 语法 | 本机 PyYAML 解析通过；actionlint 0 findings（10 个 workflow，含常量 `if` 检查） |
 | GitHub 实跑 | **未验证**：未 push master，未在远端触发 |
 | 本地长构建/全量测试 | **未执行**（按用户要求，重启前不做） |
 | Rust 流水线 | 已写好；`master` 上目录未入库 → 跳过；分支已推送但为旧快照（见 §11） |

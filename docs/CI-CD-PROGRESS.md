@@ -16,7 +16,7 @@
 | 6 | 分支推送到 origin：cpp、cpp-ops、go-V2、python；rust 已存在且无新提交 | 完成 | 见下 |
 | 7 | 镜像构建补全：Java/Go/C++/Rust Dockerfile + 选型说明 | 完成 | 868e23b |
 | 8 | GHCR 推送：`_image.yml` + master/release 接入，sha/semver/latest | 完成 | 8b547ac |
-| 9 | K8s 部署：deploy.yml（kubectl set image + rollout + imagePullSecret 校验） | 完成 | 本次提交 |
+| 9 | K8s 部署：deploy.yml（kubectl set image + rollout + imagePullSecret 校验） | 完成 | f43e6c1 |
 | 10 | CD 实跑验证（需集群/凭据） | **未验证** | - |
 
 ## 分支推送记录（2026-11-08）
