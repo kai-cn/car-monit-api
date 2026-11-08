@@ -60,7 +60,7 @@ type Scheduler struct {
 	wg     sync.WaitGroup
 	loc    *time.Location
 	// locker 为 nil 表示不启用分布式锁（单副本默认形态，行为与 V1 完全一致）。
-	locker Locker
+	locker  Locker
 	lockTTL time.Duration
 }
 
