@@ -1630,13 +1630,16 @@ void GaussEsConsistencyService::consistency_tick() {
           DataSource target = ds;
           std::string s = window_start;
           std::string e = window_end;
-          std::thread([target, s, e] {
+          const bool accepted = cm::background_pool().submit([target, s, e] {
             try {
               data_sync().repair_sync(target, s, e);
             } catch (const std::exception& ex) {
               CM_LOG_ERROR("optimization.consistency") << "补同步失败: " << ex.what();
             }
-          }).detach();
+          });
+          if (!accepted)
+            CM_LOG_WARN("optimization.consistency")
+                << "后台队列已满，本次补同步被拒绝（窗口 " << s << " ~ " << e << "）";
         } else {
           CM_LOG_INFO("optimization.consistency")
               << "[一致性] dataset=" << ds_key(ds) << " window=[" << window_start << ", "
@@ -1653,6 +1656,8 @@ void GaussEsConsistencyService::consistency_tick() {
 void ensure_consistency_scheduler() {
   static std::once_flag once;
   std::call_once(once, [] {
+    // 常驻对账调度线程：生命周期与进程一致，故意 detach（无需 join）；
+    // 进程退出时直接结束，不持有需要清理的资源。
     std::thread([] {
       const auto& cfg = config::Config::instance();
       std::vector<std::string> fields = utils::split(cfg.consistency.cron, ' ');

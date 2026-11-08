@@ -1,11 +1,11 @@
 #include "handler/handlers.h"
 
 #include "common/logging.h"
+#include "common/worker_pool.h"
 #include "service/track.h"
 
 #include <exception>
 #include <string>
-#include <thread>
 
 namespace cm::handler {
 namespace {
@@ -16,16 +16,21 @@ using http::Response;
 // Java 的 void 控制器方法：HTTP 200 + 空响应体。
 Response empty_ok() { return Response::raw(200, "", "application/json;charset=UTF-8"); }
 
-// Java 用 CompletableFuture.runAsync + 线程池异步执行；C++ 用 detached 线程等价实现。
+// Java 用 CompletableFuture.runAsync + 线程池异步执行；这里改走受控后台线程池
+// （固定 worker + 有界队列），不再为每个任务 detached 创建线程。
 void async_suspicious(int from, int to) {
   for (int i = from; i <= to; ++i) {
-    std::thread([i] {
+    const bool accepted = cm::background_pool().submit([i] {
       try {
         service::sync_suspicious_car(i);
       } catch (const std::exception& e) {
         CM_LOG_ERROR("sysutil") << "syncSuspiciousCar" << i << " 失败: " << e.what();
       }
-    }).detach();
+    });
+    if (!accepted) {
+      // 队列满：与 Java 线程池拒绝策略一致——记录错误但不阻塞请求。
+      CM_LOG_ERROR("sysutil") << "后台队列已满，syncSuspiciousCar" << i << " 被拒绝";
+    }
   }
 }
 

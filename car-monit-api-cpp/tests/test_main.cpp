@@ -955,6 +955,18 @@ static void test_contract_routes_golden() {
   CHECK(endpoints.size() >= 80); // 当前 85 个端点
 }
 
+static void test_background_pool_batch() {
+  // syncSuspiciousCar1..10 已改为提交到进程后台池：10 个任务必须全部执行、队列排空。
+  std::atomic<int> done{0};
+  for (int i = 0; i < 10; ++i) {
+    CHECK(cm::background_pool().submit([&done] { done.fetch_add(1); }));
+  }
+  for (int t = 0; t < 5000 && done.load() < 10; t += 5)
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  CHECK(done.load() == 10);
+  CHECK(cm::background_pool().pending() == 0);
+}
+
 static void test_redis_reconnect_no_deadlock() {
   // Redis 重连路径（审阅 §3.3 R7 + 代码复查，改用 hiredis 后保持覆盖）：
   // 1) 连接失败后不得泄漏 fd（hiredis redisFree 负责关闭）；
@@ -1134,6 +1146,7 @@ int main() {
   test_kafka_no_broker();
   test_reliability_timeout();
   test_worker_pool();
+  test_background_pool_batch();
   test_pg_pool_config_bounds();
   test_dao_param_binding();
   test_entity_select_columns();
