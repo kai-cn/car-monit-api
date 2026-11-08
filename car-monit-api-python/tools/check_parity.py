@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 """Java <-> Python 方法级对照审计（行为等价性静态校验）。
 
-对 219 个 Java 源文件逐一找出同路径的 `.py` 镜像文件，比较类名与方法名。
+对 Java 源文件逐一找出同路径的 `.py` 镜像文件，比较类名与方法名。
+
+作用域：Python 端口只对齐 legacy 端口。``controller/v3`` 与 ``service/v3``
+是尚未移植的 Java-only V3 架构，显式列为 out of scope（并在运行时自检：
+一旦 Python 侧出现 V3 文件，本工具直接失败，强制重新评估豁免）。
 
 输出分两档，避免把"继承来的 / 框架提供的 / Lombok 生成的"误判为缺失：
 
@@ -104,6 +108,64 @@ _DOCUMENTED_EQUIVALENTS: dict[tuple[str, str], str] = {
         "private static 内部类 → 模块级 _NamedThreadFactory（前缀下划线，外部不可见）",
 }
 
+# ---------------------------------------------------------------------------
+# V3 作用域边界（P1：check_parity 红）
+#
+# 事实依据（已核对 git 历史）：
+#   * V3 的 feature 提交（8d810b9..382fb84）只改 Java 侧，从未改 car-monit-api-python；
+#   * Python 树中不存在任何 controller/v3、service/v3 文件，也未实现 ES 主路径、
+#     Outbox/Kafka 同步、PIT 深分页、DWS ETL；
+#   * Python 端口定位是 legacy 端口的等价实现，V3 是 Java-only 的新架构。
+#
+# 因此这不是“镜像漏同步”，而是 checker 未区分“应当逐一镜像的 legacy 端口”和
+# “尚未移植的 Java-only V3”。这里显式列出作用域，并在下方做反向自检：
+# 一旦 Python 树开始出现 V3 文件，工具会直接失败，强制维护者重新审视豁免，
+# 避免作用域边界长期掩盖真实漂移。
+# ---------------------------------------------------------------------------
+_OUT_OF_SCOPE_PREFIXES: tuple[str, ...] = (
+    "pro-business-api/src/main/java/com/ruoyi/base/controller/v3/",
+    "pro-business-api/src/main/java/com/ruoyi/base/service/v3/",
+)
+
+#: legacy 控制器上仅因 V3 双路径（ES/legacy）而新增的方法；Python 仍为单一 legacy 路径。
+V3_JAVA_ONLY_METHODS: dict[str, set[str]] = {
+    "pro-business-api/src/main/java/com/ruoyi/base/controller/LargeScaleQueryController.java": {
+        "addCode", "addResolvedCodes", "asString", "buildV3ExportRequest",
+        "downloadExport", "extractFuzzyStringFields", "filePartCount", "isV3Mode",
+    },
+    "pro-business-api/src/main/java/com/ruoyi/base/controller/OdsLwzxsfsjFeeRecords01Controller.java": {
+        "applyDataScope", "decorateLegacy", "errorResult",
+        "listFromEs", "listLegacy", "toDomains",
+    },
+    "pro-business-api/src/main/java/com/ruoyi/base/controller/OdsRtSzdnSnapshotFlowAddcodeController.java": {
+        "applyDataScope", "decorate", "errorResult",
+        "listFromEs", "listLegacy", "toDomains",
+    },
+    "pro-business-api/src/main/java/com/ruoyi/base/controller/SysUtilController.java": {
+        "asString", "buildTrailInfos", "carTrackQueryByCarNoFromEs",
+        "carTrackQueryByCarNoLegacy", "toTrailTracks",
+    },
+}
+
+
+def is_v3_out_of_scope(rel: str) -> bool:
+    return any(rel.startswith(prefix) for prefix in _OUT_OF_SCOPE_PREFIXES)
+
+
+def python_v3_files() -> list[str]:
+    """反向自检：若 Python 树已出现 V3 镜像，说明作用域豁免需要重新评估。"""
+    root = PROJECT_ROOT / "pro-business-api" / "src" / "main" / "java" / "com" / "ruoyi" / "base"
+    found: list[str] = []
+    for sub in ("controller/v3", "service/v3"):
+        if not (root / sub).exists():
+            continue
+        for directory, filenames in walk(root / sub):
+            for name in filenames:
+                if name.endswith(".py"):
+                    found.append((directory / name).relative_to(PROJECT_ROOT).as_posix())
+    return sorted(found)
+
+
 
 def strip_java_comments(source: str) -> str:
     source = re.sub(r"/\*.*?\*/", " ", source, flags=re.DOTALL)
@@ -178,9 +240,18 @@ def main() -> int:
     if "--file" in sys.argv:
         only = sys.argv[sys.argv.index("--file") + 1].replace("\\", "/")
 
+    # 反向自检：Python 侧出现 V3 镜像时必须重新评估作用域豁免
+    v3_py = python_v3_files()
+    if v3_py:
+        print("检测到 Python 侧已出现 V3 镜像文件，作用域豁免失效，请移除 _OUT_OF_SCOPE_PREFIXES：")
+        for rel in v3_py:
+            print(f"  {rel}")
+        return 1
+
     global_classes, global_methods = collect_python_global()
 
     checked = exact = 0
+    out_of_scope = 0
     tier_a: list[tuple[str, list[str], list[str]]] = []
     tier_b: list[tuple[str, list[str], list[str]]] = []
 
@@ -193,6 +264,9 @@ def main() -> int:
     for java_path in java_files:
         rel = java_path.relative_to(WORKSPACE).as_posix()
         if only and only not in rel:
+            continue
+        if is_v3_out_of_scope(rel):
+            out_of_scope += 1
             continue
         py_path = PROJECT_ROOT / (rel[:-5] + ".py")
         if not py_path.exists():
@@ -207,7 +281,9 @@ def main() -> int:
         if uses_java_bean:
             j_methods = {n for n in j_methods if not _ACCESSOR_RE.match(n)}
 
-        missing = sorted(j_methods - p_methods)
+        # V3 双路径专属方法：Python 端口保持单一 legacy 路径，不算漂移
+        v3_only = V3_JAVA_ONLY_METHODS.get(rel, set())
+        missing = sorted(m for m in j_methods - p_methods if m not in v3_only)
         # static 工具类在 Python 侧是模块级函数，所以 def 也算类型已实现
         p_names = p_classes | p_methods
         missing_classes = sorted(t for t in j_types if t not in p_names)
@@ -232,6 +308,8 @@ def main() -> int:
     print("=" * 78)
     print(f"checked files        : {checked}")
     print(f"fully matched        : {exact}")
+    print(f"out of scope (Java-only V3) : {out_of_scope} file(s) "
+          f"(controller/v3 + service/v3；Python 端口未实现 V3)")
     print(f"documented equivalences : {len(_DOCUMENTED_EQUIVALENTS)} known entry(ies)")
     print(f"Tier A (shared/inherited) : {len(tier_a)} file(s) with {sum(len(m) for _, m, _ in tier_a)} name(s)")
     print(f"Tier B (real gaps)        : {len(tier_b)} file(s)")

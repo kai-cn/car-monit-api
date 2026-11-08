@@ -768,3 +768,15 @@ DWS 覆盖：escape 2025-07-04~2026-02-05、income 2025-10-22~2026-02-03、warni
 | `c93b1d5` | feat(v3-export)：snapshot 展示补齐 `plate_color_name`（颜色能力矩阵 + trail 显式拒绝） |
 
 
+
+## 12. Python 端口与 V3 的作用域边界（check_parity）
+
+- **结论**：V3 是 **Java-only** 架构；`car-monit-api-python` 只对齐 legacy 端口，未实现 V3。
+- **证据**：V3 feature 提交（`8d810b9`..`382fb84`）从未修改 `car-monit-api-python`；
+  Python 树不存在 `controller/v3`、`service/v3`，也没有 ES 主路径/Outbox/Kafka/PIT/DWS 实现。
+- **CI 处理**：`check_parity` 显式列出 `controller/v3` 与 `service/v3` 为 out of scope，
+  并在摘要中打印数量；工具同时做反向自检——一旦 Python 树出现 V3 镜像，立即 exit 1，
+  强制维护者移除豁免。legacy 控制器上因 V3 双路径新增的方法登记在
+  `V3_JAVA_ONLY_METHODS` 并附理由。
+- **不做的部分**：不提供“空壳 Python 镜像”来骗过方法名比对；如未来需要 Python 版 V3，
+  应作为独立迁移项目补真实实现、测试与文档。
