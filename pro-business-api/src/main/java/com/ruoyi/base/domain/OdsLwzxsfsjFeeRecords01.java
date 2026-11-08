@@ -653,6 +653,30 @@ public class OdsLwzxsfsjFeeRecords01 implements Custom {
     @TableField(exist = false)
     private String sectioncode;
 
+    /**
+     * V3 查询：机构/路段/路线/收费站维度编码与名称（仅用于请求参数绑定，不参与结果映射）
+     */
+    @TableField(exist = false)
+    private String orgcode;
+
+    @TableField(exist = false)
+    private String orgname;
+
+    @TableField(exist = false)
+    private String roadcode;
+
+    @TableField(exist = false)
+    private String roadname;
+
+    @TableField(exist = false)
+    private String tollcode;
+
+    @TableField(exist = false)
+    private String tollname;
+
+    @TableField(exist = false)
+    private String sectionname;
+
 
     /**
      * 排序
