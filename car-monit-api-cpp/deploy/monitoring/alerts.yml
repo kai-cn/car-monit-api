@@ -13,7 +13,9 @@ groups:
     interval: 30s
     rules:
       - alert: CarMonitApiDependencyDown
-        expr: carmonit_dependency_up == 0
+        # ES 为被动状态：未调用时上报 UNKNOWN（指标值为 0），不能与真正的 DOWN
+        # 区分，因此关键告警只覆盖 db/redis/kafka；ES 单独用 warning 规则。
+        expr: carmonit_dependency_up{component=~"db|redis|kafka"} == 0
         for: 2m
         labels:
           severity: critical
@@ -24,6 +26,19 @@ groups:
             carmonit_dependency_up{component="{{ $labels.component }}"} 连续 2 分钟为 0。
             排查顺序：连接配置/网络 -> 中间件健康 -> 凭据/认证（见 docs/RUNBOOK.md）。
             注意 /health 仍可能返回 HTTP 200（DEGRADED），不要只看探针。
+
+      - alert: CarMonitApiElasticsearchUnavailable
+        expr: carmonit_dependency_up{component="es"} == 0
+        for: 10m
+        labels:
+          severity: warning
+          service: car-monit-api
+        annotations:
+          summary: "Elasticsearch 状态非 UP（UNKNOWN 或 DOWN）"
+          description: >-
+            服务未调用 ES 前会上报 UNKNOWN（指标值同为 0）；如果本环境已接入 ES，
+            请检查 ES 健康、地址、认证与索引。ES 故障时查询会降级到 DB。
+
 
       - alert: CarMonitApiNoTraffic
         expr: rate(carmonit_requests_total[10m]) == 0
@@ -135,9 +150,9 @@ groups:
 
       - alert: CarMonitApiMemoryGrowth
         expr: >-
-          (container_memory_working_set_bytes{container="car-monit-api"}
-           - container_memory_working_set_bytes{container="car-monit-api"} offset 1h)
-           > 0.2 * (container_memory_working_set_bytes{container="car-monit-api"} offset 1h)
+          (container_memory_working_set_bytes{container=~".*car-monit-api.*"}
+           - container_memory_working_set_bytes{container=~".*car-monit-api.*"} offset 1h)
+           > 0.2 * (container_memory_working_set_bytes{container=~".*car-monit-api.*"} offset 1h)
         for: 30m
         labels:
           severity: warning

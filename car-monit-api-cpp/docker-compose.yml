@@ -113,6 +113,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        VERSION: ${CAR_MONIT_API_VERSION:-dev}
+        GIT_SHA: ${CAR_MONIT_API_GIT_SHA:-unknown}
     restart: unless-stopped
     depends_on:
       postgres:
