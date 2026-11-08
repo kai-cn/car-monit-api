@@ -1,0 +1,16 @@
+-- =============================================================================
+-- 本地联调初始化：schema / 扩展 / search_path
+--
+-- 由 docker-compose 挂载到 /docker-entrypoint-initdb.d，仅在数据卷首次初始化时执行。
+-- 角色名与 compose 中的 POSTGRES_USER 保持一致（gaussdb）；如改用其它角色，
+-- 请同步修改本文件的 ALTER ROLE。
+-- =============================================================================
+
+CREATE SCHEMA IF NOT EXISTS jl_data01;
+
+-- 服务与 Java 侧一致，默认在 jl_data01 下解析未限定 schema 的对象。
+ALTER ROLE gaussdb SET search_path = jl_data01, public;
+
+-- 大表索引/模糊查询可能用到；官方 postgres 镜像自带 contrib。
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS btree_gin;
