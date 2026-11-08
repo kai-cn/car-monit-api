@@ -11,8 +11,8 @@ import com.ruoyi.common.constant.Constants;
 import com.ruoyi.common.constant.HttpStatus;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.redis.RedisCache;
+import com.ruoyi.common.core.redis.RedisClusterProvider;
 import com.ruoyi.common.core.redis.RedisConfig;
-import com.ruoyi.common.core.redis.RedisSourceFactory;
 import com.ruoyi.common.utils.CommonUtil;
 import com.ruoyi.common.utils.SecuritySHA1Utils;
 import com.ruoyi.common.utils.StringUtils;
@@ -61,7 +61,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
     private RedisCache redisCache;
 
     @Autowired
-    private RedisSourceFactory redisSourceFactory;
+    private RedisClusterProvider redisClusterProvider;
 
     @Resource
     private RedisConfig redisConfig;
@@ -292,7 +292,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         if (null != carlist && carlist.size() > 0) {
 
             log.info("获取的配置信息："+redisConfig.getClusterNodes()+"--本地配置："+isLocalhost +"--同步车辆数量："+carlist.size());
-            JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
+            JedisCluster jedisCluster  = redisClusterProvider.getCluster();
 
             // 去掉重合的
             SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
