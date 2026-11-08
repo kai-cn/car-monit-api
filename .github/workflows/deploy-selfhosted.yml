@@ -1,0 +1,97 @@
+name: deploy-selfhosted
+
+# 单机（WSL openEuler）部署编排：默认关闭。
+# 仅在 workflow_dispatch 且 confirm=true 时执行；内容复用 cd-standalone 产出的
+# install.sh + systemctl restart + /health 检查。与 K8s 的 deploy.yml 互不影响。
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "显式确认：确实要在自托管 WSL openEuler runner 上执行部署"
+        required: true
+        type: boolean
+        default: false
+      tag:
+        description: "已存在的 Release tag（cd-standalone 在该 tag 上附加了 tar.gz）"
+        required: true
+        type: string
+      service:
+        description: "要部署的实现"
+        required: true
+        type: choice
+        default: python
+        options: [python, java, go]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: deploy standalone on self-hosted WSL
+    if: ${{ inputs.confirm }}
+    runs-on: [self-hosted, linux, x64, wsl, openeuler]
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SERVICE: ${{ inputs.service }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - name: 下载 Release 中的单机 artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/standalone" && mkdir -p "$RUNNER_TEMP/standalone"
+          gh release download "$TAG" --pattern 'car-monit-api-standalone-*.tar.gz' \
+            --dir "$RUNNER_TEMP/standalone" --clobber
+          tar -xzf "$RUNNER_TEMP"/standalone/car-monit-api-standalone-*.tar.gz -C "$RUNNER_TEMP/standalone"
+          ( cd "$RUNNER_TEMP/standalone" && sha256sum -c SHA256SUMS )
+
+      - name: 前置校验（占位符未填写则拒绝启动）
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$SERVICE" in
+            java) ENV_FILE="/opt/java/java.env" ;;
+            python) ENV_FILE="/opt/python/python.env" ;;
+            go) ENV_FILE="/opt/go/config.yaml" ;;
+            *) echo "::error::未知 service"; exit 1 ;;
+          esac
+          if [ -f "$ENV_FILE" ] && grep -q '<DB_HOST>\|<DB_USER>\|<DB_PASSWORD>' "$ENV_FILE"; then
+            echo "::error::$ENV_FILE 仍含占位符，请先按 README 填写真实依赖配置"
+            exit 1
+          fi
+          echo "配置检查通过（或尚未存在，将使用模板）"
+
+      - name: install.sh 安装 + systemd 重启 + 健康检查
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$RUNNER_TEMP/standalone"
+          sudo bash "$ROOT/install.sh" --service "$SERVICE" --no-start
+          sudo systemctl daemon-reload
+          sudo systemctl enable "car-monit-api-$SERVICE"
+          sudo systemctl restart "car-monit-api-$SERVICE"
+          STATUS="000"
+          for i in $(seq 1 20); do
+            STATUS=$(curl -s -o /tmp/health-body -w '%{http_code}' http://127.0.0.1:9901/health || true)
+            [ "$STATUS" = "200" ] && break
+            sleep 2
+          done
+          {
+            echo "### 单机部署结果"
+            echo "- service: $SERVICE"
+            echo "- tag: $TAG"
+            echo "- health_http_status: $STATUS"
+            echo "- health_body: $(cat /tmp/health-body 2>/dev/null || true)"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::health 检查未返回 200，当前状态 $STATUS"
+            exit 1
+          fi
+
+# 说明：
+# * 默认 confirm=false，workflow_dispatch 不勾选时 job 直接 skipped，不会碰 runner/部署。
+# * runner label 固定 [self-hosted, linux, x64, wsl, openeuler]；未注册 runner 前该 job 永远 queued，
+#   这是预期行为，不在本任务中注册或连机器。
+# * 生产部署需先按 docs/self-hosted-runner.md 给 /opt 下 env 填真实依赖（脚本会拒绝占位符）。

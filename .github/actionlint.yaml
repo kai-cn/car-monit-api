@@ -1,0 +1,8 @@
+self-hosted-runner:
+  labels:
+    - self-hosted
+    - linux
+    - x64
+    - wsl
+    - openeuler
+    - arm64
