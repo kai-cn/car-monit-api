@@ -14,7 +14,6 @@ import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.util.concurrent.ListenableFutureCallback;
 
 import javax.annotation.PostConstruct;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -149,11 +148,8 @@ public class KafkaProducerService {
             public void onSuccess(SendResult<String, Object> result) {
                 log.info("[Kafka生产者] 消息发送成功: dataId={}, offset={}", record.getDataId(), 
                     result.getRecordMetadata().offset());
-                // 更新数据库状态为1（成功），并记录发送时间
-                kafkaMessageRecordMapper.updateStatusById(record.getId(), 1, new Date());
-                
-                // 通知可靠性服务Kafka已确认
-                reliabilityService.handleKafkaAck(record.getDataId(), result.getRecordMetadata().offset());
+                // 通知可靠性服务Kafka已确认（内部统一更新数据库状态为1与发送时间，使用 messageId 对齐）
+                reliabilityService.handleKafkaAck(record.getId(), result.getRecordMetadata().offset());
             }
 
             /**
@@ -165,11 +161,8 @@ public class KafkaProducerService {
             @Override
             public void onFailure(Throwable ex) {
                 log.error("[Kafka生产者] 消息发送失败: dataId={}, error={}", record.getDataId(), ex.getMessage());
-                // 增加重试次数，记录错误信息，状态设为2（失败）
-                kafkaMessageRecordMapper.incrementRetryCount(record.getId(), ex.getMessage());
-                
-                // 通知可靠性服务发送失败
-                reliabilityService.handleSendFailure(record.getDataId(), ex.getMessage());
+                // 通知可靠性服务发送失败（内部统一增加重试次数、记录错误并将状态置为2，使用 messageId 对齐）
+                reliabilityService.handleSendFailure(record.getId(), ex.getMessage());
             }
         });
     }

@@ -63,4 +63,17 @@
         WHERE id = #{id}
     </update>
 
+    <!--
+       标记消息为死信（status=3）。
+       message_json 为空时保留库内已有内容，避免 Redis 过期后覆盖为空。
+    -->
+    <update id="markDeadLetter" parameterType="com.ruoyi.base.domain.KafkaMessageRecord">
+        UPDATE jl_data01.kafka_message_record
+        SET status = 3,
+            retry_count = #{retryCount},
+            error_msg = #{errorMsg},
+            message_json = COALESCE(#{messageJson}, message_json)
+        WHERE id = #{id}
+    </update>
+
 </mapper>

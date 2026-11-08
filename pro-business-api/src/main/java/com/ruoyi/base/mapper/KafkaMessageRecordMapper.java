@@ -54,4 +54,12 @@ public interface KafkaMessageRecordMapper extends BaseMapper<KafkaMessageRecord>
      * @return int 影响的行数
      */
     int incrementRetryCount(@Param("id") String id, @Param("errorMsg") String errorMsg);
+
+    /**
+     * 将消息标记为死信（status=3）
+     *
+     * @param record 死信消息记录（id 必填）
+     * @return int 影响的行数
+     */
+    int markDeadLetter(KafkaMessageRecord record);
 }

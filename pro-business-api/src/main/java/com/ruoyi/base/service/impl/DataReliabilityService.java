@@ -231,10 +231,13 @@ public class DataReliabilityService {
         // 6. 更新消息状态为待发送
         redisTemplate.opsForValue().set(MSG_STATUS_PREFIX + messageId, MessageStatus.PENDING.name(), 24, TimeUnit.HOURS);
 
-        // 7. 发送到Kafka
+        // 7. 发送前先落库（status=0 待发送），失败重试任务才能查到该消息，形成重试闭环
+        persistMessageRecord(messageId, dataId, topic, messageJson);
+
+        // 8. 发送到Kafka
         sendToKafka(wrapper, topic, messageId);
 
-        // 8. 启动超时检测定时器
+        // 9. 启动超时检测定时器
         scheduleTimeoutCheck(messageId);
 
         log.info("[可靠性服务] 发送可靠消息: messageId={}, dataId={}, topic={}", messageId, dataId, topic);
@@ -261,9 +264,34 @@ public class DataReliabilityService {
     }
 
     /**
+     * 消息发送前落库（status=0），与重试查询条件（status IN (0,2)）保持一致。
+     * 落库失败只记录错误，不阻断正常发送链路。
+     */
+    private void persistMessageRecord(String messageId, String dataId, String topic, String messageJson) {
+        try {
+            KafkaMessageRecord record = new KafkaMessageRecord();
+            record.setId(messageId);
+            record.setDataId(dataId);
+            record.setTopic(topic);
+            record.setMessageJson(messageJson);
+            record.setStatus(0);
+            record.setRetryCount(0);
+            record.setCreateTime(new Date());
+            kafkaMessageRecordMapper.insert(record);
+        } catch (Exception e) {
+            log.error("[可靠性服务] 消息落库失败，仍继续发送: messageId={}", messageId, e);
+        }
+    }
+
+    /**
      * 处理Kafka确认
      */
     public void handleKafkaAck(String messageId, long offset) {
+        try {
+            kafkaMessageRecordMapper.updateStatusById(messageId, 1, new Date());
+        } catch (Exception e) {
+            log.warn("[可靠性服务] 更新消息成功状态失败: messageId={}", messageId, e);
+        }
         MessageMeta meta = pendingMessages.get(messageId);
         if (meta != null) {
             meta.setStatus(MessageStatus.SENT);
@@ -277,6 +305,11 @@ public class DataReliabilityService {
      * 处理发送失败
      */
     public void handleSendFailure(String messageId, String error) {
+        try {
+            kafkaMessageRecordMapper.incrementRetryCount(messageId, error);
+        } catch (Exception e) {
+            log.warn("[可靠性服务] 更新消息失败状态异常: messageId={}", messageId, e);
+        }
         MessageMeta meta = pendingMessages.get(messageId);
         if (meta != null) {
             meta.incrementRetryCount();
@@ -350,15 +383,14 @@ public class DataReliabilityService {
             meta.setError(error);
             redisTemplate.opsForValue().set(MSG_STATUS_PREFIX + messageId, MessageStatus.DEAD.name());
 
-            // 记录到死信表
+            // 记录到死信表：该记录已在发送前落库，此处更新为死信状态，避免主键重复
             KafkaMessageRecord record = new KafkaMessageRecord();
-            record.setDataId(meta.getDataId());
-            record.setTopic(meta.getTopic());
+            record.setId(messageId);
             record.setStatus(3); // 死信状态
             record.setRetryCount(meta.getRetryCount());
-            record.setCreateTime(new Date());
+            record.setErrorMsg(error);
             record.setMessageJson((String) redisTemplate.opsForValue().get(MSG_CONTENT_PREFIX + messageId));
-            kafkaMessageRecordMapper.insert(record);
+            kafkaMessageRecordMapper.markDeadLetter(record);
 
             log.error("[可靠性服务] 消息进入死信队列: messageId={}, dataId={}, error={}",
                     messageId, meta.getDataId(), error);
