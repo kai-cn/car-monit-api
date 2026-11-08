@@ -1,0 +1,19 @@
+[Unit]
+Description=car-monit-api (Java / Spring Boot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@PREFIX@/java
+EnvironmentFile=@PREFIX@/java/java.env
+ExecStart=/bin/sh -c 'exec /usr/bin/java $JAVA_OPTS -jar @PREFIX@/java/app.jar'
+Restart=always
+RestartSec=10
+LimitNOFILE=65535
+StandardOutput=append:@LOG_DIR@/java/stdout.log
+StandardError=append:@LOG_DIR@/java/stderr.log
+
+[Install]
+WantedBy=multi-user.target

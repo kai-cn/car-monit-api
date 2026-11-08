@@ -1,0 +1,19 @@
+[Unit]
+Description=car-monit-api (Python)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@PREFIX@/python
+EnvironmentFile=@PREFIX@/python/python.env
+ExecStart=@PREFIX@/python/venv/bin/python @PREFIX@/python/run.py
+Restart=always
+RestartSec=10
+LimitNOFILE=65535
+StandardOutput=append:@LOG_DIR@/python/stdout.log
+StandardError=append:@LOG_DIR@/python/stderr.log
+
+[Install]
+WantedBy=multi-user.target

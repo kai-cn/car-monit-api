@@ -1,0 +1,30 @@
+# Go 单机部署配置模板（占位符，禁止真实口令/内网地址）
+server:
+  port: 9901
+  context-path: /
+  mode: release
+
+spring:
+  datasource:
+    dynamic:
+      datasource:
+        master:
+          url: jdbc:postgresql://<DB_HOST>:5432/<DB_NAME>?characterEncoding=UTF-8&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai
+          username: <DB_USER>
+          password: ""          # 用 APP_SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD 注入
+          driver-class-name: org.postgresql.Driver
+
+redis:
+  host: <REDIS_HOST>
+  port: 6379
+  password: ""
+  database: 0
+
+kafka:
+  bootstrap-servers: <KAFKA_HOST>:9092
+  group-id: car-monit-go
+  topic:
+    snapshot-flow: ods-rt-szdn-snapshot-flow
+
+elasticsearch:
+  uris: http://<ES_HOST>:9200

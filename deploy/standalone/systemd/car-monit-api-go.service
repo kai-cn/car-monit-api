@@ -1,0 +1,18 @@
+[Unit]
+Description=car-monit-api (Go)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@PREFIX@/go
+ExecStart=@PREFIX@/go/api --config @PREFIX@/go/config.yaml
+Restart=always
+RestartSec=10
+LimitNOFILE=65535
+StandardOutput=append:@LOG_DIR@/go/stdout.log
+StandardError=append:@LOG_DIR@/go/stderr.log
+
+[Install]
+WantedBy=multi-user.target
