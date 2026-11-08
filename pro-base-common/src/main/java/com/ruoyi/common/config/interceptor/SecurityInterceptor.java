@@ -45,6 +45,15 @@ public class SecurityInterceptor implements HandlerInterceptor {
     @Value("${api.security.token:}")
     private String expectedToken;
 
+    /**
+     * 过渡期旧令牌：新令牌上线后，存量调用方可继续使用旧令牌，待全部切换后关闭开关
+     */
+    @Value("${api.security.legacy-token:}")
+    private String legacyToken;
+
+    @Value("${api.security.legacy-token-enabled:true}")
+    private boolean legacyTokenEnabled;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         if (!enabled) {
@@ -64,12 +73,25 @@ public class SecurityInterceptor implements HandlerInterceptor {
             return false;
         }
         String provided = request.getHeader(headerName);
-        if (provided == null || provided.isEmpty() || !constantTimeEquals(expectedToken, provided)) {
+        if (provided == null || provided.isEmpty() || !matchesAnyToken(provided)) {
             log.warn("拒绝未授权访问: {} {}", request.getMethod(), configuredPath);
             writeUnauthorized(response, "未授权访问：No Permission 401");
             return false;
         }
         return true;
+    }
+
+    /**
+     * 校验新令牌；过渡期内同时接受旧令牌（开关可关闭）。
+     */
+    private boolean matchesAnyToken(String provided) {
+        if (constantTimeEquals(expectedToken, provided)) {
+            return true;
+        }
+        return legacyTokenEnabled
+                && legacyToken != null
+                && !legacyToken.trim().isEmpty()
+                && constantTimeEquals(legacyToken, provided);
     }
 
     /**

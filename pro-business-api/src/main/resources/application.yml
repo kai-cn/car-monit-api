@@ -11,8 +11,8 @@ spring:
     exclude: com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceAutoConfigure
   datasource:
     dynamic:
-      # 启用 p6spy 对数据源的全局代理，打印完整 SQL
-      p6spy: true
+      # 启用 p6spy 对数据源的全局代理，打印完整 SQL（生产默认关闭，按需通过 P6SPY_ENABLED 开启）
+      p6spy: ${P6SPY_ENABLED:false}
       druid: # 全局druid参数，绝大部分值和默认保持一致。(现已支持的参数如下,不清楚含义不要乱设置)
         # 连接池的配置信息
         # 初始化大小，最小，最大
@@ -114,8 +114,8 @@ mybatis-plus:
       # 默认数据库表下划线命名
       table-underline: true
   configuration:
-    # 这个配置会将执行的sql打印出来，在开发或测试的时候可以用org.apache.ibatis.logging.nologging.NoLoggingImpl
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # SQL 日志走 slf4j，由 logback 控制级别；生产不再直接写 stdout
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
     # 返回类型为Map,显示null对应的字段
     call-setters-on-nulls: true
     map-underscore-to-camel-case: true
@@ -136,7 +136,8 @@ forest:
   retry-count: 2
   max-retry-interval: 1000
 rediscluster:
-  clusterNodes: 36.200.31.15:22400
+  # 生产集群节点通过 REDIS_CLUSTER_NODES 注入，禁止把真实节点写入版本库
+  clusterNodes: ${REDIS_CLUSTER_NODES:}
   refresh-interval-ms: 300000      # 字典数据刷新间隔（毫秒）
 isLocalhost: local # 是否本地 prod生成
 sysbaseUrl: http://223.84.150.189:26066/prod-api
@@ -149,6 +150,9 @@ api:
     enabled: true
     header: X-API-Token
     token: ${API_SECURITY_TOKEN:}
+    # 过渡期兼容旧令牌：存量调用方全部切换后可置 false
+    legacy-token: ${API_SECURITY_LEGACY_TOKEN:}
+    legacy-token-enabled: ${API_SECURITY_LEGACY_TOKEN_ENABLED:true}
 
 
 kafka:
