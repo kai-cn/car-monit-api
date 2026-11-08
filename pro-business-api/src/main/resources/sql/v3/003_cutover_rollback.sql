@@ -38,6 +38,9 @@ DECLARE
     v_cur       text;
     v_exists    int;
     v_dropped   int := 0;
+    v_time_col  text;
+    v_max       timestamp;
+    v_delta     bigint;
 BEGIN
     IF :'confirm' <> 'YES' THEN
         RAISE EXCEPTION 'confirm 参数必须为 YES';
@@ -62,7 +65,26 @@ BEGIN
                     || ' RENAME TO ' || quote_ident(v_legacy);
             EXECUTE 'ALTER TABLE jl_data01.' || quote_ident(v_cur)
                     || ' RENAME TO ' || quote_ident(v_src);
+
+            -- P1-10：统计切换后写入分区表、但回滚后源表不存在的增量行
+            v_time_col := CASE v_table
+                WHEN 'ods_rt_szdn_snapshot_flow_addcode' THEN 'snapshottime'
+                WHEN 'ods_lwzxsfsj_fee_records_01'        THEN 'transtime'
+                WHEN 'zdata_trail_fitting'                THEN 'extime'
+            END;
+            EXECUTE 'SELECT max(' || quote_ident(v_time_col) || ') FROM jl_data01.'
+                    || quote_ident(v_src) INTO v_max;
+            EXECUTE 'SELECT count(*) FROM jl_data01.' || quote_ident(v_legacy)
+                    || ' WHERE ' || quote_ident(v_time_col) || ' > '
+                    || quote_literal(coalesce(v_max, to_timestamp('1970-01-01', 'YYYY-MM-DD'))::text)
+                    INTO v_delta;
+
             RAISE NOTICE '[V3] 已回滚: % -> %（分区表保留为 %）', v_cur, v_src, v_legacy;
+            RAISE NOTICE '[V3] % 切换后增量约 % 行（以源表最大 % = % 为界）',
+                v_table, v_delta, v_time_col, coalesce(v_max::text, 'NULL');
+            RAISE NOTICE '[V3] 回灌指引：以回滚后的源表为准，将分区表中上述增量的行按'
+                || '“时间窗 + 主键去重”补回源表（INSERT ... WHERE NOT EXISTS）。'
+                || '可复用 002_copy_data.sql 的 v3_copy_range 思路，先落影子表核对 count 再切换。';
         ELSE
             -- 场景 B：删除影子表
             SELECT count(*) INTO v_exists

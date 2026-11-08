@@ -17,7 +17,8 @@ SET search_path TO jl_data01, public;
 -- 通用索引创建：openGauss 3.0 不支持 CREATE INDEX IF NOT EXISTS；
 -- 分区表索引必须显式声明 LOCAL（否则与主键全局索引在分区键上冲突：
 -- "Global and local partition index should not be on same column"）。
--- 这里先用 pg_class 判断索引是否已存在，幂等创建。
+-- P1-11：同名索引必须确认归属目标表；回滚后重切时旧索引仍在旧表名下，
+-- 若只按名称判断会全部跳过。这里对“同名但归属其他表”的索引先改名让位再重建。
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION jl_data01.v3_create_index_any(
     p_table   text,
@@ -25,17 +26,39 @@ CREATE OR REPLACE FUNCTION jl_data01.v3_create_index_any(
     p_columns text
 ) RETURNS void AS $$
 DECLARE
-    v_exists int;
+    v_owned int;
+    v_stale int;
+    v_ts    text := to_char(now(), 'YYYYMMDD_HH24MISS');
 BEGIN
-    SELECT count(*) INTO v_exists
+    SELECT count(*) INTO v_owned
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      JOIN pg_index i ON i.indexrelid = c.oid
+     WHERE n.nspname = 'jl_data01'
+       AND c.relname = p_index
+       AND i.indrelid = ('jl_data01.' || quote_ident(p_table))::regclass;
+    IF v_owned > 0 THEN
+        RAISE NOTICE '[V3] 索引已存在且归属目标表，跳过: %.%', p_table, p_index;
+        RETURN;
+    END IF;
+
+    -- 同名索引存在但归属其他表（如回滚后遗留的分区表索引）：改名让位，保留可追溯
+    SELECT count(*) INTO v_stale
       FROM pg_class c
       JOIN pg_namespace n ON n.oid = c.relnamespace
      WHERE n.nspname = 'jl_data01'
        AND c.relname = p_index
        AND c.relkind IN ('i', 'I');
-    IF v_exists > 0 THEN
-        RAISE NOTICE '[V3] 索引已存在，跳过: %.%', p_table, p_index;
-        RETURN;
+    IF v_stale > 0 THEN
+        BEGIN
+            EXECUTE 'ALTER INDEX jl_data01.' || quote_ident(p_index)
+                    || ' RENAME TO ' || quote_ident(p_index || '_legacy_' || v_ts);
+            RAISE NOTICE '[V3] 同名索引归属其他表，已改名让位: % -> %',
+                p_index, p_index || '_legacy_' || v_ts;
+        EXCEPTION WHEN OTHERS THEN
+            EXECUTE 'DROP INDEX jl_data01.' || quote_ident(p_index);
+            RAISE NOTICE '[V3] 同名索引无法改名，已删除后重建: %', p_index;
+        END;
     END IF;
 
     EXECUTE 'CREATE INDEX ' || quote_ident(p_index)
