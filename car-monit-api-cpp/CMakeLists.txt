@@ -38,6 +38,13 @@ else()
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13)
     list(APPEND CM_WARN_OPTIONS -Wno-restrict)
   endif()
+  # librdkafka 的 RD_KAFKA_V_* 宏内部使用 GNU 语句表达式（({ ... })）；
+  # SYSTEM include 只能抑制头文件自身的告警，无法抑制宏在本工程文件展开时的
+  # clang -Wgnu-statement-expression-from-macro-expansion（gcc/MSVC 不受影响）。
+  # 这是第三方宏实现细节，非本工程代码，故仅对 Clang 定向关闭该诊断。
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    list(APPEND CM_WARN_OPTIONS -Wno-gnu-statement-expression-from-macro-expansion)
+  endif()
   if(CM_WERROR)
     list(APPEND CM_WARN_OPTIONS -Werror)
   endif()
