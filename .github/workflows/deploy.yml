@@ -3,6 +3,8 @@ name: deploy
 # CD：构建并推送所选语言的镜像到 GHCR，然后对**已存在**的 K8s Deployment 执行
 # kubectl set image + kubectl rollout status。
 #
+# 例外：本 workflow 为手工 K8s 发布编排，使用 kubectl/gh 等工具，保留 ubuntu 宿主；
+# 语言构建/测试已在 openEuler 容器中执行（见 docs/CI-OPENEULER.md）。
 # 前置（GitHub 仓库 / Environment 配置，全部无默认值，缺一即显式失败）：
 #   vars.K8S_NAMESPACE         目标命名空间
 #   vars.K8S_DEPLOYMENT        已存在的 Deployment 名

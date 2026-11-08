@@ -2,6 +2,9 @@ name: _java
 
 # 可复用 workflow：Java 主仓库（Spring Boot 2.4.5 / source-target 1.8）。
 # 由 pr.yml / master.yml / release.yml 调用，避免三套入口复制检查逻辑。
+# 运行环境：openEuler 24.03 容器（GitHub 托管 runner）+ openEuler dnf 的 OpenJDK 8。
+#   JDK 发行版差异说明：pom 只要求 source/target=1.8，OpenJDK 8 与 Temurin 8 行为等价；
+#   CI 不再使用手写 jdk-version 选择（统一 JDK 8），避免出现"传 21 仍装 8"的假象。
 #
 # 已知缺口（不在 CI 任务内顺手修）：
 #   * pro-base-common / pro-business-api 无 src/test，pom 未配置 checkstyle/spotbugs；
@@ -31,18 +34,37 @@ permissions:
 
 jobs:
   build:
-    name: java (JDK ${{ inputs.jdk-version }})
-    runs-on: ubuntu-latest
+    name: java (OpenJDK 8 / openEuler)
+    # openEuler 24.03 自带的 java-1.8.0-openjdk-devel 可直接编译 source/target=1.8；
+    # 不依赖 Temurin（欧拉仓库无 Temurin）。Maven 走 Apache 官方 tarball（仓库只有 maven-plugin）。
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
+    container:
+      image: openeuler/openeuler:24.03-lts
     timeout-minutes: 30
     steps:
+      - name: 安装 JDK8 / Maven / 基础工具（openEuler dnf）
+        shell: bash
+        run: |
+          dnf install -y java-1.8.0-openjdk-devel tar gzip curl ca-certificates git findutils which
+          curl -fsSL https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz -o /tmp/maven.tgz
+          tar -xzf /tmp/maven.tgz -C /opt
+          echo "/opt/apache-maven-3.9.9/bin" >> "$GITHUB_PATH"
+          JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v javac)")")")"
+          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+          export JAVA_HOME
+          export PATH="/opt/apache-maven-3.9.9/bin:$PATH"
+          java -version
+          mvn -version
+
       - uses: actions/checkout@v4
 
-      - name: Setup JDK ${{ inputs.jdk-version }}
-        uses: actions/setup-java@v4
+      - name: 缓存 Maven 本地仓库
+        uses: actions/cache@v4
         with:
-          distribution: ${{ inputs.jdk-distribution }}
-          java-version: ${{ inputs.jdk-version }}
-          cache: maven
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-${{ runner.os }}-
 
       - name: 构建（编译 + spring-boot repackage）
         run: mvn -B -ntp -DskipTests clean package

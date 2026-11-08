@@ -9,6 +9,7 @@
 | 项目 | 结论 |
 | --- | --- |
 | 远端 | `origin https://github.com/kai-cn/car-monit-api.git` |
+| 运行环境 | **openEuler 24.03 LTS**：构建/测试 job 在 `openeuler/openeuler:24.03-lts` 容器内执行；Windows MSVC 保留 `windows-latest`。详见 [CI-OPENEULER.md](CI-OPENEULER.md) |
 | 当前分支 | `master`（本地）；已推送到 `origin/master`（`dc06f3a`，快进）。远端默认分支已由用户在网页改为 **`master`**（`git ls-remote --symref origin HEAD` 已确认），CI 触发/PR 基线口径一致 |
 | 分支口径 | 所有 workflow 的触发/PR 基线统一为 `master`，不再保留 `main` 兼容分支 |
 | 仓库形态 | **单仓库多目录**：`car-monit-api-cpp/go/python/rust` 均无独立 `.git`，非 submodule（无 `.gitmodules`） |
@@ -243,3 +244,10 @@ kubectl -n "$K8S_NAMESPACE" patch deployment "$K8S_DEPLOYMENT" --type=merge \
 | `car-monit-java` / `car-monit-py` / `car-monit-go` / `car-monit-rust` | private | `sha-230372a`、`latest` 等；命名不符本仓库规则，判断为其它仓库/流水线产出，未触碰 |
 
 - 本仓库 C++/Rust 镜像在 master 上按 presence 跳过，因此 GHCR 无 `car-monit-api-cpp` / `car-monit-api-rust`。
+
+## 13. openEuler 运行环境
+
+- 默认方案：GitHub 托管 runner + `container: openeuler/openeuler:24.03-lts`；JDK 8 用 openEuler 自带 OpenJDK，Maven/Go/Python 走官方 tarball 或 setup-*。
+- 可切换方案：设置仓库变量 `CI_RUNNER_LABELS=["self-hosted","linux","openeuler"]` 即切到自托管 runner；注册命令与预装工具见 [CI-OPENEULER.md §3](CI-OPENEULER.md)。
+- 例外：Windows MSVC、Docker 镜像构建、`gh` 发布、kubectl 部署四个环节保留 `ubuntu-latest`；原因与边界见 [CI-OPENEULER.md §2](CI-OPENEULER.md)。
+- 实测状态：**待首次容器 run 回填**（本机无 Docker，镜像 tag 与 dnf 安装未本地实测）。

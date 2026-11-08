@@ -135,6 +135,8 @@ jobs:
       push: true
 
   publish:
+    # 例外：发布编排 job 使用 gh CLI，保留 ubuntu-latest 宿主（openEuler 仓库无 gh 包）。
+    # 构建/测试 job 已在 openEuler 容器中执行，见 docs/CI-OPENEULER.md。
     name: publish GitHub Release
     if: always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
     needs: [presence, java, cpp, go, python, rust, image-java, image-python, image-go, image-cpp, image-rust]

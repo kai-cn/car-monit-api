@@ -29,6 +29,8 @@ permissions:
 
 jobs:
   build:
+    # MSVC/Windows 是唯一保留 windows-latest 的构建：openEuler 无法运行 MSVC 工具链，
+    # 其余 C++ Linux 构建全部在 openeuler 容器内执行。
     name: cpp (MSVC 2022 / C++20)
     runs-on: windows-latest
     timeout-minutes: 60
@@ -66,8 +68,10 @@ jobs:
           retention-days: 14
 
   linux:
-    name: cpp (linux-${{ matrix.name }})
-    runs-on: ubuntu-latest
+    name: cpp (linux-${{ matrix.name }} / openEuler)
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
+    container:
+      image: openeuler/openeuler:24.03-lts
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -83,18 +87,20 @@ jobs:
       run:
         working-directory: car-monit-api-cpp
     steps:
-      - uses: actions/checkout@v4
+      - name: 安装依赖（openEuler dnf）
+        shell: bash
+        run: |
+          dnf install -y git tar gzip ca-certificates gcc gcc-c++ clang cmake ninja-build make which libpq-devel openssl-devel
 
-      - name: 安装依赖
-        run: sudo apt-get update && sudo apt-get install -y ninja-build libpq-dev libssl-dev
+      - uses: actions/checkout@v4
 
       - name: 缓存 FetchContent 依赖
         uses: actions/cache@v4
         with:
           path: car-monit-api-cpp/build-linux-${{ matrix.name }}/_deps
-          key: cpp-deps-linux-${{ matrix.name }}-${{ hashFiles('car-monit-api-cpp/CMakeLists.txt') }}
+          key: cpp-deps-linux-${{ matrix.name }}-${{ runner.os }}-${{ hashFiles('car-monit-api-cpp/CMakeLists.txt') }}
           restore-keys: |
-            cpp-deps-linux-${{ matrix.name }}-
+            cpp-deps-linux-${{ matrix.name }}-${{ runner.os }}-
 
       - name: 配置 + 构建 + 测试（scripts/ci-linux.sh）
         env:
@@ -104,25 +110,29 @@ jobs:
         run: bash scripts/ci-linux.sh
 
   linux-sanitizer:
-    name: cpp (linux ASan+UBSan)
-    runs-on: ubuntu-latest
+    name: cpp (linux ASan+UBSan / openEuler)
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
+    container:
+      image: openeuler/openeuler:24.03-lts
     timeout-minutes: 45
     defaults:
       run:
         working-directory: car-monit-api-cpp
     steps:
-      - uses: actions/checkout@v4
+      - name: 安装依赖（openEuler dnf）
+        shell: bash
+        run: |
+          dnf install -y git tar gzip ca-certificates gcc gcc-c++ clang cmake ninja-build make which libpq-devel openssl-devel
 
-      - name: 安装依赖
-        run: sudo apt-get update && sudo apt-get install -y ninja-build libpq-dev libssl-dev
+      - uses: actions/checkout@v4
 
       - name: 缓存 FetchContent 依赖
         uses: actions/cache@v4
         with:
           path: car-monit-api-cpp/build-linux-asan/_deps
-          key: cpp-deps-linux-asan-${{ hashFiles('car-monit-api-cpp/CMakeLists.txt') }}
+          key: cpp-deps-linux-asan-${{ runner.os }}-${{ hashFiles('car-monit-api-cpp/CMakeLists.txt') }}
           restore-keys: |
-            cpp-deps-linux-asan-
+            cpp-deps-linux-asan-${{ runner.os }}-
 
       - name: ASan + UBSan 构建与测试
         env:
@@ -132,17 +142,21 @@ jobs:
         run: bash scripts/ci-linux.sh -DCMAKE_BUILD_TYPE=Debug -DCM_SANITIZE=address,undefined
 
   static-analysis:
-    name: cpp static-analysis (cppcheck)
-    runs-on: ubuntu-latest
+    name: cpp static-analysis (cppcheck / openEuler)
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
+    container:
+      image: openeuler/openeuler:24.03-lts
     timeout-minutes: 20
     defaults:
       run:
         working-directory: car-monit-api-cpp
     steps:
-      - uses: actions/checkout@v4
+      - name: 安装 cppcheck（openEuler dnf）
+        shell: bash
+        run: |
+          dnf install -y git tar gzip ca-certificates cppcheck
 
-      - name: 安装 cppcheck
-        run: sudo apt-get update && sudo apt-get install -y cppcheck
+      - uses: actions/checkout@v4
 
       - name: cppcheck（仅定向排除 2 条已知性能提示）
         shell: bash

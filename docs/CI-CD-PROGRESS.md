@@ -24,6 +24,7 @@
 | 14 | C++ cppcheck/Clang 修复 | 完成（未 CI 验证）：定向 suppress + Clang 定向 -Wno | db770e4 / 8f1a677 / 82520da |
 | 15 | Go 53 漏洞治理 | **完成**：Go 1.26.10 + 依赖升级，govulncheck 0 可达 | 024d2f9 |
 | 16 | PR / release / GHCR 实测 | **完成**：PR Gate success；release success；tag/Release 已清理 | 48705e7 / 42496000954 |
+| 17 | openEuler 容器化（方案 A）+ 自托管切换说明（方案 B） | 代码完成，**待首次容器 run 验证** | 见 docs/CI-OPENEULER.md |
 
 ## 分支推送记录（2026-11-08）
 

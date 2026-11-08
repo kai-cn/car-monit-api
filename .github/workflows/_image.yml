@@ -26,6 +26,8 @@ permissions:
 
 jobs:
   build:
+    # 例外：Docker 镜像构建需要宿主 Docker daemon；GitHub 托管 runner 的容器 job 不提供 DinD，
+    # 因此本 job 保留 ubuntu-latest 宿主。自托管 openEuler runner 若装了 Docker，可整 job 迁过去。
     name: image ${{ inputs.language }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
