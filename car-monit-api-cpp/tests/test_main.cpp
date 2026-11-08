@@ -966,6 +966,15 @@ static void test_background_pool_batch() {
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
   CHECK(done.load() == 10);
   CHECK(cm::background_pool().pending() == 0);
+
+  // 任务异常不得逃出 worker（逃出即 std::terminate 杀进程），且后续任务照常执行。
+  std::atomic<int> after_exception{0};
+  CHECK(cm::background_pool().submit([] { throw std::runtime_error("intentional"); }));
+  CHECK(cm::background_pool().submit([&after_exception] { after_exception.fetch_add(1); }));
+  for (int t = 0; t < 5000 && after_exception.load() < 1; t += 5)
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  CHECK(after_exception.load() == 1);
+  CHECK(cm::background_pool().pending() == 0);
 }
 
 static void test_pagination_bounds() {

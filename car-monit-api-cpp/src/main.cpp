@@ -14,7 +14,9 @@
 
 #include <iostream>
 
-int main(int argc, char** argv) {
+namespace {
+
+int run(int argc, char** argv) {
   std::string config_path = "configs/config.yaml";
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
@@ -114,5 +116,21 @@ int main(int argc, char** argv) {
   cm::db::PgPool::instance().shutdown();
   CM_LOG_INFO("main") << "car-monit-api 已停止（退出码 " << rc << "）";
   return rc;
+}
 
+} // namespace
+
+int main(int argc, char** argv) {
+  // 顶层兜底：任何未捕获异常若逃出 main 会触发 std::terminate（无日志、无清理），
+  // 这里统一记录并以退出码 1 结束，便于容器/守护进程识别为失败重启。
+  try {
+    return run(argc, argv);
+  } catch (const std::exception& e) {
+    CM_LOG_ERROR("main") << "未捕获异常导致进程退出: " << e.what();
+    std::cerr << "未捕获异常导致进程退出: " << e.what() << std::endl;
+  } catch (...) {
+    CM_LOG_ERROR("main") << "未捕获异常导致进程退出: <unknown>";
+    std::cerr << "未捕获异常导致进程退出: <unknown>" << std::endl;
+  }
+  return 1;
 }

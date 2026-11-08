@@ -314,7 +314,16 @@ void KafkaProducer::Impl::delivery_cb(rd_kafka_t*, const rd_kafka_message_t* msg
                                       void* opaque) {
   auto* ctx = static_cast<DeliveryCtx*>(opaque);
   if (!ctx || !ctx->owner) return;
-  ctx->owner->on_delivery(ctx, msg);
+  // C ABI 回调绝不能向外抛异常（librdkafka 内部线程无法捕获 C++ 异常，
+  // 逃逸会直接 std::terminate）。on_delivery 内部已按同步/异步路径分别兜底，
+  // 这里再加一层防线，只记录不重抛。
+  try {
+    ctx->owner->on_delivery(ctx, msg);
+  } catch (const std::exception& e) {
+    CM_LOG_ERROR("kafka") << "[Kafka生产者] delivery 回调异常: " << e.what();
+  } catch (...) {
+    CM_LOG_ERROR("kafka") << "[Kafka生产者] delivery 回调异常: <unknown>";
+  }
 }
 
 void KafkaProducer::Impl::on_delivery(DeliveryCtx* ctx, const rd_kafka_message_t* msg) {
@@ -353,20 +362,28 @@ void KafkaProducer::Impl::on_delivery(DeliveryCtx* ctx, const rd_kafka_message_t
     return;
   }
 
-  if (ok) {
-    if (!ctx->message_id.empty()) {
-      Redis::instance().set(std::string(kMsgStatusPrefix) + ctx->message_id, "SENT");
-      CM_LOG_DEBUG("kafka") << "[可靠性服务] Kafka确认消息: messageId=" << ctx->message_id
-                            << ", offset=" << offset;
+  // 异步路径：回调里会写 Redis / DB / 死信，任何异常若逃出 C 回调都会终止进程；
+  // 单独兜底并保证 ctx 一定释放（调用方不再持有异步 ctx）。
+  try {
+    if (ok) {
+      if (!ctx->message_id.empty()) {
+        Redis::instance().set(std::string(kMsgStatusPrefix) + ctx->message_id, "SENT");
+        CM_LOG_DEBUG("kafka") << "[可靠性服务] Kafka确认消息: messageId=" << ctx->message_id
+                              << ", offset=" << offset;
+      }
+      if (!ctx->record_id.empty()) {
+        db_update_status(ctx->record_id, 1, true);
+        // Java 侧此处传的是 dataId（而非 messageId），这里保持一致。
+        Redis::instance().set(std::string(kMsgStatusPrefix) + ctx->data_id, "SENT");
+      }
+    } else {
+      if (!ctx->record_id.empty()) db_increment_retry(ctx->record_id, error);
+      if (!ctx->message_id.empty()) handle_send_failure(*ctx, error);
     }
-    if (!ctx->record_id.empty()) {
-      db_update_status(ctx->record_id, 1, true);
-      // Java 侧此处传的是 dataId（而非 messageId），这里保持一致。
-      Redis::instance().set(std::string(kMsgStatusPrefix) + ctx->data_id, "SENT");
-    }
-  } else {
-    if (!ctx->record_id.empty()) db_increment_retry(ctx->record_id, error);
-    if (!ctx->message_id.empty()) handle_send_failure(*ctx, error);
+  } catch (const std::exception& e) {
+    CM_LOG_ERROR("kafka") << "[可靠性服务] 送达状态落库/告警异常: " << e.what();
+  } catch (...) {
+    CM_LOG_ERROR("kafka") << "[可靠性服务] 送达状态落库/告警异常: <unknown>";
   }
   delete ctx;
 }
@@ -471,7 +488,14 @@ void KafkaProducer::Impl::ensure_timeout_thread() {
   timeout_running.store(true);
   timeout_thread = std::thread([this] {
     while (timeout_running.load()) {
-      process_due_timeouts();
+      // 超时检查会读 Redis，异常逃出线程会 terminate 进程，这里兜底记录。
+      try {
+        process_due_timeouts();
+      } catch (const std::exception& e) {
+        CM_LOG_ERROR("kafka") << "[可靠性服务] 超时检查异常: " << e.what();
+      } catch (...) {
+        CM_LOG_ERROR("kafka") << "[可靠性服务] 超时检查异常: <unknown>";
+      }
       std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
   });
@@ -502,10 +526,19 @@ bool KafkaProducer::start(bool start_db_retry) {
   impl_->db_retry.store(start_db_retry && !cfg.kafka.fallback_redis);
   impl_->poll_thread = std::thread([this] {
     while (impl_->running.load()) {
+      // 轮询线程同时负责重试扫描，异常若逃出会 terminate 进程，这里兜底记录。
+      try {
 #if defined(CM_WITH_KAFKA)
-      rd_kafka_poll(impl_->rk, 100);
+        rd_kafka_poll(impl_->rk, 100);
+#else
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
 #endif
-      impl_->process_due_retries();
+        impl_->process_due_retries();
+      } catch (const std::exception& e) {
+        CM_LOG_ERROR("kafka") << "[Kafka生产者] 轮询/重试线程异常: " << e.what();
+      } catch (...) {
+        CM_LOG_ERROR("kafka") << "[Kafka生产者] 轮询/重试线程异常: <unknown>";
+      }
     }
   });
   if (impl_->db_retry.load()) {
