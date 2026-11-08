@@ -31,12 +31,18 @@ docker compose up -d --build
 docker compose ps
 curl -s http://127.0.0.1:9901/health
 curl -s 'http://127.0.0.1:9901/metrics?format=prometheus' | head
+# 非 DB 端点（不查库）
+curl -s http://127.0.0.1:9901/progressive/scale-level
+# DB 列表端点（种子数据）
+curl -s 'http://127.0.0.1:9901/base/fwqjcxx/list?pageNum=1&pageSize=1'
 ```
 
 预期：
 
 - `/health` 返回 HTTP 200，`status=UP`（ES 未接入时为 `UNKNOWN`，不判降级）。
 - `/metrics?format=prometheus` 返回 Prometheus 文本（`carmonit_requests_total` 等）。
+- `/progressive/scale-level` 返回 200（非 DB 端点冒烟）。
+- `/base/fwqjcxx/list` 返回种子数据（验证 DB + schema）。
 - DB/Redis/Kafka 全部 healthy 后 api 才启动（`depends_on: condition: service_healthy`）。
 
 常用命令：
@@ -69,8 +75,9 @@ docker compose --profile observability up -d   # 额外启动 Prometheus + Grafa
 **仓库内没有完整生产 DDL**：`pro-business-api/src/main/resources/sql/partition_scheme.sql`
 只有 3 张核心表的设计样例，且列集合与 Mapper 实际查询不完全一致。因此：
 
-- 本地联调：占位 schema 足够让服务启动、`/health` 与非数据库端点通过；部分依赖真实列语义的
-  查询可能返回空结果或 SQL 错误，属于预期。
+- 本地联调：占位 schema 已覆盖 22 张实体表；列名与 service SELECT 片段对齐，已用
+  PostgreSQL 17 实测 19 个 `/base` 与 `/manager` 列表接口全部返回 200。复杂联表、
+  写入路径与真实类型语义仍需真实 DDL。
 - 预发/生产：必须用数据仓提供的真实 DDL 替换 `02-placeholder-tables.sql`，并按需执行
   `partition_scheme.sql` / `index_optimization.sql` 中的分区与索引方案。
 
