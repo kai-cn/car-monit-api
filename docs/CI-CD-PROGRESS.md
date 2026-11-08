@@ -20,6 +20,10 @@
 | 10 | CD 实跑验证（需集群/凭据） | **未验证** | - |
 | 11 | Actions 首轮失败静态修复（Mapper XML/golden、Kafka 镜像、CGO、extra-tag、基础镜像固定） | 完成 | 15e4ef1 / 465aeba |
 | 12 | 修复后复跑 Actions | **完成**：master run 42491418177 / 42491455889 均 success | - |
+| 13 | 分支对齐到 c7ef070 | cpp/cpp-ops/python/java-fix 完成；go 冲突未解 | 见下 |
+| 14 | C++ cppcheck/Clang 修复 | 完成（未 CI 验证）：定向 suppress + Clang 定向 -Wno | db770e4 / 8f1a677 / 82520da |
+| 15 | Go 53 漏洞治理 | **完成**：Go 1.26.10 + 依赖升级，govulncheck 0 可达 | 024d2f9 |
+| 16 | PR / release / GHCR 实测 | **完成**：PR Gate success；release success；tag/Release 已清理 | 48705e7 / 42496000954 |
 
 ## 分支推送记录（2026-11-08）
 
@@ -27,21 +31,22 @@
 
 | 语言 | 本地分支 | 本地/远端 SHA | 远端状态 |
 | --- | --- | --- | --- |
-| cpp | `car-monit-api-cpp` | 63bb3c9e8ad4ab4a8663a403ce814880643f4b34 | 已推送（新建，非 force） |
-| cpp | `car-monit-api-cpp-ops` | 119e438aaa47ecd6ca80b8dc62d1d51a8372ea28 | 已推送（新建，非 force） |
-| go | `car-monit-api-go-V2` | ed6a28163b49c63c48dfcce7d5b482ddc9d6f485 | 已推送（新建，非 force） |
-| rust | `car-monit-api-rust` | 847441dddc7f3b25d7f8c9d4ba612559c91635b8 | 远端已存在且一致，**无需推送** |
-| python | `car-monit-api-python` | 6fff93ccbd37f006bc8a4b98fff6641729561f7c | 已推送（从 master 新建，基于当时 master tip；master 后续已另行推送） |
+| cpp | `car-monit-api-cpp` | `db770e48c932978ee1db850533e137a161635971` | 已 merge master + 删除 cpp-ci.yml + Clang 告警修复，已推送 |
+| cpp | `car-monit-api-cpp-ops` | `8f1a6778c6e39e943739e9936d3ef059c6787a9f` | 同上 |
+| go | `car-monit-api-go-V2` | `ed6a28163b49c63c48dfcce7d5b482ddc9d6f485` | **merge 冲突未解**（config.yaml / config.verify.yaml / review 文档），未推送 |
+| rust | `car-monit-api-rust` | `847441dddc7f3b25d7f8c9d4ba612559c91635b8` | 远端已存在且一致，旧快照 |
+| python | `car-monit-api-python` | `c7ef07006c285462388283912c76a38739d8aa69` | 已快进到 c7ef070 并推送 |
+| java-fix | `car-monit-api-java-fix` | `2062d28a6716181061b609b5830694b4dc0317d5` | 已 merge master（旧 ci.yml 自动删除）并推送 |
 
-gh CLI 不可用 → **已推送，未验证 Actions 是否触发**。
+上述分支由 PAT 回读确认；master / pr / release 的实测结论见 `CI-CD-PIPELINES.md §12.5`。
 
 ## master 推送与默认分支（2026-11-08）
 
 | 项 | 状态 |
 | --- | --- |
-| `origin/master` | `465aebadaeebea440d08e976202a9f939d9295b5`（快进，非 force；含首轮 CI 修复） |
+| `origin/master` | `48705e713313b7044e60ed783fddaf8ea3d879b7`（含 Go 升级、C++ 检查补齐、release publish 修复） |
 | 远端默认分支 | 已是 `master`（用户网页修改后回读确认） |
-| Actions 触发 | 修复前失败原因未知（无凭据读日志）；修复后推送待确认 |
+| Actions 触发 | 已确认：master / pr / release 均 success（详见 CI-CD-PIPELINES.md §12.5）；deploy 未运行 |
 | `main` 分支 | 独立历史 `cdee15a Initial commit`（仅 README.md 2 行），非 master 祖先；**未删除**，建议改默认分支且 master CI 跑通后再删 |
 
 ## 待确认

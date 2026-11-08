@@ -218,17 +218,28 @@ kubectl -n "$K8S_NAMESPACE" patch deployment "$K8S_DEPLOYMENT" --type=merge \
 | Go `gofmt` / `go vet` / `go build` / `go test` | 全部通过（race 因本机无 gcc 未跑） |
 | Java `mvn compile`（JDK 8 / Maven 3.9.9） | BUILD SUCCESS |
 
-### 12.5 GitHub Actions 实测结果（只读 PAT，2026-11-08）
+### 12.5 GitHub Actions 实测结果（只读+写权限 PAT，2026-11-08）
 
 | workflow / 运行 | 分支 / SHA | 结论 | 说明 |
 | --- | --- | --- | --- |
-| `master` | master `465aeba`（run 42491418177） | **success** | presence、java、go、python gates、python integration、image-java/python/go、Master Gate 全绿；cpp/rust 及对应镜像 skip |
-| `master` | master `a6b6398`（run 42491455889） | **success** | 同上，缓存后耗时明显下降 |
-| `pr` | — | **未运行** | 仓库暂无 PR |
-| `release` | — | **未运行** | 暂无 `v*.*.*` tag |
-| `deploy` | — | **未运行** | 仅手动触发 |
-| `C++ CI`（分支自带旧 workflow） | `car-monit-api-cpp` `63bb3c9` | **failure** | cppcheck 退出 1；linux-clang / ASan+UBSan 因 `-Wgnu-statement-expression-from-macro-expansion` 失败；linux-gcc、windows-msvc 通过 |
-| `car-monit-api-go CI`（分支自带旧 workflow） | `car-monit-api-go-V2` `ed6a281` | **failure** | `govulncheck` 报告 53 个可达漏洞（4 模块 + 标准库），退出 3 |
-| `ci`（旧 Python-only workflow，java-fix 分支） | `car-monit-api-java-fix` `913981e` | **failure** | 旧分支未包含本轮修复：pytest golden 失配 + `bitnami/kafka:3.7` 拉取失败 |
+| `master` | master `024d2f9`（run 42495366929） | **success** | Go 1.26.10 + govulncheck 0 可达漏洞；image-java/python/go 全绿 |
+| `master` | master `48705e7`（run 42495971365） | **success** | 含 release publish 修复 |
+| `pr` | PR #1 noise（`1248155`，run 42495436926） | **success** | `changes` success；java/go/cpp/python/rust 全部 **skipped**（docs-only）；`PR Gate` success；PR 已关闭、临时分支已删除 |
+| `release` | tag `v0.0.0-citest` @ `48705e7`（run 42496000954） | **success** | 首跑 42495556977 仅 publish 失败（`gh` 无 checkout 报 not a git repository），已用 `GH_REPO` 修复并复跑；资产 jar 216M / go 27M / python 镜像 73M / SHA256SUMS；tag 与 Release 已清理 |
+| `deploy` | — | **未运行** | 无 K8s 集群/凭据 |
+| `C++ CI`（旧分支 workflow） | `car-monit-api-cpp` `63bb3c9` | 已被删除 | 旧 `cpp-ci.yml` 已移除，检查并入统一 `_cpp.yml`；新检查待 PR 验证 |
+| `car-monit-api-go CI`（旧分支 workflow） | `car-monit-api-go-V2` | 待合并后移除 | 分支 merge 冲突未解决；govulncheck 已在 master 统一 `_go.yml` 保留 |
+| `ci`（旧 Python-only，java-fix 分支） | `car-monit-api-java-fix` | 已被 merge 移除 | 分支已 merge master，旧 `ci.yml` 自动删除 |
 
 > 首轮 `master` 失败根因（真实日志）：① `test_sql_golden` 与 Mapper XML 不同步；② `bitnami/kafka:3.7` manifest unknown。其余语言 job 当轮即为 success，并非"全部语言都挂"。
+
+### 12.6 GHCR 镜像实测清单（2026-11-08）
+
+| 包 | 可见性 | 实际 tag（节选） |
+| --- | --- | --- |
+| `car-monit-api`（Java） | private | `latest`、`sha-48705e7`、`0.0.0-citest` 及历史 `sha-*` |
+| `car-monit-api-python` | private | `latest`、`sha-48705e7`、`0.0.0-citest` 及历史 `sha-*` |
+| `car-monit-api-go` | private | `latest`、`sha-48705e7`、`0.0.0-citest` 及历史 `sha-*` |
+| `car-monit-java` / `car-monit-py` / `car-monit-go` / `car-monit-rust` | private | `sha-230372a`、`latest` 等；命名不符本仓库规则，判断为其它仓库/流水线产出，未触碰 |
+
+- 本仓库 C++/Rust 镜像在 master 上按 presence 跳过，因此 GHCR 无 `car-monit-api-cpp` / `car-monit-api-rust`。
