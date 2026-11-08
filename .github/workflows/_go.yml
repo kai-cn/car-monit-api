@@ -25,6 +25,10 @@ jobs:
     defaults:
       run:
         working-directory: car-monit-api-go
+    env:
+      # 容器内 checkout 的 VCS 元数据/安全目录对 go 的 buildvcs 探测不友好，
+      # 会报 "error obtaining VCS status: exit status 128"；CI 不需要版本戳记。
+      GOFLAGS: "-buildvcs=false"
     steps:
       - name: 安装基础工具（openEuler dnf）
         shell: bash
