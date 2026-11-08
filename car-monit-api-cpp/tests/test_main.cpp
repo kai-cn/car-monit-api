@@ -1,6 +1,7 @@
 // 最小冒烟测试：覆盖工具类、时间语义、摘要算法与 JSON 信封。
 // 数据库/Redis 连通性由环境变量 CM_TEST_DB / CM_TEST_REDIS 开启。
 #include "cache/redis.h"
+#include "cluster/leader.h"
 #include "common/crypto.h"
 #include "common/datetime.h"
 #include "common/error.h"
@@ -1135,6 +1136,85 @@ static void test_redis_reconnect_no_deadlock() {
   CHECK(threw);
 }
 
+static void test_leader_election_failure_paths() {
+  // 无 Redis 时的行为（D-017）：disabled=单实例；fail-open=降级执行；fail-closed=不执行。
+  auto& redis = cm::cache::Redis::instance();
+  CHECK(!redis.connect("127.0.0.1", 1, "", 0, 300));
+  redis.close();
+  auto& elector = cm::cluster::LeaderElector::instance();
+
+  cm::cluster::LeaderOptions o;
+  o.enabled = false;
+  elector.start(o, "test-single");
+  CHECK(elector.is_leader());
+  elector.stop();
+  CHECK(!elector.is_leader());
+
+  o.enabled = true;
+  o.key = "cm-test:leader:no-redis";
+  o.ttl_ms = 1000;
+  o.renew_ms = 200;
+  o.fail_open = true;
+  elector.start(o, "test-open");
+  CHECK(elector.is_leader());
+  elector.stop();
+  CHECK(!elector.is_leader());
+
+  o.fail_open = false;
+  elector.start(o, "test-closed");
+  CHECK(!elector.is_leader());
+  elector.stop();
+  CHECK(!elector.is_leader());
+}
+
+static void test_leader_election_optional_redis() {
+  // 有本地 Redis 时验证真实抢锁/续期/释放/接管；无 Redis 则跳过（与 CI 环境一致）。
+  if (!cm::utils::get_env("CM_TEST_REDIS")) return;
+  auto& cfg = cm::config::Config::instance();
+  cfg.load("configs/config.yaml");
+  cfg.apply_env_overrides();
+  auto& redis = cm::cache::Redis::instance();
+  if (!redis.connect(cfg.redis().host, cfg.redis().port, cfg.redis().password,
+                     cfg.redis().database, cfg.redis().timeout_ms, cfg.redis().tls,
+                     cfg.redis().tls_cacert, cfg.redis().tls_cert, cfg.redis().tls_key)) {
+    std::cout << "跳过 Redis leader 选举测试：Redis 不可用" << std::endl;
+    return;
+  }
+
+  const std::string key =
+      "cm-test:leader:" +
+      std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+  cm::cluster::LeaderOptions o;
+  o.enabled = true;
+  o.key = key;
+  o.ttl_ms = 2000;
+  o.renew_ms = 400;
+  o.fail_open = false;
+
+  cm::cluster::LeaderElector a;
+  cm::cluster::LeaderElector b;
+  a.start(o, "owner-a");
+  CHECK(a.is_leader());
+  b.start(o, "owner-b");
+  CHECK(!b.is_leader()); // 锁被 A 持有
+
+  // A 续期后仍持锁；B 不能抢到。
+  std::this_thread::sleep_for(std::chrono::milliseconds(900));
+  CHECK(a.is_leader());
+  CHECK(!b.is_leader());
+
+  // A 释放后，B 在下一个轮询周期接管。
+  a.stop();
+  bool acquired = false;
+  for (int i = 0; i < 30 && !acquired; ++i) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    acquired = b.is_leader();
+  }
+  CHECK(acquired);
+  b.stop();
+  redis.del(key);
+}
+
 static void test_server_security() {
   // 安全加固（审阅 §5.1 #6）：鉴权与限流为新增能力（默认关闭，对齐 Java 生产
   // 实例——SecurityInterceptor 被整体注释）；开启后的判定逻辑在此覆盖。
@@ -1406,6 +1486,8 @@ int main() {
   test_health_and_metrics();
   test_log_json_and_request_id();
   test_log_rotation();
+  test_leader_election_failure_paths();
+  test_leader_election_optional_redis();
   test_db_optional();
   if (g_fail == 0) {
     std::cout << "ALL TESTS PASSED" << std::endl;

@@ -180,6 +180,17 @@ consistency:
     drift-ratio: 0.01
     cron: "0 30 2 * * ?"
 
+# 多实例单活（D-017）：Redis 分布式锁决定谁执行调度与全量/增量同步。
+# Redis 不可用时 fail-open=false（默认）暂停后台任务但 HTTP 继续服务；
+# 单机部署可设 enabled=false 跳过选举。
+cluster:
+  leader-election:
+    enabled: true
+    key: "car-monit:leader"
+    ttl-ms: 30000
+    renew-ms: 10000
+    fail-open: false
+
 reliability:
   message-timeout-ms: 30000
   max-retry-count: 5

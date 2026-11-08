@@ -173,6 +173,7 @@ file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/config/*.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/db/*.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cache/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/cluster/*.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/es/*.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/meta/*.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/repo/*.cpp"

@@ -2,6 +2,7 @@
 // + SpringApplication.run：加载配置 -> 初始化连接池 -> 注册路由 -> 启动调度器。
 #include "config/config.h"
 #include "cache/redis.h"
+#include "cluster/leader.h"
 #include "db/auth_guard.h"
 #include "db/pg.h"
 #include "common/logging.h"
@@ -85,6 +86,16 @@ int run(int argc, char** argv) {
     CM_LOG_WARN("main") << "Redis 连接失败，缓存相关功能将按 Java 侧降级语义处理";
   }
 
+  // 多实例单活：Redis 分布式锁决定谁执行调度与同步；抢锁失败/Redis 不可用
+  // 都不影响 HTTP 服务，只影响后台任务（行为见 docs/DECISIONS.md D-017）。
+  cm::cluster::LeaderOptions leader_options;
+  leader_options.enabled = cfg.cluster.leader_election_enabled;
+  leader_options.key = cfg.cluster.leader_lock_key;
+  leader_options.ttl_ms = cfg.cluster.leader_ttl_ms;
+  leader_options.renew_ms = cfg.cluster.leader_renew_ms;
+  leader_options.fail_open = cfg.cluster.leader_fail_open;
+  cm::cluster::LeaderElector::instance().start(leader_options);
+
   // Kafka 生产者（KafkaTemplate 等价物）。broker 不可达不会阻断启动：
   // librdkafka 在首次发送时才建立连接，失败通过 delivery 回调进入重试/死信。
   if (cfg.kafka.enabled) {
@@ -107,10 +118,11 @@ int run(int argc, char** argv) {
 
   int rc = cm::http::run_server(cfg.server_port(), router, 16, cfg.shutdown_timeout_ms());
   // 优雅停机（审阅 §5.1 #11）：run_server 因信号或错误返回后，按依赖顺序回收——
-  // 调度器（停止触发 + join 执行池）→ 快照同步线程 → 后台任务池（导出/全量修复
-  // 同步，排空 join）→ Kafka（rd_kafka_flush）→ 数据库连接池。
+  // 调度器（停止触发 + join 执行池）→ 快照同步线程 → 释放 leader 锁 →
+  // 后台任务池（导出/全量修复同步，排空 join）→ Kafka（rd_kafka_flush）→ 数据库连接池。
   cm::router::stop_schedulers();
   cm::service::stop_snapshot_flow_sync();
+  cm::cluster::LeaderElector::instance().stop();
   cm::background_pool().shutdown();
   cm::mq::KafkaProducer::instance().stop();
   cm::db::PgPool::instance().shutdown();
