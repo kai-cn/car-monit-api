@@ -52,8 +52,10 @@ public class TrafficQueryV3Controller {
             boolean deep = api.getSearchAfter() != null && !api.getSearchAfter().isEmpty();
             req.setSearchAfter(deep ? api.getSearchAfter() : new ArrayList<>());
             req.setPitId(api.getPitId());
-            // PIT 需要贯穿首页与后续页；首页也必须保留 pitId 才能继续 search_after
-            req.setKeepPit(true);
+            // P1-4：仅深分页或调用方显式要求时保留 PIT。
+            // 普通 from/size 分页请求结束后立即关闭，避免每个请求遗留 2 分钟搜索上下文，
+            // 持续 QPS 下打满 max_open_scroll_context（默认 500）。
+            req.setKeepPit(deep || api.isKeepPit());
             req.setNeedTotal(!deep && api.isNeedTotal());
 
             TrafficSearchResult result = searchService.search(req);
