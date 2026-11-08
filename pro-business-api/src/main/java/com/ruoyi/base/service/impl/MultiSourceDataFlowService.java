@@ -8,10 +8,15 @@ import com.ruoyi.common.utils.CommonUtil;
 import com.ruoyi.common.utils.DateUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -58,6 +63,26 @@ public class MultiSourceDataFlowService {
      * 待处理队列重试间隔（60秒）
      */
     private static final int PENDING_RETRY_INTERVAL = 60;
+
+    /**
+     * 轨迹拼接分段锁数量：同一车牌的读-改-写必须串行，不同车牌按哈希分散
+     */
+    private static final int PLATE_LOCK_STRIPES = 64;
+
+    private final Object[] plateLocks = new Object[PLATE_LOCK_STRIPES];
+
+    {
+        for (int i = 0; i < PLATE_LOCK_STRIPES; i++) {
+            plateLocks[i] = new Object();
+        }
+    }
+
+    /**
+     * 取车牌对应的分段锁
+     */
+    private Object lockForPlate(String plateKey) {
+        return plateLocks[(plateKey.hashCode() & 0x7fffffff) % PLATE_LOCK_STRIPES];
+    }
 
     // ==================== 核心处理流程 ====================
 
@@ -257,39 +282,49 @@ public class MultiSourceDataFlowService {
     private boolean tryAppendToTrail(String plateKey, TrailBo newEvent) {
         String trailKey = REALTIME_TRAIL_KEY_PREFIX + plateKey;
 
-        try {
-            // 步骤1：获取当前轨迹
-            TrailInfo currentTrail = (TrailInfo) redisTemplate.opsForValue().get(trailKey);
-
-            if (currentTrail == null || currentTrail.getTracks() == null) {
-                // 无现有轨迹，创建新轨迹
-                log.info("[轨迹拼接] 无现有轨迹，创建新轨迹：plateKey={}", plateKey);
-                createNewTrail(plateKey, newEvent);
-                return true;
-            }
-
-            // 步骤2：判断是否需要切割轨迹（时间差超过7天）
-            boolean needSplit = needSplitTrail(currentTrail, newEvent);
-
-            if (needSplit) {
-                log.info("[轨迹拼接] 时间差超过7天，开启新轨迹链：plateKey={}", plateKey);
-                createNewTrail(plateKey, newEvent);
-                return true;
-            }
-
-            // 步骤3：拼接到现有轨迹
-            appendToExistingTrail(currentTrail, newEvent);
-
-            // 步骤4：保存更新后的轨迹
-            redisTemplate.opsForValue().set(trailKey, currentTrail, REALTIME_TRAIL_TTL, TimeUnit.SECONDS);
-            log.debug("[轨迹拼接] 成功拼接到现有轨迹：plateKey={}, pointUuid={}",
-                    plateKey, newEvent.getPointUuid());
-
-            return true;
-
-        } catch (Exception e) {
-            log.error("[轨迹拼接] 异常：plateKey={}", plateKey, e);
+        // 抓拍时间缺失或格式非法时无法参与排序，直接跳过并记录，交由调用方进入待处理队列
+        if (DateUtils.parseDate(newEvent.getCaptureTime()) == null) {
+            log.warn("[轨迹拼接] 抓拍时间缺失或格式非法，跳过：plateKey={}, pointUuid={}, captureTime={}",
+                    plateKey, newEvent.getPointUuid(), newEvent.getCaptureTime());
             return false;
+        }
+
+        // 同一车牌的读-改-写必须串行，否则并发消息会互相覆盖导致轨迹点丢失
+        synchronized (lockForPlate(plateKey)) {
+            try {
+                // 步骤1：获取当前轨迹
+                TrailInfo currentTrail = (TrailInfo) redisTemplate.opsForValue().get(trailKey);
+
+                if (currentTrail == null || currentTrail.getTracks() == null) {
+                    // 无现有轨迹，创建新轨迹
+                    log.info("[轨迹拼接] 无现有轨迹，创建新轨迹：plateKey={}", plateKey);
+                    createNewTrail(plateKey, newEvent);
+                    return true;
+                }
+
+                // 步骤2：判断是否需要切割轨迹（时间差超过7天）
+                boolean needSplit = needSplitTrail(currentTrail, newEvent);
+
+                if (needSplit) {
+                    log.info("[轨迹拼接] 时间差超过7天，开启新轨迹链：plateKey={}", plateKey);
+                    createNewTrail(plateKey, newEvent);
+                    return true;
+                }
+
+                // 步骤3：拼接到现有轨迹
+                appendToExistingTrail(currentTrail, newEvent);
+
+                // 步骤4：保存更新后的轨迹
+                redisTemplate.opsForValue().set(trailKey, currentTrail, REALTIME_TRAIL_TTL, TimeUnit.SECONDS);
+                log.debug("[轨迹拼接] 成功拼接到现有轨迹：plateKey={}, pointUuid={}",
+                        plateKey, newEvent.getPointUuid());
+
+                return true;
+
+            } catch (Exception e) {
+                log.error("[轨迹拼接] 异常：plateKey={}", plateKey, e);
+                return false;
+            }
         }
     }
 
@@ -307,7 +342,8 @@ public class MultiSourceDataFlowService {
         ZdataTrailTracks tracks = currentTrail.getTracks();
         Date eventTime = DateUtils.parseDate(newEvent.getCaptureTime());
 
-        if (tracks.getEnterTime() == null || tracks.getExitTime() == null) {
+        // 解析失败或无起止时间时不做切割判定，避免 NPE；非法时间已在入口处拦截
+        if (eventTime == null || tracks.getEnterTime() == null || tracks.getExitTime() == null) {
             return false;
         }
 
@@ -381,8 +417,9 @@ public class MultiSourceDataFlowService {
         // 添加新事件
         trailList.add(newEvent);
 
-        // 按抓拍时间排序
-        trailList.sort(Comparator.comparing(TrailBo::getCaptureTime));
+        // 按抓拍时间排序（空时间排在最前，避免历史脏数据触发 NPE）
+        trailList.sort(Comparator.comparing(TrailBo::getCaptureTime,
+                Comparator.nullsFirst(Comparator.<String>naturalOrder())));
 
         // 更新轨迹信息
         tracks.setPointCount((long) trailList.size());
@@ -391,10 +428,10 @@ public class MultiSourceDataFlowService {
         Date firstTime = DateUtils.parseDate(trailList.get(0).getCaptureTime());
         Date lastTime = DateUtils.parseDate(trailList.get(trailList.size() - 1).getCaptureTime());
 
-        if (tracks.getEnterTime() == null || firstTime.before(tracks.getEnterTime())) {
+        if (firstTime != null && (tracks.getEnterTime() == null || firstTime.before(tracks.getEnterTime()))) {
             tracks.setEnterTime(firstTime);
         }
-        if (tracks.getExitTime() == null || lastTime.after(tracks.getExitTime())) {
+        if (lastTime != null && (tracks.getExitTime() == null || lastTime.after(tracks.getExitTime()))) {
             tracks.setExitTime(lastTime);
         }
 
@@ -440,8 +477,8 @@ public class MultiSourceDataFlowService {
     public void processPendingQueue() {
         log.info("[待处理队列] 开始处理");
 
-        // 获取所有待处理队列的Key
-        Set<String> keys = redisTemplate.keys(PENDING_QUEUE_KEY_PREFIX + "*");
+        // 使用 SCAN 游标代替 KEYS，避免大 key 空间下阻塞 Redis
+        Set<String> keys = scanKeys(PENDING_QUEUE_KEY_PREFIX + "*");
 
         if (keys == null || keys.isEmpty()) {
             log.info("[待处理队列] 无待处理数据");
@@ -451,19 +488,23 @@ public class MultiSourceDataFlowService {
         int totalProcessed = 0;
 
         for (String queueKey : keys) {
-            String plateKey = queueKey.replace(PENDING_QUEUE_KEY_PREFIX, "");
+            String plateKey = queueKey.substring(PENDING_QUEUE_KEY_PREFIX.length());
 
-            // 取出队列中的所有数据
-            List<Object> pendingEvents = redisTemplate.opsForList().range(queueKey, 0, -1);
+            // 记录本次运行处理的原始元素个数：失败项重新入队后不会被本轮再次取出，避免死循环
+            Long queueSize = redisTemplate.opsForList().size(queueKey);
+            long batchSize = queueSize == null ? 0 : queueSize;
 
-            if (pendingEvents == null || pendingEvents.isEmpty()) {
-                continue;
-            }
+            for (long i = 0; i < batchSize; i++) {
+                // 逐条弹出：处理中途异常时仅丢失当前一条，不会丢掉整批
+                Object obj = redisTemplate.opsForList().leftPop(queueKey);
 
-            // 清空队列
-            redisTemplate.delete(queueKey);
+                if (!(obj instanceof PendingEvent)) {
+                    if (obj != null) {
+                        log.warn("[待处理队列] 非法元素，丢弃：plateKey={}, type={}", plateKey, obj.getClass());
+                    }
+                    continue;
+                }
 
-            for (Object obj : pendingEvents) {
                 PendingEvent pendingEvent = (PendingEvent) obj;
 
                 // 尝试处理
@@ -480,13 +521,35 @@ public class MultiSourceDataFlowService {
                         redisTemplate.opsForList().rightPush(queueKey, pendingEvent);
                     } else {
                         log.warn("[待处理队列] 超过最大重试次数，放弃：plateKey={}, pointUuid={}",
-                                plateKey, pendingEvent.getEvent().getPointUuid());
+                                plateKey, pendingEvent.getEvent() == null ? null : pendingEvent.getEvent().getPointUuid());
                     }
                 }
             }
         }
 
         log.info("[待处理队列] 处理完成，成功数：{}", totalProcessed);
+    }
+
+    /**
+     * 使用 SCAN 游标匹配 key，返回集合与 KEYS 相同（非阻塞）
+     */
+    private Set<String> scanKeys(String pattern) {
+        Set<String> keys = new LinkedHashSet<>();
+        redisTemplate.execute((RedisCallback<Void>) connection -> {
+            Cursor<byte[]> cursor = connection.scan(
+                    ScanOptions.scanOptions().match(pattern).count(1000).build());
+            try {
+                cursor.forEachRemaining(bytes -> keys.add(new String(bytes, StandardCharsets.UTF_8)));
+            } finally {
+                try {
+                    cursor.close();
+                } catch (IOException e) {
+                    log.warn("[待处理队列] 关闭 SCAN 游标异常", e);
+                }
+            }
+            return null;
+        });
+        return keys;
     }
 
     /**
