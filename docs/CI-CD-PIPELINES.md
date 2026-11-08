@@ -248,6 +248,15 @@ kubectl -n "$K8S_NAMESPACE" patch deployment "$K8S_DEPLOYMENT" --type=merge \
 ## 13. openEuler 运行环境
 
 - 默认方案：GitHub 托管 runner + `container: openeuler/openeuler:24.03-lts`；JDK 8 用 openEuler 自带 OpenJDK，Maven/Go/Python 走官方 tarball 或 setup-*。
-- 可切换方案：设置仓库变量 `CI_RUNNER_LABELS=["self-hosted","linux","openeuler"]` 即切到自托管 runner；注册命令与预装工具见 [CI-OPENEULER.md §3](CI-OPENEULER.md)。
+- 可切换方案：设置仓库变量 `CI_RUNNER_LABELS=["self-hosted","linux","x64","wsl","openeuler"]` 即切到 WSL openEuler 自托管 runner；注册命令与预装工具见 [self-hosted-runner.md](self-hosted-runner.md)。
 - 例外：Windows MSVC、Docker 镜像构建、`gh` 发布、kubectl 部署四个环节保留 `ubuntu-latest`；原因与边界见 [CI-OPENEULER.md §2](CI-OPENEULER.md)。
 - 实测状态：**已验证**。master run `42499755525`（sha `0191d95`）success：Java/Python gates/Python integration/Go 容器 job 与镜像 job 全绿；services 按容器网络服务名连通；JDK8 来自 openEuler dnf（`1.8.0.462.b08`）。C++ Linux 容器 job 仍待 PR 验证，详见 [CI-OPENEULER.md §4](CI-OPENEULER.md)。
+
+## 14. 单机部署 CD（与 K8s 并存）
+
+- 文件：`.github/workflows/cd-standalone.yml`；与 `deploy.yml`（K8s）互不影响。
+- 触发：`push master` / tag `v*.*.*` / `workflow_dispatch`（可选 service、tag）。
+- artifact：`car-monit-api-standalone-<sha>.tar.gz`，含 Java jar、Go Linux amd64 二进制、Python 源码 + 离线 wheels、systemd units、占位配置模板、参数化 `install.sh`/`uninstall.sh`、`SHA256SUMS`、README；Rust 因 master 未入库暂不包含。
+- 完整生命周期验证 job：解包 → `sha256sum -c` → tar 清单 → 非 root 临时前缀 `install.sh` → 启动 Python（`CAR_MONIT_RUNTIME=shim`）→ `/health` → 停止 → `uninstall.sh` → 断言清理；报告作为 artifact 上传。
+- 实测：run `42507567691` **success**（build + verify）；artifact `standalone-tar-…` **232,870,588 B**；`/health` **HTTP 200**，响应体 `status=DEGRADED`（DB 连接超时，Redis/ES/Kafka 为 shim UP），`cleanup=OK`。
+- 自托管单机部署：`.github/workflows/deploy-selfhosted.yml` 默认关闭（`confirm=false` 已验证 run `42508196517` = **skipped**）；接入文档见 [self-hosted-runner.md](self-hosted-runner.md)（WSL openEuler，labels `self-hosted,linux,x64,wsl,openeuler`）。

@@ -26,6 +26,10 @@
 | 16 | PR / release / GHCR 实测 | **完成**：PR Gate success；release success；tag/Release 已清理 | 48705e7 / 42496000954 |
 | 17 | openEuler 容器化（方案 A）+ 自托管切换说明（方案 B） | **完成**：run 42499755525 全绿（Java/Python gates+integration/Go 容器 job 真跑通） | 0191d95 |
 | 18 | ARM64 openEuler 验证 | **搁置（用户决定）**：未落代码；TODO 见 docs/CI-OPENEULER.md §5 | - |
+| 19 | rust 同步到 car-monit-api-rust | **完成**：127 文件；cargo test --lib 39 passed；clippy 通过 | d1afb3d |
+| 20 | java-V3 挂 CI/CD | **完成**：10 workflow + docker 资产；push 触发；run 42507948143 failure（Python check_parity / 其余绿） | 382fb84 → cc20aa0 |
+| 21 | 单机 CD artifact + 生命周期验证 | **完成**：run 42507567691 success；artifact 232,870,588 B；/health 200 DEGRADED；cleanup OK | 5621292 |
+| 22 | WSL openEuler 自托管部署（默认关闭） | **完成**：文档 + deploy-selfhosted.yml；confirm=false run 42508196517 skipped | fdebf4d |
 
 ## 分支推送记录（2026-11-08）
 
