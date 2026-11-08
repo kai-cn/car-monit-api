@@ -33,6 +33,8 @@ jobs:
     steps:
       - name: 安装基础工具（openEuler dnf）
         shell: bash
+        # checkout 前语言目录尚不存在，必须显式回到 workspace 根。
+        working-directory: .
         run: |
           dnf install -y git tar gzip unzip curl ca-certificates
           # Python 3.12 不在 openEuler 24.03 仓库（OS/everything/EPOL 均未命中），
@@ -148,6 +150,8 @@ jobs:
     steps:
       - name: 安装基础工具（openEuler dnf）
         shell: bash
+        # checkout 前语言目录尚不存在，必须显式回到 workspace 根。
+        working-directory: .
         run: |
           dnf install -y git tar gzip unzip curl ca-certificates
 

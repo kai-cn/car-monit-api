@@ -44,6 +44,7 @@ jobs:
     steps:
       - name: 安装 JDK8 / Maven / 基础工具（openEuler dnf）
         shell: bash
+        working-directory: .
         run: |
           dnf install -y java-1.8.0-openjdk-devel tar gzip curl ca-certificates git findutils which
           curl -fsSL https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz -o /tmp/maven.tgz
