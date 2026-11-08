@@ -742,3 +742,20 @@ DWS 覆盖：escape 2025-07-04~2026-02-05、income 2025-10-22~2026-02-03、warni
   `CARMONIT_MYSQL_USERNAME=carmonit_ro`（口令在仓库外 launcher，不提交）。
 - 服务曾被外部停止十几分钟；本次按同一 launcher/WMI 方式恢复并完成上述能力发布。
 
+### 7.17 分支提交记录（仅 `car-monit-api-java-V3`，未 push）
+
+| 提交 | 内容 |
+|---|---|
+| `56153cd` | chore(v3)：运行配置、9902 端口、MySQL JDBC、口令改为环境注入 |
+| `ef05191` | feat(v3-sql)：分区迁移/回滚、同步基础表、DWS 建表脚本 |
+| `25f5cce` | feat(v3-plate)：MySQL 字典单一事实源的解析器 |
+| `30ae038` | feat(v3-es)：月索引模板/ILM/别名/初始化脚本 |
+| `8d810b9` | feat(v3-query)：ES 组合查询与三个既有接口改造 |
+| `0632930` | feat(v3-query-api)：`/api/v3/traffic` 原生查询入口 |
+| `abf1e29` | feat(v3-sync)：Outbox/Kafka、car-warning CDC、分钟桶对账 |
+| `f4cae4b` | feat(v3-export)：双路径导出、全字段维度过滤、capabilities |
+| `e907238` | feat(v3-bigscreen)：DWS 统计/ETL、warning 多值/captureType、运维接口 |
+| `3a71f7f` | fix(sync)：Redis 水位类型兼容，修复 fullSync 强转异常 |
+| `41e5c08` | docs(v3)：本决策文档与演练结果 |
+
+
