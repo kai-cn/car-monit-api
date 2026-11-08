@@ -9,11 +9,12 @@
 | 项目 | 结论 |
 | --- | --- |
 | 远端 | `origin https://github.com/kai-cn/car-monit-api.git` |
-| 当前分支 | `master` |
+| 当前分支 | `master`（本地）；**远端默认分支实际是 `main`**（`git ls-remote --symref origin HEAD`），需在 GitHub Settings 手动改为 `master`，本机无凭据无法修改 |
+| 分支口径 | 所有 workflow 的触发/PR 基线统一为 `master`，不再保留 `main` 兼容分支 |
 | 仓库形态 | **单仓库多目录**：`car-monit-api-cpp/go/python/rust` 均无独立 `.git`，非 submodule（无 `.gitmodules`） |
 | Rust 目录 | 仍被根 [.gitignore L77](../.gitignore) `car-monit-api-rust/` **整体忽略**，`git ls-files` 为空 → 该语言流水线**当前不会在 GitHub 触发**（代码写好后需先取消忽略并入库） |
 | C# / Kotlin | `car-monit-api-csharp`、`car-monit-api-kotlin` 内只有迁移提示词 `.md`，无可构建代码 → 不建流水线 |
-| 现有 workflow | 仅根 `.github/workflows/ci.yml`（Python 专用：pytest + 覆盖率 65% 门禁 + 6 项一致性门禁 + 冒烟 + Redis/ES/Kafka 集成 + secret 扫描）。子项目内无 `.github` |
+| 现有 workflow | 本次重构前仅根 `.github/workflows/ci.yml`（Python 专用）。现已替换为 9 个统一风格 workflow，详见下表 |
 | 构建工具链 | Maven（Spring Boot 2.4.5 / source-target 1.8，2 模块，`packaging=pom` + `pro-business-api` repackage）；CMake 3.20 + C++20 + MSVC（无 `CMakePresets.json`）；Go 1.24.1（module `github.com/ruoyi/car-monit-api-go`，入口 `./cmd/api`）；Python 3.12（`requirements.txt` + `requirements.lock.txt`，pytest/coverage，`Dockerfile`，`docker-compose.integration.yml`）；Rust 1.90.0（`Cargo.toml` 单 crate，`rust-toolchain.toml` 已锁 1.90.0 + rustfmt + clippy） |
 | 测试现状 | Java 无 `src/test`；C++ 有 `tests/test_main.cpp`（ctest）；Go 有 8 个 `*_test.go`；Python 有完整 pytest + tools 门禁；Rust 有 `tests/parity_test.rs`、`router_test.rs` |
 
@@ -25,9 +26,9 @@ PR / 主分支 / 发布三套入口只负责触发、路径分诊与汇总，不
 | 流水线 | 触发条件 | 路径分诊 | 检查内容 | 产物形态 |
 | --- | --- | --- | --- | --- |
 | **PR** (`pr.yml`) | `pull_request` → `master`（opened/synchronize/reopened/ready_for_review），支持手动 dispatch | `dorny/paths-filter`：`java`=`pom.xml|pro-base-common/**|pro-business-api/**`；`cpp/go/python/rust` 各自目录；未受影响的语言 job 跳过 | Java：JDK **8** Temurin + Maven `clean package`（无测试/无静态检查配置，见缺口）；C++：**windows-latest** + VS2022 + CMake C++20 + `ctest`；Go：`gofmt -l` + `go vet` + `go build` + `go test -race -cover`；Python：pytest（分支覆盖）+ 业务覆盖率 ≥65% 门禁 + `check_routes/mappers/parity/env/secrets` + 两个冒烟 + Redis/ES/Kafka service containers 集成测试；Rust：`cargo fmt --check` + `clippy -D warnings` + `cargo test` | 无发布产物（Python 覆盖率 HTML/XML 作为 artifact）；汇总 job `PR Gate` 作为唯一必需检查 |
-| **主分支** (`main.yml`) | `push` → `master`，支持手动 dispatch | 全量（不分诊） | 五语言全部检查（Python 含集成测试）+ `Dockerfile` 构建校验（不推送） | `java-jar`、`cpp-windows-x64`、`go-linux-amd64`、`rust-linux-amd64`、`python-coverage` artifacts，保留 14 天 |
-| **发布** (`release.yml`) | `push` tag `v*.*.*`，支持手动指定已存在 tag | 全量 | 与主分支一致 + 校验和生产 | 五个 artifact 汇总后由 `gh release create/upload` 挂到 GitHub Release（含 `SHA256SUMS`）；Python 额外导出 `docker save` 镜像 tar.gz（registry 未定前不 push） |
-| **部署** (`deploy.yml`) | 仅 `workflow_dispatch` | — | **占位，不可执行**：`push-images` / `deploy` 两个 job 用 `if: ${{ false }}` 注释说明缺口，`guard` job 显式报错阻止误操作 | 待定 |
+| **主分支** (`master.yml`) | `push` → `master`，支持手动 dispatch | 全量（不分诊） | 五语言全部检查（Python 含集成测试）+ `Dockerfile` 构建校验（不推送） | `java-jar`、`cpp-windows-x64`、`go-linux-amd64`、`rust-linux-amd64`、`python-coverage` artifacts，保留 14 天 |
+| **发布** (`release.yml`) | `push` tag `v*.*.*`；手动 dispatch 时在 UI 选择 tag 作为 ref | 全量 | 与主分支一致 + 校验和生产 | 五个 artifact 汇总后由 `gh release create/upload` 挂到 GitHub Release（含 `SHA256SUMS`）；Python 额外导出 `docker save` 镜像 tar.gz（registry 未定前不 push） |
+| **部署** (`deploy.yml`) | 仅 `workflow_dispatch` | — | **占位，不可执行**：`push-images` / `deploy` 由 `vars.CD_REGISTRY_CONFIGURED` / `vars.CD_DEPLOY_TARGET_CONFIGURED` 显式开关控制（默认未设置=跳过），`guard` job 显式报错阻止误操作 | 待定 |
 
 ### JDK 版本口径
 
@@ -71,6 +72,6 @@ PR / 主分支 / 发布三套入口只负责触发、路径分诊与汇总，不
 
 ## 7. 启用方式（操作提示）
 
-1. 推送后到仓库 Settings → Branches 将必需检查指向 **`PR Gate`**（旧 `ci / gates` 检查名随 `ci.yml` 移除而消失）。
+1. 推送后到仓库 Settings → Branches 将默认分支改为 **`master`**（当前远端 HEAD 指向 `main`），再把必需检查指向 **`PR Gate`**（旧 `ci / gates` 检查名随 `ci.yml` 移除而消失）。
 2. Rust 入库：从 `.gitignore` 删除 L77，`git add car-monit-api-rust`，确认 `Cargo.lock` 一并提交。
 3. CD：确认第 3 节两项后，在 `deploy.yml` 填对应 secrets，并把 `if: ${{ false }}` 改为实际条件。

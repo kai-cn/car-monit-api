@@ -8,7 +8,7 @@ on:
   workflow_call:
     inputs:
       mode:
-        description: "pr | main | release"
+        description: "pr | master | release"
         required: false
         type: string
         default: pr

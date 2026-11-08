@@ -1,6 +1,7 @@
-name: main
+name: master
 
 # 主分支流水线：push 到 master 全量构建（不做路径分诊），产出可归档制品。
+# 默认分支口径统一为 master；不要加入 main 兼容分支。
 # 同一 ref 不取消进行中的运行：每次提交都要留下完整的构建/测试结论。
 on:
   push:
@@ -8,7 +9,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: main-${{ github.ref }}
+  group: master-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -39,26 +40,26 @@ jobs:
     name: java
     uses: ./.github/workflows/_java.yml
     with:
-      mode: main
+      mode: master
       jdk-version: "8"
 
   cpp:
     name: cpp
     uses: ./.github/workflows/_cpp.yml
     with:
-      mode: main
+      mode: master
 
   go:
     name: go
     uses: ./.github/workflows/_go.yml
     with:
-      mode: main
+      mode: master
 
   python:
     name: python
     uses: ./.github/workflows/_python.yml
     with:
-      mode: main
+      mode: master
       run-integration: true
 
   rust:
@@ -67,10 +68,10 @@ jobs:
     if: needs.presence.outputs.rust == 'true'
     uses: ./.github/workflows/_rust.yml
     with:
-      mode: main
+      mode: master
 
-  main-gate:
-    name: Main Gate
+  master-gate:
+    name: Master Gate
     if: always()
     needs: [presence, java, cpp, go, python, rust]
     runs-on: ubuntu-latest

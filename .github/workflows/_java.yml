@@ -1,7 +1,7 @@
 name: _java
 
 # 可复用 workflow：Java 主仓库（Spring Boot 2.4.5 / source-target 1.8）。
-# 由 pr.yml / main.yml / release.yml 调用，避免三套入口复制检查逻辑。
+# 由 pr.yml / master.yml / release.yml 调用，避免三套入口复制检查逻辑。
 #
 # 已知缺口（不在 CI 任务内顺手修）：
 #   * pro-base-common / pro-business-api 无 src/test，pom 未配置 checkstyle/spotbugs；
@@ -11,7 +11,7 @@ on:
   workflow_call:
     inputs:
       mode:
-        description: "pr | main | release"
+        description: "pr | master | release"
         required: false
         type: string
         default: pr
