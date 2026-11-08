@@ -1,63 +1,184 @@
 name: deploy
 
-# CD 占位：两项决策未确认前不写任何真实部署逻辑，避免凭空编造服务器地址/凭据。
+# CD：构建并推送所选语言的镜像到 GHCR，然后对**已存在**的 K8s Deployment 执行
+# kubectl set image + kubectl rollout status。
 #
-# 待确认（见 docs/CI-CD-PIPELINES.md §3）：
-#   1) 镜像推送目标：GHCR 还是私有 registry？
-#      - GHCR：用 GITHUB_TOKEN（需 packages: write 权限），镜像名 ghcr.io/<org>/<repo>。
-#      - 私有：需 secrets REGISTRY_HOST / REGISTRY_USERNAME / REGISTRY_PASSWORD。
-#   2) 部署目标形态：
-#      - K8s：需 KUBE_CONFIG_DATA（base64）+ 目标 namespace / workload 名。
-#      - 单机：需 SSH_HOST / SSH_USER / SSH_KEY + 目标目录与 compose 文件。
-#      - 只出 jar 与二进制：本 workflow 可直接删除，由 release.yml 产物替代。
+# 例外：本 workflow 为手工 K8s 发布编排，使用 kubectl/gh 等工具，保留 ubuntu 宿主；
+# 语言构建/测试已在 openEuler 容器中执行（见 docs/CI-OPENEULER.md）。
+# 前置（GitHub 仓库 / Environment 配置，全部无默认值，缺一即显式失败）：
+#   vars.K8S_NAMESPACE         目标命名空间
+#   vars.K8S_DEPLOYMENT        已存在的 Deployment 名
+#   vars.K8S_CONTAINER         Pod 模板中的容器名
+#   vars.K8S_IMAGE_PULL_SECRET 已存在的 imagePullSecret 名（私有 GHCR 必需）
+#   secrets.KUBE_CONFIG        kubeconfig（建议 base64；脚本兼容明文）
 #
-# 确认后：配置对应 environment 的 secrets，并在仓库/环境 Variables 中显式设置
-#   CD_REGISTRY_CONFIGURED=true / CD_DEPLOY_TARGET_CONFIGURED=true
-# 再把下面两个 job 的 if 换成真实条件并补 steps；在此之前 guard job 会显式失败，
-# 防止误以为已部署。
+# 仓库内没有任何 K8s manifest：本 workflow 只更新已有 Deployment 的镜像。
+# 首次部署需人工 bootstrap（namespace / Deployment / imagePullSecret / 配置挂载），
+# 详见 docs/CI-CD-PIPELINES.md §10。
 on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "目标环境"
+        description: "目标环境（GitHub Environment，用于审批与变量隔离）"
         required: true
         type: choice
         default: staging
         options: [staging, production]
-      image-tag:
-        description: "要部署的镜像 tag（留空则用当前提交 SHA）"
-        required: false
-        type: string
-        default: ""
+      language:
+        description: "要部署的实现"
+        required: true
+        type: choice
+        default: java
+        options: [java, python, go, cpp, rust]
 
 permissions:
   contents: read
 
+env:
+  REGISTRY: ghcr.io
+
 jobs:
-  push-images:
-    name: push images (placeholder)
-    if: ${{ vars.CD_REGISTRY_CONFIGURED == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: TODO
-        run: echo "registry 未确认：确认后在此增加 docker/login-action + docker push"
-
-  deploy:
-    name: deploy (placeholder)
-    if: ${{ vars.CD_DEPLOY_TARGET_CONFIGURED == 'true' }}
-    runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
-    steps:
-      - name: TODO
-        run: echo "部署目标未确认：确认后按 K8s / 单机 / 仅制品 补对应 steps"
-
-  guard:
-    name: deployment blocked
+  precheck:
+    name: precheck
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # 必须挂 environment：K8S_* variables 可能配置在 environment 作用域。
+    environment: ${{ inputs.environment }}
+    outputs:
+      image: ${{ steps.resolve.outputs.image }}
+      tag: ${{ steps.resolve.outputs.tag }}
+      namespace: ${{ steps.resolve.outputs.namespace }}
+      deployment: ${{ steps.resolve.outputs.deployment }}
+      container: ${{ steps.resolve.outputs.container }}
+      pull-secret: ${{ steps.resolve.outputs.pull_secret }}
     steps:
-      - name: 说明缺口并阻断
+      - uses: actions/checkout@v4
+
+      - name: 前置校验（vars/secrets 缺失即失败）
+        shell: bash
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+          K8S_NAMESPACE: ${{ vars.K8S_NAMESPACE }}
+          K8S_DEPLOYMENT: ${{ vars.K8S_DEPLOYMENT }}
+          K8S_CONTAINER: ${{ vars.K8S_CONTAINER }}
+          K8S_IMAGE_PULL_SECRET: ${{ vars.K8S_IMAGE_PULL_SECRET }}
+        run: |
+          missing=()
+          [ -n "$KUBE_CONFIG" ] || missing+=("secrets.KUBE_CONFIG")
+          [ -n "$K8S_NAMESPACE" ] || missing+=("vars.K8S_NAMESPACE")
+          [ -n "$K8S_DEPLOYMENT" ] || missing+=("vars.K8S_DEPLOYMENT")
+          [ -n "$K8S_CONTAINER" ] || missing+=("vars.K8S_CONTAINER")
+          [ -n "$K8S_IMAGE_PULL_SECRET" ] || missing+=("vars.K8S_IMAGE_PULL_SECRET")
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf '::error::缺少必需配置: %s\n' "${missing[*]}"
+            exit 1
+          fi
+
+      - name: 解析镜像与部署目标
+        id: resolve
+        shell: bash
+        env:
+          LANG_INPUT: ${{ inputs.language }}
+          K8S_NAMESPACE: ${{ vars.K8S_NAMESPACE }}
+          K8S_DEPLOYMENT: ${{ vars.K8S_DEPLOYMENT }}
+          K8S_CONTAINER: ${{ vars.K8S_CONTAINER }}
+          K8S_IMAGE_PULL_SECRET: ${{ vars.K8S_IMAGE_PULL_SECRET }}
+        run: |
+          case "$LANG_INPUT" in
+            java)   name="car-monit-api" ;;
+            python) name="car-monit-api-python" ;;
+            go)     name="car-monit-api-go" ;;
+            cpp)    name="car-monit-api-cpp" ;;
+            rust)   name="car-monit-api-rust" ;;
+            *) echo "::error::未知语言: $LANG_INPUT"; exit 1 ;;
+          esac
+
+          # 固定使用本次提交的短哈希标签，保证部署到可追溯的镜像
+          tag="sha-${GITHUB_SHA::7}"
+
+          {
+            echo "image=${REGISTRY}/${{ github.repository_owner }}/${name}:${tag}"
+            echo "tag=${tag}"
+            echo "namespace=${K8S_NAMESPACE}"
+            echo "deployment=${K8S_DEPLOYMENT}"
+            echo "container=${K8S_CONTAINER}"
+            echo "pull_secret=${K8S_IMAGE_PULL_SECRET}"
+          } >> "$GITHUB_OUTPUT"
+
+  image:
+    name: image ${{ inputs.language }}
+    needs: precheck
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/_image.yml
+    with:
+      language: ${{ inputs.language }}
+      push: true
+
+  deploy:
+    name: deploy to ${{ inputs.environment }}
+    needs: [precheck, image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: v1.31.0
+
+      - name: 写入 kubeconfig（base64 或明文）
+        shell: bash
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          umask 077
+          mkdir -p "$HOME/.kube"
+          if printf '%s' "$KUBE_CONFIG" | grep -q 'apiVersion'; then
+            printf '%s' "$KUBE_CONFIG" > "$HOME/.kube/config"
+          elif printf '%s' "$KUBE_CONFIG" | base64 -d > "$HOME/.kube/config" 2>/dev/null; then
+            :
+          else
+            echo "::error::secrets.KUBE_CONFIG 既不是 kubeconfig 明文（缺 apiVersion），也不是合法 base64"
+            exit 1
+          fi
+          chmod 600 "$HOME/.kube/config"
+
+      - name: 校验 Deployment 与 imagePullSecret
+        shell: bash
+        env:
+          NS: ${{ needs.precheck.outputs.namespace }}
+          DEPLOY: ${{ needs.precheck.outputs.deployment }}
+          PULL: ${{ needs.precheck.outputs.pull-secret }}
+        run: |
+          kubectl -n "$NS" get deployment "$DEPLOY" >/dev/null
+          kubectl -n "$NS" get secret "$PULL" >/dev/null
+
+          refs="$(kubectl -n "$NS" get deployment "$DEPLOY" \
+            -o jsonpath='{.spec.template.spec.imagePullSecrets[*].name}' | tr ' ' '\n')"
+          if ! printf '%s\n' "$refs" | grep -qx "$PULL"; then
+            echo "::error::Deployment ${DEPLOY} 的 pod 模板未引用 imagePullSecret ${PULL}，Pod 会 ImagePullBackOff"
+            exit 1
+          fi
+
+      - name: set image + rollout status
+        shell: bash
+        env:
+          NS: ${{ needs.precheck.outputs.namespace }}
+          DEPLOY: ${{ needs.precheck.outputs.deployment }}
+          CONTAINER: ${{ needs.precheck.outputs.container }}
+          IMAGE: ${{ needs.precheck.outputs.image }}
+        run: |
+          kubectl -n "$NS" set image "deployment/${DEPLOY}" "${CONTAINER}=${IMAGE}"
+          kubectl -n "$NS" rollout status "deployment/${DEPLOY}" --timeout=300s
+
+      - name: 部署摘要
         shell: bash
         run: |
-          echo "::error::CD 尚未启用：需要先确认『镜像推送目标』与『部署目标形态』两项决策（见 docs/CI-CD-PIPELINES.md §3）"
-          exit 1
+          {
+            echo "### 部署完成"
+            echo "- environment: ${{ inputs.environment }}"
+            echo "- language: ${{ inputs.language }}"
+            echo "- image: ${{ needs.precheck.outputs.image }}"
+            echo "- deployment: ${{ needs.precheck.outputs.namespace }}/${{ needs.precheck.outputs.deployment }}"
+          } >> "$GITHUB_STEP_SUMMARY"

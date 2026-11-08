@@ -36,6 +36,7 @@ jobs:
       python: ${{ steps.filter.outputs.python }}
       rust: ${{ steps.filter.outputs.rust }}
       rust-present: ${{ steps.presence.outputs.rust }}
+      cpp-present: ${{ steps.presence.outputs.cpp }}
     steps:
       - uses: actions/checkout@v4
 
@@ -58,7 +59,7 @@ jobs:
             rust:
               - 'car-monit-api-rust/**'
 
-      - name: rust 目录是否已入库（被 .gitignore 忽略时跳过，避免假红）
+      - name: rust / cpp 源码是否已入库（被忽略或缺失时跳过，避免假红）
         id: presence
         shell: bash
         run: |
@@ -66,6 +67,11 @@ jobs:
             echo "rust=true" >> "$GITHUB_OUTPUT"
           else
             echo "rust=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -f car-monit-api-cpp/src/main.cpp ]; then
+            echo "cpp=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "cpp=false" >> "$GITHUB_OUTPUT"
           fi
 
   java:
@@ -80,7 +86,7 @@ jobs:
   cpp:
     name: cpp
     needs: changes
-    if: needs.changes.result == 'success' && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.cpp == 'true')
+    if: needs.changes.result == 'success' && needs.changes.outputs.cpp-present == 'true' && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.cpp == 'true')
     uses: ./.github/workflows/_cpp.yml
     with:
       mode: pr

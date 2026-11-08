@@ -1,12 +1,13 @@
 name: _go
 
-# 可复用 workflow：Go 迁移实现（go.mod 锁 1.24.1，入口 ./cmd/api）。
-# Linux runner；本地 Windows 的 tools/check.bat 不在 CI 使用，等价检查在此显式展开。
+# 可复用 workflow：Go 迁移实现（go.mod 锁 1.26.10，入口 ./cmd/api）。
+# 运行环境：openEuler 24.03 容器（GitHub 托管 runner）；Go 由 setup-go 安装
+# （openEuler 仓库仅 1.21.4，不满足 go.mod 1.26.10）。
 on:
   workflow_call:
     inputs:
       mode:
-        description: "pr | main | release"
+        description: "pr | master | release"
         required: false
         type: string
         default: pr
@@ -16,13 +17,28 @@ permissions:
 
 jobs:
   checks:
-    name: go (1.24.1)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    name: go (1.26.10 / openEuler)
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
+    container:
+      image: openeuler/openeuler:24.03-lts
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: car-monit-api-go
+    env:
+      # 容器内 checkout 的 VCS 元数据/安全目录对 go 的 buildvcs 探测不友好，
+      # 会报 "error obtaining VCS status: exit status 128"；CI 不需要版本戳记。
+      GOFLAGS: "-buildvcs=false"
     steps:
+      - name: 安装基础工具（openEuler dnf）
+        shell: bash
+        # checkout 前语言目录尚不存在，必须显式回到 workspace 根，不能继承 defaults。
+        working-directory: .
+        run: |
+          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip curl ca-certificates gcc
+          # gcc 供 go test -race 的 cgo 使用；Go 1.26.10 由 setup-go 安装到 tool cache
+          # （openEuler 仓库只有 golang 1.21.4，低于 go.mod 要求）。
+
       - uses: actions/checkout@v4
 
       - name: Setup Go（版本取自 go.mod）
@@ -50,7 +66,14 @@ jobs:
           go build -o bin/api ./cmd/api
 
       - name: go test（race + 覆盖率）
+        env:
+          CGO_ENABLED: "1"   # -race 需要 cgo；GitHub runner 自带 gcc
         run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
+
+      - name: govulncheck（可达漏洞门禁）
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+          "$(go env GOPATH)/bin/govulncheck" ./...
 
       - name: 覆盖率摘要
         shell: bash

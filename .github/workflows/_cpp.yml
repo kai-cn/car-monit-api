@@ -1,15 +1,20 @@
 name: _cpp
 
-# 可复用 workflow：C++ 迁移实现（CMake 3.20+ / C++20 / MSVC）。
-# MSVC 专属构建，固定 windows-latest；librdkafka 由 CMake FetchContent 拉取。
+# 可复用 workflow：C++ 迁移实现（CMake 3.20+ / C++20）。
+# 检查矩阵：
+#   * Windows + MSVC（windows-latest，VS2022 生成器）
+#   * Linux gcc / clang（ubuntu-latest，scripts/ci-linux.sh）
+#   * Linux ASan + UBSan（clang）
+#   * cppcheck 静态分析（warning/performance/portability，third_party 排除）
+# librdkafka 由 CMake FetchContent 拉取。
 #
-# 已知缺口：仓库无 .clang-format / .clang-tidy，MSVC 仅有 /W3，
-# PR 门禁为"配置 + 编译 + ctest"，格式/静态检查未纳入。
+# 说明：master 上 C++ 源码不完整（完整源码在 car-monit-api-cpp 分支），
+# 调用方会用 presence 检查跳过本 workflow；PR 携带完整源码时才会真正执行。
 on:
   workflow_call:
     inputs:
       mode:
-        description: "pr | main | release"
+        description: "pr | master | release"
         required: false
         type: string
         default: pr
@@ -24,6 +29,8 @@ permissions:
 
 jobs:
   build:
+    # MSVC/Windows 是唯一保留 windows-latest 的构建：openEuler 无法运行 MSVC 工具链，
+    # 其余 C++ Linux 构建全部在 openeuler 容器内执行。
     name: cpp (MSVC 2022 / C++20)
     runs-on: windows-latest
     timeout-minutes: 60
@@ -59,3 +66,113 @@ jobs:
           path: car-monit-api-cpp/build/${{ inputs.build-type }}/car-monit-api.exe
           if-no-files-found: error
           retention-days: 14
+
+  linux:
+    name: cpp (linux-${{ matrix.name }} / openEuler)
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
+    container:
+      image: openeuler/openeuler:24.03-lts
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: gcc
+            cc: gcc
+            cxx: g++
+          - name: clang
+            cc: clang
+            cxx: clang++
+    defaults:
+      run:
+        working-directory: car-monit-api-cpp
+    steps:
+      - name: 安装依赖（openEuler dnf）
+        shell: bash
+        working-directory: .
+        run: |
+          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip ca-certificates gcc gcc-c++ clang cmake ninja-build make libpq-devel openssl-devel
+
+      - uses: actions/checkout@v4
+
+      - name: 缓存 FetchContent 依赖
+        uses: actions/cache@v4
+        with:
+          path: car-monit-api-cpp/build-linux-${{ matrix.name }}/_deps
+          key: cpp-deps-linux-${{ matrix.name }}-${{ runner.os }}-${{ hashFiles('car-monit-api-cpp/CMakeLists.txt') }}
+          restore-keys: |
+            cpp-deps-linux-${{ matrix.name }}-${{ runner.os }}-
+
+      - name: 配置 + 构建 + 测试（scripts/ci-linux.sh）
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+          BUILD_DIR: build-linux-${{ matrix.name }}
+        run: bash scripts/ci-linux.sh
+
+  linux-sanitizer:
+    name: cpp (linux ASan+UBSan / openEuler)
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
+    container:
+      image: openeuler/openeuler:24.03-lts
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: car-monit-api-cpp
+    steps:
+      - name: 安装依赖（openEuler dnf）
+        shell: bash
+        working-directory: .
+        run: |
+          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip ca-certificates gcc gcc-c++ clang cmake ninja-build make libpq-devel openssl-devel
+
+      - uses: actions/checkout@v4
+
+      - name: 缓存 FetchContent 依赖
+        uses: actions/cache@v4
+        with:
+          path: car-monit-api-cpp/build-linux-asan/_deps
+          key: cpp-deps-linux-asan-${{ runner.os }}-${{ hashFiles('car-monit-api-cpp/CMakeLists.txt') }}
+          restore-keys: |
+            cpp-deps-linux-asan-${{ runner.os }}-
+
+      - name: ASan + UBSan 构建与测试
+        env:
+          CC: clang
+          CXX: clang++
+          BUILD_DIR: build-linux-asan
+        run: bash scripts/ci-linux.sh -DCMAKE_BUILD_TYPE=Debug -DCM_SANITIZE=address,undefined
+
+  static-analysis:
+    name: cpp static-analysis (cppcheck / openEuler)
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
+    container:
+      image: openeuler/openeuler:24.03-lts
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: car-monit-api-cpp
+    steps:
+      - name: 安装 cppcheck（openEuler dnf）
+        shell: bash
+        working-directory: .
+        run: |
+          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip ca-certificates cppcheck
+
+      - uses: actions/checkout@v4
+
+      - name: cppcheck（仅定向排除 2 条已知性能提示）
+        shell: bash
+        run: |
+          # 已知可忽略项（performance: uselessCallsSubstr，无行为差异）：
+          #   src/config/config.cpp:55
+          #   src/config/config.cpp:214
+          # 按 file:line 定向排除，不关闭整个 cppcheck 规则集。
+          cppcheck --enable=warning,performance,portability --std=c++20 \
+            --inline-suppr --suppress=missingIncludeSystem \
+            --suppress='*:*third_party*' \
+            --suppress=uselessCallsSubstr:src/config/config.cpp:55 \
+            --suppress=uselessCallsSubstr:src/config/config.cpp:214 \
+            --error-exitcode=1 \
+            -I src -I third_party -I third_party/httplib -I third_party/nlohmann \
+            -i third_party src tests
