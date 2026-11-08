@@ -10,7 +10,7 @@
 | --- | --- |
 | 远端 | `origin https://github.com/kai-cn/car-monit-api.git` |
 | 运行环境 | **openEuler 24.03 LTS**：构建/测试 job 在 `openeuler/openeuler:24.03-lts` 容器内执行；Windows MSVC 保留 `windows-latest`。详见 [CI-OPENEULER.md](CI-OPENEULER.md) |
-| 当前分支 | `master`（本地）；已推送到 `origin/master`（`dc06f3a`，快进）。远端默认分支已由用户在网页改为 **`master`**（`git ls-remote --symref origin HEAD` 已确认），CI 触发/PR 基线口径一致 |
+| 当前分支 | `master`（本地）；已推送到 `origin/master`（最新 SHA 见 [CI-CD-PROGRESS.md](CI-CD-PROGRESS.md)）。远端默认分支已由用户改为 **`master`**，CI 触发/PR 基线口径一致 |
 | 分支口径 | 所有 workflow 的触发/PR 基线统一为 `master`，不再保留 `main` 兼容分支 |
 | 仓库形态 | **单仓库多目录**：`car-monit-api-cpp/go/python/rust` 均无独立 `.git`，非 submodule（无 `.gitmodules`） |
 | Rust 目录 | 仍被根 [.gitignore L77](../.gitignore) `car-monit-api-rust/` **整体忽略**，`git ls-files` 为空 → 该语言流水线**当前不会在 GitHub 触发**（代码写好后需先取消忽略并入库） |
@@ -250,4 +250,4 @@ kubectl -n "$K8S_NAMESPACE" patch deployment "$K8S_DEPLOYMENT" --type=merge \
 - 默认方案：GitHub 托管 runner + `container: openeuler/openeuler:24.03-lts`；JDK 8 用 openEuler 自带 OpenJDK，Maven/Go/Python 走官方 tarball 或 setup-*。
 - 可切换方案：设置仓库变量 `CI_RUNNER_LABELS=["self-hosted","linux","openeuler"]` 即切到自托管 runner；注册命令与预装工具见 [CI-OPENEULER.md §3](CI-OPENEULER.md)。
 - 例外：Windows MSVC、Docker 镜像构建、`gh` 发布、kubectl 部署四个环节保留 `ubuntu-latest`；原因与边界见 [CI-OPENEULER.md §2](CI-OPENEULER.md)。
-- 实测状态：**待首次容器 run 回填**（本机无 Docker，镜像 tag 与 dnf 安装未本地实测）。
+- 实测状态：**已验证**。master run `42499755525`（sha `0191d95`）success：Java/Python gates/Python integration/Go 容器 job 与镜像 job 全绿；services 按容器网络服务名连通；JDK8 来自 openEuler dnf（`1.8.0.462.b08`）。C++ Linux 容器 job 仍待 PR 验证，详见 [CI-OPENEULER.md §4](CI-OPENEULER.md)。

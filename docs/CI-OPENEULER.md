@@ -8,7 +8,7 @@
 | 项 | 结论 |
 | --- | --- |
 | 镜像 | `openeuler/openeuler:24.03-lts`（Docker Hub）。本机 Docker Hub API 503、无 Docker，**未能在本地确认 tag**；以 GitHub 容器 job 实际拉取为准。若该 tag 不可用，备选 `hub.oepkgs.net/openeuler/openeuler:24.03-lts`（需按 registry 实际可用性切换）。 |
-| JDK 8 | **openEuler OS 仓库自带 `java-1.8.0-openjdk-devel 1.8.0.412`**，用 `dnf` 安装即可；不需要 Temurin。发行版差异只影响厂商实现，不影响 `source/target=1.8` 编译目标。 |
+| JDK 8 | **openEuler OS/update 仓库自带 `java-1.8.0-openjdk-devel`**；实际 run 解析到 `1.8.0.462.b08`（update 仓库）。用 `dnf` 安装并自动设置 `JAVA_HOME`；不需要 Temurin。发行版差异只影响厂商实现，不影响 `source/target=1.8` 编译目标。 |
 | Maven | openEuler 仓库只有 `maven-plugin`，**没有 Maven 本体**；使用 Apache 官方 `apache-maven-3.9.9-bin.tar.gz`。 |
 | gcc / g++ | `gcc 12.3.1`、`gcc-c++ 12.3.1` 在 OS 仓库；满足 C++20。 |
 | clang | `clang 17.0.6` 在 OS 仓库。 |
@@ -106,8 +106,35 @@ CI_RUNNER_LABELS = ["self-hosted","linux","openeuler"]
 - Go 1.26.10、Python 3.12（或用 setup-go / setup-python）
 - 镜像 job：Docker；发布 job：gh；部署 job：kubectl
 
-## 4. 验证状态
+## 4. 验证状态（2026-11-08）
 
-- 本机：无法 docker run，镜像 tag 与 dnf 安装均未本地实测（仅基于官方仓库元数据）。
-- GitHub：首次容器 run 结果见 `docs/CI-CD-PIPELINES.md §13`（推送后回填）；至少一条容器 job 真跑通才算完成。
-- 若容器内出现 dnf/镜像/网络报错，按真实日志修正，**不回退到 ubuntu 宿主假装完成**。
+实测 run：
+
+| 项 | 结果 |
+| --- | --- |
+| master run | **`42499755525`（sha `0191d95`）success** |
+| Java 容器 job | **success**：dnf 安装 `java-1.8.0-openjdk-devel 1.8.0.462.b08` + Apache Maven 3.9.9 tarball，`mvn clean package` 通过 |
+| Python gates 容器 job | **success**：setup-python 3.12.16 + `python -m pip`（不能直接用 `pip` shim） |
+| Python integration 容器 job | **success**：`services` 与 job 容器同网络，`redis:6379` / `elasticsearch:9200` / `kafka:9092` 连通，Kafka advertised listener `kafka:9092` |
+| Go 容器 job | **success**：setup-go 1.26.10 + dnf gcc（race/cgo）+ `GOFLAGS=-buildvcs=false` + govulncheck 0 可达漏洞 |
+| 镜像 job | success（保留 ubuntu 宿主，需 Docker daemon） |
+| C++ Linux 容器 job | **未验证**：master 上 `cpp` 被 presence 跳过；容器化代码已提交，需从 `car-monit-api-cpp` 开 PR 才能实际执行 windows/linux/clang/ASan/cppcheck 全链路 |
+| `deploy` | 未运行（无 K8s 凭据） |
+
+> 已知容器内环境差异：`setup-python` 自带的 pip shim 在 openEuler 容器内不可执行 → 统一用 `python -m pip`；`go build` 的 buildvcs 在容器 checkout 上会失败 → `GOFLAGS=-buildvcs=false`。dnf 偶发镜像超时但会自动重试，最终成功。
+
+## 5. ARM64（已搁置，TODO）
+
+用户决定 ARM64 先搁置；本次**未落任何 ARM64/ARCH/buildx/QEMU 代码**。
+
+- 硬约束：GitHub 托管 Linux runner 均为 x86_64；arm64 托管 runner 仅公开仓库可用，本仓库私有不可用。
+- 可选路径：
+  1. 自托管 ARM64 openEuler 真机 runner（唯一真验证），标签建议 `[self-hosted, linux, arm64, openeuler]`；
+  2. `ubuntu-latest` + `docker run --platform linux/arm64` QEMU 模拟（慢 5–20 倍，JVM 构建可能超时）；
+  3. 交叉编译（只验证编得过，验证不了运行）。
+- 接入前需要补齐：
+  - workflow 增加 `ARCH: amd64|arm64` 参数（默认 amd64）；
+  - `_image.yml` 改 `docker/buildx` + `--platform linux/$ARCH`，发布链路支持 `linux/amd64,linux/arm64` 多架构 manifest；
+  - 增加 QEMU 模拟验证 job（明确标注"模拟，性能数字不作参考"）；
+  - deploy 阶段做架构校验或只部署与 manifest 匹配的架构，避免 x86 集群拉 arm64 镜像 `exec format error`。
+- 自托管 ARM64 的注册步骤与工具清单可复用本文 §3，仅把 labels 改为 `self-hosted,linux,arm64,openeuler`，并在 ARM64 机器上重新验证 dnf 包（`java-1.8.0-openjdk-devel`、gcc、cmake、ninja、cppcheck 等）可得性。
