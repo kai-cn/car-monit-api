@@ -2,6 +2,7 @@ package com.ruoyi.base.service.v3.sync;
 
 import com.ruoyi.base.service.v3.config.TrafficV3Properties;
 import com.ruoyi.base.service.v3.model.TrafficTable;
+import com.ruoyi.base.service.v3.query.TrafficTimeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
@@ -108,19 +109,19 @@ public class TrafficReconciliationService {
                         backfillService.submit(table, bucketStart, bucketEnd);
                         repairs++;
                         log.warn("[V3对账] {} 桶存在漂移，已提交回灌: {} ~ {}",
-                                table, new Timestamp(bucketStart), new Timestamp(bucketEnd));
+                                table, TrafficTimeUtils.toDbTimestamp(bucketStart), TrafficTimeUtils.toDbTimestamp(bucketEnd));
                     }
                 }
                 bucketStart = bucketEnd;
             }
         }
         log.info("[V3对账] 完成，窗口 {} ~ {}，桶数 {}，漂移 {}，触发回灌 {}",
-                new Timestamp(alignedStart), new Timestamp(alignedEnd),
+                TrafficTimeUtils.toDbTimestamp(alignedStart), TrafficTimeUtils.toDbTimestamp(alignedEnd),
                 totalBuckets, driftBuckets, repairs);
 
         java.util.Map<String, Object> summary = new java.util.LinkedHashMap<>();
-        summary.put("start", new Timestamp(alignedStart));
-        summary.put("end", new Timestamp(alignedEnd));
+        summary.put("start", TrafficTimeUtils.toDbTimestamp(alignedStart));
+        summary.put("end", TrafficTimeUtils.toDbTimestamp(alignedEnd));
         summary.put("bucketMinutes", bucketMinutes);
         summary.put("totalBuckets", totalBuckets);
         summary.put("driftBuckets", driftBuckets);
@@ -135,7 +136,7 @@ public class TrafficReconciliationService {
                     "SELECT count(*) FROM " + table.getSourceTable()
                             + " WHERE " + table.getTimeField() + " >= ? AND "
                             + table.getTimeField() + " < ?",
-                    Long.class, new Timestamp(bucketStart), new Timestamp(bucketEnd));
+                    Long.class, TrafficTimeUtils.toDbTimestamp(bucketStart), TrafficTimeUtils.toDbTimestamp(bucketEnd));
             result.gaussCount = gauss == null ? 0 : gauss;
         } catch (Exception e) {
             result.error = e.getMessage();
@@ -172,14 +173,14 @@ public class TrafficReconciliationService {
                             + "bucket_end = ?, gauss_count = ?, es_count = ?, diff_ratio = ?, "
                             + "status = ?, detail = ?, created_at = now() "
                             + "WHERE table_name = ? AND bucket_start = ?",
-                    new Timestamp(bucketEnd), result.gaussCount, result.esCount, result.diffRatio,
+                    TrafficTimeUtils.toDbTimestamp(bucketEnd), result.gaussCount, result.esCount, result.diffRatio,
                     result.status, result.error == null ? null : truncate(result.error),
-                    table.getIndexBase(), new Timestamp(bucketStart));
+                    table.getIndexBase(), TrafficTimeUtils.toDbTimestamp(bucketStart));
             if (updated == 0) {
                 jdbc.update("INSERT INTO jl_data01.search_sync_reconcile "
                                 + "(table_name, bucket_start, bucket_end, gauss_count, es_count, "
                                 + "diff_ratio, status, detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                        table.getIndexBase(), new Timestamp(bucketStart), new Timestamp(bucketEnd),
+                        table.getIndexBase(), TrafficTimeUtils.toDbTimestamp(bucketStart), TrafficTimeUtils.toDbTimestamp(bucketEnd),
                         result.gaussCount, result.esCount, result.diffRatio, result.status,
                         result.error == null ? null : truncate(result.error));
             }
@@ -197,7 +198,7 @@ public class TrafficReconciliationService {
             Integer count = jdbc.queryForObject(
                     "SELECT count(*) FROM jl_data01.search_sync_reconcile "
                             + "WHERE table_name = ? AND bucket_start = ? AND status IN ('DRIFT','REPAIRED')",
-                    Integer.class, table.getIndexBase(), new Timestamp(bucketStart));
+                    Integer.class, table.getIndexBase(), TrafficTimeUtils.toDbTimestamp(bucketStart));
             return count != null && count > 0;
         } catch (Exception e) {
             return false;

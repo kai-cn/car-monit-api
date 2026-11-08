@@ -2,6 +2,7 @@ package com.ruoyi.base.service.v3.bigscreen;
 
 import com.ruoyi.base.service.v3.config.TrafficV3Properties;
 import com.ruoyi.base.service.v3.query.TrafficQueryException;
+import com.ruoyi.base.service.v3.query.TrafficTimeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -251,7 +252,7 @@ public class BigScreenStatsService {
      * 日期范围：startDate/endDate 支持 yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss；end 为闭区间，内部转半开。
      */
     private LocalDate[] dateRange(String startDate, String endDate, int defaultDays) {
-        LocalDate now = LocalDate.now();
+        LocalDate now = LocalDate.now(TrafficTimeUtils.ZONE);
         LocalDate start = parseDate(startDate, now.minusDays(defaultDays));
         LocalDate end = parseDate(endDate, now);
         if (start.isAfter(end)) {
@@ -268,7 +269,7 @@ public class BigScreenStatsService {
             return dateRange(applyTime1, applyTime2, 7);
         }
         if (notBlank(startDate)) {
-            LocalDate start = parseDate(startDate, LocalDate.now());
+            LocalDate start = parseDate(startDate, LocalDate.now(TrafficTimeUtils.ZONE));
             LocalDate monthStart = start.withDayOfMonth(1);
             LocalDate endExclusive = monthStart.plusMonths(1);
             if (ChronoUnit.DAYS.between(monthStart, endExclusive.minusDays(1)) > MAX_RANGE_DAYS) {

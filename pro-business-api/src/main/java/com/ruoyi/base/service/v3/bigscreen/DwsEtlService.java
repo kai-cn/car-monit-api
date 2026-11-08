@@ -84,10 +84,10 @@ public class DwsEtlService {
             JdbcTemplate mysqlJdbc = new JdbcTemplate(mysql);
             mysqlJdbc.setQueryTimeout(30);
 
-            Timestamp startTs = new Timestamp(startMillis);
-            Timestamp endTs = new Timestamp(endMillis);
-            Date startDate = new Date(startMillis);
-            Date endDate = new Date(endMillis);
+            Timestamp startTs = TrafficTimeUtils.toDbTimestamp(startMillis);
+            Timestamp endTs = TrafficTimeUtils.toDbTimestamp(endMillis);
+            Date startDate = TrafficTimeUtils.toDbDate(startMillis);
+            Date endDate = TrafficTimeUtils.toDbDate(endMillis);
 
             // 1. 逃费日汇总
             List<Map<String, Object>> escapeRows = mysqlJdbc.queryForList(
@@ -188,9 +188,9 @@ public class DwsEtlService {
 
     private Date toDate(Object value) {
         if (value instanceof java.util.Date) {
-            return new Date(((java.util.Date) value).getTime());
+            return TrafficTimeUtils.toDbDate(((java.util.Date) value).getTime());
         }
-        return new Date(Long.parseLong(String.valueOf(value)));
+        return TrafficTimeUtils.toDbDate(Long.parseLong(String.valueOf(value)));
     }
 
     private String str(Object value) {

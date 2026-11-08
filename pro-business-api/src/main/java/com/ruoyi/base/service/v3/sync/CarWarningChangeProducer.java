@@ -2,6 +2,7 @@ package com.ruoyi.base.service.v3.sync;
 
 import com.alibaba.fastjson2.JSON;
 import com.ruoyi.base.service.v3.config.TrafficV3Properties;
+import com.ruoyi.base.service.v3.query.TrafficTimeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -77,10 +78,10 @@ public class CarWarningChangeProducer {
 
             Timestamp watermark = loadWatermark();
             if (watermark == null) {
-                watermark = new Timestamp(System.currentTimeMillis()
+                watermark = TrafficTimeUtils.toDbTimestamp(System.currentTimeMillis()
                         - TimeUnit.DAYS.toMillis(Math.max(1, properties.getSync().getCarWarningLookbackDays())));
             }
-            Timestamp now = new Timestamp(System.currentTimeMillis());
+            Timestamp now = TrafficTimeUtils.toDbTimestamp(System.currentTimeMillis());
 
             List<Map<String, Object>> rows = mysqlJdbc.queryForList(
                     "SELECT t.*, c.plate_color AS plate_color, c.escaped_type AS escaped_type, "
@@ -169,7 +170,7 @@ public class CarWarningChangeProducer {
             return (Timestamp) value;
         }
         if (value instanceof java.util.Date) {
-            return new Timestamp(((java.util.Date) value).getTime());
+            return TrafficTimeUtils.toDbTimestamp(((java.util.Date) value).getTime());
         }
         return null;
     }

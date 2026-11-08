@@ -1,6 +1,7 @@
 package com.ruoyi.base.service.v3.es;
 
 import com.alibaba.fastjson2.JSON;
+import com.ruoyi.base.service.v3.query.TrafficTimeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -77,14 +78,16 @@ public class CarWarningBackfillService {
         for (String schema : schemas) {
             try {
                 rows = jdbc.queryForList(joinSql(schema),
-                        new Timestamp(start), new Timestamp(end), fetchLimit);
+                        TrafficTimeUtils.toDbTimestamp(start), TrafficTimeUtils.toDbTimestamp(end),
+                        fetchLimit);
                 source = (schema.isEmpty() ? "" : schema + ".") + "car_warning_info + car_info";
                 break;
             } catch (Exception joinError) {
                 lastError = joinError;
                 try {
                     rows = jdbc.queryForList(simpleSql(schema),
-                            new Timestamp(start), new Timestamp(end), fetchLimit);
+                            TrafficTimeUtils.toDbTimestamp(start), TrafficTimeUtils.toDbTimestamp(end),
+                            fetchLimit);
                     source = (schema.isEmpty() ? "" : schema + ".") + "car_warning_info";
                     break;
                 } catch (Exception simpleError) {
@@ -162,13 +165,11 @@ public class CarWarningBackfillService {
 
     private long parseTime(String value) {
         try {
-            if (value.length() >= 19 && value.charAt(4) == '-' && value.charAt(10) == ' ') {
-                return Timestamp.valueOf(value).getTime();
+            Long millis = TrafficTimeUtils.parseDbTimestamp(value);
+            if (millis != null) {
+                return millis;
             }
-            if (value.length() >= 10 && value.charAt(4) == '-') {
-                return Timestamp.valueOf(value.substring(0, 10) + " 00:00:00").getTime();
-            }
-            return Long.parseLong(value);
+            throw new IllegalArgumentException("时间格式非法: " + value);
         } catch (Exception e) {
             throw new IllegalArgumentException("时间格式非法: " + value
                     + "，支持 yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss");

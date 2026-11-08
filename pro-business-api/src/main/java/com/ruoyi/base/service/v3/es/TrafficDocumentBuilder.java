@@ -5,6 +5,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.ruoyi.base.service.v3.model.TrafficTable;
 import com.ruoyi.base.service.v3.plate.PlateNumberParser;
 import com.ruoyi.base.service.v3.plate.PlateParseResult;
+import com.ruoyi.base.service.v3.query.TrafficTimeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -208,7 +209,7 @@ public class TrafficDocumentBuilder {
                     return OffsetDateTime.parse(s).toInstant().toEpochMilli();
                 }
                 if (s.length() >= 19 && s.charAt(4) == '-' && s.charAt(10) == ' ') {
-                    return Timestamp.valueOf(s).getTime();
+                    return TrafficTimeUtils.parseDbTimestamp(s);
                 }
                 return Long.parseLong(s);
             } catch (DateTimeParseException | IllegalArgumentException ignored) {

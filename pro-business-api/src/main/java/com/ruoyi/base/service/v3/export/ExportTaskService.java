@@ -292,8 +292,8 @@ public class ExportTaskService {
         sql.append(" WHERE t.").append(table.getTimeField()).append(" >= ? AND t.")
                 .append(table.getTimeField()).append(" < ?");
         List<Object> args = new ArrayList<>();
-        args.add(new Timestamp(task.getStartMillis()));
-        args.add(new Timestamp(task.getEndMillis()));
+        args.add(TrafficTimeUtils.toDbTimestamp(task.getStartMillis()));
+        args.add(TrafficTimeUtils.toDbTimestamp(task.getEndMillis()));
 
         // 车牌精确/前缀下推：抓拍/轨迹完整车牌；收费原始列带 _颜色码，使用前缀匹配
         if (request.getPlate() != null && !request.getPlate().trim().isEmpty()) {

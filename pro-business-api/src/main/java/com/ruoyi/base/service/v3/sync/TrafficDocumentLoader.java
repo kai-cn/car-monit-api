@@ -1,6 +1,7 @@
 package com.ruoyi.base.service.v3.sync;
 
 import com.ruoyi.base.service.v3.model.TrafficTable;
+import com.ruoyi.base.service.v3.query.TrafficTimeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -57,7 +58,8 @@ public class TrafficDocumentLoader {
                 return null;
         }
         try {
-            return jdbc.queryForMap(sql, pk, new Timestamp(from), new Timestamp(to));
+            return jdbc.queryForMap(sql, pk,
+                    TrafficTimeUtils.toDbTimestamp(from), TrafficTimeUtils.toDbTimestamp(to));
         } catch (EmptyResultDataAccessException e) {
             return null;
         } catch (Exception e) {

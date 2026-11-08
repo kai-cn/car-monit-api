@@ -55,8 +55,8 @@ public class TrailPointLoader {
         sql.append(')');
 
         Object[] args = new Object[cids.size() + 2];
-        args[0] = new Timestamp(start);
-        args[1] = new Timestamp(end);
+        args[0] = TrafficTimeUtils.toDbTimestamp(start);
+        args[1] = TrafficTimeUtils.toDbTimestamp(end);
         for (int i = 0; i < cids.size(); i++) {
             args[i + 2] = cids.get(i);
         }

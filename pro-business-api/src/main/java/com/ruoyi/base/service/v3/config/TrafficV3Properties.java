@@ -16,6 +16,12 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "traffic")
 public class TrafficV3Properties {
 
+    /**
+     * 业务时区（P2-1）：查询解析、JDBC 时间窗、导出格式化统一使用该时区。
+     * 启动时据此设置 JVM 默认时区并打印自检信息；容器默认 UTC 时避免整体偏 8 小时。
+     */
+    private String timezone = "Asia/Shanghai";
+
     private Query query = new Query();
     private Es es = new Es();
     private Plate plate = new Plate();

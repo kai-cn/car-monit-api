@@ -1,5 +1,6 @@
 package com.ruoyi.base.service.v3.es;
 
+import com.ruoyi.base.service.v3.query.TrafficTimeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -121,7 +122,7 @@ public class CarWarningDocumentBuilder {
             }
             try {
                 if (s.length() >= 19 && s.charAt(4) == '-' && s.charAt(10) == ' ') {
-                    return Timestamp.valueOf(s).getTime();
+                    return TrafficTimeUtils.parseDbTimestamp(s);
                 }
                 return Long.parseLong(s);
             } catch (Exception e) {

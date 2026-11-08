@@ -5,6 +5,7 @@ import com.ruoyi.base.service.v3.config.TrafficV3Properties;
 import com.ruoyi.base.service.v3.es.TrafficDocumentBuilder;
 import com.ruoyi.base.service.v3.es.TrafficEsIndexService;
 import com.ruoyi.base.service.v3.model.TrafficTable;
+import com.ruoyi.base.service.v3.query.TrafficTimeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
@@ -147,7 +148,7 @@ public class EsBulkIndexer {
                             + "(event_id, table_name, pk, op, event_time, payload, error_message, retry_count) "
                             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     event.getEventId(), event.getTable(), event.getPk(), event.getOp(),
-                    event.getEventTime() == null ? null : new Timestamp(event.getEventTime()),
+                    event.getEventTime() == null ? null : TrafficTimeUtils.toDbTimestamp(event.getEventTime()),
                     event.getPayload() == null ? null : JSON.toJSONString(event.getPayload()),
                     error == null ? "unknown" : String.valueOf(error.getMessage()).substring(
                             0, Math.min(1000, String.valueOf(error.getMessage()).length())),

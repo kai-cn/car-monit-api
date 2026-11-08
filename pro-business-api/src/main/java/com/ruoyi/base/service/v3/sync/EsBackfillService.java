@@ -3,6 +3,7 @@ package com.ruoyi.base.service.v3.sync;
 import com.ruoyi.base.service.v3.config.TrafficV3Properties;
 import com.ruoyi.base.service.v3.es.TrafficDocumentBuilder;
 import com.ruoyi.base.service.v3.model.TrafficTable;
+import com.ruoyi.base.service.v3.query.TrafficTimeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -164,8 +165,9 @@ public class EsBackfillService {
                 return new ArrayList<>();
         }
         Object[] args = new Object[]{
-                new Timestamp(start), new Timestamp(end),
-                new Timestamp(cursorTime), new Timestamp(cursorTime), cursorPk, limit
+                TrafficTimeUtils.toDbTimestamp(start), TrafficTimeUtils.toDbTimestamp(end),
+                TrafficTimeUtils.toDbTimestamp(cursorTime),
+                TrafficTimeUtils.toDbTimestamp(cursorTime), cursorPk, limit
         };
         RowMapper<Map<String, Object>> mapper = (rs, rowNum) -> {
             Map<String, Object> row = new LinkedHashMap<>();
@@ -188,11 +190,8 @@ public class EsBackfillService {
             return ((Number) value).longValue();
         }
         if (value instanceof CharSequence) {
-            try {
-                return Timestamp.valueOf(value.toString()).getTime();
-            } catch (Exception ignored) {
-                return System.currentTimeMillis();
-            }
+            Long millis = TrafficTimeUtils.parseDbTimestamp(value.toString());
+            return millis == null ? System.currentTimeMillis() : millis;
         }
         return System.currentTimeMillis();
     }
