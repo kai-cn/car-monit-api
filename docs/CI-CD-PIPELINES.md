@@ -74,4 +74,20 @@ PR / 主分支 / 发布三套入口只负责触发、路径分诊与汇总，不
 
 1. 推送后到仓库 Settings → Branches 将默认分支改为 **`master`**（当前远端 HEAD 指向 `main`），再把必需检查指向 **`PR Gate`**（旧 `ci / gates` 检查名随 `ci.yml` 移除而消失）。
 2. Rust 入库：从 `.gitignore` 删除 L77，`git add car-monit-api-rust`，确认 `Cargo.lock` 一并提交。
-3. CD：确认第 3 节两项后，在 `deploy.yml` 填对应 secrets，并把 `if: ${{ false }}` 改为实际条件。
+3. CD：见第 8-10 节（GHCR + K8s 已按决策实现，K8s 首次部署需人工 bootstrap）。
+
+## 8. 镜像构建补全（Dockerfile）
+
+| 语言 | Dockerfile | 构建上下文 | 基础镜像 | 说明 |
+| --- | --- | --- | --- | --- |
+| Java | `docker/java.Dockerfile` | 仓库根 | 构建 `maven:3.9-eclipse-temurin-8`；运行 `eclipse-temurin:8-jre-jammy` | pom `source/target=1.8`，必须 JDK 8；运行只要 JRE；glibc 规避 Alpine 兼容风险 |
+| Python | `car-monit-api-python/Dockerfile`（既有） | `car-monit-api-python/` | `python:3.12-slim` | 原文件未改动 |
+| Go | `docker/go.Dockerfile` | `car-monit-api-go/` | 构建 `golang:1.24-bookworm`；运行 `debian:12-slim` | `CGO_ENABLED=0` 静态产物；运行期需 tzdata + CA |
+| C++ | `docker/cpp.Dockerfile` | `car-monit-api-cpp/` | 构建/运行均 `debian:12-slim` | C++20 用 g++12；运行需 libstdc++/CA/tzdata；distroless 缺 CA/无 shell，不用 |
+| Rust | `docker/rust.Dockerfile` | `car-monit-api-rust/` | 构建 `rust:1.90-slim-bookworm`；运行 `debian:12-slim` | 与 `rust-toolchain.toml` 1.90.0 对齐；rdkafka cmake-build 需 cmake/g++/zlib |
+
+- **配置不打包进镜像**：Go/C++/Rust 的 `configs/config.yaml`、`config/application.yaml` 可能含连接串/口令，镜像只放二进制；由 K8s 以 ConfigMap/Secret 挂载到约定路径。Java 的 `application.yml` 已打入 jar，口令走环境变量覆盖。
+- **构建缺口（如实声明）**：
+  - `master` 只跟踪 11 个 C++ 文件，完整源码在 `car-monit-api-cpp` 分支 → master 上 C++ 构建/镜像会被 presence 检查显式跳过，不会产出假镜像。
+  - `car-monit-api-rust/` 未入 master → rust 镜像同样跳过；且该分支当前是旧快照（见 §11）。
+- **验证状态**：本机**没有 docker**（`docker version` 不可用），所有镜像均**未实测构建/未实测运行期依赖**，仅做静态审阅。首次启用 CI 时以 GitHub runner 构建结果为准。
