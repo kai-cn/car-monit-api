@@ -145,11 +145,24 @@ PageInfo resolve_page(const http::Request& req) {
   PageInfo p;
   auto page_num = req.get_int("pageNum");
   auto page_size = req.get_int("pageSize");
-  if (page_num && page_size && *page_size > 0) {
-    p.paged = true;
-    p.page_num = *page_num;
-    p.page_size = *page_size;
+  // 任一参数存在即视为分页请求：避免 pageSize 非法时退化成全表返回。
+  if (!page_num && !page_size) return p;
+  p.paged = true;
+
+  long long num = page_num.value_or(1);
+  long long size = page_size.value_or(10);
+  if (num < 1) num = 1;
+  if (num > 10000) {
+    CM_LOG_WARN("db.dao") << "pageNum 超出上限，按 10000 处理: " << num;
+    num = 10000;
   }
+  if (size <= 0) size = 10;
+  if (size > 500) {
+    CM_LOG_WARN("db.dao") << "pageSize 超出上限，按 500 处理: " << size;
+    size = 500;
+  }
+  p.page_num = static_cast<int>(num);
+  p.page_size = static_cast<int>(size);
   std::string col = req.str("orderByColumn");
   if (!col.empty()) {
     std::string under = to_under_score(utils::trim(col));
