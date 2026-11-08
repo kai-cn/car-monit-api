@@ -1,0 +1,68 @@
+name: _java
+
+# 可复用 workflow：Java 主仓库（Spring Boot 2.4.5 / source-target 1.8）。
+# 由 pr.yml / main.yml / release.yml 调用，避免三套入口复制检查逻辑。
+#
+# 已知缺口（不在 CI 任务内顺手修）：
+#   * pro-base-common / pro-business-api 无 src/test，pom 未配置 checkstyle/spotbugs；
+#     因此门禁只到"可编译可打包"。
+#   * pulsar-client 2.10.4 在 pom 注释中自述需 JDK 11+，与 JDK 8 目标冲突，未验证。
+on:
+  workflow_call:
+    inputs:
+      mode:
+        description: "pr | main | release"
+        required: false
+        type: string
+        default: pr
+      jdk-version:
+        description: "主项目固定 8；未来 Kotlin 等 JVM 模块按自身需要显式传入（21/25），不要共用"
+        required: false
+        type: string
+        default: "8"
+      jdk-distribution:
+        description: "JDK 发行版"
+        required: false
+        type: string
+        default: temurin
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: java (JDK ${{ inputs.jdk-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup JDK ${{ inputs.jdk-version }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: ${{ inputs.jdk-distribution }}
+          java-version: ${{ inputs.jdk-version }}
+          cache: maven
+
+      - name: 构建（编译 + spring-boot repackage）
+        run: mvn -B -ntp -DskipTests clean package
+
+      - name: 门禁口径说明（静态检查缺口）
+        if: inputs.mode == 'pr'
+        shell: bash
+        run: |
+          {
+            echo "### Java 门禁口径"
+            echo "- 模块：pro-base-common / pro-business-api"
+            echo "- 已执行：JDK ${{ inputs.jdk-version }} 下 mvn clean package"
+            echo "- 未执行：单元测试（无 src/test）、checkstyle/spotbugs（pom 未配置）"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 上传 jar
+        if: inputs.mode != 'pr'
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-jar-${{ github.sha }}
+          path: pro-business-api/target/*.jar
+          if-no-files-found: error
+          retention-days: 14

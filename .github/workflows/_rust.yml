@@ -1,0 +1,73 @@
+name: _rust
+
+# 可复用 workflow：Rust 迁移实现（rust-toolchain.toml 锁 1.90.0 + rustfmt + clippy）。
+#
+# !! 重要：car-monit-api-rust/ 仍被根 .gitignore L77 整体忽略且未入库（无独立 .git），
+# 因此本 workflow 目前不会被 GitHub 触发；取消忽略并提交后才生效。
+on:
+  workflow_call:
+    inputs:
+      mode:
+        description: "pr | main | release"
+        required: false
+        type: string
+        default: pr
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: rust (1.90.0)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: car-monit-api-rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Rust 1.90.0（与 rust-toolchain.toml 一致）
+        run: |
+          rustup toolchain install 1.90.0 --profile minimal --component rustfmt clippy
+          rustup default 1.90.0
+
+      # rdkafka 的 cmake-build 特性需要 C 工具链；libz 由 rdkafka 默认特性引入。
+      - name: 系统构建依赖
+        run: sudo apt-get update && sudo apt-get install -y cmake build-essential zlib1g-dev pkg-config
+
+      - name: 缓存 cargo registry 与 target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            car-monit-api-rust/target
+          key: rust-${{ runner.os }}-${{ hashFiles('car-monit-api-rust/Cargo.lock') }}
+          restore-keys: |
+            rust-${{ runner.os }}-
+
+      - name: cargo fmt 格式检查
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy 静态检查（warnings 视为错误）
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: cargo build
+        run: cargo build --all-targets
+
+      - name: cargo test
+        run: cargo test --all-targets
+
+      - name: cargo build --release
+        if: inputs.mode != 'pr'
+        run: cargo build --release
+
+      - name: 上传二进制（Linux amd64）
+        if: inputs.mode != 'pr'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-linux-amd64-${{ github.sha }}
+          path: car-monit-api-rust/target/release/car-monit-api-rust
+          if-no-files-found: error
+          retention-days: 14

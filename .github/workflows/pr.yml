@@ -1,0 +1,131 @@
+name: pr
+
+# PR 统一入口：按改动路径分诊，只跑受影响语言；未受影响语言跳过（由 PR Gate 视为通过）。
+# 统一风格：真正的检查都在 _java/_cpp/_go/_python/_rust.yml 里，本文件不复制任何检查逻辑。
+#
+# 注意：
+#   * car-monit-api-rust/** 目前被根 .gitignore L77 忽略且未入库，该过滤器不会命中，
+#     对应的 rust job 实际不会运行（详见 docs/CI-CD-PIPELINES.md §4）。
+#   * 仓库分支保护请把必需检查指向 "PR Gate"（单一汇总检查），不要指向各语言 job，
+#     否则路径未命中时检查会停留在 skipped/expected 状态。
+on:
+  pull_request:
+    branches: ["master"]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: pr-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: changes (paths filter)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      java: ${{ steps.filter.outputs.java }}
+      cpp: ${{ steps.filter.outputs.cpp }}
+      go: ${{ steps.filter.outputs.go }}
+      python: ${{ steps.filter.outputs.python }}
+      rust: ${{ steps.filter.outputs.rust }}
+      rust-present: ${{ steps.presence.outputs.rust }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 路径分诊
+        id: filter
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            java:
+              - 'pom.xml'
+              - 'pro-base-common/**'
+              - 'pro-business-api/**'
+            cpp:
+              - 'car-monit-api-cpp/**'
+            go:
+              - 'car-monit-api-go/**'
+            python:
+              - 'car-monit-api-python/**'
+            rust:
+              - 'car-monit-api-rust/**'
+
+      - name: rust 目录是否已入库（被 .gitignore 忽略时跳过，避免假红）
+        id: presence
+        shell: bash
+        run: |
+          if [ -d car-monit-api-rust ]; then
+            echo "rust=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "rust=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  java:
+    name: java
+    needs: changes
+    if: needs.changes.result == 'success' && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.java == 'true')
+    uses: ./.github/workflows/_java.yml
+    with:
+      mode: pr
+      jdk-version: "8"
+
+  cpp:
+    name: cpp
+    needs: changes
+    if: needs.changes.result == 'success' && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.cpp == 'true')
+    uses: ./.github/workflows/_cpp.yml
+    with:
+      mode: pr
+
+  go:
+    name: go
+    needs: changes
+    if: needs.changes.result == 'success' && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.go == 'true')
+    uses: ./.github/workflows/_go.yml
+    with:
+      mode: pr
+
+  python:
+    name: python
+    needs: changes
+    if: needs.changes.result == 'success' && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.python == 'true')
+    uses: ./.github/workflows/_python.yml
+    with:
+      mode: pr
+      run-integration: true
+
+  rust:
+    name: rust
+    needs: changes
+    if: needs.changes.result == 'success' && needs.changes.outputs.rust-present == 'true' && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.rust == 'true')
+    uses: ./.github/workflows/_rust.yml
+    with:
+      mode: pr
+
+  pr-gate:
+    name: PR Gate
+    if: always()
+    needs: [changes, java, cpp, go, python, rust]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 汇总各语言结果
+        shell: bash
+        run: |
+          echo "job results: ${{ join(needs.*.result, ', ') }}"
+          echo "skipped = 该语言路径未改动，按通过处理"
+
+      - name: 失败/取消则阻断
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        shell: bash
+        run: |
+          echo "::error::存在失败或被取消的语言流水线，PR Gate 不通过"
+          exit 1
