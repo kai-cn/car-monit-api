@@ -142,6 +142,169 @@ def test_shared_template_factory_switches_by_env(monkeypatch) -> None:
 
 
 # ============================================================== ES 适配（P2-3）
+# ------------------------------------------------------- H2 熔断窗口回归
+class _Clock:
+    """可手动推进的 monotonic 时钟（避免测试里真的 sleep 60 秒）。"""
+
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def monotonic(self) -> float:
+        return self.now
+
+
+def test_redis_breaker_refreshes_window_on_every_failure(monkeypatch) -> None:
+    """连续两个窗口：探测失败后必须重新计时，而不是每次调用都直连。"""
+    import redis as redis_py
+
+    from app.middleware.real_redis import RealRedisTemplate
+
+    clock = _Clock()
+    monkeypatch.setattr("app.middleware.breaker.time", clock)
+
+    class _Broken:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def get(self, key):
+            self.calls += 1
+            raise redis_py.ConnectionError("down")
+
+    client = _Broken()
+    template = RealRedisTemplate("redis://127.0.0.1:1/0", fallback="memory",
+                                 client=client)
+
+    assert template.opsForValue().get("k") is None
+    assert client.calls == 1 and template.degraded is True
+    clock.now = 30.0
+    assert template.opsForValue().get("k") is None
+    assert client.calls == 1                      # 窗口内不直连
+    clock.now = 61.0
+    assert template.opsForValue().get("k") is None
+    assert client.calls == 2                      # 半开探测一次
+    clock.now = 62.0
+    assert template.opsForValue().get("k") is None
+    assert client.calls == 2                      # 失败后重新计时，不再直连
+    clock.now = 122.0
+    assert template.opsForValue().get("k") is None
+    assert client.calls == 3                      # 第二个窗口的探测
+
+
+def test_redis_half_open_allows_only_one_probe(monkeypatch) -> None:
+    import threading
+
+    import redis as redis_py
+
+    from app.middleware.real_redis import RealRedisTemplate
+
+    clock = _Clock()
+    monkeypatch.setattr("app.middleware.breaker.time", clock)
+
+    class _Blocking:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.entered = threading.Event()
+            self.release = threading.Event()
+
+        def get(self, key):
+            self.calls += 1
+            self.entered.set()
+            self.release.wait(5)
+            raise redis_py.ConnectionError("down")
+
+    client = _Blocking()
+    template = RealRedisTemplate("redis://127.0.0.1:1/0", fallback="memory",
+                                 client=client)
+    template.opsForValue().get("k")                # 首次失败 → 熔断
+    clock.now = 61.0
+
+    results: list = []
+    thread = threading.Thread(
+        target=lambda: results.append(template.opsForValue().get("k")))
+    thread.start()
+    assert client.entered.wait(3)                  # 探测已在途
+    assert template.opsForValue().get("k") is None  # 并发调用直接走内存
+    assert client.calls == 2                        # 只放行一个真实探测
+    client.release.set()
+    thread.join(5)
+    assert results == [None]
+    assert template.degraded is True
+
+
+def test_es_breaker_refreshes_window_on_every_failure(monkeypatch) -> None:
+    import elasticsearch.exceptions as es_exc
+
+    from app.middleware.real_es import RealEsBackend
+
+    clock = _Clock()
+    monkeypatch.setattr("app.middleware.breaker.time", clock)
+
+    class _Broken:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def ping(self):
+            self.calls += 1
+            raise es_exc.ConnectionError("N/A", "down", None)
+
+    client = _Broken()
+    backend = RealEsBackend("http://127.0.0.1:1", fallback="memory", client=client)
+
+    assert backend.ping(memory=lambda: True) is True
+    assert client.calls == 1 and backend.degraded is True
+    clock.now = 30.0
+    assert backend.ping(memory=lambda: True) is True
+    assert client.calls == 1
+    clock.now = 61.0
+    assert backend.ping(memory=lambda: True) is True
+    assert client.calls == 2
+    clock.now = 62.0
+    assert backend.ping(memory=lambda: True) is True
+    assert client.calls == 2                       # 失败后重新计时
+    clock.now = 122.0
+    assert backend.ping(memory=lambda: True) is True
+    assert client.calls == 3
+
+
+def test_kafka_breaker_refreshes_window_on_every_failure(monkeypatch) -> None:
+    from confluent_kafka import KafkaError
+
+    from app.middleware.real_kafka import RealKafkaProducer
+
+    clock = _Clock()
+    monkeypatch.setattr("app.middleware.breaker.time", clock)
+
+    class _Broken:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def produce(self, topic, key, value, on_delivery):
+            self.calls += 1
+            on_delivery(KafkaError(KafkaError._ALL_BROKERS_DOWN, "down"), None)
+
+        def flush(self, timeout=None):
+            return 0
+
+    client = _Broken()
+    producer = RealKafkaProducer("127.0.0.1:1", fallback="memory", client=client)
+
+    # 首条真实发送：送达回调同步报错 → 熔断，但本条仍是失败 future（不静默重投）
+    producer.send("t", "k", "v", memory=lambda: "memory-ok")
+    assert client.calls == 1 and producer.degraded is True
+    clock.now = 30.0
+    assert producer.send("t", "k", "v", memory=lambda: "memory-ok") == "memory-ok"
+    assert client.calls == 1
+    clock.now = 61.0
+    producer.send("t", "k", "v", memory=lambda: "memory-ok")
+    assert client.calls == 2
+    clock.now = 62.0
+    assert producer.send("t", "k", "v", memory=lambda: "memory-ok") == "memory-ok"
+    assert client.calls == 2                       # 失败后重新计时
+    clock.now = 122.0
+    producer.send("t", "k", "v", memory=lambda: "memory-ok")
+    assert client.calls == 3
+
+
 def test_es_response_decimals_are_parsed_exactly() -> None:
     """H1 回归：真实 ES 响应用 parse_float=Decimal，金额不先降成 float。"""
     from decimal import Decimal

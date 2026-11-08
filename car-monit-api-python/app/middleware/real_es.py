@@ -54,13 +54,14 @@ import json
 import logging
 import os
 import re
-import time
 from decimal import Decimal
 from typing import Any, Callable, Dict, List, Optional
 
 import elasticsearch as es_py
 import elasticsearch.exceptions as es_exceptions
 from elasticsearch.serializer import JSONSerializer
+
+from app.middleware.breaker import CircuitBreaker
 
 from org.elasticsearch.ElasticsearchException import index_not_found_exception
 from org.elasticsearch.action.bulk.BulkItemResponse import BulkItemResponse
@@ -361,35 +362,42 @@ class RealEsBackend:
         self.client = client or es_py.Elasticsearch(
             [url], timeout=30, max_retries=0, retry_on_timeout=False,
             serializer=_DECIMAL_SERIALIZER)
-        self._down = False
-        self._down_since = 0.0
+        self._breaker = CircuitBreaker(_RETRY_SECONDS)
 
     # ------------------------------------------------------------- dispatch
     def _run(self, description: str, real: Callable[[], Any],
              memory: Callable[[], Any]) -> Any:
-        if self._down and time.monotonic() - self._down_since < _RETRY_SECONDS:
+        allowed, probe = self._breaker.acquire()
+        if not allowed:
             return memory()
         try:
             result = real()
         except es_exceptions.ConnectionError as error:
             if self._fallback == "error":
+                if probe:
+                    self._breaker.release_probe()
                 raise
-            if not self._down:
-                self._down = True
-                self._down_since = time.monotonic()
-                log.warning("[ES适配] %s 失败，熔断降级为进程内替身（%.0fs 后半开重试；"
-                            "降级期间的写入不会回灌真实 ES）: %s",
-                            description, _RETRY_SECONDS, error)
+            # H2：失败分支无条件刷新窗口计时（包括半开探测失败）
+            first = self._breaker.failure()
+            log.warning("[ES适配] %s %s，熔断降级为进程内替身（%.0fs 后半开重试；"
+                        "降级期间的写入不会回灌真实 ES）: %s",
+                        description, "失败" if first else "半开探测仍失败",
+                        _RETRY_SECONDS, error)
             return memory()
-        if self._down:
-            self._down = False
+        except BaseException:
+            # 确定性错误（索引不存在 / 上下文失效等）不是服务不可用：
+            # 释放探测名额后原样抛出，不改变熔断状态
+            if probe:
+                self._breaker.release_probe()
+            raise
+        if self._breaker.success():
             log.info("[ES适配] 真实 ES 已恢复（%s）", self._url)
         return result
 
     @property
     def degraded(self) -> bool:
         """当前是否处于熔断降级（供健康检查/测试观察）。"""
-        return self._down
+        return self._breaker.degraded
 
     # ----------------------------------------------------------------- 连接
     def ping(self, memory: Callable[[], bool]) -> bool:

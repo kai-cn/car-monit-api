@@ -54,7 +54,6 @@ from __future__ import annotations
 
 import logging
 import os
-import time
 from typing import Any, Callable, Dict, Optional
 
 from confluent_kafka import KafkaError, KafkaException, Producer
@@ -64,6 +63,8 @@ from org.apache.kafka.common.serialization.JsonSerializer import JsonSerializer
 from org.apache.kafka.common.serialization.StringSerializer import StringSerializer
 from org.springframework.kafka.support.SendResult import RecordMetadata, SendResult
 from org.springframework.util.concurrent.ListenableFuture import ListenableFuture
+
+from app.middleware.breaker import CircuitBreaker
 
 __all__ = [
     "RealKafkaProducer",
@@ -155,28 +156,27 @@ class RealKafkaProducer:
         self._value_serializer = value_serializer or JsonSerializer()
         self._producer = client or Producer(
             dict(_PRODUCER_CONF, **{"bootstrap.servers": bootstrap_servers}))
-        self._down = False
-        self._down_since = 0.0
+        self._breaker = CircuitBreaker(_RETRY_SECONDS)
 
     # ------------------------------------------------------------- dispatch
     def _trip(self, reason: Any) -> None:
-        if not self._down:
-            self._down = True
-            self._down_since = time.monotonic()
-            log.warning("[Kafka适配] 发送失败（疑似 broker 不可用），熔断降级为进程内替身"
-                        "（%.0fs 后半开重试；降级期间的写入不会回灌真实 broker）: %s",
-                        _RETRY_SECONDS, reason)
+        # H2：失败分支无条件刷新窗口计时（包括半开探测失败）
+        first = self._breaker.failure()
+        log.warning("[Kafka适配] %s（疑似 broker 不可用），熔断降级为进程内替身"
+                    "（%.0fs 后半开重试；降级期间的写入不会回灌真实 broker）: %s",
+                    "发送失败" if first else "半开探测仍失败", _RETRY_SECONDS, reason)
 
     @property
     def degraded(self) -> bool:
         """当前是否处于熔断降级（供健康检查/测试观察）。"""
-        return self._down
+        return self._breaker.degraded
 
     # ----------------------------------------------------------------- 发送
     def send(self, topic: str, key: Any, value: Any,
              memory: Callable[[], ListenableFuture]) -> ListenableFuture:
         """等价 ``KafkaTemplate.send``：立即返回 future，ack 后完成。"""
-        if self._down and time.monotonic() - self._down_since < _RETRY_SECONDS:
+        allowed, probe = self._breaker.acquire()
+        if not allowed:
             return memory()
 
         future = ListenableFuture()
@@ -184,6 +184,8 @@ class RealKafkaProducer:
             key_bytes = self._key_serializer.serialize(topic, key)
             value_bytes = self._value_serializer.serialize(topic, value)
         except Exception:  # noqa: BLE001 - 序列化失败=确定性错误，直接进失败 future
+            if probe:
+                self._breaker.release_probe()
             future._setException(
                 RuntimeError("org.apache.kafka.common.errors.SerializationException: "
                              "key/value 序列化失败"))
@@ -196,12 +198,14 @@ class RealKafkaProducer:
                                           _offset=msg.offset())
                 future._setResult(SendResult(metadata,
                                              producer_record=(topic, key, value)))
-                if self._down:
-                    self._down = False
+                if self._breaker.success():
                     log.info("[Kafka适配] 真实 broker 已恢复（%s）", self._url)
                 return
             if self._fallback == "memory" and _looks_like_outage(error):
+                # H2：送达失败无条件刷新窗口计时
                 self._trip(error)
+            elif probe:
+                self._breaker.release_probe()
             future._setException(_as_exception(error))
 
         try:
@@ -210,17 +214,23 @@ class RealKafkaProducer:
         except BufferError:
             # 32MB 发送队列打满：Java 在 max.block.ms 后抛 TimeoutException，
             # 这里直接失败该条（文档化差异：不阻塞调用线程）
+            if probe:
+                self._breaker.release_probe()
             future._setException(
                 RuntimeError("org.apache.kafka.common.errors.TimeoutException: "
                              "本地发送队列已满（BufferError）"))
         except KafkaException as error:
             if self._fallback == "error":
+                if probe:
+                    self._breaker.release_probe()
                 raise
             inner = error.args[0] if error.args else None
             if _looks_like_outage(inner):
                 self._trip(error)
                 return memory()
             # 确定性同步错误（如消息超限的客户端侧拦截）：只失败该条，不熔断
+            if probe:
+                self._breaker.release_probe()
             future._setException(_as_exception(inner) if inner is not None
                                  else RuntimeError(str(error)))
         return future

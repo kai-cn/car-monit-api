@@ -45,7 +45,6 @@ import importlib
 import json
 import logging
 import os
-import time
 import typing
 from decimal import Decimal
 from enum import Enum
@@ -56,6 +55,7 @@ import redis as redis_py
 from com.ruoyi.common.core.redis.RedisCache import TimeUnit, _InMemoryRedisTemplate
 
 from app.compat import java_meta
+from app.middleware.breaker import CircuitBreaker
 
 __all__ = ["RealRedisTemplate", "redis_fallback_policy"]
 
@@ -522,34 +522,39 @@ class RealRedisTemplate:
             socket_connect_timeout=2, socket_timeout=5,
             health_check_interval=30)
         self._memory = _InMemoryRedisTemplate()
-        self._down = False
-        self._down_since = 0.0
+        self._breaker = CircuitBreaker(_RETRY_SECONDS)
 
     # ------------------------------------------------------------- dispatch
     def _run(self, description: str, real: Any, memory: Any) -> Any:
-        if self._down and time.monotonic() - self._down_since < _RETRY_SECONDS:
+        allowed, probe = self._breaker.acquire()
+        if not allowed:
             return memory()
         try:
             result = real()
         except redis_py.RedisError as error:
             if self._fallback == "error":
+                if probe:
+                    self._breaker.release_probe()
                 raise
-            if not self._down:
-                self._down = True
-                self._down_since = time.monotonic()
-                log.warning("[Redis适配] %s 失败，熔断降级为进程内内存（%.0fs 后半开重试；"
-                            "降级期间的写入不会回灌真实 Redis）: %s",
-                            description, _RETRY_SECONDS, error)
+            # H2：失败分支无条件刷新窗口计时（包括半开探测失败）
+            first = self._breaker.failure()
+            log.warning("[Redis适配] %s %s，熔断降级为进程内内存（%.0fs 后半开重试；"
+                        "降级期间的写入不会回灌真实 Redis）: %s",
+                        description, "失败" if first else "半开探测仍失败",
+                        _RETRY_SECONDS, error)
             return memory()
-        if self._down:
-            self._down = False
+        except BaseException:
+            if probe:
+                self._breaker.release_probe()
+            raise
+        if self._breaker.success():
             log.info("[Redis适配] 真实 Redis 已恢复（%s）", self._url)
         return result
 
     @property
     def degraded(self) -> bool:
         """当前是否处于熔断降级（供健康检查/测试观察）。"""
-        return self._down
+        return self._breaker.degraded
 
     # ----------------------------------------------------------------- ops
     def opsForValue(self) -> _RealValueOps:
