@@ -248,13 +248,13 @@
           "editorMode": "code",
           "expr": "sum(carmonit_dependency_up)",
           "instant": false,
-          "legendFormat": "依赖正常数（满分 4）",
+          "legendFormat": "依赖 UP 数（ES UNKNOWN 计 0）",
           "range": true,
           "refId": "A",
           "format": "time_series"
         }
       ],
-      "title": "依赖正常数（满分 4）",
+      "title": "依赖 UP 数（ES UNKNOWN 计 0）",
       "type": "stat"
     },
     {
