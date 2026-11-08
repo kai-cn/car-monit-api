@@ -57,6 +57,10 @@ public class LargeScaleQueryService {
     @Autowired
     private RestHighLevelClient client;
 
+    /** ES 最大返回窗口 / max result window */
+    @Value("${optimization.query.max-window:10000}")
+    private int maxWindow;
+
     /** 导出文件根目录 / export file root dir */
     @Value("${optimization.export.dir:/data/export}")
     private String exportDir;
@@ -190,8 +194,16 @@ public class LargeScaleQueryService {
 
             SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
             sourceBuilder.query(boolQuery);
-            sourceBuilder.from((pageNum - 1) * pageSize);
-            sourceBuilder.size(pageSize);
+            int size = Math.min(pageSize, maxWindow);
+            long from = com.ruoyi.common.utils.PageUtils.safeFrom(pageNum, pageSize);
+            if (from + size > maxWindow) {
+                long clamped = Math.max(0L, (long) maxWindow - size);
+                log.warn("[全字段模糊查询] 分页超出 max_result_window={}，from 由 {} 截断为 {}，pageNum={}, pageSize={}",
+                        maxWindow, from, clamped, pageNum, pageSize);
+                from = clamped;
+            }
+            sourceBuilder.from((int) from);
+            sourceBuilder.size(size);
             sourceBuilder.sort(target.timeField, SortOrder.DESC);
             sourceBuilder.terminateAfter(1000000); // 单次最多扫描 100 万，防慢查询
             sourceBuilder.timeout(new TimeValue(QUERY_TIMEOUT_SECONDS, TimeUnit.SECONDS));

@@ -230,8 +230,8 @@ public class UnifiedQueryService {
             }
         }
 
-        // 2. 分页参数
-        int from = Math.max(0, (pageNum - 1) * pageSize);
+        // 2. 分页参数（long 运算避免深分页溢出）
+        long from = com.ruoyi.common.utils.PageUtils.safeFrom(pageNum, pageSize);
         int size = Math.min(pageSize, maxWindow);
         if (from + size > maxWindow) {
             throw new IllegalStateException(
@@ -240,7 +240,7 @@ public class UnifiedQueryService {
 
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
                 .query(boolQuery)
-                .from(from)
+                .from((int) from)
                 .size(size)
                 .sort(timeField, SortOrder.DESC)
                 .timeout(new TimeValue(queryTimeoutMs, TimeUnit.MILLISECONDS));

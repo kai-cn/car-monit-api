@@ -32,4 +32,20 @@ public class PageUtils extends PageHelper
     {
         PageHelper.clearPage();
     }
+
+    /**
+     * 计算分页偏移量。
+     *
+     * 使用 long 运算，避免 (pageNum - 1) * pageSize 在 int 下溢出为负数；
+     * 结果小于 0 时按 0 处理。
+     *
+     * @param pageNum 页码（从 1 开始）
+     * @param pageSize 每页大小
+     * @return 偏移量
+     */
+    public static long safeFrom(int pageNum, int pageSize)
+    {
+        long from = ((long) pageNum - 1L) * (long) pageSize;
+        return Math.max(0L, from);
+    }
 }

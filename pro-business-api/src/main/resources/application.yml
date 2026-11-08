@@ -223,6 +223,10 @@ elasticsearch:
     # 创建索引时是否挂载 ILM 策略（生产环境建议开启，实现冷热分层）
     attach-ilm: false
 
+# 通用分页上限：请求 pageSize 超过该值时截断并记录告警（默认 2000）
+page:
+  max-size: 2000
+
 # 通用大表查询/导出优化配置
 optimization:
   query:

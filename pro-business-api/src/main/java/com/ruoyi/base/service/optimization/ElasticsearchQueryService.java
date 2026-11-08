@@ -81,6 +81,27 @@ public class ElasticsearchQueryService {
     private String trailIndex;
 
     /**
+     * ES 最大返回窗口（from + size 上限），默认 10000
+     */
+    @Value("${optimization.query.max-window:10000}")
+    private int maxWindow;
+
+    /**
+     * 统一设置分页：size 截断到 maxWindow，from 使用 long 计算并在越界时截断并记录日志。
+     */
+    private void applyPaging(SearchSourceBuilder sourceBuilder, int pageNum, int pageSize) {
+        int size = Math.min(pageSize, maxWindow);
+        long from = com.ruoyi.common.utils.PageUtils.safeFrom(pageNum, pageSize);
+        if (from + size > maxWindow) {
+            long clamped = Math.max(0L, (long) maxWindow - size);
+            log.warn("[ES查询服务] 分页超出 max_result_window={}，from 由 {} 截断为 {}，pageNum={}, pageSize={}",
+                    maxWindow, from, clamped, pageNum, pageSize);
+            from = clamped;
+        }
+        sourceBuilder.from((int) from).size(size);
+    }
+
+    /**
      * 门架抓拍流水 ES 查询（模糊查询 + 时间范围查询
      * <p>
      * 性能优化：
@@ -148,8 +169,7 @@ public class ElasticsearchQueryService {
             // ============== 2. 构建搜索请求 ==================
             SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
             sourceBuilder.query(boolQuery);
-            sourceBuilder.from((pageNum - 1) * pageSize);
-            sourceBuilder.size(pageSize);
+            applyPaging(sourceBuilder, pageNum, pageSize);
             sourceBuilder.sort("snapshottime", SortOrder.DESC);
             // 超时设置
             sourceBuilder.timeout(new org.elasticsearch.core.TimeValue(30, java.util.concurrent.TimeUnit.SECONDS));
@@ -257,8 +277,7 @@ public class ElasticsearchQueryService {
 
             SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
             sourceBuilder.query(boolQuery);
-            sourceBuilder.from((pageNum - 1) * pageSize);
-            sourceBuilder.size(pageSize);
+            applyPaging(sourceBuilder, pageNum, pageSize);
             sourceBuilder.sort("transtime", SortOrder.DESC);
             sourceBuilder.timeout(new org.elasticsearch.core.TimeValue(30, java.util.concurrent.TimeUnit.SECONDS));
 
@@ -321,8 +340,7 @@ public class ElasticsearchQueryService {
 
             SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
             sourceBuilder.query(boolQuery);
-            sourceBuilder.from((pageNum - 1) * pageSize);
-            sourceBuilder.size(pageSize);
+            applyPaging(sourceBuilder, pageNum, pageSize);
             sourceBuilder.sort("extime", SortOrder.DESC);
             sourceBuilder.timeout(new org.elasticsearch.core.TimeValue(30, java.util.concurrent.TimeUnit.SECONDS));
 
