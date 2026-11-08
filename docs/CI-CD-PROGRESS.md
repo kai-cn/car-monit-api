@@ -18,7 +18,7 @@
 | 8 | GHCR 推送：`_image.yml` + master/release 接入，sha/semver/latest | 完成 | 8b547ac |
 | 9 | K8s 部署：deploy.yml（kubectl set image + rollout + imagePullSecret 校验） | 完成 | f43e6c1 |
 | 10 | CD 实跑验证（需集群/凭据） | **未验证** | - |
-| 11 | Actions 首轮失败静态修复（Mapper XML/golden、Kafka 镜像、CGO、extra-tag、基础镜像固定） | 完成 | 本次提交 |
+| 11 | Actions 首轮失败静态修复（Mapper XML/golden、Kafka 镜像、CGO、extra-tag、基础镜像固定） | 完成 | 15e4ef1 / 465aeba |
 | 12 | 修复后复跑 Actions | **未验证**（无凭据读日志） | - |
 
 ## 分支推送记录（2026-11-08）
@@ -39,7 +39,7 @@ gh CLI 不可用 → **已推送，未验证 Actions 是否触发**。
 
 | 项 | 状态 |
 | --- | --- |
-| `origin/master` | `5c8b89a67d46c92ef05e1d7e6a9c95be7e38ce51`（快进，非 force，领先 10 提交、落后 0） |
+| `origin/master` | `465aebadaeebea440d08e976202a9f939d9295b5`（快进，非 force；含首轮 CI 修复） |
 | 远端默认分支 | 已是 `master`（用户网页修改后回读确认） |
 | Actions 触发 | 修复前失败原因未知（无凭据读日志）；修复后推送待确认 |
 | `main` 分支 | 独立历史 `cdee15a Initial commit`（仅 README.md 2 行），非 master 祖先；**未删除**，建议改默认分支且 master CI 跑通后再删 |
