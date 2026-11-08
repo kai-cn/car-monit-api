@@ -60,23 +60,34 @@ public class EsBulkIndexer {
      */
     public boolean indexOne(SearchSyncEvent event) {
         TrafficTable table = TrafficTable.fromSourceTableOrParam(event.getTable());
-        long eventTime = event.getEventTime() == null ? System.currentTimeMillis() : event.getEventTime();
         String id = event.getPk();
         if (id == null || id.isEmpty()) {
             log.warn("[V3同步] 事件缺少主键，丢弃: {}", event.getEventId());
             return false;
         }
 
+        // P1-5：按月路由使用业务时间（transtime/snapshottime/extime），
+        // 而不是 outbox 的 event_time；删除事件无 payload 时才回退 event_time。
+        long routingTime = routingTime(table, event);
+
         Exception lastError = null;
         for (int attempt = 1; attempt <= properties.getSync().getMaxRetry(); attempt++) {
             try {
-                String index = indexService.ensureIndexForEventTime(table, eventTime);
+                String index = indexService.ensureIndexForEventTime(table, routingTime);
                 if ("D".equalsIgnoreCase(event.getOp())) {
+                    // P1-6：删除事件即使 payload 为空也生成 tombstone（按 _id 删除）
                     esClient.delete(new DeleteRequest(index, id), RequestOptions.DEFAULT);
                 } else {
-                    Map<String, Object> doc = event.getPayload();
-                    if (doc == null || doc.isEmpty()) {
+                    Map<String, Object> payload = event.getPayload();
+                    if (payload == null || payload.isEmpty()) {
                         log.warn("[V3同步] 事件 payload 为空，跳过: eventId={}", event.getEventId());
+                        return false;
+                    }
+                    // 统一过文档构建器：只保留 mapping 白名单字段并归一化日期，
+                    // 避免 Outbox payload/回查原始行在 dynamic:strict 下被 ES 拒绝。
+                    Map<String, Object> doc = documentBuilder.build(table, payload);
+                    if (doc.isEmpty()) {
+                        log.warn("[V3同步] 事件 payload 无有效字段，跳过: eventId={}", event.getEventId());
                         return false;
                     }
                     IndexRequest request = new IndexRequest(index).id(id)
@@ -91,6 +102,31 @@ public class EsBulkIndexer {
         }
         toDlq(event, lastError);
         return false;
+    }
+
+    /** 业务时间优先；payload 缺时间列时回退 event_time。 */
+    private long routingTime(TrafficTable table, SearchSyncEvent event) {
+        Map<String, Object> payload = event.getPayload();
+        if (payload != null) {
+            Long millis = toMillis(payload.get(table.getTimeField()));
+            if (millis != null) {
+                return millis;
+            }
+        }
+        return event.getEventTime() == null ? System.currentTimeMillis() : event.getEventTime();
+    }
+
+    private Long toMillis(Object value) {
+        if (value instanceof java.util.Date) {
+            return ((java.util.Date) value).getTime();
+        }
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+        if (value instanceof CharSequence) {
+            return TrafficTimeUtils.parseDbTimestamp(value.toString());
+        }
+        return null;
     }
 
     /**

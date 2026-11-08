@@ -288,4 +288,34 @@ public class TrafficAdminV3Controller {
         result.put("message", "relay 已执行一次");
         return result;
     }
+
+    /**
+     * P1-7：清理指定时间窗内“ES 存在但 GaussDB 不存在”的孤儿文档。
+     * 对账只在漂移桶自动清理；此接口用于历史区间的定向修复。
+     */
+    @PostMapping("/sync/reconcile/orphans")
+    public Map<String, Object> sweepOrphans(
+            @RequestParam String table,
+            @RequestParam String startTime,
+            @RequestParam String endTime) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            TrafficTable t = TrafficTable.fromParam(table);
+            Long start = TrafficTimeUtils.parse(startTime, false);
+            Long end = TrafficTimeUtils.parse(endTime, true);
+            if (start == null || end == null) {
+                throw new IllegalArgumentException("时间格式非法，支持 yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss");
+            }
+            int deleted = reconciliationService.sweepOrphanDocs(t, start, end);
+            result.put("code", 200);
+            result.put("message", "孤儿文档清理完成");
+            result.put("table", t.getParamName());
+            result.put("deleted", deleted);
+        } catch (Exception e) {
+            log.error("[V3运维] 孤儿清理失败", e);
+            result.put("code", 400);
+            result.put("message", e.getMessage());
+        }
+        return result;
+    }
 }

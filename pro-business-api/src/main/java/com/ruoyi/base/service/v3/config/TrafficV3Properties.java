@@ -124,6 +124,13 @@ public class TrafficV3Properties {
         private double driftRatio = 0.001D;
         /** 单次对账最多回灌的桶数，防止雪崩 */
         private int maxRepairBuckets = 12;
+        /**
+         * 漂移桶是否同时清理“GaussDB 不存在但 ES 仍存在”的孤儿文档。
+         * 只回灌无法删除多余文档，漂移会一直存在。
+         */
+        private boolean deleteOrphans = true;
+        /** 单桶孤儿扫描最多读取的 ES 文档数，防止异常大桶拖垮对账 */
+        private int orphanSweepMaxDocs = 20000;
     }
 
     @Data

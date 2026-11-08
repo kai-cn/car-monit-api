@@ -4,17 +4,32 @@ import com.ruoyi.base.service.v3.config.TrafficV3Properties;
 import com.ruoyi.base.service.v3.model.TrafficTable;
 import com.ruoyi.base.service.v3.query.TrafficTimeUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.delete.DeleteRequest;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.core.CountRequest;
 import org.elasticsearch.client.core.CountResponse;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.sort.SortBuilders;
+import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
-import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -95,6 +110,7 @@ public class TrafficReconciliationService {
         int repairs = 0;
         int driftBuckets = 0;
         int totalBuckets = 0;
+        int orphansDeleted = 0;
         for (TrafficTable table : TrafficTable.values()) {
             long bucketStart = alignedStart;
             while (bucketStart < alignedEnd) {
@@ -109,24 +125,146 @@ public class TrafficReconciliationService {
                         backfillService.submit(table, bucketStart, bucketEnd);
                         repairs++;
                         log.warn("[V3对账] {} 桶存在漂移，已提交回灌: {} ~ {}",
-                                table, TrafficTimeUtils.toDbTimestamp(bucketStart), TrafficTimeUtils.toDbTimestamp(bucketEnd));
+                                table, TrafficTimeUtils.toDbTimestamp(bucketStart),
+                                TrafficTimeUtils.toDbTimestamp(bucketEnd));
+                    }
+                    // P1-7：只回灌无法删除“GaussDB 不存在但 ES 仍存在”的孤儿文档，
+                    // 漂移会长期存在。这里同步清理孤儿文档（单桶有 maxDocs 上限）。
+                    if (properties.getReconcile().isDeleteOrphans()) {
+                        orphansDeleted += sweepOrphanDocs(table, bucketStart, bucketEnd);
                     }
                 }
                 bucketStart = bucketEnd;
             }
         }
-        log.info("[V3对账] 完成，窗口 {} ~ {}，桶数 {}，漂移 {}，触发回灌 {}",
+        log.info("[V3对账] 完成，窗口 {} ~ {}，桶数 {}，漂移 {}，触发回灌 {}，清理孤儿 {}",
                 TrafficTimeUtils.toDbTimestamp(alignedStart), TrafficTimeUtils.toDbTimestamp(alignedEnd),
-                totalBuckets, driftBuckets, repairs);
+                totalBuckets, driftBuckets, repairs, orphansDeleted);
 
-        java.util.Map<String, Object> summary = new java.util.LinkedHashMap<>();
+        java.util.Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("start", TrafficTimeUtils.toDbTimestamp(alignedStart));
         summary.put("end", TrafficTimeUtils.toDbTimestamp(alignedEnd));
         summary.put("bucketMinutes", bucketMinutes);
         summary.put("totalBuckets", totalBuckets);
         summary.put("driftBuckets", driftBuckets);
         summary.put("repairBuckets", repairs);
+        summary.put("orphansDeleted", orphansDeleted);
         return summary;
+    }
+
+    /**
+     * P1-7：删除指定桶内“ES 存在但 GaussDB 不存在”的孤儿文档。
+     *
+     * <p>只回灌（GaussDB→ES）无法收敛 ES 多出来的文档，漂移会一直存在。
+     * 这里按业务主键排序 + search_after 拉取 ES _id，再分批回查 GaussDB 做差集，
+     * 最后 bulk delete。单次最多扫描 {@code traffic.reconcile.orphan-sweep-max-docs} 条。</p>
+     */
+    public int sweepOrphanDocs(TrafficTable table, long start, long end) {
+        int maxDocs = Math.max(1, properties.getReconcile().getOrphanSweepMaxDocs());
+        String pk = table.getPkField();
+        String time = table.getTimeField();
+
+        List<String> esIds = new ArrayList<>();
+        List<Object> searchAfter = new ArrayList<>();
+        try {
+            while (esIds.size() < maxDocs) {
+                int size = Math.min(1000, maxDocs - esIds.size());
+                SearchSourceBuilder source = new SearchSourceBuilder()
+                        .query(QueryBuilders.rangeQuery(time)
+                                .format("epoch_millis").gte(start).lt(end))
+                        .size(size)
+                        .fetchSource(false)
+                        .sort(SortBuilders.fieldSort(pk).order(SortOrder.ASC).missing("_last"));
+                if (!searchAfter.isEmpty()) {
+                    source.searchAfter(searchAfter.toArray());
+                }
+                SearchRequest request = new SearchRequest(table.readAlias()).source(source);
+                SearchResponse response = esClient.search(request, RequestOptions.DEFAULT);
+                SearchHit[] hits = response.getHits().getHits();
+                if (hits.length == 0) {
+                    break;
+                }
+                for (SearchHit hit : hits) {
+                    esIds.add(hit.getId());
+                }
+                if (hits.length < size || hits[hits.length - 1].getSortValues() == null) {
+                    break;
+                }
+                searchAfter = Arrays.asList(hits[hits.length - 1].getSortValues());
+            }
+        } catch (Exception e) {
+            log.warn("[V3对账] 孤儿扫描失败 table={}: {}", table, e.getMessage());
+            return 0;
+        }
+        if (esIds.isEmpty()) {
+            return 0;
+        }
+
+        Set<String> existing = new HashSet<>();
+        for (int i = 0; i < esIds.size(); i += 1000) {
+            List<String> chunk = esIds.subList(i, Math.min(i + 1000, esIds.size()));
+            String sql = "SELECT " + pk + " FROM " + table.getSourceTable()
+                    + " WHERE " + time + " >= ? AND " + time + " < ? AND " + pk + " IN ("
+                    + placeholders(chunk.size()) + ")";
+            Object[] args = new Object[chunk.size() + 2];
+            args[0] = TrafficTimeUtils.toDbTimestamp(start);
+            args[1] = TrafficTimeUtils.toDbTimestamp(end);
+            for (int j = 0; j < chunk.size(); j++) {
+                args[j + 2] = chunk.get(j);
+            }
+            try {
+                existing.addAll(jdbc.queryForList(sql, String.class, args));
+            } catch (Exception e) {
+                log.warn("[V3对账] 孤儿回查 GaussDB 失败 table={}: {}", table, e.getMessage());
+                return 0;
+            }
+        }
+
+        List<String> orphans = new ArrayList<>();
+        for (String id : esIds) {
+            if (!existing.contains(id)) {
+                orphans.add(id);
+            }
+        }
+        if (orphans.isEmpty()) {
+            return 0;
+        }
+        return deleteFromEs(table, orphans);
+    }
+
+    private String placeholders(int count) {
+        StringBuilder sb = new StringBuilder(count * 2);
+        for (int i = 0; i < count; i++) {
+            if (i > 0) {
+                sb.append(',');
+            }
+            sb.append('?');
+        }
+        return sb.toString();
+    }
+
+    private int deleteFromEs(TrafficTable table, List<String> ids) {
+        int deleted = 0;
+        try {
+            BulkRequest bulk = new BulkRequest();
+            for (String id : ids) {
+                bulk.add(new DeleteRequest(table.readAlias(), id));
+            }
+            BulkResponse response = esClient.bulk(bulk, RequestOptions.DEFAULT);
+            for (org.elasticsearch.action.bulk.BulkItemResponse item : response.getItems()) {
+                if (!item.isFailed()) {
+                    deleted++;
+                }
+            }
+            if (response.hasFailures()) {
+                log.warn("[V3对账] 孤儿删除部分失败 table={}: {}", table, response.buildFailureMessage());
+            }
+            log.warn("[V3对账] 已删除孤儿文档 table={}, count={}", table, deleted);
+        } catch (Exception e) {
+            log.warn("[V3对账] 孤儿删除失败 table={}: {}", table, e.getMessage());
+            return 0;
+        }
+        return deleted;
     }
 
     private ReconcileResult reconcileBucket(TrafficTable table, long bucketStart, long bucketEnd) {

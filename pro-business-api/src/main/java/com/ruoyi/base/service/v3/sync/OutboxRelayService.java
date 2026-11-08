@@ -94,11 +94,14 @@ public class OutboxRelayService {
                 log.warn("[V3 Outbox] payload 不是 JSON，改为按主键回查: id={}", id);
             }
         }
-        if (event.getPayload() == null) {
+        boolean delete = "D".equalsIgnoreCase(op);
+        if (event.getPayload() == null && !delete) {
             TrafficTable table = TrafficTable.fromSourceTableOrParam(tableName);
             event.setPayload(documentLoader.loadByPk(table, pk, millis));
         }
-        if (event.getPayload() == null) {
+        // P1-6：删除事件即使 payload 为空也要发 tombstone，由消费者按 _id 删除；
+        // 不能因为“回查无数据”把删除事件标 FAILED 卡在 outbox 里。
+        if (event.getPayload() == null && !delete) {
             markFailed(id, "payload 为空且回查无数据");
             return;
         }
