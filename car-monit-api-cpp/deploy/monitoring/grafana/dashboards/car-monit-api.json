@@ -708,6 +708,32 @@
           "range": true,
           "refId": "B",
           "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "carmonit_dependency_latency_ms{component=\"es\"}",
+          "instant": false,
+          "legendFormat": "es（被动，恒 0）",
+          "range": true,
+          "refId": "C",
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "carmonit_dependency_latency_ms{component=\"kafka\"}",
+          "instant": false,
+          "legendFormat": "kafka（仅启动状态）",
+          "range": true,
+          "refId": "D",
+          "format": "time_series"
         }
       ],
       "title": "依赖探活延迟",
