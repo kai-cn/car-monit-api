@@ -4,17 +4,21 @@ import com.ruoyi.base.service.v3.config.TrafficV3Properties;
 import com.ruoyi.base.service.v3.query.TrafficTimeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -29,12 +33,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class DwsEtlService {
 
     private final JdbcTemplate gaussJdbc;
+    private final TransactionTemplate transactionTemplate;
     private final TrafficV3Properties properties;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     public DwsEtlService(DataSource dataSource, TrafficV3Properties properties) {
         this.gaussJdbc = new JdbcTemplate(dataSource);
         this.gaussJdbc.setQueryTimeout(60);
+        this.transactionTemplate = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
         this.properties = properties;
     }
 
@@ -86,8 +92,6 @@ public class DwsEtlService {
 
             Timestamp startTs = TrafficTimeUtils.toDbTimestamp(startMillis);
             Timestamp endTs = TrafficTimeUtils.toDbTimestamp(endMillis);
-            Date startDate = TrafficTimeUtils.toDbDate(startMillis);
-            Date endDate = TrafficTimeUtils.toDbDate(endMillis);
 
             // 1. 逃费日汇总
             List<Map<String, Object>> escapeRows = mysqlJdbc.queryForList(
@@ -126,24 +130,14 @@ public class DwsEtlService {
                             + "GROUP BY DATE(gantry_time), COALESCE(road_code, ''), COALESCE(section_code, '')",
                     startTs, endTs);
 
-            // 4. 幂等重算：先删范围内，再批量写入
-            gaussJdbc.update("DELETE FROM jl_data01.dws_escape_daily WHERE stat_date >= ? AND stat_date < ?",
-                    startDate, endDate);
-            gaussJdbc.update("DELETE FROM jl_data01.dws_income_daily WHERE stat_date >= ? AND stat_date < ?",
-                    startDate, endDate);
-            gaussJdbc.update("DELETE FROM jl_data01.dws_warning_section_daily WHERE stat_date >= ? AND stat_date < ?",
-                    startDate, endDate);
-
+            // 4. 幂等重算：只删本次实际算出的 stat_date，删除+写入放在同一事务。
+            //    若源表已归档/查询返回空，不执行任何 DELETE，避免误删 DWS 历史。
             List<Object[]> escapeArgs = new ArrayList<>();
             for (Map<String, Object> row : escapeRows) {
                 escapeArgs.add(new Object[]{
                         toDate(row.get("stat_date")), str(row.get("org_id")), str(row.get("escaped_type")),
                         toLong(row.get("cnt")), toDecimal(row.get("amount")), toLong(row.get("car_cnt"))
                 });
-            }
-            if (!escapeArgs.isEmpty()) {
-                gaussJdbc.batchUpdate("INSERT INTO jl_data01.dws_escape_daily "
-                        + "(stat_date, org_id, escaped_type, cnt, amount, car_cnt) VALUES (?, ?, ?, ?, ?, ?)", escapeArgs);
             }
 
             List<Object[]> incomeArgs = new ArrayList<>();
@@ -153,10 +147,6 @@ public class DwsEtlService {
                         "suo", toDecimal(row.get("amount")), toLong(row.get("car_cnt"))
                 });
             }
-            if (!incomeArgs.isEmpty()) {
-                gaussJdbc.batchUpdate("INSERT INTO jl_data01.dws_income_daily "
-                        + "(stat_date, org_id, org_name, query_type, amount, car_cnt) VALUES (?, ?, ?, ?, ?, ?)", incomeArgs);
-            }
 
             List<Object[]> warningArgs = new ArrayList<>();
             for (Map<String, Object> row : warningRows) {
@@ -165,10 +155,33 @@ public class DwsEtlService {
                         toLong(row.get("warning_cnt"))
                 });
             }
-            if (!warningArgs.isEmpty()) {
-                gaussJdbc.batchUpdate("INSERT INTO jl_data01.dws_warning_section_daily "
-                        + "(stat_date, road_code, section_code, warning_cnt) VALUES (?, ?, ?, ?)", warningArgs);
-            }
+
+            Set<Date> escapeDates = statDates(escapeRows);
+            Set<Date> incomeDates = statDates(incomeRows);
+            Set<Date> warningDates = statDates(warningRows);
+
+            transactionTemplate.execute(status -> {
+                deleteByDates("dws_escape_daily", escapeDates);
+                deleteByDates("dws_income_daily", incomeDates);
+                deleteByDates("dws_warning_section_daily", warningDates);
+
+                if (!escapeArgs.isEmpty()) {
+                    gaussJdbc.batchUpdate("INSERT INTO jl_data01.dws_escape_daily "
+                            + "(stat_date, org_id, escaped_type, cnt, amount, car_cnt) VALUES (?, ?, ?, ?, ?, ?)",
+                            escapeArgs);
+                }
+                if (!incomeArgs.isEmpty()) {
+                    gaussJdbc.batchUpdate("INSERT INTO jl_data01.dws_income_daily "
+                            + "(stat_date, org_id, org_name, query_type, amount, car_cnt) VALUES (?, ?, ?, ?, ?, ?)",
+                            incomeArgs);
+                }
+                if (!warningArgs.isEmpty()) {
+                    gaussJdbc.batchUpdate("INSERT INTO jl_data01.dws_warning_section_daily "
+                            + "(stat_date, road_code, section_code, warning_cnt) VALUES (?, ?, ?, ?)",
+                            warningArgs);
+                }
+                return null;
+            });
 
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("escapeRows", escapeRows.size());
@@ -190,7 +203,31 @@ public class DwsEtlService {
         if (value instanceof java.util.Date) {
             return TrafficTimeUtils.toDbDate(((java.util.Date) value).getTime());
         }
-        return TrafficTimeUtils.toDbDate(Long.parseLong(String.valueOf(value)));
+        String s = String.valueOf(value);
+        if (s.length() >= 10 && s.charAt(4) == '-') {
+            // MySQL DATE 以字符串返回时，只取日历日，不做时区换算
+            return Date.valueOf(s.substring(0, 10));
+        }
+        return TrafficTimeUtils.toDbDate(Long.parseLong(s));
+    }
+
+    /** 本次实际算出的 stat_date 集合（去重、保持顺序）。 */
+    private Set<Date> statDates(List<Map<String, Object>> rows) {
+        Set<Date> dates = new LinkedHashSet<>();
+        for (Map<String, Object> row : rows) {
+            Object value = row.get("stat_date");
+            if (value != null) {
+                dates.add(toDate(value));
+            }
+        }
+        return dates;
+    }
+
+    /** 只删除本次重算覆盖到的日期；空集合不做任何删除。 */
+    private void deleteByDates(String table, Set<Date> dates) {
+        for (Date date : dates) {
+            gaussJdbc.update("DELETE FROM jl_data01." + table + " WHERE stat_date = ?", date);
+        }
     }
 
     private String str(Object value) {
