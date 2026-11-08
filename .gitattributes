@@ -1,3 +1,12 @@
-# 随包 mapper XML 必须与 Java 源逐字节一致（tools/check_mappers.py 门禁比对磁盘文件）；
+# mapper XML 必须与 Java 源逐字节一致（tools/check_mappers.py 门禁比对磁盘文件）；
 # 锁定 LF，禁止 checkout 时的 LF->CRLF 转换（merge 后主仓曾因此漂移）。
+# M1（2026-11-08 审阅）：Java 源树同样要覆盖，否则 Windows 新 clone 会把
+# pro-business-api/**/*Mapper.xml 转成 CRLF，逐字节门禁必红。
 car-monit-api-python/pro-business-api/src/main/resources/**/*.xml text eol=lf
+car-monit-api-python/pro-base-common/src/main/resources/**/*.xml text eol=lf
+car-monit-api-python/pro-business-api/src/main/java/**/*.xml text eol=lf
+car-monit-api-python/pro-base-common/src/main/java/**/*.xml text eol=lf
+pro-business-api/src/main/resources/**/*.xml text eol=lf
+pro-base-common/src/main/resources/**/*.xml text eol=lf
+pro-business-api/src/main/java/**/*.xml text eol=lf
+pro-base-common/src/main/java/**/*.xml text eol=lf

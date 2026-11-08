@@ -107,6 +107,8 @@ class MapperRegistry:
         self.fragments: dict[str, Sequence[Any]] = {}
         self._loaded = False
         self._installed: Optional[InstallReport] = None
+        # H4：解析失败的 XML 文件（此前只 warning 后跳过，fail-fast 看不到）
+        self.failed_files: list[str] = []
 
     # ------------------------------------------------------------------ loading
     def load(self) -> "MapperRegistry":
@@ -127,10 +129,14 @@ class MapperRegistry:
             try:
                 mapper_xml = load_mapper_xml(path)
             except SqlError as error:
-                log.warning("mapper XML skipped: %s", error)
+                # H4：XML 解析失败是启动期错误（与 Spring 的 mapper-locations
+                # 解析失败一致），记录到 failed_files 供 install()/fail-fast 判定。
+                log.error("mapper XML parse failed: %s", error)
+                self.failed_files.append(str(path))
                 continue
             if not mapper_xml.namespace:
-                log.warning("%s: <mapper> without namespace ignored", path.name)
+                log.error("%s: <mapper> without namespace", path.name)
+                self.failed_files.append(str(path))
                 continue
             self.mapper_xmls[mapper_xml.namespace] = mapper_xml
             for fragment_id, nodes in mapper_xml.fragments.items():
@@ -171,6 +177,8 @@ class MapperRegistry:
             return self._installed
         self.load()
         report = InstallReport()
+        # H4：把 XML 解析失败带进安装报告，app.main 的 fail-fast 会据此拒绝启动
+        report.failed_files.extend(self.failed_files)
         namespaces = sorted(set(self.mapper_xmls) | set(ANNOTATED_STATEMENTS))
         for namespace in namespaces:
             mapper_cls = self._import_mapper(namespace)

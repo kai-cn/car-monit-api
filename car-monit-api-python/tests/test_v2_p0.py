@@ -465,6 +465,32 @@ def test_install_persistence_fails_on_unexpected_missing(monkeypatch) -> None:
         _install_persistence()
 
 
+def test_install_persistence_fails_on_mapper_xml_parse_failure(monkeypatch) -> None:
+    """H4：Mapper XML 解析失败必须进入 fail-fast（此前只 warning 后跳过）。"""
+    import app.db.registry as registry_mod
+    from app.main import _install_persistence
+
+    monkeypatch.delenv("CAR_MONIT_STARTUP_FAIL_FAST", raising=False)
+    monkeypatch.setattr(
+        registry_mod, "install_mappers",
+        lambda: _FakeMapperReport([], failed_files=["BrokenMapper.xml"]))
+    with pytest.raises(RuntimeError, match="failed_files"):
+        _install_persistence()
+
+
+def test_mapper_registry_records_xml_parse_failures(tmp_path) -> None:
+    """MapperRegistry.load 不再吞掉解析失败，供 install/门禁统一判定。"""
+    from app.db.registry import MapperRegistry
+
+    broken = tmp_path / "com" / "ruoyi" / "base" / "mapper" / "xml" / "BrokenMapper.xml"
+    broken.parent.mkdir(parents=True)
+    broken.write_text('<mapper namespace="broken"><select id="x">', encoding="utf-8")
+
+    registry = MapperRegistry(root=tmp_path).load()
+    assert registry.failed_files
+    assert any("BrokenMapper.xml" in item for item in registry.failed_files)
+
+
 def test_install_persistence_fails_on_install_error(monkeypatch) -> None:
     import app.db.registry as registry_mod
     from app.main import _install_persistence

@@ -26,6 +26,11 @@ def main() -> int:
     print(f"statements       : {len(registry.statements)}")
     print(f"sql fragments    : {len(registry.fragments) // 2}")
     print()
+    exit_code = 1 if registry.failed_files else 0
+    if registry.failed_files:
+        print(f"XML parse failures: {len(registry.failed_files)}")
+        for item in registry.failed_files:
+            print(f"    {item}")
 
     for namespace in sorted(registry.mapper_xmls):
         mapper_xml = registry.mapper_xmls[namespace]
@@ -37,7 +42,11 @@ def main() -> int:
 
     report = get_registry().install()
     print(f"bound methods    : {report.patched_methods}")
-    exit_code = 0
+    if report.failed_files:
+        print(f"install failures : {len(report.failed_files)}")
+        for item in report.failed_files:
+            print(f"    {item}")
+        exit_code = 1
     if report.missing_statements:
         from app.db.registry import KNOWN_MISSING_STATEMENTS
 
