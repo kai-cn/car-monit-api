@@ -175,8 +175,10 @@ class RealKafkaProducer:
     def send(self, topic: str, key: Any, value: Any,
              memory: Callable[[], ListenableFuture]) -> ListenableFuture:
         """等价 ``KafkaTemplate.send``：立即返回 future，ack 后完成。"""
-        allowed, probe = self._breaker.acquire()
-        if not allowed:
+        allowed, probe, epoch = self._breaker.acquire()
+        # fallback=error：即使熔断已打开也继续直连（不回落内存），
+        # 失败仍会被记录进 readiness（复核高危①）。
+        if not allowed and self._fallback != "error":
             return memory()
 
         future = ListenableFuture()
@@ -185,7 +187,7 @@ class RealKafkaProducer:
             value_bytes = self._value_serializer.serialize(topic, value)
         except Exception:  # noqa: BLE001 - 序列化失败=确定性错误，直接进失败 future
             if probe:
-                self._breaker.release_probe()
+                self._breaker.release_probe(epoch)
             future._setException(
                 RuntimeError("org.apache.kafka.common.errors.SerializationException: "
                              "key/value 序列化失败"))
@@ -198,14 +200,15 @@ class RealKafkaProducer:
                                           _offset=msg.offset())
                 future._setResult(SendResult(metadata,
                                              producer_record=(topic, key, value)))
-                if self._breaker.success():
+                if self._breaker.success(epoch):
                     log.info("[Kafka适配] 真实 broker 已恢复（%s）", self._url)
                 return
-            if self._fallback == "memory" and _looks_like_outage(error):
-                # H2：送达失败无条件刷新窗口计时
+            if _looks_like_outage(error):
+                # H2：送达失败无条件刷新窗口计时（error 模式也记录）
                 self._trip(error)
-            elif probe:
-                self._breaker.release_probe()
+            else:
+                # 确定性错误（消息超限等）说明 broker 可达：闭合熔断
+                self._breaker.success(epoch)
             future._setException(_as_exception(error))
 
         try:
@@ -215,25 +218,54 @@ class RealKafkaProducer:
             # 32MB 发送队列打满：Java 在 max.block.ms 后抛 TimeoutException，
             # 这里直接失败该条（文档化差异：不阻塞调用线程）
             if probe:
-                self._breaker.release_probe()
+                self._breaker.release_probe(epoch)
             future._setException(
                 RuntimeError("org.apache.kafka.common.errors.TimeoutException: "
                              "本地发送队列已满（BufferError）"))
         except KafkaException as error:
-            if self._fallback == "error":
-                if probe:
-                    self._breaker.release_probe()
-                raise
             inner = error.args[0] if error.args else None
             if _looks_like_outage(inner):
                 self._trip(error)
+                if self._fallback == "error":
+                    raise
                 return memory()
-            # 确定性同步错误（如消息超限的客户端侧拦截）：只失败该条，不熔断
-            if probe:
-                self._breaker.release_probe()
+            # 确定性同步错误（如消息超限的客户端侧拦截）：broker 可达，闭合熔断
+            self._breaker.success(epoch)
+            if self._fallback == "error":
+                raise
             future._setException(_as_exception(inner) if inner is not None
                                  else RuntimeError(str(error)))
         return future
+
+    def ping(self, timeout: float = 3.0) -> bool:
+        """主动探测 broker（供 readiness 探针）。"""
+        try:
+            metadata = self._producer.list_topics(timeout=timeout)
+        except KafkaException as error:
+            inner = error.args[0] if error.args else None
+            if _looks_like_outage(inner):
+                self._trip(error)
+                if self._fallback == "error":
+                    raise
+                return True
+            raise
+        except Exception as error:  # noqa: BLE001 - 客户端可能抛非 KafkaException
+            if _looks_like_outage(error):
+                self._trip(error)
+                if self._fallback == "error":
+                    raise
+                return True
+            raise
+        brokers = getattr(metadata, "brokers", None)
+        if not brokers:
+            reason = RuntimeError("Kafka list_topics 返回空 broker 列表")
+            self._trip(reason)
+            if self._fallback == "error":
+                raise reason
+            return True
+        if self._breaker.success():
+            log.info("[Kafka适配] 真实 broker 已恢复（%s）", self._url)
+        return True
 
     # ------------------------------------------------------------- 生命周期
     def flush(self, timeout: float = 10.0) -> int:

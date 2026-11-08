@@ -54,6 +54,7 @@ from org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest import (
     AliasActions,
     IndicesAliasesRequest,
 )
+from org.elasticsearch.ElasticsearchException import ElasticsearchException
 from org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest import (
     DeleteIndexRequest,
 )
@@ -270,8 +271,10 @@ class EsIndexManageService(object):
                 node: JsonNode = EsIndexManageService.OBJECT_MAPPER.readTree(body)
                 return node.has(policyName)
             return False
-        except Exception:  # noqa: BLE001 - 与 Java 的 catch (Exception e) 一致
-            # 404 表示不存在；其它异常按不存在处理，由调用方重试创建
+        except ElasticsearchException as error:
+            # 只吞 ES 语义错误（404/index_not_found）。TypeError、连接失败等
+            # 必须上抛，避免“ILM 不存在”误判后创建再炸同一处（复核 M-1）。
+            log.warning("[ES索引管理] ILM 策略查询失败（按不存在处理）: %s", error)
             return False
 
     def buildIlmPolicyJson(self) -> str:

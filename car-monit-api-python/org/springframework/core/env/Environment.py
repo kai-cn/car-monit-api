@@ -82,6 +82,18 @@ def _parse_scalar(raw: str) -> Any:
     return text
 
 
+def _stringify_scalar(value: Any) -> str:
+    """属性值 → 占位符替换文本（对齐 Spring 的 ``String.valueOf`` 语义）。
+
+    yml 的 ``true``/``false`` 解析成 Python bool，但 Java 的 Boolean 文本是
+    小写 ``true``/``false``；``null`` 属性在 Spring 里视为"未解析"，由默认值
+    兜底，而不是字符串 ``"None"``。
+    """
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
+
+
 def _load_yaml_flat(path: str) -> Dict[str, Any]:
     """极简 YAML 读取：缩进嵌套映射 → 扁平化的点号 key。
 
@@ -183,8 +195,8 @@ class Environment:
             for candidate in _relaxed_names(key):
                 if candidate in os.environ:
                     return os.environ[candidate]
-            if key in self._properties:
-                return str(self._properties[key])
+            if key in self._properties and self._properties[key] is not None:
+                return _stringify_scalar(self._properties[key])
             if default_text is not None:
                 return default_text
             return match.group(0)  # 解析不到且无默认：保留原文，问题对调用方可见
@@ -210,7 +222,9 @@ class Environment:
             if default_text is None:
                 # 与 Spring 一致：无默认值且解析不到 → 启动失败
                 raise KeyError("无法解析占位符 ${%s}：配置项缺失且无默认值" % key)
-            raw = _parse_scalar(default_text)
+            # 低危复核：字符串目标的默认值必须原样保留（`${x:00123}` → "00123"），
+            # 只有显式数值/布尔目标才按标量解析。
+            raw = default_text if target_type is str else _parse_scalar(default_text)
         return self._convert(raw, target_type)
 
     @staticmethod

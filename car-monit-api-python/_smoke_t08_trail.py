@@ -8,6 +8,7 @@ import logging
 import os
 import sys
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE)
@@ -208,8 +209,8 @@ check("dict locationFlag", d.getLocationFlag(), None)  # 字典分支不设 flag
 g = enriched[1]
 check("gantry devCode", g.getDevCode(), "GC-1")
 check("gantry devName", g.getDevName(), "门架一")
-check("gantry lon float", g.getLon(), 113.123456)
-check("gantry lat float", g.getLat(), 23.654321)
+check("gantry lon decimal", g.getLon(), Decimal("113.123456"))
+check("gantry lat decimal", g.getLat(), Decimal("23.654321"))
 check("gantry roadCode", g.getRoadCode(), "G001")
 check("gantry sectionCode", g.getSectionCode(), "S001")
 check("gantry pileno", g.getPileno(), "K12+300")
@@ -222,7 +223,7 @@ check_true("gantry BO field", g.getGantryIpBO() is not None)
 s = enriched[2]
 check("station devCode", s.getDevCode(), "TC-1")
 check("station devName", s.getDevName(), "收费站一")
-check("station lon", s.getLon(), 114.000001)
+check("station lon decimal", s.getLon(), Decimal("114.000001"))
 check("station lat blank skipped", s.getLat(), None)
 check("station roadCode", s.getRoadCode(), "G002")
 check("station sectionCode", s.getSectionCode(), "S002")

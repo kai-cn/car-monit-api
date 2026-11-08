@@ -64,6 +64,38 @@ def test_fastjson_json_entity_json_roundtrip_is_byte_identical() -> None:
     assert JSON.toJSONString(entity) == text        # 逐字节一致
 
 
+def test_trail_aggregation_writes_decimal_not_float() -> None:
+    """复核高危②：经纬度写入 Decimal 字段，不能先经过 float。"""
+    from com.ruoyi.base.domain.OdsSzdnGantry import OdsSzdnGantry
+    from com.ruoyi.base.domain.OdsSzdnGantryIp import OdsSzdnGantryIp
+    from com.ruoyi.base.domain.TrailBo import TrailBo
+    from com.ruoyi.base.service.impl.TrailAggregationService import (
+        TrailAggregationService,
+    )
+
+    point = TrailBo()
+    gantry = OdsSzdnGantry()
+    gantry.setLon("116.404123456789")
+    gantry.setLat("39.915123456789")
+    gantry_ip = OdsSzdnGantryIp()
+    gantry_ip.setOdsSzdnGantry(gantry)
+
+    TrailAggregationService().enrichFromGantryIp(point, gantry_ip, {})
+    assert isinstance(point.getLon(), Decimal)
+    assert point.getLon() == Decimal("116.404123456789")
+    assert point.getLat() == Decimal("39.915123456789")
+
+
+def test_device_simulator_writes_decimal_not_float() -> None:
+    from com.ruoyi.base.device.DeviceDataSimulator import DeviceDataSimulator
+
+    simulator = DeviceDataSimulator()
+    data = simulator.generateGantryData(DeviceDataSimulator.DEVICES[0])
+    assert isinstance(data.getLon(), Decimal)
+    assert data.getLon() == Decimal("116.404")
+    assert data.getLat() == Decimal("39.915")
+
+
 def test_bigdecimal_result_type_maps_to_decimal() -> None:
     from app.db.proxy import resolve_type
     from app.db.xml_mapper import coerce_value

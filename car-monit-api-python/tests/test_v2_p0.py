@@ -491,6 +491,24 @@ def test_mapper_registry_records_xml_parse_failures(tmp_path) -> None:
     assert any("BrokenMapper.xml" in item for item in registry.failed_files)
 
 
+def test_mapper_install_propagates_xml_parse_failures(tmp_path) -> None:
+    """测试缺口：`report.failed_files.extend(...)` 必须真正把解析失败带进安装报告。"""
+    from app.db.registry import MapperRegistry
+
+    xml_dir = tmp_path / "com" / "ruoyi" / "base" / "mapper" / "xml"
+    xml_dir.mkdir(parents=True)
+    (xml_dir / "BrokenMapper.xml").write_text(
+        '<mapper namespace="broken"><select id="x">', encoding="utf-8")
+    (xml_dir / "ValidMapper.xml").write_text(
+        '<mapper namespace="com.ruoyi.base.mapper.TestOnlyMapper">'
+        '<select id="selectById" resultType="OdsSzdnGantry">SELECT 1</select>'
+        '</mapper>', encoding="utf-8")
+
+    report = MapperRegistry(root=tmp_path).install()
+    assert any("BrokenMapper.xml" in item for item in report.failed_files)
+    assert report.ok is False
+
+
 def test_install_persistence_fails_on_install_error(monkeypatch) -> None:
     import app.db.registry as registry_mod
     from app.main import _install_persistence
@@ -561,6 +579,25 @@ def test_environment_env_values_are_never_yaml_parsed(monkeypatch) -> None:
     assert env.value("${app.probe.password:false}", bool) is True
     monkeypatch.setenv("APP_PROBE_PASSWORD", "00123")
     assert env.value("${app.probe.password:0}", int) == 123
+    # 低危复核：字符串目标的默认值不得被标量解析（前导零必须保留）
+    monkeypatch.delenv("APP_PROBE_MISSING", raising=False)
+    assert env.value("${app.probe.missing:00123}", str) == "00123"
+    assert env.value("${app.probe.missing:true}", str) == "true"
+
+
+def test_environment_placeholder_uses_java_scalar_text(tmp_path) -> None:
+    """复核中危：占位符引用 bool/null 属性时输出 Java 文本（true/false，null→默认）。"""
+    from org.springframework.core.env.Environment import Environment
+
+    config = tmp_path / "application.yml"
+    config.write_text(
+        "enabled: true\n"
+        "disabled: false\n"
+        "missing: null\n"
+        "url: ${enabled:false}/${disabled:true}/${missing:fallback}\n",
+        encoding="utf-8")
+    env = Environment([str(config)])
+    assert env.getProperty("url") == "true/false/fallback"
 
 
 def test_environment_local_overlay(tmp_path) -> None:

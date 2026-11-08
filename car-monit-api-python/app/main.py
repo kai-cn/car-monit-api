@@ -66,12 +66,15 @@ def _register_health_probes() -> None:
         from app.middleware.real_kafka import shared_kafka_producer
         from com.ruoyi.common.core.redis.RedisCache import shared_redis_template
 
-        health_registry.register("redis",
-                                 degraded_probe("redis", shared_redis_template))
-        health_registry.register("elasticsearch",
-                                 degraded_probe("elasticsearch", shared_es_backend))
-        health_registry.register("kafka",
-                                 degraded_probe("kafka", shared_kafka_producer))
+        health_registry.register(
+            "redis", degraded_probe("redis", shared_redis_template,
+                                    health_check=lambda backend: backend.ping()))
+        health_registry.register(
+            "elasticsearch", degraded_probe("elasticsearch", shared_es_backend,
+                                           health_check=lambda backend: backend.health_ping()))
+        health_registry.register(
+            "kafka", degraded_probe("kafka", shared_kafka_producer,
+                                    health_check=lambda backend: backend.ping()))
     except Exception as error:  # noqa: BLE001
         log.debug("middleware probes not registered: %s", error)
 

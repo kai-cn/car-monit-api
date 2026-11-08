@@ -347,6 +347,30 @@ def _as_index_not_found(error: Any,
     return index_not_found_exception(indices[0] if indices else "_all")
 
 
+def _is_outage(error: Any) -> bool:
+    """是否属于"服务不可用"（应触发熔断）。
+
+    确定性错误（索引不存在、请求参数错误、序列化失败、鉴权失败）说明集群
+    仍然可达，不应熔断；连接失败 / 超时 / HTTP 5xx 才算不可用。
+    """
+    if isinstance(error, es_exceptions.ConnectionError):
+        return True
+    if isinstance(error, (es_exceptions.NotFoundError,
+                          es_exceptions.RequestError,
+                          es_exceptions.ConflictError,
+                          es_exceptions.SerializationError,
+                          es_exceptions.AuthenticationException,
+                          es_exceptions.AuthorizationException)):
+        return False
+    status = getattr(error, "status_code", None)
+    if status is None:
+        return True
+    try:
+        return int(status) >= 500
+    except (TypeError, ValueError):
+        return False
+
+
 # --------------------------------------------------------------------- 后端
 class RealEsBackend:
     """真实 Elasticsearch 后端（elasticsearch-py 7.17，兼容 ES 7.15 服务端）。
@@ -367,30 +391,35 @@ class RealEsBackend:
     # ------------------------------------------------------------- dispatch
     def _run(self, description: str, real: Callable[[], Any],
              memory: Callable[[], Any]) -> Any:
-        allowed, probe = self._breaker.acquire()
-        if not allowed:
+        allowed, probe, epoch = self._breaker.acquire()
+        # fallback=error：即使熔断已打开也继续直连（不回落替身），
+        # 失败仍会被记录进 readiness（复核高危①）。
+        if not allowed and self._fallback != "error":
             return memory()
         try:
             result = real()
-        except es_exceptions.ConnectionError as error:
+        except es_exceptions.TransportError as error:
+            if not _is_outage(error):
+                # 集群可达的确定性错误：探测成功则闭合熔断后原样抛出
+                if probe:
+                    self._breaker.success(epoch)
+                raise
+            # 失败分支无条件刷新窗口计时 + 递增代际（包括 error 模式）
+            first = self._breaker.failure()
             if self._fallback == "error":
                 if probe:
-                    self._breaker.release_probe()
+                    self._breaker.release_probe(epoch)
                 raise
-            # H2：失败分支无条件刷新窗口计时（包括半开探测失败）
-            first = self._breaker.failure()
             log.warning("[ES适配] %s %s，熔断降级为进程内替身（%.0fs 后半开重试；"
                         "降级期间的写入不会回灌真实 ES）: %s",
                         description, "失败" if first else "半开探测仍失败",
                         _RETRY_SECONDS, error)
             return memory()
         except BaseException:
-            # 确定性错误（索引不存在 / 上下文失效等）不是服务不可用：
-            # 释放探测名额后原样抛出，不改变熔断状态
             if probe:
-                self._breaker.release_probe()
+                self._breaker.release_probe(epoch)
             raise
-        if self._breaker.success():
+        if self._breaker.success(epoch):
             log.info("[ES适配] 真实 ES 已恢复（%s）", self._url)
         return result
 
@@ -405,6 +434,10 @@ class RealEsBackend:
             return bool(self.client.ping())
 
         return self._run("RestHighLevelClient.ping", real, memory)
+
+    def health_ping(self) -> bool:
+        """主动 ping（供 readiness 探针）。"""
+        return bool(self.ping(memory=lambda: True))
 
     # ----------------------------------------------------------------- 写入
     def index(self, request: Any, memory: Callable[[], Any]) -> IndexResponse:
@@ -623,8 +656,9 @@ class RealEsBackend:
             except es_exceptions.NotFoundError:
                 return Response(StatusLine(404),
                                 HttpEntity('{"error":"resource_not_found_exception"}'))
-            body_text = json.dumps(result if result is not None else {},
-                                   ensure_ascii=False)
+            # M-1：低层 REST 响应同样可能含 Decimal（例如 cluster health 的
+            # 浮点指标），json.dumps 会 TypeError；复用精确序列化。
+            body_text = _dump_source(result if result is not None else {})
             return Response(StatusLine(200), HttpEntity(body_text))
 
         return self._run("RestClient.performRequest", real, memory)

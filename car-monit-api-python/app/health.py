@@ -41,11 +41,14 @@ def health_verbose() -> bool:
     return runtime_mode() != "prod"
 
 
-def degraded_probe(name: str, backend_factory: Callable[[], Any]) -> Callable[[], Any]:
-    """M6：把真实适配器的 ``degraded`` 状态接进健康检查。
+def degraded_probe(name: str, backend_factory: Callable[[], Any],
+                   health_check: Optional[Callable[[Any], Any]] = None) -> Callable[[], Any]:
+    """把真实适配器的健康状态接进 readiness。
 
     * 后端不存在（未配置 URL）→ ``{"mode": "shim"}``，UP；
     * 后端是内存实现（无 ``degraded`` 属性）→ ``{"mode": "memory"}``，UP；
+    * 真实后端先执行主动探测（Redis PING / ES ping / Kafka list_topics），
+      失败会触发适配器记录降级（``fallback=error`` 时直接抛错）；
     * 真实后端处于熔断降级 → 抛 ``RuntimeError``（组件 DOWN，readiness 503）。
     """
 
@@ -55,6 +58,8 @@ def degraded_probe(name: str, backend_factory: Callable[[], Any]) -> Callable[[]
             return {"mode": "shim"}
         if not hasattr(backend, "degraded"):
             return {"mode": "memory"}
+        if health_check is not None:
+            health_check(backend)
         if bool(backend.degraded):
             raise RuntimeError("%s 熔断降级中（真实服务不可用，已回落进程内替身）" % name)
         return {"mode": "real"}

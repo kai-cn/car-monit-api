@@ -19,10 +19,10 @@
 5) 深拷贝 `JSON.parseObject(JSON.toJSONString(point), TrailBo.class)`
    → `JSON.parseObject(JSON.toJSONString(point), TrailBo)`：
    Java 传 `TrailBo.class`（Class 对象），Python 直接传类对象本身。
-6) `new BigDecimal(String)` → `float(...)`：本工程的 `BigDecimal` 字段统一映射为
-   Python `float`（TrailBo.lon/lat 已在 t05 声明为 `Optional[float]`）。
-   注意 `new BigDecimal(null)` 在 Java 抛 NPE；`float(None)` 在 Python 抛 TypeError，
-   两者同为“运行期异常”，语义一致。
+6) `new BigDecimal(String)` → `Decimal(str(...))`：本工程的 `BigDecimal` 字段统一
+   映射为 `decimal.Decimal`（TrailBo.lon/lat 为 `Optional[Decimal]`），经纬度赋值
+   不再经过 float（复核高危②）。`new BigDecimal(null)` 在 Java 抛 NPE；
+   `Decimal(str(None))` 在 Python 抛 InvalidOperation，两者同为“运行期异常”。
 7) `String.valueOf(Object)` 语义为 **null → "null"**，而 Python `str(None)` 是
    `"None"`，二者不同 → 统一走本文件的 `_javaStr()`。
 8) `Comparator.comparing(TrailBo::getCaptureTime)` → `key=lambda p: p.capture_time`。
@@ -56,6 +56,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, List, Optional
 
 from com.alibaba.fastjson2.JSON import JSON
@@ -249,10 +250,10 @@ class TrailAggregationService(object):
         if gantry is not None:
             if point.getLon() is None:
                 # Java: new BigDecimal(gantry.getLon()) —— lon 是 String
-                point.setLon(float(gantry.getLon()))
+                point.setLon(Decimal(str(gantry.getLon())))
             if point.getLat() is None:
                 # Java: new BigDecimal(gantry.getLat())
-                point.setLat(float(gantry.getLat()))
+                point.setLat(Decimal(str(gantry.getLat())))
             if CommonUtil.isBlank(point.getRoadCode()):
                 point.setRoadCode(gantry.getRoadCode())
             if CommonUtil.isBlank(point.getSectionCode()):
@@ -276,9 +277,9 @@ class TrailAggregationService(object):
         if toll is not None:
             if point.getLon() is None and CommonUtil.isNotBlank(toll.getLongitude()):
                 # Java: new java.math.BigDecimal(toll.getLongitude())
-                point.setLon(float(toll.getLongitude()))
+                point.setLon(Decimal(str(toll.getLongitude())))
             if point.getLat() is None and CommonUtil.isNotBlank(toll.getLatitude()):
-                point.setLat(float(toll.getLatitude()))
+                point.setLat(Decimal(str(toll.getLatitude())))
             if CommonUtil.isBlank(point.getRoadCode()):
                 point.setRoadCode(toll.getRoadCode())
             if CommonUtil.isBlank(point.getSectionCode()):

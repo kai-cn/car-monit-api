@@ -73,8 +73,12 @@ _TYPE_WHITELIST = ("com.ruoyi", "org.springframework")
 
 
 def _allows_type(fqcn: Any) -> bool:
-    return (isinstance(fqcn, str)
-            and any(fqcn.startswith(prefix) for prefix in _TYPE_WHITELIST))
+    if not isinstance(fqcn, str):
+        return False
+    # 点号边界：只允许 "com.ruoyi" 本身或 "com.ruoyi.*"，
+    # 不能放行 "com.ruoyi_evil"（复核 H3 绕过实测）。
+    return any(fqcn == prefix or fqcn.startswith(prefix + ".")
+               for prefix in _TYPE_WHITELIST)
 
 
 def _normalize_fastjson(text: str) -> str:
@@ -631,18 +635,20 @@ class RealRedisTemplate:
 
     # ------------------------------------------------------------- dispatch
     def _run(self, description: str, real: Any, memory: Any) -> Any:
-        allowed, probe = self._breaker.acquire()
-        if not allowed:
+        allowed, probe, epoch = self._breaker.acquire()
+        # fallback=error：即使熔断已打开也继续直连（不回落内存），
+        # 这样真实服务失败仍会被记录进 readiness（复核高危①）。
+        if not allowed and self._fallback != "error":
             return memory()
         try:
             result = real()
         except redis_py.RedisError as error:
+            # 失败分支无条件刷新窗口计时 + 递增代际（包括 error 模式）
+            first = self._breaker.failure()
             if self._fallback == "error":
                 if probe:
-                    self._breaker.release_probe()
+                    self._breaker.release_probe(epoch)
                 raise
-            # H2：失败分支无条件刷新窗口计时（包括半开探测失败）
-            first = self._breaker.failure()
             log.warning("[Redis适配] %s %s，熔断降级为进程内内存（%.0fs 后半开重试；"
                         "降级期间的写入不会回灌真实 Redis）: %s",
                         description, "失败" if first else "半开探测仍失败",
@@ -650,9 +656,9 @@ class RealRedisTemplate:
             return memory()
         except BaseException:
             if probe:
-                self._breaker.release_probe()
+                self._breaker.release_probe(epoch)
             raise
-        if self._breaker.success():
+        if self._breaker.success(epoch):
             log.info("[Redis适配] 真实 Redis 已恢复（%s）", self._url)
         return result
 
@@ -660,6 +666,11 @@ class RealRedisTemplate:
     def degraded(self) -> bool:
         """当前是否处于熔断降级（供健康检查/测试观察）。"""
         return self._breaker.degraded
+
+    def ping(self) -> bool:
+        """主动 PING（供 readiness 探针；error 模式失败会抛错并记录熔断状态）。"""
+        return bool(self._run("ping", lambda: bool(self.client.ping()),
+                              lambda: True))
 
     # ----------------------------------------------------------------- ops
     def opsForValue(self) -> _RealValueOps:

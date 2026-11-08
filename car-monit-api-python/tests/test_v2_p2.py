@@ -119,6 +119,14 @@ def test_codec_type_whitelist_blocks_arbitrary_reflection(monkeypatch) -> None:
     assert not isinstance(restored, Evil)
     assert restored == {"pwned": "yes"}  # @type 被剥离
 
+    # 前缀绕过：com.ruoyi_evil 不能命中 com.ruoyi 白名单（点号边界）
+    evil_module = types.ModuleType("com.ruoyi_evil")
+    evil_module.Evil = Evil
+    monkeypatch.setitem(sys.modules, "com.ruoyi_evil", evil_module)
+    bypass = decode(b'{"@type":"com.ruoyi_evil.Evil","pwned":"yes"}')
+    assert isinstance(bypass, dict)
+    assert not isinstance(bypass, Evil)
+
 
 # ------------------------------------------------------------------ fallback
 class _BrokenClient:
@@ -291,6 +299,94 @@ def test_redis_half_open_allows_only_one_probe(monkeypatch) -> None:
     assert template.degraded is True
 
 
+def test_breaker_stale_success_does_not_clear_newer_failure() -> None:
+    """复核中危：旧请求的成功不能清掉并发期间新失败打开的熔断窗口。"""
+    from app.middleware.breaker import CircuitBreaker
+
+    breaker = CircuitBreaker()
+    allowed, probe, epoch = breaker.acquire()
+    assert allowed is True and probe is False
+    assert breaker.failure() is True          # 打开熔断，代际 +1
+    assert breaker.success(epoch) is False    # 旧代际成功被忽略
+    assert breaker.degraded is True
+    # 新代际的显式成功才允许闭合
+    assert breaker.success(breaker.acquire()[2]) is True
+    assert breaker.degraded is False
+
+
+def test_error_fallback_records_degraded_for_readiness() -> None:
+    """复核高危①：fallback=error 失败也要记录 degraded，readiness 才能变 DOWN。"""
+    import redis as redis_py
+
+    from app.health import degraded_probe
+    from app.middleware.real_redis import RealRedisTemplate
+
+    class _Broken:
+        def get(self, key):
+            raise redis_py.ConnectionError("down")
+
+        def ping(self):
+            raise redis_py.ConnectionError("down")
+
+    template = RealRedisTemplate("redis://127.0.0.1:1/0", fallback="error",
+                                 client=_Broken())
+    with pytest.raises(redis_py.ConnectionError):
+        template.opsForValue().get("k")
+    assert template.degraded is True
+
+    probe = degraded_probe("redis", lambda: template,
+                           health_check=lambda backend: backend.ping())
+    with pytest.raises(redis_py.ConnectionError):
+        probe()  # 主动 ping 失败 → HealthRegistry 标记 redis DOWN
+
+
+def test_es_http_5xx_trips_but_404_does_not() -> None:
+    """复核中危：ES 5xx 属于服务不可用（应熔断）；404 是确定性错误（不熔断）。"""
+    import elasticsearch.exceptions as es_exc
+
+    from app.middleware.real_es import RealEsBackend
+    from org.elasticsearch.action.search.SearchRequest import SearchRequest
+
+    class _503:
+        def search(self, **kwargs):
+            raise es_exc.TransportError(503, "service_unavailable", None)
+
+    backend = RealEsBackend("http://127.0.0.1:1", fallback="memory",
+                            client=_503())
+    result = backend.search(SearchRequest("snapshot_flow"), memory=lambda: "memory-ok")
+    assert result == "memory-ok"
+    assert backend.degraded is True
+
+    class _404:
+        def search(self, **kwargs):
+            raise es_exc.NotFoundError(
+                404, "index_not_found_exception",
+                {"error": {"type": "index_not_found_exception",
+                           "reason": "no such index [x]"}})
+
+    backend404 = RealEsBackend("http://127.0.0.1:1", fallback="memory",
+                               client=_404())
+    with pytest.raises(Exception):
+        backend404.search(SearchRequest("x"), memory=lambda: "memory-ok")
+    assert backend404.degraded is False
+
+
+def test_health_probe_actively_checks_backend() -> None:
+    """复核中危：readiness 不能只读 degraded 标志，必须主动探测。"""
+    from app.health import degraded_probe
+
+    class _Backend:
+        degraded = False
+
+        def ping(self):
+            raise RuntimeError("service down")
+
+    probe = degraded_probe("redis", lambda: _Backend(),
+                           health_check=lambda backend: backend.ping())
+    with pytest.raises(RuntimeError):
+        probe()
+
+
 def test_es_breaker_refreshes_window_on_every_failure(monkeypatch) -> None:
     import elasticsearch.exceptions as es_exc
 
@@ -363,6 +459,54 @@ def test_kafka_breaker_refreshes_window_on_every_failure(monkeypatch) -> None:
     clock.now = 122.0
     producer.send("t", "k", "v", memory=lambda: "memory-ok")
     assert client.calls == 3
+
+
+def test_es_perform_request_serializes_decimal() -> None:
+    """M-1：低层 REST 响应含 Decimal 时不能 TypeError（应输出 1.50）。"""
+    from decimal import Decimal
+
+    from app.middleware.real_es import RealEsBackend
+    from org.elasticsearch.client.Request import Request
+
+    class _Transport:
+        def perform_request(self, method, endpoint, headers=None, body=None):
+            return {"fee": Decimal("1.50")}
+
+    class _Client:
+        transport = _Transport()
+
+    backend = RealEsBackend("http://127.0.0.1:1", fallback="memory", client=_Client())
+    response = backend.performRequest(Request("GET", "/_cluster/health"),
+                                      memory=lambda: None)
+    assert response.getStatusLine().getStatusCode() == 200
+    assert '"fee":1.50' in response.getEntity().text
+
+
+def test_ilm_policy_type_error_is_not_swallowed() -> None:
+    """M-1：EsIndexManageService 只吞 ES 语义错误，TypeError 必须上抛。"""
+    from com.ruoyi.base.service.optimization.EsIndexManageService import (
+        EsIndexManageService,
+    )
+
+    class _Low:
+        def performRequest(self, request):
+            raise TypeError("Object of type Decimal is not JSON serializable")
+
+    class _Client:
+        def getLowLevelClient(self):
+            return _Low()
+
+    service = EsIndexManageService(esClient=_Client())
+    with pytest.raises(TypeError):
+        service.ilmPolicyExists("car-monit-policy")
+
+
+def test_es_client_uses_decimal_serializer() -> None:
+    """测试缺口：必须真正断言 RealEsBackend 装配了 Decimal 序列化器。"""
+    from app.middleware.real_es import _DecimalJSONSerializer, RealEsBackend
+
+    backend = RealEsBackend("http://127.0.0.1:1")
+    assert isinstance(backend.client.transport.serializer, _DecimalJSONSerializer)
 
 
 def test_es_response_decimals_are_parsed_exactly() -> None:
@@ -709,6 +853,20 @@ def test_kafka_sync_failure_error_policy_raises() -> None:
         client=_SyncFailProducer(KafkaError._ALL_BROKERS_DOWN))
     with pytest.raises(KafkaException):
         backend.send("t", "k", "v", memory=lambda: "memory-ok")
+
+
+def test_kafka_error_mode_records_degraded_for_readiness() -> None:
+    """复核高危①：Kafka fallback=error 失败也要记录 degraded。"""
+    from confluent_kafka import KafkaError, KafkaException
+
+    from app.middleware.real_kafka import RealKafkaProducer
+
+    backend = RealKafkaProducer(
+        "127.0.0.1:1", fallback="error",
+        client=_SyncFailProducer(KafkaError._ALL_BROKERS_DOWN))
+    with pytest.raises(KafkaException):
+        backend.send("t", "k", "v", memory=lambda: "memory-ok")
+    assert backend.degraded is True
 
 
 def test_kafka_sync_deterministic_failure_no_trip() -> None:
