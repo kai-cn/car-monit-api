@@ -1686,7 +1686,15 @@ void ensure_consistency_scheduler() {
         (void)month;
         if (h == hour && m == minute && s == second && day != last_day) {
           last_day = day;
-          consistency_service().consistency_tick();
+          // detached 常驻线程：异常逃出会 terminate 进程，单次对账失败只记录。
+          try {
+            consistency_service().consistency_tick();
+          } catch (const std::exception& e) {
+            CM_LOG_ERROR("optimization.consistency")
+                << "[一致性] 对账 tick 异常: " << e.what();
+          } catch (...) {
+            CM_LOG_ERROR("optimization.consistency") << "[一致性] 对账 tick 异常: <unknown>";
+          }
         }
       }
     }).detach();

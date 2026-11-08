@@ -207,6 +207,8 @@ void full_sync(const meta::EntityMeta& m, int batch_size, const std::string& top
   } catch (const std::exception& e) {
     // Java 108-110 行：异常只记录，不重试，线程退出。
     CM_LOG_ERROR("sync") << "全量同步异常: " << e.what();
+  } catch (...) {
+    CM_LOG_ERROR("sync") << "全量同步异常: <unknown>";
   }
 }
 
@@ -249,6 +251,9 @@ void incremental_sync(const meta::EntityMeta& m, int batch_size, long long inter
     } catch (const std::exception& e) {
       // Java 165-173 行：异常后同样等待 interval 再继续。
       CM_LOG_ERROR("sync") << "增量同步异常: " << e.what();
+      if (!sleep_while_running(interval_ms)) break;
+    } catch (...) {
+      CM_LOG_ERROR("sync") << "增量同步异常: <unknown>";
       if (!sleep_while_running(interval_ms)) break;
     }
   }

@@ -1,5 +1,7 @@
 #include "common/worker_pool.h"
 
+#include "common/logging.h"
+
 #include <atomic>
 #include <condition_variable>
 #include <cstddef>
@@ -31,7 +33,15 @@ struct WorkerPool::Impl {
         queue.pop_front();
       }
       active.fetch_add(1);
-      task(); // 异常由任务自身负责（与 Java 线程池的 worker 捕获语义一致）
+      // 兜底捕获：任务若漏掉异常处理，异常逃出 worker 线程会触发 std::terminate
+      // 直接杀进程（Java 线程池的 worker 也会捕获并记录）。这里只记录，不中断池。
+      try {
+        task();
+      } catch (const std::exception& e) {
+        CM_LOG_ERROR("pool") << "后台任务异常: " << e.what();
+      } catch (...) {
+        CM_LOG_ERROR("pool") << "后台任务异常: <unknown>";
+      }
       active.fetch_sub(1);
     }
   }
