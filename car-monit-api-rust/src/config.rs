@@ -20,6 +20,13 @@ use std::time::Duration;
 
 use serde::Deserialize;
 
+/// 消费端"处理中"等待的短 TTL（`consumer.rs` 使用）。
+pub const PROCESSING_TTL_SECONDS: u64 = 10;
+/// mq 重试退避基数（指数退避 200ms × 2^n）。
+pub const RETRY_BACKOFF_MS: u64 = 200;
+/// DLQ 发布的发送超时（与 `FutureProducer::send` 一致）。
+pub const DLQ_SEND_TIMEOUT_SECONDS: u64 = 30;
+
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default)]
 pub struct Config {
@@ -150,7 +157,7 @@ impl RedisConfig {
     }
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(default)]
 pub struct KafkaConfig {
     #[serde(rename = "bootstrap-servers")]
@@ -160,6 +167,24 @@ pub struct KafkaConfig {
     pub max_retry_count: i32,
     #[serde(rename = "group-id")]
     pub group_id: String,
+    /// 两次 `recv()` 之间的最大允许间隔。librdkafka 默认 300000ms（300s，见
+    /// `rdkafka-sys/librdkafka/CONFIGURATION.md` 第 136 行与 `rdkafka_conf.c:1379`）。
+    /// 消费端在 handler 内同步处理/等待，仍需显式配置并由 validate() 校验预算，
+    /// 避免调大 retry/TTL 后静默越过该上限。
+    #[serde(rename = "max-poll-interval-ms")]
+    pub max_poll_interval_ms: u64,
+}
+
+impl Default for KafkaConfig {
+    fn default() -> Self {
+        Self {
+            bootstrap_servers: String::new(),
+            topic: KafkaTopic::default(),
+            max_retry_count: 0,
+            group_id: String::new(),
+            max_poll_interval_ms: 600_000,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -334,7 +359,7 @@ impl Default for EsIndexConfig {
             trail: "trail_fitting".into(),
             shards: 6,
             replicas: 1,
-            auto_create: false,
+            auto_create: true,
             ilm_policy: "car_monit_ilm_policy".into(),
             attach_ilm: false,
         }
@@ -449,18 +474,10 @@ impl Default for SyncConfig {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default)]
 pub struct ConsistencyConfig {
     pub reconcile: ReconcileConfig,
-}
-
-impl Default for ConsistencyConfig {
-    fn default() -> Self {
-        Self {
-            reconcile: ReconcileConfig::default(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -579,11 +596,20 @@ pub struct AppConfig {
     pub env: String,
     #[serde(rename = "sysbase-url")]
     pub sysbase_url: String,
-    /// JS 侧配置里没有；Rust 侧用于显式开关后台消费者（默认打开，与 Java 一致）
+    /// Java 侧所有消费者（@Service/@PulsarConsumer）均在源码中被注释，实际不消费；
+    /// Rust 侧默认关闭，避免与 Java/Go 消费端双写同一 topic。
     #[serde(rename = "consumer-enabled")]
     pub consumer_enabled: bool,
     #[serde(rename = "enable-scheduler")]
     pub enable_scheduler: bool,
+    /// 多副本语义开关：true=必须拿到 Redis 租约才执行定时任务（多副本严格模式）；
+    /// false=租约暂时不可用时按单副本降级继续执行并告警（默认，适合单副本部署）。
+    #[serde(rename = "scheduler-lease-required")]
+    pub scheduler_lease_required: bool,
+    /// 优雅停机总预算（秒），从收到 SIGTERM 起算，覆盖 HTTP 排空 + 后台任务 + 连接池关闭。
+    /// K8s 的 terminationGracePeriodSeconds 必须大于该值（建议 +5s 余量）。
+    #[serde(rename = "shutdown-grace-seconds")]
+    pub shutdown_grace_seconds: u64,
 }
 
 impl Default for AppConfig {
@@ -591,8 +617,10 @@ impl Default for AppConfig {
         Self {
             env: "local".into(),
             sysbase_url: "http://223.84.150.189:26066/prod-api".into(),
-            consumer_enabled: true,
+            consumer_enabled: false,
             enable_scheduler: true,
+            scheduler_lease_required: false,
+            shutdown_grace_seconds: 25,
         }
     }
 }
@@ -664,6 +692,9 @@ fn apply_env_overrides(cfg: &mut Config) {
     if let Ok(v) = env::var("APP_KAFKA_GROUP_ID") {
         cfg.kafka.group_id = v;
     }
+    set("APP_KAFKA_MAX_POLL_INTERVAL_MS", |v: u64| {
+        cfg.kafka.max_poll_interval_ms = v
+    });
 
     if let Ok(v) = env::var("APP_ELASTICSEARCH_HOST") {
         cfg.elasticsearch.host = v;
@@ -705,6 +736,15 @@ fn apply_env_overrides(cfg: &mut Config) {
     }
     if let Ok(v) = env::var("APP_ENABLE_SCHEDULER") {
         cfg.app.enable_scheduler = matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes");
+    }
+    if let Ok(v) = env::var("APP_SCHEDULER_LEASE_REQUIRED") {
+        cfg.app.scheduler_lease_required =
+            matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes");
+    }
+    if let Ok(v) = env::var("APP_SHUTDOWN_GRACE_SECONDS") {
+        if let Ok(n) = v.parse::<u64>() {
+            cfg.app.shutdown_grace_seconds = n.clamp(5, 300);
+        }
     }
 }
 
@@ -768,9 +808,79 @@ impl Config {
         if self.redis.host.trim().is_empty() {
             problems.push("redis.host 不能为空".to_string());
         }
+        // 消费预算校验：单条消息最坏耗时必须严格小于 max.poll.interval.ms，
+        // 否则同一条消息在 handler 内等待/重试期间就会触发 group rebalance。
+        // 公式：attempts×(processing TTL+1s) + Σ退避 + DLQ 发送超时。
+        // 校验对退避按不封顶指数累加，比运行期 `1u32 << attempt.min(10)` 更保守。
+        if self.kafka.max_poll_interval_ms == 0 {
+            problems.push("kafka.max-poll-interval-ms 必须 > 0".to_string());
+        } else {
+            let retries = self.pulsar.max_retry_times.max(0);
+            if retries > 200 {
+                problems.push(format!(
+                    "pulsar.max-retry-times 过大（{} > 200），无法给出有界的消费预算",
+                    retries
+                ));
+            } else {
+                let poll = self.kafka.max_poll_interval_ms;
+                let wait_ms = (PROCESSING_TTL_SECONDS + 1) * 1000;
+                let mut worst_ms: u64 = 0;
+                let mut backoff_ms = RETRY_BACKOFF_MS;
+                for attempt in 0..=retries {
+                    worst_ms = worst_ms.saturating_add(wait_ms);
+                    if attempt < retries {
+                        worst_ms = worst_ms.saturating_add(backoff_ms);
+                        backoff_ms = backoff_ms.saturating_mul(2);
+                    }
+                    if worst_ms >= poll {
+                        break;
+                    }
+                }
+                worst_ms = worst_ms.saturating_add(DLQ_SEND_TIMEOUT_SECONDS * 1000);
+                if worst_ms >= poll {
+                    problems.push(format!(
+                        "消费预算不合规：最坏 {}ms ≥ kafka.max-poll-interval-ms {}ms（{} 次尝试 × (TTL+1s) + 退避 + DLQ 超时）；请调小 PROCESSING_TTL/max-retry-times 或调大 max-poll-interval-ms",
+                        worst_ms, poll, retries + 1
+                    ));
+                }
+            }
+        }
         if !problems.is_empty() {
             anyhow::bail!("配置校验失败: {}", problems.join("; "));
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn base() -> Config {
+        Config::load(Some("config/application.yaml")).expect("加载测试配置")
+    }
+
+    #[test]
+    fn default_poll_interval_satisfies_consumer_budget() {
+        base().validate().expect("默认配置的消费预算应合规");
+    }
+
+    #[test]
+    fn too_small_poll_interval_is_rejected() {
+        let mut cfg = base();
+        cfg.kafka.max_poll_interval_ms = 60_000;
+        cfg.pulsar.max_retry_times = 3;
+        let err = cfg.validate().expect_err("60s 预算应被拒绝").to_string();
+        assert!(err.contains("消费预算不合规"), "错误应指出预算不合规: {err}");
+    }
+
+    #[test]
+    fn excessive_retry_times_are_rejected() {
+        let mut cfg = base();
+        cfg.pulsar.max_retry_times = 30;
+        assert!(
+            cfg.validate().is_err(),
+            "30 次尝试 × (TTL+1s) 必然超过默认 poll 预算"
+        );
     }
 }

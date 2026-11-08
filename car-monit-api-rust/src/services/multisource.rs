@@ -176,7 +176,7 @@ impl MultiSourceService {
                 .list_range(&queue_key, 0, -1)
                 .await
                 .unwrap_or_default();
-            let _ = cache.del(&[queue_key.clone()]).await;
+            let _ = cache.del(std::slice::from_ref(&queue_key)).await;
             let trail_key = format!("{}{}", REALTIME_TRAIL_KEY_PREFIX, plate);
             let mut trail = cache
                 .get_json::<TrailInfo>(&trail_key)

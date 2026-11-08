@@ -94,10 +94,6 @@ impl AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let status = self.status();
-        if status.is_server_error() {
-            // 响应体保持 Spring 的空 message，只把根因写进日志，便于双端比对时定位
-            tracing::error!(status = status.as_u16(), error = %self, "接口内部错误");
-        }
         let error = match status.as_u16() {
             400 => "Bad Request",
             401 => "Unauthorized",

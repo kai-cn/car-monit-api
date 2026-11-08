@@ -12,7 +12,7 @@ spring:
         master:
           url: jdbc:postgresql://192.168.56.10:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
           username: gaussdb
-          password: OpenGauss@123
+          password: ""             # 必须由环境变量 APP_SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD 注入，仓库不再保存明文
           driver-class-name: org.postgresql.Driver
           max-open-conns: 20     # Druid maxActive
           max-idle-conns: 5      # Druid min-idle
@@ -22,7 +22,7 @@ spring:
 redis:
   host: 127.0.0.1
   port: 6379
-  password: ""
+  password: ""                   # 由 APP_REDIS_PASSWORD 注入
   database: 0
   pool-size: 16
 
@@ -32,6 +32,9 @@ kafka:
     snapshot-flow: ods-rt-szdn-snapshot-flow
   max-retry-count: 10
   group-id: ods-rt-szdn-snapshot-flow-sub
+  # 消费端在 handler 内同步处理/等待；Config::validate 会校验最坏预算 < 该值。
+  # librdkafka 默认 300000ms（300s）。
+  max-poll-interval-ms: 600000
 
 pulsar:
   service-url: pulsar://localhost:6650
@@ -70,7 +73,7 @@ elasticsearch:
   port: 9200
   scheme: http
   username: elastic
-  password: changeme
+  password: ""                   # 由 APP_ELASTICSEARCH_PASSWORD 注入，仓库不再保存明文
   connection-timeout-ms: 30000
   socket-timeout-ms: 30000
   index:
@@ -79,7 +82,7 @@ elasticsearch:
     trail: trail_fitting
     shards: 6
     replicas: 1
-    auto-create: false
+    auto-create: true             # 启动时若索引缺失，按内置 mapping 创建（已存在则跳过，不改结构）
     ilm-policy: car_monit_ilm_policy
     attach-ilm: false
 
@@ -140,5 +143,9 @@ logging:
 app:
   env: local                    # 对应 application.yml 的 isLocalhost
   sysbase-url: http://223.84.150.189:26066/prod-api
-  consumer-enabled: true        # Rust 侧新增（默认与 Java 一致：消费端启动）
+  consumer-enabled: false       # Rust 侧新增；默认关闭：Java 侧消费者源码全部被注释，避免与其它消费端双写。确需启用时设 APP_CONSUMER_ENABLED=true
   enable-scheduler: true        # Rust 侧新增（默认与 Java 一致：@EnableScheduling）
+  scheduler-lease-required: false  # 多副本严格模式设 true（租约不可用则暂停调度）；false=单副本降级继续跑
+  # 优雅停机总预算（秒），从 SIGTERM 起算，覆盖 HTTP 排空 + 消费端 + 调度任务 + 导出 + DB 关闭。
+  # 部署要求：K8s terminationGracePeriodSeconds >= 该值 + 5（默认 30 时本项保持 25）。
+  shutdown-grace-seconds: 25

@@ -120,7 +120,9 @@ impl SysUtilService {
                 flag: "currentTrack".to_string().into(),
                 ..Default::default()
             };
-            let info = self.change_data(&mut tracks, rtn).await?;
+            let mut info = self.change_data(&mut tracks, rtn).await?;
+            // PARITY: Java syncTrack 在 changeData 之后显式 setTrailUuid(carNo)。
+            info.trail_uuid = car_no.clone().into();
             let key = format!("{}{}", CAR_CURRENT_TRAIL_PREFIX, car_no);
             cache.set_json(&key, &info, Duration::ZERO).await?;
         }
@@ -128,6 +130,8 @@ impl SysUtilService {
     }
 
     /// 对应 TrackTask.syncHistroyTrack：逐车回放历史轨迹，与 car_history_trail 旧数据按 uuid 合并。
+    /// PARITY: Java 缓存的是 `List<TrailInfo>`（tracks + trailList），不是裸的 ZdataTrailTracks；
+    /// 且只保留 trailList 非空的条目。此前 Rust 写入裸实体，前端读历史轨迹会解析失败。
     pub async fn sync_history_track(&self) -> AppResult<()> {
         let vehicles = self.key_vehicles().await;
         if vehicles.is_empty() {
@@ -153,19 +157,31 @@ impl SysUtilService {
                 },
                 ..Default::default()
             };
-            let rows = self.trail.get_history_trail(&vo, 0).await?;
-            let mut merged: Vec<ZdataTrailTracks> = rows;
+            let rows = self.trail.get_history_trail(&vo, 0, 0).await?;
+            let mut merged: Vec<TrailInfo> = self.build_trail_infos(rows, false).await?;
             let history_key = format!("{}{}", CAR_HISTORY_TRAIL_PREFIX, car_no);
-            if let Ok(Some(old)) = cache.get_json::<Vec<ZdataTrailTracks>>(&history_key).await {
-                let mut seen: HashSet<String> =
-                    merged.iter().map(|r| r.uuid.as_str().to_string()).collect();
+            if let Ok(Some(old)) = cache.get_json::<Vec<TrailInfo>>(&history_key).await {
+                let mut seen: HashSet<String> = merged
+                    .iter()
+                    .filter_map(|i| i.tracks.as_ref().map(|t| t.uuid.as_str().to_string()))
+                    .collect();
                 for o in old {
-                    if seen.insert(o.uuid.as_str().to_string()) {
+                    let Some(tracks) = o.tracks.as_ref() else {
+                        continue;
+                    };
+                    if o.trail_list.value.is_empty() {
+                        continue;
+                    }
+                    if seen.insert(tracks.uuid.as_str().to_string()) {
                         merged.push(o);
                     }
                 }
             }
-            merged.sort_by(|a, b| b.uuid.cmp(&a.uuid));
+            merged.sort_by(|a, b| {
+                let ua = a.tracks.as_ref().map(|t| t.uuid.as_str()).unwrap_or("");
+                let ub = b.tracks.as_ref().map(|t| t.uuid.as_str()).unwrap_or("");
+                ub.cmp(ua)
+            });
             cache
                 .set_json(&history_key, &merged, Duration::ZERO)
                 .await?;

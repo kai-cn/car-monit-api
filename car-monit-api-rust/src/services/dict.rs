@@ -27,15 +27,6 @@ use crate::repo::*;
 use crate::services::*;
 use crate::utils;
 
-/// 见 `DictService::bundle`：五张字典映射的一次性快照。
-pub struct DictBundle {
-    pub station: HashMap<String, OdsSzdnTollStationIp>,
-    pub toll: HashMap<String, OdsSzdnToll>,
-    pub gantry: HashMap<String, OdsSzdnGantryIp>,
-    pub location: HashMap<String, ZdataLocationDict>,
-    pub section: HashMap<String, OdsSzdnSection>,
-}
-
 #[derive(Clone)]
 pub struct DictService {
     pub location: LocationDictRepo,
@@ -184,23 +175,6 @@ impl DictService {
             .into_iter()
             .map(|s| (s.section_code.as_str().to_string(), s))
             .collect())
-    }
-
-    /// 一次请求内复用的一组字典映射。
-    ///
-    /// Java 的 `changeData` 每处理一个轨迹点都会去 Redis 取同一批 key，取到即用；Rust 的映射
-    /// 是拿整表 JSON 现场搭的（`gantry_ip_map` 每行会产生 ~9×条目数 个 entry）。逐行重建会把
-    /// 一页数据放大成 5×N 次全量反序列化 —— 实测 10 行 3.9s，而 Java 0.26s。
-    /// 这里**只做请求内复用，不是 TTL 缓存**：每次请求仍然照常读 Redis，
-    /// 这样「双端 Redis DB 隔离 → 缓存内容不同 → 结果不同」这条对比链路不会被破坏。
-    pub async fn bundle(&self) -> AppResult<DictBundle> {
-        Ok(DictBundle {
-            station: self.station_ip_map().await?,
-            toll: self.toll_map().await?,
-            gantry: self.gantry_ip_map().await?,
-            location: self.location_map().await?,
-            section: self.section_map().await?,
-        })
     }
 
     /// 对应 getRedisList()：先读 Redis（JSON），未命中回源并写回；缓存失败不阻断业务。

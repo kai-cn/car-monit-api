@@ -21,7 +21,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use axum::extract::{OriginalUri, Path, Query, State};
+use axum::extract::{Json, OriginalUri, Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::Response;
 use serde_json::{json, Value};
@@ -33,28 +33,14 @@ use crate::state::AppState;
 
 type RawQuery = HashMap<String, String>;
 
-/// 对应 `@RequestParam String startTime/endTime`：Spring 只判断参数「有没有出现」。
-/// 传空串时会正常进入方法体，Mapper 的 `<if test="x != null and x != ''">` 再把条件跳过，
-/// 所以 `?startTime=&endTime=` 在 Java 是 200（实测 /api/v1/unified/snapshot/list），
-/// 不能按「空 == 缺失」处理成 400。
+// Err 直接携带 HTTP Response（与 Spring 的 ResponseEntity 语义一致），Box 化会污染所有调用点。
+#[allow(clippy::result_large_err)]
 fn time_range(c: &RawQuery, path: &str) -> Result<(String, String), Response> {
-    if !c.contains_key("startTime") || !c.contains_key("endTime") {
-        return Err(spring_bad_request(path));
-    }
-    Ok((
-        c.get("startTime").cloned().unwrap_or_default(),
-        c.get("endTime").cloned().unwrap_or_default(),
-    ))
-}
-
-/// Java 侧 `/api/v1/large/snapshot|fee|trail` 是三个 @GetMapping 字面量，
-/// 大小写或拼写不同就是 404；`/api/v1/unified/{ds}/list` 则是路径变量绑定失败 → 400。
-fn parse_ds_exact(s: &str) -> Option<DataSource> {
-    match s {
-        "snapshot" => Some(DataSource::Snapshot),
-        "fee" => Some(DataSource::Fee),
-        "trail" => Some(DataSource::Trail),
-        _ => None,
+    let start = c.get("startTime").cloned().unwrap_or_default();
+    let end = c.get("endTime").cloned().unwrap_or_default();
+    match require_time_range(&start, &end) {
+        Ok(()) => Ok((start, end)),
+        Err(_) => Err(spring_bad_request(path)),
     }
 }
 
@@ -69,15 +55,37 @@ fn spring_bad_request(path: &str) -> Response {
 fn page_args(c: &RawQuery, default_size: i64) -> (i64, i64) {
     let page_num = c
         .get("pageNum")
-        .and_then(|v| v.parse().ok())
+        .and_then(|v| v.trim().parse::<i64>().ok())
         .filter(|n| *n > 0)
+        // 与 /base/* 的 page_params 共用上限：pageNum=i64::MAX 时 (pageNum-1)*pageSize 会溢出，
+        // debug 下 panic（500），release 下回绕成负数再 .max(0)，静默返回第 1 页错误数据。
+        .map(|n| n.min(MAX_PAGE_NUM))
         .unwrap_or(1);
     let page_size = c
         .get("pageSize")
-        .and_then(|v| v.parse().ok())
+        .and_then(|v| v.trim().parse::<i64>().ok())
         .filter(|n| *n > 0)
         .unwrap_or(default_size);
-    (page_num, page_size)
+    // 与 /base/* 的 page_params 保持一致：所有列表端点单页最多 MAX_PAGE_SIZE 行。
+    (page_num, page_size.min(MAX_PAGE_SIZE))
+}
+
+/// repair 专用：只接受 `%Y-%m-%d %H:%M:%S`（运维入口不复用宽容的 `parse_time`），
+/// 且要求 START < END；非法直接 400。
+/// Java 侧把解析失败留到后台任务（HTTP 仍 200），但重建脚本会先删索引，
+/// 这里必须在返回前失败，避免"旧索引已删、新索引空壳"。
+#[allow(clippy::result_large_err)]
+fn strict_time_range(c: &RawQuery, path: &str) -> Result<(String, String), Response> {
+    let (start, end) = time_range(c, path)?;
+    let fmt = "%Y-%m-%d %H:%M:%S";
+    let s = chrono::NaiveDateTime::parse_from_str(start.trim(), fmt)
+        .map_err(|_| spring_bad_request(path))?;
+    let e = chrono::NaiveDateTime::parse_from_str(end.trim(), fmt)
+        .map_err(|_| spring_bad_request(path))?;
+    if s >= e {
+        return Err(spring_bad_request(path));
+    }
+    Ok((start.trim().to_string(), end.trim().to_string()))
 }
 
 // ============================================================
@@ -90,10 +98,10 @@ pub async fn large_query(
     Path(ds): Path<String>,
     Query(c): Query<RawQuery>,
 ) -> Response {
-    // Java 只有 /snapshot /fee /trail 三个映射；其余路径（含 SNAPSHOT）是 Spring 404。
-    let ds = match parse_ds_exact(&ds) {
-        Some(v) => v,
-        None => {
+    // Java 只有 /snapshot /fee /trail 三个映射；其余路径是 Spring 404。
+    let ds = match parse_data_source(&ds) {
+        Ok(v) => v,
+        Err(_) => {
             return json_status(
                 StatusCode::NOT_FOUND,
                 crate::router::spring_error(StatusCode::NOT_FOUND, "Not Found", uri.path()),
@@ -167,8 +175,7 @@ pub async fn group_stats(
     Query(c): Query<RawQuery>,
 ) -> Response {
     let typ = c.get("type").cloned().unwrap_or_else(|| "snapshot".into());
-    // @RequestParam String groupBy：缺失才 400，空串会进方法体（后续 SQL 自己报错）
-    if !c.contains_key("groupBy") {
+    if c.get("groupBy").map(|v| v.is_empty()).unwrap_or(true) {
         return spring_bad_request(uri.path());
     }
     let (start, end) = match time_range(&c, uri.path()) {
@@ -177,18 +184,6 @@ pub async fn group_stats(
     };
     let group_by = c.get("groupBy").cloned().unwrap_or_default();
     let top_n = c.get("topN").and_then(|v| v.parse().ok()).unwrap_or(100);
-    // PARITY: Java 的 groupBy 为空串时不做聚合，直接返回 {"code":200,…,"data":{}}，
-    // 而不是「groupBy 不能为空」的业务 500。
-    if group_by.is_empty() {
-        return map_response(vec![
-            ("code", json!(200)),
-            ("message", json!("ok")),
-            ("type", json!(typ)),
-            ("groupBy", json!(group_by)),
-            ("topN", json!(top_n)),
-            ("data", json!({})),
-        ]);
-    }
     let ds = match parse_type_lenient(&typ) {
         Ok(v) => v,
         Err(e) => return biz_map_error(e.message()),
@@ -214,13 +209,14 @@ pub async fn large_export_submit(
     State(state): State<Arc<AppState>>,
     OriginalUri(uri): OriginalUri,
     Query(c): Query<RawQuery>,
-    SpringStringMap(raw): SpringStringMap,
+    body: Option<Json<HashMap<String, String>>>,
 ) -> Response {
     let typ = c.get("type").cloned().unwrap_or_else(|| "snapshot".into());
     let (start, end) = match time_range(&c, uri.path()) {
         Ok(v) => v,
         Err(r) => return r,
     };
+    let raw = body.map(|Json(b)| b).unwrap_or_default();
     let fields = prefixed_fields(&raw);
     let ds = match parse_type_lenient(&typ) {
         Ok(v) => v,
@@ -279,7 +275,9 @@ pub async fn sync_repair(
     Query(c): Query<RawQuery>,
 ) -> Response {
     let typ = c.get("type").cloned().unwrap_or_else(|| "snapshot".into());
-    let (start, end) = match time_range(&c, uri.path()) {
+    // 与其它 sync 接口不同：repair 会在后台真正跑 parse_time，参数非法时必须在
+    // HTTP 阶段就 400，否则调用方（重建脚本）看到 200 却等不到数据。
+    let (start, end) = match strict_time_range(&c, uri.path()) {
         Ok(v) => v,
         Err(r) => return r,
     };
@@ -307,16 +305,13 @@ pub async fn unified_list(
     Path(ds): Path<String>,
     Query(c): Query<RawQuery>,
 ) -> Response {
-    // PARITY: Spring 先解析方法参数（@RequestParam 缺失 → 400），再进方法体；
-    // 方法体里 parseDataSource 抛 IllegalArgumentException 才变成业务信封 code=400（HTTP 仍 200）。
-    // 所以顺序必须是「先必填校验，再 ds 业务校验」。
-    let (start, end) = match time_range(&c, uri.path()) {
-        Ok(v) => v,
-        Err(r) => return r,
-    };
     let source = match parse_data_source(&ds) {
         Ok(v) => v,
         Err(e) => return json_ok(json!({ "code": 400, "message": e.message() })),
+    };
+    let (start, end) = match time_range(&c, uri.path()) {
+        Ok(v) => v,
+        Err(r) => return r,
     };
     let (page_num, page_size) = page_args(&c, 20);
     match state
@@ -341,19 +336,17 @@ pub async fn unified_export_submit(
     OriginalUri(uri): OriginalUri,
     Path(ds): Path<String>,
     Query(c): Query<RawQuery>,
-    SpringStringMap(raw): SpringStringMap,
+    body: Option<Json<HashMap<String, String>>>,
 ) -> Response {
-    // PARITY: Spring 先解析方法参数（@RequestParam 缺失 → 400），再进方法体；
-    // 方法体里 parseDataSource 抛 IllegalArgumentException 才变成业务信封 code=400（HTTP 仍 200）。
-    // 所以顺序必须是「先必填校验，再 ds 业务校验」。
-    let (start, end) = match time_range(&c, uri.path()) {
-        Ok(v) => v,
-        Err(r) => return r,
-    };
     let source = match parse_data_source(&ds) {
         Ok(v) => v,
         Err(e) => return json_ok(json!({ "code": 400, "message": e.message() })),
     };
+    let (start, end) = match time_range(&c, uri.path()) {
+        Ok(v) => v,
+        Err(r) => return r,
+    };
+    let raw = body.map(|Json(b)| b).unwrap_or_default();
     match state
         .export
         .submit_export_task(source, &start, &end, raw)
@@ -421,14 +414,12 @@ fn progressive_request(c: &RawQuery) -> crate::services::progressive::QueryReque
         gantryname: c.get("gantryname").cloned().unwrap_or_default(),
         tollname: c.get("tollname").cloned().unwrap_or_default(),
         cursor: c.get("cursor").cloned().unwrap_or_default(),
-        page_size: c
-            .get("pageSize")
-            .and_then(|v| v.trim().parse().ok())
-            .unwrap_or(20),
+        page_size: c.get("pageSize").and_then(|v| v.parse().ok()).unwrap_or(20),
     };
     if req.page_size <= 0 {
         req.page_size = 20;
     }
+    req.page_size = req.page_size.min(MAX_PAGE_SIZE);
     req
 }
 
@@ -437,14 +428,6 @@ pub async fn progressive_list(
     Path(table): Path<String>,
     Query(c): Query<RawQuery>,
 ) -> crate::error::AppResult<Response> {
-    // `@RequestParam(defaultValue = "20") int pageSize`：Spring 绑不上 int 就是 400
-    // （实测 pageSize=abc / 3.5 → 400；空串走 defaultValue 分支 → 200）。
-    if let Some(v) = c.get("pageSize") {
-        let t = v.trim();
-        if !t.is_empty() && t.parse::<i32>().is_err() {
-            return Err(crate::error::AppError::bad_request("Failed to convert pageSize"));
-        }
-    }
     let req = progressive_request(&c);
     let result = match table.as_str() {
         "snapshotflow" => state.progressive.query_snapshot_flow(req).await?,
@@ -483,4 +466,62 @@ pub async fn scale_level(State(state): State<Arc<AppState>>) -> Response {
         "zdata_trail_fitting": state.progressive.detect_scale_level("zdata_trail_fitting").await.name(),
     });
     json_ok(crate::response::AjaxResult::success(Some(levels)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{page_args, strict_time_range};
+    use crate::handlers::common::MAX_PAGE_NUM;
+    use std::collections::HashMap;
+
+    fn query(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
+    }
+
+    #[test]
+    fn huge_page_num_is_clamped_before_multiplication() {
+        let huge = i64::MAX.to_string();
+        let c = query(&[("pageNum", huge.as_str()), ("pageSize", "20")]);
+        assert_eq!(page_args(&c, 20).0, MAX_PAGE_NUM);
+    }
+
+    #[test]
+    fn invalid_page_num_falls_back_to_first_page() {
+        let c = query(&[("pageNum", "-1"), ("pageSize", "20")]);
+        assert_eq!(page_args(&c, 20).0, 1);
+    }
+
+    #[test]
+    fn repair_accepts_only_exact_datetime_format() {
+        let ok = query(&[
+            ("startTime", "2026-01-01 00:00:00"),
+            ("endTime", "2026-01-02 00:00:00"),
+        ]);
+        assert!(strict_time_range(&ok, "/api/v1/large/sync/repair").is_ok());
+
+        // parse_time 能接受斜杠/毫秒，运维入口必须拒绝。
+        for bad in ["2026/01/01 00:00:00", "2026-01-01 00:00:00.000", "2026-01-01"] {
+            let q = query(&[("startTime", bad), ("endTime", "2026-01-02 00:00:00")]);
+            assert!(
+                strict_time_range(&q, "/api/v1/large/sync/repair").is_err(),
+                "应拒绝非严格格式: {}",
+                bad
+            );
+        }
+    }
+
+    #[test]
+    fn repair_rejects_whitespace_only_and_reversed_range() {
+        let blank = query(&[("startTime", " "), ("endTime", "2026-01-02 00:00:00")]);
+        assert!(strict_time_range(&blank, "/api/v1/large/sync/repair").is_err());
+
+        let reversed = query(&[
+            ("startTime", "2026-01-02 00:00:00"),
+            ("endTime", "2026-01-01 00:00:00"),
+        ]);
+        assert!(strict_time_range(&reversed, "/api/v1/large/sync/repair").is_err());
+    }
 }

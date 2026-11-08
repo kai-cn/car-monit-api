@@ -68,7 +68,7 @@ pub struct AppState {
     pub multisource: MultiSourceService,
     pub trail: TrailAggregationService,
     pub sysutil: Arc<SysUtilService>,
-    pub consumer_started: Arc<std::sync::atomic::AtomicBool>,
+    pub consumer_state: crate::mq::ConsumerState,
 }
 
 impl AppState {

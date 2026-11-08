@@ -1,0 +1,80 @@
+{
+  "settings": {
+    "number_of_shards": __NUMBER_OF_SHARDS__,
+    "number_of_replicas": __NUMBER_OF_REPLICAS__,
+    "refresh_interval": "5s",
+    "index.max_ngram_diff": 2,
+    "analysis": {
+      "analyzer": {
+        "ngram_analyzer": {
+          "type": "custom",
+          "tokenizer": "ngram_tokenizer",
+          "filter": ["lowercase"]
+        }
+      },
+      "tokenizer": {
+        "ngram_tokenizer": {
+          "type": "ngram",
+          "min_gram": 2,
+          "max_gram": 4,
+          "token_chars": ["letter", "digit"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "dynamic_date_formats": ["yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis"],
+    "properties": {
+      "big_id":          { "type": "keyword" },
+      "vehicleplate": {
+        "type": "keyword",
+        "fields": {
+          "keyword": { "type": "keyword" },
+          "ngram": { "type": "text", "analyzer": "ngram_analyzer" }
+        }
+      },
+      "gantryid":        { "type": "keyword" },
+      "gantryname": {
+        "type": "keyword",
+        "fields": {
+          "keyword": { "type": "keyword" },
+          "ngram": { "type": "text", "analyzer": "ngram_analyzer" }
+        }
+      },
+      "sectioncode":     { "type": "keyword" },
+      "sectionname": {
+        "type": "keyword",
+        "fields": {
+          "keyword": { "type": "keyword" },
+          "ngram": { "type": "text", "analyzer": "ngram_analyzer" }
+        }
+      },
+      "roadname": {
+        "type": "keyword",
+        "fields": {
+          "keyword": { "type": "keyword" },
+          "ngram": { "type": "text", "analyzer": "ngram_analyzer" }
+        }
+      },
+      "tollname": {
+        "type": "keyword",
+        "fields": {
+          "keyword": { "type": "keyword" },
+          "ngram": { "type": "text", "analyzer": "ngram_analyzer" }
+        }
+      },
+      "orgname": {
+        "type": "keyword",
+        "fields": {
+          "keyword": { "type": "keyword" },
+          "ngram": { "type": "text", "analyzer": "ngram_analyzer" }
+        }
+      },
+      "transtime":       { "type": "date", "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis" },
+      "lastgantrytime":  { "type": "date", "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis" },
+      "fee":             { "type": "double" },
+      "axlecount":       { "type": "integer" },
+      "passstate":       { "type": "keyword" }
+    }
+  }
+}

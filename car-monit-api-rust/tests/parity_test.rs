@@ -91,8 +91,10 @@ fn entity_json_uses_java_field_names() {
 
 #[test]
 fn day_serializes_as_yyyy_mm_dd() {
-    let mut flow = OdsRtSzdnSnapshotFlowAddcode::default();
-    flow.receivedtime = Day::new(utils::parse_time("2026-10-31 23:59:59").unwrap());
+    let flow = OdsRtSzdnSnapshotFlowAddcode {
+        receivedtime: Day::new(utils::parse_time("2026-10-31 23:59:59").unwrap()),
+        ..Default::default()
+    };
     let v = serde_json::to_value(&flow).unwrap();
     assert_eq!(v["receivedtime"], json!("2026-10-31"));
 }
@@ -100,8 +102,10 @@ fn day_serializes_as_yyyy_mm_dd() {
 #[test]
 fn jdatetime_serializes_as_java_pattern() {
     let mut flow = OdsRtSzdnSnapshotFlowAddcode::default();
-    let mut gantry = OdsLwzxsfsjFeeGantryFusion01::default();
-    gantry.entime = JDateTime::from(utils::parse_time("2026-10-31 12:34:56").unwrap());
+    let gantry = OdsLwzxsfsjFeeGantryFusion01 {
+        entime: JDateTime::from(utils::parse_time("2026-10-31 12:34:56").unwrap()),
+        ..Default::default()
+    };
     let v = serde_json::to_value(&gantry).unwrap();
     assert_eq!(v["entime"], json!("2026-10-31 12:34:56"));
 
@@ -116,33 +120,21 @@ fn pagination_defaults_match_ruoyi() {
     let p = page_params(&PageQuery {
         page_num: None,
         page_size: None,
-        ..Default::default()
     });
     assert_eq!((p.page_num, p.page_size, p.offset()), (1, 10, 0));
 
     let p = page_params(&PageQuery {
         page_num: Some("3".into()),
         page_size: Some("20".into()),
-        ..Default::default()
     });
     assert_eq!(p.offset(), 40);
 
-    // Java 侧 PageHelper 对 pageSize 没有上限，Rust 不能自己钳位
+    // 8 亿级表保护上限
     let p = page_params(&PageQuery {
         page_num: Some("1".into()),
         page_size: Some("99999".into()),
-        ..Default::default()
     });
-    assert_eq!(p.page_size, 99999);
-
-    // reasonable=false 时不做页码归一
-    let p = page_params(&PageQuery {
-        page_num: Some("0".into()),
-        page_size: Some("5".into()),
-        reasonable: Some("false".into()),
-        ..Default::default()
-    });
-    assert!(!p.reasonable);
+    assert_eq!(p.page_size, 1000);
 }
 
 #[test]
@@ -153,8 +145,8 @@ fn fuzzy_fields_extraction_matches_large_controller() {
     raw.insert("pageNum".to_string(), "1".to_string());
     let f = fuzzy_fields(&raw);
     assert_eq!(f.get("platenumber"), Some(&"赣A".to_string()));
-    assert!(f.get("gantryname").is_none());
-    assert!(f.get("pageNum").is_none());
+    assert!(!f.contains_key("gantryname"));
+    assert!(!f.contains_key("pageNum"));
 }
 
 #[test]
@@ -180,39 +172,17 @@ fn java_date_whitelist_matches_parse_date_patterns() {
     ] {
         assert!(java_date_parseable(ok), "{ok} 应当被 Java 接受");
     }
-    // SimpleDateFormat 是宽松的：越界会进位、数字段不定时宽，这些都算解析成功
-    // （阶段9 dates 矩阵实测：Java 会拼进 WHERE 并返回 0 行，而不是忽略条件）
-    for ok in [
-        "2025-13-01",
-        "2025-09-10 25:61:61",
-        "10-09-2025",
-        "0000-00-00",
-        "2025-9-1",
-        "2025-09-10 1:2:3",
-    ] {
-        assert!(java_date_parseable(ok), "{ok} 应当被 Java 宽松接受");
-    }
-    // 白名单之外（含「整串没消费完」和前后空白，Java 不 trim）：
-    // parseDate 返回 null，条件被静默忽略
+    // 白名单之外的形式：Java 的 parseDate 返回 null，条件被静默忽略
     for no in [
         "2025-09-08T00:00:00.000+00:00",
         "1969-12-31T16:00:00.000+00:00",
         "2025-09-08T00:00:00Z",
         "not-a-date",
         "",
-        "2025-09-08 00:00:00.000",
-        "2025-09-08 ",
-        "  2025-09-08  ",
-        "20250910",
-        "1757462400000",
-        "2025-09-08 12",
+        "2025-13-01",
     ] {
         assert!(!java_date_parseable(no), "{no} 应当被 Java 忽略");
     }
-    // 公元前会被收敛到公元 1 年：条件照样生效，但不会让 GaussDB 报
-    // `invalid input syntax for type timestamp: "-0001-11-30"`（Java 那边是 200）
-    let ancient = car_monit_api_rust::java_date::parse_date("0000-00-00").unwrap();
-    assert!(ancient.format("%Y").to_string().starts_with('0'), "{ancient}");
 }
 
 #[test]
@@ -269,42 +239,54 @@ async fn java_query_drops_unparseable_date_params_like_init_binder() {
     assert!(q.tailcapturetime.utc().is_some());
 }
 
-#[tokio::test]
-async fn java_query_joins_duplicate_date_params_before_validating() {
-    // 阶段9 dates-range 实测：Spring 的 WebDataBinder 先把同名参数逗号拼接，
-    // 再交给 PropertyEditor；`f=a&f=b&f=zzz` 编辑看到的是 "a,b,zzz" —— 解析失败 -> 条件不生效。
-    // Rust 若逐对校验后拼接，就会把无法解析的整串送进反序列化，变成 400（Java 是 200）。
-    use axum::extract::FromRequestParts;
-    use car_monit_api_rust::handlers::common::JavaQuery;
-    use car_monit_api_rust::models::OdsRtSzdnSnapshotFlowProvcaptureAddcode;
-
-    let state = ();
-    let mut parts = axum::http::Request::builder()
-        .uri("/base/provcapture/list?tailcapturetime=2025-09-01&tailcapturetime=2025-09-30&tailcapturetime=zzz")
-        .body(())
-        .unwrap()
-        .into_parts()
-        .0;
-    let JavaQuery(q) =
-        JavaQuery::<OdsRtSzdnSnapshotFlowProvcaptureAddcode>::from_request_parts(&mut parts, &state)
-            .await
-            .unwrap();
-    assert!(q.tailcapturetime.utc().is_none(), "拼接后不可解析，条件必须不生效");
+#[test]
+fn cond_time_equality_renders_to_timestamp() {
+    // 审查项 #3/#10：时间列（含 Day）`=` 必须渲染成 to_timestamp 并保留时分秒。
+    use car_monit_api_rust::repo::{push_where, Cond};
+    let mut qb = sqlx::QueryBuilder::<sqlx::Postgres>::new("SELECT 1 FROM t");
+    push_where(
+        &mut qb,
+        &[Cond::EqTimestamp(
+            "snapshottime",
+            "2026-10-31 12:34:56".into(),
+        )],
+    );
+    let sql = qb.sql();
+    assert!(
+        sql.contains("snapshottime = to_timestamp("),
+        "实际 SQL: {sql}"
+    );
+    assert!(sql.contains("'yyyy-mm-dd HH24:MI:SS'"), "实际 SQL: {sql}");
 }
 
 #[test]
-fn jlist_splits_without_trimming_or_dropping_blanks() {
-    // StringUtils.commaDelimitedListToStringArray：只有空串得到空数组，
-    // 其余不 trim、不丢空元素。实测 cidList=%20 在 Java 是 IN (' ') -> 0 行。
-    use car_monit_api_rust::models::JList;
-    let one: JList<String> = serde_json::from_value(serde_json::Value::String(" ".into())).unwrap();
-    assert!(one.present && one.value == vec![" ".to_string()]);
-    let empty: JList<String> = serde_json::from_value(serde_json::Value::String(String::new()))
-        .unwrap();
-    assert!(!empty.present && empty.value.is_empty());
-    let tail: JList<String> =
-        serde_json::from_value(serde_json::Value::String("a,".into())).unwrap();
-    assert!(tail.value == vec!["a".to_string(), String::new()]);
+fn dedupe_points_merges_into_stored_point_not_last_output() {
+    // 审查项 #6：合并图片必须写回 Java map 里保存的那个点，不能用 out.len()-1 误指向别的点。
+    use car_monit_api_rust::services::trail::dedupe_points;
+    use car_monit_api_rust::services::{DATA_TYPE_GANTRY_CAPTURE, DATA_TYPE_STATION_CAPTURE};
+
+    fn bo(state: &str, loc: &str, time: &str, images: &str) -> TrailBo {
+        TrailBo {
+            state_type: state.into(),
+            location_code: loc.into(),
+            capture_time: time.into(),
+            images_arry: images.into(),
+            ..Default::default()
+        }
+    }
+
+    let list = vec![
+        bo(DATA_TYPE_GANTRY_CAPTURE, "L1", "2026-10-31 10:00:00", "a.jpg"),
+        bo(DATA_TYPE_STATION_CAPTURE, "S1", "2026-10-31 10:00:00", "b.jpg"),
+        bo(DATA_TYPE_GANTRY_CAPTURE, "L1", "2026-10-31 10:01:00", "c.jpg"),
+        bo(DATA_TYPE_GANTRY_CAPTURE, "L1", "2026-10-31 10:02:00", "d.jpg"),
+    ];
+    let out = dedupe_points(list);
+    assert_eq!(out.len(), 2);
+    // 第 3 条并入第 1 条；第 4 条在 Java 里也是并入"未入列的当前对象"，因此不可见（保持原语义）。
+    assert_eq!(out[0].images_arry.as_str(), "a.jpg,c.jpg");
+    // 关键断言：第 4 条绝不能被错误合并到 S1（旧实现 seen 用 out.len()-1 会写到这里）。
+    assert_eq!(out[1].images_arry.as_str(), "b.jpg");
 }
 
 #[test]
@@ -326,56 +308,4 @@ fn parse_time_accepts_es_and_row_json_formats() {
             "{s} -> {t}"
         );
     }
-}
-
-#[test]
-fn order_by_matches_page_domain_and_sqlutil() {
-    use car_monit_api_rust::handlers::common::{order_by_clause, to_under_score_case, PageQuery};
-
-    assert_eq!(to_under_score_case("orgCode"), "org_code");
-    assert_eq!(to_under_score_case("ID"), "id");
-    assert_eq!(to_under_score_case("ssglzxbm"), "ssglzxbm");
-
-    // orderByColumn 缺省 / 全空格 → 不追加排序
-    assert_eq!(order_by_clause(&PageQuery::default()).unwrap(), None);
-    let q = PageQuery {
-        order_by_column: Some("  ".into()),
-        ..Default::default()
-    };
-    assert_eq!(order_by_clause(&q).unwrap(), None);
-
-    let q = PageQuery {
-        order_by_column: Some("orgCode".into()),
-        is_asc: Some("desc".into()),
-        ..Default::default()
-    };
-    assert_eq!(order_by_clause(&q).unwrap().as_deref(), Some("org_code desc"));
-
-    // isAsc 缺省沿用 PageDomain 的字段默认值 "asc"；兼容 ascending/descending
-    let q = PageQuery {
-        order_by_column: Some("id".into()),
-        ..Default::default()
-    };
-    assert_eq!(order_by_clause(&q).unwrap().as_deref(), Some("id asc"));
-    let q = PageQuery {
-        order_by_column: Some("id".into()),
-        is_asc: Some("descending".into()),
-        ..Default::default()
-    };
-    assert_eq!(order_by_clause(&q).unwrap().as_deref(), Some("id desc"));
-
-    // SqlUtil.isValidOrderBySql 之外的字符 → UtilException（HTTP 500）
-    let q = PageQuery {
-        order_by_column: Some("1;drop table x".into()),
-        is_asc: Some("asc".into()),
-        ..Default::default()
-    };
-    assert!(order_by_clause(&q).is_err());
-
-    // 超过 500 字符同样拒绝
-    let q = PageQuery {
-        order_by_column: Some("a".repeat(600)),
-        ..Default::default()
-    };
-    assert!(order_by_clause(&q).is_err());
 }

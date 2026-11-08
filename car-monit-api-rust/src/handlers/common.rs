@@ -8,7 +8,6 @@
 
 use std::collections::HashMap;
 
-use axum::extract::Request;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
@@ -24,92 +23,6 @@ pub struct PageQuery {
     pub page_num: Option<String>,
     #[serde(rename = "pageSize")]
     pub page_size: Option<String>,
-    /// 对应 TableSupport.ORDER_BY_COLUMN
-    #[serde(rename = "orderByColumn")]
-    pub order_by_column: Option<String>,
-    /// 对应 TableSupport.IS_ASC
-    #[serde(rename = "isAsc")]
-    pub is_asc: Option<String>,
-    /// 对应 TableSupport.REASONABLE（PageDomain#getReasonable 把 null 当 true）
-    pub reasonable: Option<String>,
-}
-
-/// `StringUtils.toUnderScoreCase`（pro-base-common/StringUtils.java:453-496）的逐行等价实现。
-/// 注意 Java 的 `nexteCharIsUpperCase` 在最后一个字符处不更新，沿用上一轮的值，
-/// 这里保留同样的「尾巴」语义。
-pub fn to_under_score_case(s: &str) -> String {
-    let cs: Vec<char> = s.chars().collect();
-    let mut sb = String::with_capacity(s.len() + 4);
-    // Java 里 nexteCharIsUpperCase 在最后一个字符处不更新，沿用上一轮的值，所以它必须活在循环外
-    let mut next = true;
-    for i in 0..cs.len() {
-        let c = cs[i];
-        let pre = if i > 0 { cs[i - 1].is_uppercase() } else { false };
-        let cur = c.is_uppercase();
-        if i + 1 < cs.len() {
-            next = cs[i + 1].is_uppercase();
-        }
-        if pre && cur && !next {
-            sb.push('_');
-        } else if i != 0 && !pre && cur {
-            sb.push('_');
-        }
-        sb.extend(c.to_lowercase());
-    }
-    sb
-}
-
-/// `SqlUtil.isValidOrderBySql` 的 `[a-zA-Z0-9_ .,]+`（Java 用 `String.matches`，即全串匹配）。
-fn is_valid_order_by(v: &str) -> bool {
-    !v.is_empty()
-        && v.chars().all(|c| {
-            c.is_ascii_alphanumeric() || matches!(c, '_' | ' ' | ',' | '.')
-        })
-}
-
-/// `PageDomain#setIsAsc`：空值不覆盖默认 "asc"，并兼容前端写的 ascending/descending。
-fn normalize_is_asc(raw: Option<&str>) -> String {
-    match raw {
-        None => "asc".to_string(),
-        Some(v) if v.trim().is_empty() => "asc".to_string(),
-        Some("ascending") => "asc".to_string(),
-        Some("descending") => "desc".to_string(),
-        Some(v) => v.to_string(),
-    }
-}
-
-/// `Convert.toBool` + `PageDomain#getReasonable`：解析不出来（含缺省）一律按 true。
-fn reasonable_on(raw: Option<&str>) -> bool {
-    let v = match raw {
-        None => return true,
-        Some(v) => v.trim().to_ascii_lowercase(),
-    };
-    match v.as_str() {
-        "" => true,
-        "false" | "off" | "no" | "n" | "0" => false,
-        "true" | "on" | "yes" | "y" | "1" => true,
-        other => other.parse::<f64>().map(|x| x != 0.0).unwrap_or(true),
-    }
-}
-
-/// 对应 `PageDomain#getOrderBy()` + `SqlUtil#escapeOrderBySql()`（PageUtils.java:1-40）。
-/// 返回的是「不含 ORDER BY 关键字」的排序片段，由仓库层拼进 SQL。
-/// - orderByColumn 为空/全空格 → None（Java 走 `StringUtils.isEmpty` 分支，返回 ""）
-/// - 非法字符或超过 500 字符 → UtilException，Spring 侧表现为 HTTP 500
-pub fn order_by_clause(q: &PageQuery) -> AppResult<Option<String>> {
-    let col = q.order_by_column.clone().unwrap_or_default();
-    if col.trim().is_empty() {
-        return Ok(None);
-    }
-    let asc = normalize_is_asc(q.is_asc.as_deref());
-    let composed = format!("{} {}", to_under_score_case(col.trim()), asc);
-    if !is_valid_order_by(&composed) {
-        return Err(AppError::internal("参数不符合规范，不能进行查询"));
-    }
-    if composed.chars().count() > 500 {
-        return Err(AppError::internal("参数已超过最大限制，不能进行查询"));
-    }
-    Ok(Some(composed))
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -118,8 +31,6 @@ pub struct PageParams {
     pub page_size: i64,
     /// PageHelper 语义：pageSize <= 0 时 rows 为空（total 仍为匹配总数）。
     pub empty: bool,
-    /// PageHelper `reasonable`：false 时不做页码归一/钳位。
-    pub reasonable: bool,
 }
 
 impl PageParams {
@@ -127,7 +38,7 @@ impl PageParams {
         if self.page_num <= 1 {
             0
         } else {
-            (self.page_num - 1) * self.page_size
+            (self.page_num - 1).saturating_mul(self.page_size)
         }
     }
 
@@ -135,9 +46,6 @@ impl PageParams {
     /// pageNum < 1 归 1；pageNum 超过总页数时钳位到最后一页（不是返回空行）。
     /// 因为钳位依赖总数，调用方需要先 count 再取 offset（与 PageHelper 先 count 后取数一致）。
     pub fn offset_for(&self, total: i64) -> i64 {
-        if !self.reasonable {
-            return self.offset();
-        }
         let mut num = self.page_num.max(1);
         if self.page_size > 0 {
             let pages = (total + self.page_size - 1) / self.page_size;
@@ -145,42 +53,51 @@ impl PageParams {
                 num = pages;
             }
         }
-        (num - 1) * self.page_size
+        (num - 1).saturating_mul(self.page_size)
     }
 }
 
+/// pageNum 上限：防止 (pageNum-1)*pageSize 溢出，也避免下游把 offset 转 i32 时回绕。
+pub const MAX_PAGE_NUM: i64 = 10_000_000;
+/// pageSize 上限：全局限流式保护，所有列表接口单页最多 1000 行。
+pub const MAX_PAGE_SIZE: i64 = 1000;
+
 /// 对应 BaseController.startPage()：默认 pageNum=1、pageSize=10。
 pub fn page_params(q: &PageQuery) -> PageParams {
-    let raw_num = q.page_num.as_deref().and_then(|v| v.trim().parse::<i64>().ok());
-    let page_num = raw_num.filter(|n| *n > 0).unwrap_or(1);
+    let page_num = q
+        .page_num
+        .as_deref()
+        .and_then(|v| v.trim().parse::<i64>().ok())
+        // PARITY: Java 用 Convert.toInt（Integer），超出 int 范围视为非法 -> 默认 1
+        .filter(|n| *n > 0 && *n <= i32::MAX as i64)
+        .map(|n| n.min(MAX_PAGE_NUM))
+        .unwrap_or(1);
     let parsed_size = q
         .page_size
         .as_deref()
         .and_then(|v| v.trim().parse::<i64>().ok());
-    let reasonable = reasonable_on(q.reasonable.as_deref());
-    // PageHelper 语义（实测）：pageSize<=0 → 空行；
-    // reasonable=false 且 pageNum<1 → 也是空行（total 仍为匹配总数），
-    // 而 reasonable=true（默认）会把 pageNum<1 归一到第 1 页。
-    let empty = matches!(parsed_size, Some(n) if n <= 0)
-        || (!reasonable && matches!(raw_num, Some(n) if n < 1));
-    let page_size = parsed_size.filter(|n| *n > 0).unwrap_or(10);
-    // 注意：Java 侧 PageHelper 对 pageSize 没有上限（只有 reasonable 归一化），
-    // 曾在此处加过 1000 的保护钳位，导致 pageSize=2000 时双端行数不同，已移除。
+    let empty = matches!(parsed_size, Some(n) if n <= 0);
+    let mut page_size = parsed_size.filter(|n| *n > 0).unwrap_or(10);
+    // 统一保护上限：所有列表接口单页最多 1000 行（与 Go 版一致，避免一次拉全表）。
+    if page_size > MAX_PAGE_SIZE {
+        page_size = MAX_PAGE_SIZE;
+    }
     PageParams {
         page_num,
         page_size,
         empty,
-        reasonable,
     }
 }
 
 /// 对应 `@RequestParam String startTime/endTime` 的必填校验。
+/// `startTime=+` 会被解码成一个空格：只判 `is_empty` 会放行，随后 `parse_time("")`
+/// 返回 epoch 0，查询从 1970 年开始。这里必须按 trim 后是否为空判定。
 pub fn require_time_range(start: &str, end: &str) -> AppResult<()> {
     let mut missing = Vec::new();
-    if start.is_empty() {
+    if start.trim().is_empty() {
         missing.push("startTime");
     }
-    if end.is_empty() {
+    if end.trim().is_empty() {
         missing.push("endTime");
     }
     if missing.is_empty() {
@@ -247,15 +164,50 @@ pub fn biz_map_error(message: impl Into<String>) -> Response {
 // Java 的日期参数白名单绑定
 // ============================================================
 
-/// `DateUtils.parsePatterns`（pro-base-common/DateUtils.java:28-31）的等价实现见
-/// `crate::java_date`：12 种模式、SimpleDateFormat 的宽松进位、贪婪数字段、整串消费，
-/// 且**不做 trim**（`"  2025-09-10  "` 在 Java 是解析失败，条件不生效）。
-///
-/// Java 的 `BaseController.initBinder` 用这 12 种模式解析所有 `java.util.Date` 查询参数；
-/// 不匹配时 `parseDate` 返回 null，对应的 `<if test="x != null">` 条件根本不会拼进 SQL
-/// —— 也就是「过滤条件被静默忽略」，HTTP 仍然 200。
+/// `DateUtils.parsePatterns`（pro-base-common/DateUtils.java:28-31）。
+/// Java 的 `BaseController.initBinder` 用这 12 种模式解析所有 `java.util.Date` 查询参数，
+/// 且要求整串匹配；不匹配时 `parseDate` 返回 null，对应的 `<if test="x != null">` 条件
+/// 根本不会拼进 SQL —— 也就是「过滤条件被静默忽略」，HTTP 仍然 200。
+const JAVA_DATE_PATTERNS: &[&str] = &[
+    "%Y-%m-%d %H:%M:%S",
+    "%Y-%m-%d %H:%M",
+    "%Y-%m-%d",
+    "%Y/%m/%d %H:%M:%S",
+    "%Y/%m/%d %H:%M",
+    "%Y/%m/%d",
+    "%Y.%m.%d %H:%M:%S",
+    "%Y.%m.%d %H:%M",
+    "%Y.%m.%d",
+];
+
+/// 对应 `DateUtils.parseDate(String)` 的成功/失败判定（不做时区换算，只判断能否解析）。
 pub fn java_date_parseable(s: &str) -> bool {
-    crate::java_date::parseable(s)
+    use chrono::{NaiveDate, NaiveDateTime};
+    let s = s.trim();
+    if s.is_empty() {
+        return false;
+    }
+    for f in JAVA_DATE_PATTERNS {
+        if NaiveDateTime::parse_from_str(s, f).is_ok() || NaiveDate::parse_from_str(s, f).is_ok() {
+            return true;
+        }
+    }
+    // yyyy-MM / yyyy/MM / yyyy.MM：只到年份+月份
+    for sep in ['-', '/', '.'] {
+        if let Some(pos) = s.find(sep) {
+            let (y, m) = (&s[..pos], &s[pos + 1..]);
+            if y.len() == 4
+                && matches!(m.len(), 1 | 2)
+                && y.parse::<i32>().is_ok()
+                && m.parse::<u32>()
+                    .map(|v| (1..=12).contains(&v))
+                    .unwrap_or(false)
+            {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 fn percent_decode(s: &str) -> String {
@@ -314,24 +266,22 @@ pub struct JavaQuery<T>(pub T);
 
 impl<T, S> axum::extract::FromRequestParts<S> for JavaQuery<T>
 where
-    T: serde::de::DeserializeOwned + crate::models::JavaDateFields + crate::models::JavaIndexedFields,
+    T: serde::de::DeserializeOwned + crate::models::JavaDateFields,
     S: Send + Sync,
 {
-    type Rejection = AppError;
+    type Rejection = SpringQueryRejection;
 
     async fn from_request_parts(
         parts: &mut axum::http::request::Parts,
         state: &S,
     ) -> Result<Self, Self::Rejection> {
         let raw = parts.uri.query().unwrap_or_default().to_string();
-        // PARITY: 绑定前先按 Java 的规则整理查询串
-        //  1) 同名参数重复出现时，Spring 的 WebDataBinder 用逗号拼成一个值再交给编辑器
+        // PARITY: 绑定前做两件事，都与 Java 对齐
+        //  1) 同名参数重复出现时，Spring 把它们用逗号拼成一个值再绑定
         //     （实测 `platenumber=%&platenumber=%` 在 Java 变成 `%,%` → LIKE 不命中；
         //      Rust 走 serde_urlencoded 会当重复字段直接 400）；
         //  2) Date 字段只认 DateUtils.parseDate 的 12 种模式，解析失败要像 Spring 的
         //     PropertyEditor 那样把参数丢掉（条件不生效），而不是报错。
-        //     判定必须发生在拼接**之后**：`f=2025-09-01&f=2025-09-30&f=zzz` 交给编辑器的
-        //     是 `2025-09-01,2025-09-30,zzz` 这一整串，Java 解析失败 → 条件不生效 → 200。
         let mut kept: Vec<(String, String)> = Vec::new(); // (原始键, 已拼接的值)
         for pair in raw.split('&').filter(|p| !p.is_empty()) {
             let (k, v) = match pair.split_once('=') {
@@ -339,19 +289,10 @@ where
                 None => (pair, ""),
             };
             let key = percent_decode(k);
-            // Spring 的 BeanWrapper：`x[y]=v` 只有当 x 是 Map/List/数组才合法，
-            // 否则 InvalidPropertyException → 500；x 完全不存在时才是「未知属性」→ 忽略。
-            if let Some(pos) = key.find('[') {
-                let root = &key[..pos];
-                if <T as crate::models::JavaIndexedFields>::JAVA_INDEXED_FIELDS
-                    .iter()
-                    .any(|f| *f == root)
-                {
-                    return Err(AppError::internal(format!(
-                        "Invalid property '{}' of bean class",
-                        key
-                    )));
-                }
+            let date_field = <T as crate::models::JavaDateFields>::JAVA_DATE_FIELDS
+                .contains(&key.as_str());
+            if date_field && !java_date_parseable(&percent_decode(v)) {
+                continue;
             }
             if let Some(slot) = kept.iter_mut().find(|(ek, _)| ek == k) {
                 slot.1.push(',');
@@ -360,13 +301,6 @@ where
                 kept.push((k.to_string(), v.to_string()));
             }
         }
-        kept.retain(|(k, v)| {
-            let name = percent_decode(k);
-            let date_field = <T as crate::models::JavaDateFields>::JAVA_DATE_FIELDS
-                .iter()
-                .any(|f| *f == name.as_str());
-            !date_field || java_date_parseable(&percent_decode(v))
-        });
         let kept: Vec<String> = kept
             .into_iter()
             .map(|(k, v)| {
@@ -385,138 +319,43 @@ where
         }
         let q = axum::extract::Query::<T>::from_request_parts(parts, state)
             .await
-            .map_err(|e| AppError::bad_request(e.to_string()))?;
+            .map_err(SpringQueryRejection)?;
         Ok(JavaQuery(q.0))
     }
 }
 
-// ============================================================
-// 请求体绑定：对应 Spring 的 HttpMessageNotReadableException
-// ============================================================
+#[cfg(test)]
+mod tests {
+    use super::{page_params, require_time_range, PageQuery, MAX_PAGE_NUM};
 
-/// Spring 侧请求体不可读时的响应：HTTP 400 + `/error` 的 JSON 体（message 为空串）。
-/// axum 默认给 `text/plain` 的 "Failed to parse the request body as JSON: ..."，
-/// 且类型不符时是 422，两处都会让契约比对失败。
-fn body_not_readable() -> Response {
-    spring_body_error(StatusCode::BAD_REQUEST)
-}
-
-/// 状态码跟随 Spring：请求体类型不符 400、Content-Type 不支持 415。
-fn spring_body_error(status: StatusCode) -> Response {
-    let path = crate::middleware::CURRENT_PATH
-        .try_with(|p| p.clone())
-        .unwrap_or_default();
-    let error = status.canonical_reason().unwrap_or("Bad Request");
-    json_status(
-        status,
-        crate::router::spring_error(status, error, &path),
-    )
-}
-
-/// Spring 的 `@RequestBody` 允许「不带 Content-Type」（此时按可读性挑转换器），
-/// 但显式的非 JSON 类型一定 415。
-fn content_type_accepts_json(req: &Request) -> bool {
-    match req
-        .headers()
-        .get(axum::http::header::CONTENT_TYPE)
-        .and_then(|v| v.to_str().ok())
-    {
-        None => true,
-        Some(raw) => {
-            let t = raw
-                .split(';')
-                .next()
-                .unwrap_or("")
-                .trim()
-                .to_ascii_lowercase();
-            t.is_empty()
-                || t == "application/json"
-                || t == "application/*+json"
-                || t.ends_with("+json")
-        }
+    #[test]
+    fn require_time_range_rejects_whitespace_only() {
+        // `startTime=+` 解码成空格：不能当成"已提供"。
+        assert!(require_time_range(" ", "2026-01-01 00:00:00").is_err());
+        assert!(require_time_range("2026-01-01 00:00:00", "\t").is_err());
+        assert!(require_time_range("2026-01-01 00:00:00", "2026-01-02 00:00:00").is_ok());
     }
-}
 
-/// 对应 `@RequestBody T x`（required = true）：缺失/空/非法/类型不符都按 Spring 走 400。
-pub struct SpringJson<T>(pub T);
-
-impl<T, S> axum::extract::FromRequest<S> for SpringJson<T>
-where
-    T: serde::de::DeserializeOwned + Send,
-    S: Send + Sync,
-{
-    type Rejection = Response;
-
-    async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
-        let expect = if content_type_accepts_json(&req) {
-            StatusCode::BAD_REQUEST
-        } else {
-            StatusCode::UNSUPPORTED_MEDIA_TYPE
+    #[test]
+    fn page_params_clamps_page_num_above_cap() {
+        // i32 范围以内但超过 MAX_PAGE_NUM：钳到上限。
+        let q = PageQuery {
+            page_num: Some("2000000000".to_string()),
+            page_size: Some("20".into()),
         };
-        let bad = |e: axum::extract::rejection::JsonRejection| {
-            spring_body_error(if e.status() == StatusCode::UNSUPPORTED_MEDIA_TYPE {
-                StatusCode::UNSUPPORTED_MEDIA_TYPE
-            } else {
-                expect
-            })
-        };
-        // Jackson 只把 JSON **对象**绑定成 bean；`[]`/`{}` 之外的标量、数组都会
-        // HttpMessageNotReadableException(400)。serde 默认允许「用数组按顺序填结构体字段」，
-        // 所以这里先落到 Value 再把非对象拒掉（实测 Java `[]` → 400，Rust 修复前 → 200）。
-        let Json(value) = axum::extract::Json::<serde_json::Value>::from_request(req, state)
-            .await
-            .map_err(bad)?;
-        if !value.is_object() {
-            return Err(spring_body_error(StatusCode::BAD_REQUEST));
-        }
-        let v: T = serde_json::from_value(value).map_err(|_| spring_body_error(StatusCode::BAD_REQUEST))?;
-        Ok(SpringJson(v))
+        let p = page_params(&q);
+        assert_eq!(p.page_num, MAX_PAGE_NUM);
+        assert_eq!(p.offset(), (MAX_PAGE_NUM - 1).saturating_mul(20));
+        assert!(!p.empty);
     }
-}
 
-/// 对应 `@RequestBody(required = false) Map<String, String> fuzzyFields`：
-/// 无请求体或空体 → 空 Map；JSON 非对象 / 值非标量 → 400。
-/// 数字与布尔按 Jackson 的宽松标量强转成字符串，null 值在 Java 侧会被 isNotBlank 跳过，
-/// 这里等价地丢弃。
-pub struct SpringStringMap(pub HashMap<String, String>);
-
-impl<S> axum::extract::FromRequest<S> for SpringStringMap
-where
-    S: Send + Sync,
-{
-    type Rejection = Response;
-
-    async fn from_request(req: Request, _state: &S) -> Result<Self, Self::Rejection> {
-        if !content_type_accepts_json(&req) {
-            return Err(spring_body_error(StatusCode::UNSUPPORTED_MEDIA_TYPE));
-        }
-        let bytes = axum::body::Bytes::from_request(req, _state)
-            .await
-            .map_err(|_| body_not_readable())?;
-        if String::from_utf8_lossy(&bytes).trim().is_empty() {
-            return Ok(SpringStringMap(HashMap::new()));
-        }
-        let value: serde_json::Value =
-            serde_json::from_slice(&bytes).map_err(|_| body_not_readable())?;
-        let serde_json::Value::Object(map) = value else {
-            return Err(body_not_readable());
+    #[test]
+    fn page_params_falls_back_for_int_overflow_page_num() {
+        // 超过 i32::MAX 与 Java Convert.toInt 一致：视为非法，回退第 1 页。
+        let q = PageQuery {
+            page_num: Some(i64::MAX.to_string()),
+            page_size: Some("20".into()),
         };
-        let mut out = HashMap::new();
-        for (k, v) in map {
-            match v {
-                Value::String(s) => {
-                    out.insert(k, s);
-                }
-                Value::Number(n) => {
-                    out.insert(k, n.to_string());
-                }
-                Value::Bool(b) => {
-                    out.insert(k, b.to_string());
-                }
-                Value::Null => {}
-                _ => return Err(body_not_readable()),
-            }
-        }
-        Ok(SpringStringMap(out))
+        assert_eq!(page_params(&q).page_num, 1);
     }
 }

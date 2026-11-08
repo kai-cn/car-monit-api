@@ -145,7 +145,7 @@ pub fn row_to_json(row: &PgRow) -> serde_json::Value {
     for (i, col) in row.columns().iter().enumerate() {
         let name = <sqlx::postgres::PgColumn as sqlx::Column>::name(col);
         let type_info = <sqlx::postgres::PgColumn as sqlx::Column>::type_info(col);
-        let type_name = <sqlx::postgres::PgTypeInfo as sqlx::TypeInfo>::name(&type_info);
+        let type_name = <sqlx::postgres::PgTypeInfo as sqlx::TypeInfo>::name(type_info);
         let v = match type_name {
             "BOOL" => row
                 .try_get::<Option<bool>, _>(i)

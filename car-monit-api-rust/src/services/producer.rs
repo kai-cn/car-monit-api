@@ -77,8 +77,9 @@ impl KafkaProducerService {
                     RETRY_ERROR_BACKOFF_SECS
                 };
                 tokio::select! {
-                    _ = stop.changed() => {
-                        if *stop.borrow() { return; }
+                    r = stop.changed() => {
+                        // Err = Sender 已 drop，按停机处理，避免 borrow() 仍 false 时忙循环。
+                        if r.is_err() || *stop.borrow() { return; }
                     }
                     _ = tokio::time::sleep(Duration::from_secs(wait)) => {}
                 }

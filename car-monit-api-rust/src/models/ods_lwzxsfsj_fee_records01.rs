@@ -23,13 +23,13 @@ pub struct OdsLwzxsfsjFeeRecords01 {
     #[sqlx(default)]
     pub axlecount: JLong,
     #[sqlx(default)]
-    pub balanceafter: JDecimal,
+    pub balanceafter: JFloat,
     #[sqlx(default)]
-    pub balancebefore: JDecimal,
+    pub balancebefore: JFloat,
     #[sqlx(default)]
-    pub cardfeesumafter: JDecimal,
+    pub cardfeesumafter: JFloat,
     #[sqlx(default)]
-    pub cardfeesumbefore: JDecimal,
+    pub cardfeesumbefore: JFloat,
     #[sqlx(default)]
     pub computerorder: JString,
     #[sqlx(default)]
@@ -55,7 +55,7 @@ pub struct OdsLwzxsfsjFeeRecords01 {
     #[sqlx(default)]
     pub dealstatus: JString,
     #[sqlx(default)]
-    pub discountfee: JDecimal,
+    pub discountfee: JFloat,
     #[sqlx(default)]
     pub discountfeegroup: JString,
     #[sqlx(default)]
@@ -67,7 +67,7 @@ pub struct OdsLwzxsfsjFeeRecords01 {
     #[sqlx(default)]
     pub entollstationhex: JString,
     #[sqlx(default)]
-    pub fee: JDecimal,
+    pub fee: JFloat,
     #[sqlx(default)]
     pub feecalcresult: JString,
     #[sqlx(default)]
@@ -83,7 +83,7 @@ pub struct OdsLwzxsfsjFeeRecords01 {
     #[sqlx(default)]
     pub feeinfo3: JString,
     #[sqlx(default)]
-    pub feemileage: JDecimal,
+    pub feemileage: JFloat,
     #[sqlx(default)]
     pub feeprovbeginhex: JString,
     #[sqlx(default)]
@@ -125,9 +125,9 @@ pub struct OdsLwzxsfsjFeeRecords01 {
     #[sqlx(default)]
     pub obuenddate: JString,
     #[sqlx(default)]
-    pub obufeesumafter: JDecimal,
+    pub obufeesumafter: JFloat,
     #[sqlx(default)]
-    pub obufeesumbefore: JDecimal,
+    pub obufeesumbefore: JFloat,
     #[sqlx(default)]
     pub obuinfotyperead: JString,
     #[sqlx(default)]
@@ -141,23 +141,23 @@ pub struct OdsLwzxsfsjFeeRecords01 {
     #[sqlx(default)]
     pub obumac: JString,
     #[sqlx(default)]
-    pub obumileageafter: JDecimal,
+    pub obumileageafter: JFloat,
     #[sqlx(default)]
-    pub obumileagebefore: JDecimal,
+    pub obumileagebefore: JFloat,
     #[sqlx(default)]
     pub obupassstate: JString,
     #[sqlx(default)]
-    pub obupayfeesumafter: JDecimal,
+    pub obupayfeesumafter: JFloat,
     #[sqlx(default)]
-    pub obupayfeesumbefore: JDecimal,
+    pub obupayfeesumbefore: JFloat,
     #[sqlx(default)]
-    pub obuprovfeesumafter: JDecimal,
+    pub obuprovfeesumafter: JFloat,
     #[sqlx(default)]
-    pub obuprovfeesumbefore: JDecimal,
+    pub obuprovfeesumbefore: JFloat,
     #[sqlx(default)]
-    pub obuprovpayfeesumafter: JDecimal,
+    pub obuprovpayfeesumafter: JFloat,
     #[sqlx(default)]
-    pub obuprovpayfeesumbefore: JDecimal,
+    pub obuprovpayfeesumbefore: JFloat,
     #[sqlx(default)]
     pub obuprovtradesuccnumafter: JLong,
     #[sqlx(default)]
@@ -191,13 +191,13 @@ pub struct OdsLwzxsfsjFeeRecords01 {
     #[sqlx(default)]
     pub pathfitflag: JString,
     #[sqlx(default)]
-    pub payfee: JDecimal,
+    pub payfee: JFloat,
     #[sqlx(default)]
     pub payfeegroup: JString,
     #[sqlx(default)]
     pub pcrsuversion: JString,
     #[sqlx(default)]
-    pub provminfee: JDecimal,
+    pub provminfee: JFloat,
     #[sqlx(default)]
     pub provincenumafter: JLong,
     #[sqlx(default)]
@@ -233,7 +233,7 @@ pub struct OdsLwzxsfsjFeeRecords01 {
     #[sqlx(default)]
     pub tollintervalsign: JString,
     #[sqlx(default)]
-    pub totalweight: JDecimal,
+    pub totalweight: JFloat,
     #[sqlx(default)]
     pub tradeid: JString,
     #[sqlx(default)]
@@ -245,7 +245,7 @@ pub struct OdsLwzxsfsjFeeRecords01 {
     #[sqlx(default)]
     pub tradewriteciphertext: JString,
     #[sqlx(default)]
-    pub transfee: JDecimal,
+    pub transfee: JFloat,
     #[sqlx(default)]
     pub transno: JString,
     #[sqlx(default)]
@@ -257,9 +257,9 @@ pub struct OdsLwzxsfsjFeeRecords01 {
     #[sqlx(default)]
     pub vehicleclass: JString,
     #[sqlx(default)]
-    pub vehiclehight: JDecimal,
+    pub vehiclehight: JFloat,
     #[sqlx(default)]
-    pub vehiclelength: JDecimal,
+    pub vehiclelength: JFloat,
     #[sqlx(default)]
     pub vehicleplate: JString,
     #[sqlx(default)]
@@ -271,7 +271,7 @@ pub struct OdsLwzxsfsjFeeRecords01 {
     #[sqlx(default)]
     pub vehicleusertype: JString,
     #[sqlx(default)]
-    pub vehiclewidth: JDecimal,
+    pub vehiclewidth: JFloat,
     #[sqlx(default)]
     pub verifycode: JString,
     #[sqlx(default)]

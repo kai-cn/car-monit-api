@@ -9,18 +9,20 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use serde_json::{json, Value};
-use tokio::sync::{RwLock, Semaphore};
-use tracing::info;
+use tokio::sync::{Mutex, RwLock, Semaphore};
+use tracing::{info, warn};
 use uuid::Uuid;
 
+use crate::cache::Cache;
 use crate::config::OptimizationConfig;
 use crate::error::{AppError, AppResult};
 use crate::es::{build_fuzzy_query, extract_hits, total_hits, EsClient};
 use crate::services::export::{
-    now_ms, stringify, ExportTaskStatus, TASK_COMPLETED, TASK_FAILED, TASK_PENDING, TASK_RUNNING,
+    load_task, now_ms, persist_task, stringify, ExportTaskStatus, TASK_COMPLETED, TASK_FAILED,
+    TASK_PENDING, TASK_RUNNING,
 };
 use crate::services::query::{DataSource, QueryService};
 
@@ -43,17 +45,28 @@ pub struct LargeScaleQueryService {
     query: QueryService,
     cfg: OptimizationConfig,
     tasks: Arc<RwLock<HashMap<String, ExportTaskStatus>>>,
+    /// 多副本：任务状态镜像到 Redis。
+    store: Option<Cache>,
     sem: Arc<Semaphore>,
+    /// 在途导出的 JoinHandle：关闭时在宽限期内 join。
+    handles: Arc<Mutex<Vec<tokio::task::JoinHandle<()>>>>,
 }
 
 impl LargeScaleQueryService {
-    pub fn new(es: Option<EsClient>, query: QueryService, cfg: OptimizationConfig) -> Self {
+    pub fn new(
+        es: Option<EsClient>,
+        query: QueryService,
+        cfg: OptimizationConfig,
+        store: Option<Cache>,
+    ) -> Self {
         Self {
             es,
             query,
             cfg,
             tasks: Arc::new(RwLock::new(HashMap::new())),
+            store,
             sem: Arc::new(Semaphore::new(4)),
+            handles: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -101,7 +114,8 @@ impl LargeScaleQueryService {
             .map(|(k, v)| build_fuzzy_query(k, v))
             .collect();
         let body = json!({
-            "from": (page_num - 1) * page_size,
+            // 饱和乘法：即使调用方绕过 handlers 钳制，也不能在 debug 下 panic / release 下回绕。
+            "from": page_num.saturating_sub(1).saturating_mul(page_size),
             "size": page_size,
             "query": { "bool": { "filter": filters, "must": must } },
             "sort": [ { target.time_field: { "order": "desc" } } ],
@@ -124,6 +138,8 @@ impl LargeScaleQueryService {
         Ok(rows)
     }
 
+    // 参数与 Java aggregationStats(...) 的签名逐项对应，保留以便对照。
+    #[allow(clippy::too_many_arguments)]
     pub async fn aggregation_stats(
         &self,
         ds: DataSource,
@@ -203,28 +219,53 @@ impl LargeScaleQueryService {
             submit_time: now_ms(),
             ..Default::default()
         };
-        self.tasks.write().await.insert(task_id.clone(), st);
+        self.tasks.write().await.insert(task_id.clone(), st.clone());
+        persist_task(&self.store, &st).await;
         let this = self.clone();
         let id = task_id.clone();
         let start = start_time.to_string();
         let end = end_time.to_string();
-        tokio::spawn(async move {
+        let handle = tokio::spawn(async move {
             let _permit = this.sem.acquire().await;
             let result = this.detail_export(&id, ds, &start, &end, &fuzzy).await;
-            let mut map = this.tasks.write().await;
-            if let Some(st) = map.get_mut(&id) {
-                if let Err(e) = result {
-                    st.status = TASK_FAILED.into();
-                    st.finish_time = Some(now_ms());
-                    st.error_message = Some(e);
+            let failed = {
+                let mut map = this.tasks.write().await;
+                match (map.get_mut(&id), result) {
+                    (Some(st), Err(e)) => {
+                        st.status = TASK_FAILED.into();
+                        st.finish_time = Some(now_ms());
+                        st.error_message = Some(e);
+                        Some(st.clone())
+                    }
+                    _ => None,
                 }
+            };
+            // 多副本：失败状态同步到 Redis。
+            if let Some(st) = failed {
+                persist_task(&this.store, &st).await;
             }
         });
+        let mut hs = self.handles.lock().await;
+        hs.retain(|h| !h.is_finished());
+        hs.push(handle);
         Ok(task_id)
     }
 
     pub async fn get_export_status(&self, task_id: &str) -> Option<ExportTaskStatus> {
-        self.tasks.read().await.get(task_id).cloned()
+        if let Some(st) = self.tasks.read().await.get(task_id) {
+            return Some(st.clone());
+        }
+        load_task(&self.store, task_id).await
+    }
+
+    /// S4：清理过期的内存任务状态（文件由 ExportService 统一清理）。
+    pub async fn clean_expired_tasks(&self, max_age: Duration) {
+        let cutoff = now_ms() - max_age.as_millis() as i64;
+        let mut map = self.tasks.write().await;
+        map.retain(|_, st| {
+            let finished = st.status == TASK_COMPLETED || st.status == TASK_FAILED;
+            !(finished && st.finish_time.map(|t| t < cutoff).unwrap_or(false))
+        });
     }
 
     async fn detail_export(
@@ -345,12 +386,18 @@ impl LargeScaleQueryService {
             w.flush().map_err(|e| e.to_string())?;
         }
         let _ = es.clear_scroll(&scroll_id).await;
-        let mut map = self.tasks.write().await;
-        if let Some(st) = map.get_mut(task_id) {
-            st.status = TASK_COMPLETED.into();
-            st.finish_time = Some(now_ms());
-            st.total_exported = total;
-            st.file_part_count = part;
+        let snapshot = {
+            let mut map = self.tasks.write().await;
+            map.get_mut(task_id).map(|st| {
+                st.status = TASK_COMPLETED.into();
+                st.finish_time = Some(now_ms());
+                st.total_exported = total;
+                st.file_part_count = part;
+                st.clone()
+            })
+        };
+        if let Some(st) = snapshot {
+            persist_task(&self.store, &st).await;
         }
         Ok(())
     }
@@ -370,20 +417,86 @@ impl LargeScaleQueryService {
     }
 
     async fn set_status(&self, task_id: &str, status: &str) {
-        if let Some(st) = self.tasks.write().await.get_mut(task_id) {
-            st.status = status.into();
+        let snapshot = {
+            let mut map = self.tasks.write().await;
+            map.get_mut(task_id).map(|st| {
+                st.status = status.into();
+                st.clone()
+            })
+        };
+        if let Some(st) = snapshot {
+            persist_task(&self.store, &st).await;
         }
     }
 
     async fn add_progress(&self, task_id: &str, delta: i64, parts: usize) {
-        if let Some(st) = self.tasks.write().await.get_mut(task_id) {
-            st.total_exported += delta;
-            st.file_part_count = parts;
+        let snapshot = {
+            let mut map = self.tasks.write().await;
+            map.get_mut(task_id).map(|st| {
+                st.total_exported += delta;
+                st.file_part_count = parts;
+                st.clone()
+            })
+        };
+        if let Some(st) = snapshot {
+            persist_task(&self.store, &st).await;
         }
     }
 
-    pub async fn close(&self) {
-        let _ = self.sem.acquire_many(4).await;
+    /// 关闭：在宽限期内 join 所有在途任务；超时则**显式 abort** 剩余任务，
+    /// 避免任务 detach 后与随后的 db.close() 并发写库。
+    pub async fn close(&self, grace: Duration) -> bool {
+        let mut handles: Vec<tokio::task::JoinHandle<()>> = {
+            let mut hs = self.handles.lock().await;
+            std::mem::take(&mut *hs)
+        };
+        if handles.is_empty() {
+            return true;
+        }
+        info!(
+            tasks = handles.len(),
+            grace_seconds = grace.as_secs(),
+            "[大查询导出] 等待后台任务结束"
+        );
+        let aborts: Vec<tokio::task::AbortHandle> =
+            handles.iter().map(|h| h.abort_handle()).collect();
+        // 超时后先 abort 再 join（500ms 上限），确保 task 真正停在 await 点，
+        // 避免 close 返回后仍与 db.close() 并发写库。
+        let wait_all = async {
+            for h in handles.iter_mut() {
+                let _ = h.await;
+            }
+        };
+        match tokio::time::timeout(grace, wait_all).await {
+            Ok(_) => true,
+            Err(_) => {
+                for a in &aborts {
+                    a.abort();
+                }
+                let drain = async {
+                    for h in handles.iter_mut() {
+                        let _ = h.await;
+                    }
+                };
+                // 500ms 是"放弃等待"上限，不是"确保停止"：取消只能在下一次 await 点生效，
+                // 同步 CSV/文件写入段落最长会再延后一次写盘。
+                if tokio::time::timeout(Duration::from_millis(500), drain)
+                    .await
+                    .is_err()
+                {
+                    warn!(
+                        tasks = aborts.len(),
+                        "[大查询导出] abort 已发出，但 500ms 内任务仍停在同步 I/O；最长再延后一次写盘"
+                    );
+                }
+                warn!(
+                    tasks = aborts.len(),
+                    grace_seconds = grace.as_secs(),
+                    "[大查询导出] 宽限期内仍有任务未结束，已中止剩余任务"
+                );
+                false
+            }
+        }
     }
 }
 

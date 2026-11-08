@@ -164,7 +164,7 @@ impl DelayMonitorService {
     async fn trigger_alert(&self, alert_type: &str, target_id: &str, actual: i64, threshold: i64) {
         let Some(c) = &self.cache else { return };
         let key = format!("{}{}:{}", ALERT_COUNT_PREFIX, alert_type, target_id);
-        match c
+        if let Ok(true) = c
             .set_nx(
                 &key,
                 now_ms().to_string(),
@@ -172,11 +172,10 @@ impl DelayMonitorService {
             )
             .await
         {
-            Ok(true) => error!(
+            error!(
                 alert_type,
                 target_id, actual, threshold, "[延迟监控告警] 延迟超过阈值"
-            ),
-            _ => {}
+            );
         }
     }
 

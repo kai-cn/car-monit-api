@@ -43,36 +43,36 @@ pub struct ZdataTrailTracks {
     #[sqlx(skip)]
     #[serde(rename = "trackJosn")]
     pub track_josn: JString,
-    #[sqlx(default)]
+    #[sqlx(skip)]
     pub enaxlecount: JInt,
-    #[sqlx(default)]
+    #[sqlx(skip)]
     pub entolllaneid: JString,
-    #[sqlx(default)]
+    #[sqlx(skip)]
     pub entollstationid: JString,
-    #[sqlx(default)]
+    #[sqlx(skip)]
     pub entollstationname: JString,
-    #[sqlx(default)]
+    #[sqlx(skip)]
     pub envehicleclass: JString,
-    #[sqlx(default)]
+    #[sqlx(skip)]
     pub envehicleid: JString,
-    #[sqlx(default)]
+    #[sqlx(skip)]
     pub envehicletype: JString,
-    #[sqlx(default)]
-    pub enweight: JDecimal,
-    #[sqlx(default)]
+    #[sqlx(skip)]
+    pub enweight: JFloat,
+    #[sqlx(skip)]
     pub extolllaneid: JString,
-    #[sqlx(default)]
+    #[sqlx(skip)]
     pub extollstationid: JString,
-    #[sqlx(default)]
+    #[sqlx(skip)]
     pub extollstationname: JString,
-    #[sqlx(default)]
+    #[sqlx(skip)]
     pub exvehicleclass: JString,
-    #[sqlx(default)]
+    #[sqlx(skip)]
     pub exvehicleid: JString,
-    #[sqlx(default)]
+    #[sqlx(skip)]
     pub exvehicletype: JString,
-    #[sqlx(default)]
-    pub exweight: JDecimal,
+    #[sqlx(skip)]
+    pub exweight: JFloat,
     #[sqlx(skip)]
     #[serde(rename = "startLon")]
     pub start_lon: JString,

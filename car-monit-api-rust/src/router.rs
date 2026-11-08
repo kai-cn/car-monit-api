@@ -35,20 +35,30 @@ pub fn build(state: Arc<AppState>) -> Router {
     } else {
         Router::new().nest(&state.cfg.server.context_path, r)
     };
-    // axum 的 Router::layer 只包住「此前已注册」的路由与兜底，所以兜底要先挂上
-    let r = r
-        .fallback(not_found)
-        .method_not_allowed_fallback(method_not_allowed);
-    // axum 的 Router::layer 只包住「此前已注册」的路由与兜底，所以兜底要先挂上。
-    // 注意：路径归一化必须发生在路由匹配之前，因此 spring_negotiation 由 main.rs
-    // 用 ServiceBuilder 套在整个 Router 外面，不在这里。
-    let r = r
-        .fallback(not_found)
-        .method_not_allowed_fallback(method_not_allowed);
-    r.layer(axum::middleware::from_fn(middleware::request_id_and_log))
+    r
+        // 注意顺序：axum 的 layer 后加的在最外层。request_id/日志/指标必须在最外层，
+        // 否则 TimeoutLayer 生成 408 时内层 future 被取消，in-flight 计数会泄漏。
+        .layer(tower_http::limit::RequestBodyLimitLayer::new(MAX_BODY_BYTES))
+        .layer(tower::limit::ConcurrencyLimitLayer::new(MAX_CONCURRENT_REQUESTS))
+        // 全局限时：必须大于最慢的同步查询（统计接口 ES timeout=60s），导出为后台任务不受影响。
+        .layer(tower_http::timeout::TimeoutLayer::with_status_code(
+            StatusCode::REQUEST_TIMEOUT,
+            REQUEST_TIMEOUT,
+        ))
         .layer(CatchPanicLayer::custom(handle_panic))
+        .layer(axum::middleware::from_fn(middleware::request_id_and_log))
+        .fallback(not_found)
+        .method_not_allowed_fallback(method_not_allowed)
         .with_state(state)
 }
+
+/// 单请求体上限（Tomcat 默认 maxPostSize 为 2MB，但 changeTrailInfo 的历史调用方会传更大的轨迹 JSON，
+/// 这里取 20MB 作为硬上限）。
+const MAX_BODY_BYTES: usize = 20 * 1024 * 1024;
+/// 单请求超时：覆盖最慢的 ES 聚合查询（60s），留 30s 余量。
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(90);
+/// 全局限流并发数：约为 DB 连接池（20）的 12 倍，超出的请求排队等待。
+const MAX_CONCURRENT_REQUESTS: usize = 256;
 
 fn routes() -> Router<Arc<AppState>> {
     Router::new()
@@ -56,6 +66,8 @@ fn routes() -> Router<Arc<AppState>> {
         .route("/healthz", get(healthz))
         .route("/readyz", get(readyz))
         .route("/health", get(readyz))
+        // ---- 指标（S1；Java 未接 Actuator，属新增） ----
+        .route("/metrics", get(crate::metrics::metrics))
         // ---- 19 张基础表 ----
         .route("/base/fwqjcxx/list", get(crud::fwqjcxx_list))
         .route("/base/fwqjcxx/listAll", get(crud::fwqjcxx_all))
@@ -248,8 +260,10 @@ async fn readyz(State(state): State<Arc<AppState>>) -> Response {
             None
         }
     };
-    if let Some(c) = &state.cache {
-        match c.ping().await {
+    // Java 侧 Redis 是必需组件（缓存缺失会导致轨迹/重点车辆查询直接降级）；
+    // 启动时连不上（cache=None）同样视为未就绪，而不是静默 UP。
+    match &state.cache {
+        Some(c) => match c.ping().await {
             Ok(()) => body.insert("redis".into(), json!("UP")),
             Err(e) => {
                 body.insert("redis".into(), json!(format!("DOWN: {}", e.message())));
@@ -257,35 +271,86 @@ async fn readyz(State(state): State<Arc<AppState>>) -> Response {
                 status = StatusCode::SERVICE_UNAVAILABLE;
                 None
             }
-        };
-    }
-    if let Some(es) = &state.es {
-        match es.health().await {
+        },
+        None => {
+            body.insert("redis".into(), json!("DOWN: 启动时连接失败"));
+            body.insert("status".into(), json!("DOWN"));
+            status = StatusCode::SERVICE_UNAVAILABLE;
+            None
+        }
+    };
+    // ES 是查询/导出的主链路之一（大表查询默认走 ES），故障时 readiness 必须摘流。
+    match &state.es {
+        Some(es) => match es.health().await {
             Ok(()) => body.insert("elasticsearch".into(), json!("UP")),
             Err(e) => {
                 body.insert(
                     "elasticsearch".into(),
                     json!(format!("DOWN: {}", e.message())),
                 );
+                body.insert("status".into(), json!("DOWN"));
+                status = StatusCode::SERVICE_UNAVAILABLE;
                 None
             }
-        };
-    }
+        },
+        None => {
+            body.insert("elasticsearch".into(), json!("DOWN: 客户端初始化失败"));
+            body.insert("status".into(), json!("DOWN"));
+            status = StatusCode::SERVICE_UNAVAILABLE;
+            None
+        }
+    };
+    // 运维脚本（tools/es-rebuild-snapshot-flow.sh）据此断言"要重建的索引 == APP 实际查询的索引"，
+    // 防止 APP_ELASTICSEARCH_INDEX_SNAPSHOT 与脚本 INDEX 不一致时重建了另一个索引。
     body.insert(
-        "mqConsumer".into(),
-        json!(if state
-            .consumer_started
-            .load(std::sync::atomic::Ordering::SeqCst)
-        {
-            "UP"
-        } else {
-            "DOWN"
-        }),
+        "elasticsearchIndex".into(),
+        json!(state.cfg.elasticsearch.index.snapshot),
     );
+    // 消费端四态：DISABLED=配置关闭；DOWN=未订阅或连接异常；STALE=topic 安静；
+    // UP=最近 60s 有消息。判定顺序把"新鲜消息"放最前：只要链路在正常收消息，
+    // 即使之前出现过错误也应显示 UP（mark_recv 已同时清空 last_error）。
+    let last_recv = state.consumer_state.last_recv_ms();
+    let now = crate::services::sysutil::now_ms();
+    let consumer = consumer_status(
+        state.cfg.app.consumer_enabled,
+        state.consumer_state.is_started(),
+        last_recv,
+        state.consumer_state.last_error().map(|(t, _)| t),
+        now,
+    );
+    body.insert("mqConsumer".into(), json!(consumer));
+    body.insert("mqConsumerLastRecvMs".into(), json!(last_recv));
+    if let Some((_, msg)) = state.consumer_state.last_error() {
+        body.insert("mqConsumerError".into(), json!(msg));
+    }
     (status, Json(serde_json::Value::Object(body))).into_response()
 }
 
 // ---- 兜底 ----
+/// `/readyz` 的消费端状态机（有状态部分已抽成纯函数，便于单测覆盖边界）。
+pub(crate) fn consumer_status(
+    enabled: bool,
+    started: bool,
+    last_recv_ms: i64,
+    last_error_ms: Option<i64>,
+    now_ms: i64,
+) -> &'static str {
+    if !enabled {
+        "DISABLED"
+    } else if !started {
+        "DOWN"
+    } else if last_recv_ms != 0 && now_ms.saturating_sub(last_recv_ms) <= 60_000 {
+        "UP"
+    } else if let Some(err_at) = last_error_ms {
+        if err_at > last_recv_ms {
+            "DOWN"
+        } else {
+            "STALE"
+        }
+    } else {
+        "STALE"
+    }
+}
 
 /// Spring Boot 默认 /error 响应体（未配置 @ControllerAdvice 时的真实形态）。
 pub fn spring_error(status: StatusCode, error: &str, path: &str) -> serde_json::Value {
@@ -299,7 +364,7 @@ pub fn spring_error(status: StatusCode, error: &str, path: &str) -> serde_json::
 }
 
 async fn not_found(req: axum::extract::Request) -> Response {
-    let path = crate::middleware::error_path_of(&req);
+    let path = req.uri().path().to_string();
     (
         StatusCode::NOT_FOUND,
         Json(spring_error(StatusCode::NOT_FOUND, "Not Found", &path)),
@@ -308,7 +373,7 @@ async fn not_found(req: axum::extract::Request) -> Response {
 }
 
 async fn method_not_allowed(req: axum::extract::Request) -> Response {
-    let path = crate::middleware::error_path_of(&req);
+    let path = req.uri().path().to_string();
     (
         StatusCode::METHOD_NOT_ALLOWED,
         Json(spring_error(
@@ -769,3 +834,108 @@ pub const JAVA_API_INVENTORY: &[(&str, &str, &str)] = &[
         "ZdataTrailTracksController.java",
     ),
 ];
+
+#[cfg(test)]
+mod consumer_status_tests {
+    use super::consumer_status;
+    use crate::mq::ConsumerState;
+    use crate::services::sysutil::now_ms;
+
+    /// 用真实 ConsumerState 的 getter 组装入参，驱动 mark_* 的真实状态迁移；
+    /// 只测纯函数时，即便 mark_started 不再清 last_error，测试也照样全绿。
+    fn status_with(state: &ConsumerState, enabled: bool) -> &'static str {
+        consumer_status(
+            enabled,
+            state.is_started(),
+            state.last_recv_ms(),
+            state.last_error().map(|(t, _)| t),
+            now_ms(),
+        )
+    }
+
+    fn status(state: &ConsumerState) -> &'static str {
+        status_with(state, true)
+    }
+
+    #[test]
+    fn disabled_wins() {
+        // 真正的优先级：enabled=false 时即使从未启动、没有任何状态，也必须是 DISABLED。
+        let state = ConsumerState::default();
+        assert!(!state.is_started());
+        assert_eq!(status_with(&state, false), "DISABLED");
+    }
+
+    #[test]
+    fn disabled_wins_even_with_fresh_message() {
+        // 构造"其它任何分支都会判 UP"的状态，确保 enabled=false 的判定必须排在最前面；
+        // 若把 enabled 判断下移到 UP 分支之后，本用例会变成 UP 而失败。
+        let state = ConsumerState::default();
+        state.mark_started();
+        state.mark_recv();
+        assert_eq!(status_with(&state, true), "UP");
+        assert_eq!(status_with(&state, false), "DISABLED");
+    }
+
+    #[test]
+    fn enabled_but_not_started_is_down() {
+        let state = ConsumerState::default();
+        assert_eq!(status(&state), "DOWN");
+    }
+
+    #[test]
+    fn not_started_is_down() {
+        // 任务 panic/退出后 mark_stopped，即使刚收过消息也必须是 DOWN。
+        let state = ConsumerState::default();
+        state.mark_started();
+        state.mark_recv();
+        state.mark_stopped();
+        assert_eq!(status(&state), "DOWN");
+    }
+
+    #[test]
+    fn started_with_fresh_message_is_up() {
+        let state = ConsumerState::default();
+        state.mark_started();
+        state.mark_recv();
+        assert_eq!(status(&state), "UP");
+    }
+
+    #[test]
+    fn mark_started_clears_previous_error_then_stale() {
+        // 订阅失败 → 恢复：mark_started 必须清 last_error，否则 topic 安静时永久 DOWN。
+        let state = ConsumerState::default();
+        state.mark_error("订阅失败: broker 不可用");
+        assert_eq!(status(&state), "DOWN");
+        state.mark_started();
+        assert!(
+            state.last_error().is_none(),
+            "mark_started 必须清空 last_error，否则恢复后仍报 DOWN"
+        );
+        assert_eq!(status(&state), "STALE");
+    }
+
+    #[test]
+    fn mark_recv_clears_previous_error_and_reports_up() {
+        let state = ConsumerState::default();
+        state.mark_started();
+        state.mark_error("拉取消息失败");
+        state.mark_recv();
+        assert!(state.last_error().is_none());
+        assert_eq!(status(&state), "UP");
+    }
+
+    #[test]
+    fn error_after_start_without_message_is_down() {
+        let state = ConsumerState::default();
+        state.mark_started();
+        state.mark_error("拉取消息失败");
+        assert_eq!(status(&state), "DOWN");
+    }
+
+    #[test]
+    fn never_received_is_stale() {
+        let state = ConsumerState::default();
+        state.mark_started();
+        assert_eq!(status(&state), "STALE");
+    }
+}

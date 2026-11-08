@@ -9,13 +9,13 @@ description = "car-monit-api (Java/Spring Boot) 的 Rust 1:1 迁移实现"
 # Web / 运行时 —— Java: spring-boot-starter-web + 内嵌 Tomcat
 axum = { version = "0.8.1", features = ["macros"] }
 tokio = { version = "1.43.0", features = ["full"] }
-tower = "0.5.2"
-tower-http = { version = "0.6.2", features = ["trace", "cors", "catch-panic"] }
+tower = { version = "0.5.2", features = ["limit"] }
+tower-http = { version = "0.6.2", features = ["trace", "cors", "catch-panic", "limit", "timeout"] }
 hyper = "1.5.2"
 
 # 序列化 —— Java: Jackson / fastjson2
 serde = { version = "1.0.217", features = ["derive"] }
-serde_json = { version = "1.0.135", features = ["preserve_order", "arbitrary_precision"] }
+serde_json = { version = "1.0.135", features = ["preserve_order"] }
 
 # 数据访问 —— Java: MyBatis-Plus + Druid + PageHelper
 sqlx = { version = "0.8.3", default-features = false, features = [

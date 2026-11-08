@@ -89,9 +89,9 @@ pub struct TrailBo {
     #[serde(rename = "imagesArry")]
     pub images_arry: JString,
     #[sqlx(skip)]
-    pub lon: JDecimal,
+    pub lon: JFloat,
     #[sqlx(skip)]
-    pub lat: JDecimal,
+    pub lat: JFloat,
     #[sqlx(skip)]
     #[serde(rename = "roadCode")]
     pub road_code: JString,

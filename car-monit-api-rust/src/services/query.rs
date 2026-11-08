@@ -50,9 +50,7 @@ impl DataSource {
 
 /// 对应 UnifiedQueryController.parseDataSource：非法值报 400。
 pub fn parse_data_source(s: &str) -> AppResult<DataSource> {
-    // PARITY: Java 的 resolve 只忽略大小写、不 trim（实测 `/api/v1/unified/snapshot /list`
-    // 会走「未知数据源」分支），所以这里不能 strip。
-    match s.to_lowercase().as_str() {
+    match s.trim().to_lowercase().as_str() {
         "snapshot" => Ok(DataSource::Snapshot),
         "fee" => Ok(DataSource::Fee),
         "trail" => Ok(DataSource::Trail),
@@ -200,6 +198,8 @@ impl QueryService {
         }
     }
 
+    // 参数与 Java queryRoute(...) 对应；拆结构体会让调用链难以与 Java 对照。
+    #[allow(clippy::too_many_arguments)]
     async fn query_route(
         &self,
         ds: DataSource,
@@ -271,9 +271,10 @@ impl QueryService {
             };
             must.push(build_fuzzy_query(physical, v));
         }
-        let from = ((page_num - 1) * page_size).max(0);
+        // 饱和乘法：pageNum 已在上层钳到 MAX_PAGE_NUM，但这里仍防御直接调用方传入 i64 极值。
+        let from = page_num.saturating_sub(1).saturating_mul(page_size).max(0);
         let size = page_size.min(self.cfg.query.max_window);
-        if from + size > self.cfg.query.max_window {
+        if from.saturating_add(size) > self.cfg.query.max_window {
             return Err(AppError::bad_request(format!(
                 "浅分页超过 max_result_window={}，请使用 export 接口或 search_after",
                 self.cfg.query.max_window
@@ -331,7 +332,7 @@ impl QueryService {
             if v.trim().is_empty() {
                 return Ok(true);
             }
-            match utils::java_timestamp_value_of(v) {
+            match utils::parse_time(v) {
                 Ok(t) => {
                     args.push(utils::format_datetime(&t));
                     where_clauses.push(format!(
@@ -356,13 +357,14 @@ impl QueryService {
             if v.trim().is_empty() {
                 continue;
             }
-            // PARITY: Java 用 translation.getOrDefault(key, key)，未知字段直接当物理列名，
-            // 于是 SQL 报错 -> 被 query() 捕获 -> 空列表。
-            let physical = meta
-                .logical_to_physical
-                .get(k.as_str())
-                .cloned()
-                .unwrap_or(k.as_str());
+            // PARITY: Java 用 translation.getOrDefault(key, key)，未知字段直接当物理列名拼进 SQL
+            // （可注入）。Rust 只允许白名单内的逻辑字段，未知字段直接拒绝，绝不进入 SQL 文本。
+            let Some(physical) = meta.logical_to_physical.get(k.as_str()).copied() else {
+                return Err(AppError::bad_request(format!(
+                    "不支持的模糊查询字段: {}",
+                    k
+                )));
+            };
             args.push(format!("%{}%", v));
             // PARITY: Java QueryWrapper.like -> 大小写敏感的 LIKE。
             where_clauses.push(format!("{} LIKE ${}", physical, args.len()));
@@ -462,10 +464,35 @@ fn normalize_doc_keys(doc: Value) -> Value {
 }
 
 pub fn page_in_memory<T: Clone>(rows: Vec<T>, page_num: i64, page_size: i64) -> Vec<T> {
-    let from = ((page_num - 1) * page_size).max(0) as usize;
+    // 饱和运算：极值 pageNum 不得 panic（debug）或因回绕退化成第 1 页（release）。
+    let from = page_num
+        .saturating_sub(1)
+        .saturating_mul(page_size)
+        .max(0) as usize;
     if from >= rows.len() {
         return vec![];
     }
-    let to = rows.len().min(from + page_size.max(1) as usize);
+    let to = rows
+        .len()
+        .min(from.saturating_add(page_size.max(1) as usize));
     rows[from..to].to_vec()
+}
+
+#[cfg(test)]
+mod paging_tests {
+    use super::page_in_memory;
+
+    #[test]
+    fn huge_page_num_returns_empty_without_overflow() {
+        let rows = vec![1, 2, 3];
+        assert!(page_in_memory(rows, i64::MAX, 20).is_empty());
+    }
+
+    #[test]
+    fn first_page_still_works() {
+        let rows = vec![1, 2, 3, 4, 5];
+        assert_eq!(page_in_memory(rows.clone(), 1, 2), vec![1, 2]);
+        assert_eq!(page_in_memory(rows.clone(), 2, 2), vec![3, 4]);
+        assert_eq!(page_in_memory(rows, 3, 2), vec![5]);
+    }
 }

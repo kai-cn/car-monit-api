@@ -3,8 +3,6 @@
 // 防止迁移时漏挂某个 Controller（Spring 注解扫描不会漏，Rust 显式注册会）。
 // 对应 Java: router_test ↔ @SpringBootTest + MockMvc 的轻量替代。
 
-use std::sync::atomic::AtomicBool;
-
 use axum::body::Body;
 use axum::http::Request;
 use std::sync::Arc;
@@ -73,8 +71,13 @@ fn build_state() -> Arc<AppState> {
         cfg.optimization.clone(),
         cfg.elasticsearch.clone(),
     );
-    let large = LargeScaleQueryService::new(es.clone(), query.clone(), cfg.optimization.clone());
-    let export = ExportService::new(es.clone(), query.clone(), cfg.optimization.clone());
+    let large = LargeScaleQueryService::new(
+        es.clone(),
+        query.clone(),
+        cfg.optimization.clone(),
+        None,
+    );
+    let export = ExportService::new(es.clone(), query.clone(), cfg.optimization.clone(), None);
     let progressive = ProgressiveService::new(
         &cfg.optimization,
         snapshot_flow.clone(),
@@ -171,7 +174,7 @@ fn build_state() -> Arc<AppState> {
         multisource,
         trail,
         sysutil,
-        consumer_started: Arc::new(AtomicBool::new(false)),
+        consumer_state: Default::default(),
     })
 }
 

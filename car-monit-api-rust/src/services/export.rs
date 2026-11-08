@@ -14,11 +14,12 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use serde::Serialize;
-use tokio::sync::{RwLock, Semaphore};
+use serde::{Deserialize, Serialize};
+use tokio::sync::{Mutex, RwLock, Semaphore};
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
+use crate::cache::Cache;
 use crate::config::OptimizationConfig;
 use crate::es::{build_fuzzy_query, EsClient};
 use crate::services::query::{DataSource, QueryService};
@@ -28,7 +29,11 @@ pub const TASK_RUNNING: &str = "RUNNING";
 pub const TASK_COMPLETED: &str = "COMPLETED";
 pub const TASK_FAILED: &str = "FAILED";
 
-#[derive(Debug, Clone, Serialize, Default)]
+/// 任务状态在 Redis 中的前缀与保留期（多副本共享轮询结果）。
+const TASK_KEY_PREFIX: &str = "car_monit:export:task:";
+const TASK_REDIS_TTL_SECS: u64 = 86_400;
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportTaskStatus {
     pub task_id: String,
@@ -36,11 +41,11 @@ pub struct ExportTaskStatus {
     pub total_exported: i64,
     pub file_part_count: usize,
     pub submit_time: i64,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub finish_time: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub file_paths: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error_message: Option<String>,
 }
 
@@ -50,17 +55,28 @@ pub struct ExportService {
     pub query: QueryService,
     pub cfg: OptimizationConfig,
     pub tasks: Arc<RwLock<HashMap<String, ExportTaskStatus>>>,
+    /// 多副本：任务状态镜像到 Redis，任一副本轮询都能命中。
+    store: Option<Cache>,
     sem: Arc<Semaphore>,
+    /// 在途导出的 JoinHandle：关闭时在宽限期内 join，超时则告警放弃。
+    handles: Arc<Mutex<Vec<tokio::task::JoinHandle<()>>>>,
 }
 
 impl ExportService {
-    pub fn new(es: Option<EsClient>, query: QueryService, cfg: OptimizationConfig) -> Self {
+    pub fn new(
+        es: Option<EsClient>,
+        query: QueryService,
+        cfg: OptimizationConfig,
+        store: Option<Cache>,
+    ) -> Self {
         Self {
             es,
             query,
             cfg,
             tasks: Arc::new(RwLock::new(HashMap::new())),
+            store,
             sem: Arc::new(Semaphore::new(2)), // 对应 Java 固定 2 线程
+            handles: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -87,7 +103,8 @@ impl ExportService {
             submit_time: now_ms(),
             ..Default::default()
         };
-        self.tasks.write().await.insert(task_id.clone(), status);
+        self.tasks.write().await.insert(task_id.clone(), status.clone());
+        persist_task(&self.store, &status).await;
 
         let tasks = self.tasks.clone();
         let sem = self.sem.clone();
@@ -96,25 +113,40 @@ impl ExportService {
         let start = start_time.to_string();
         let end = end_time.to_string();
         let task_for_job = task_id.clone();
-        tokio::spawn(async move {
+        let handle = tokio::spawn(async move {
             let _permit = sem.acquire().await;
             let result = this
                 .execute_export_scroll(&task_for_job, ds_owned, &start, &end, &fuzzy)
                 .await;
-            let mut map = tasks.write().await;
-            if let Some(st) = map.get_mut(&task_for_job) {
-                if let Err(e) = result {
-                    st.status = TASK_FAILED.into();
-                    st.finish_time = Some(now_ms());
-                    st.error_message = Some(e);
+            let failed = {
+                let mut map = tasks.write().await;
+                match (map.get_mut(&task_for_job), result) {
+                    (Some(st), Err(e)) => {
+                        st.status = TASK_FAILED.into();
+                        st.finish_time = Some(now_ms());
+                        st.error_message = Some(e);
+                        Some(st.clone())
+                    }
+                    _ => None,
                 }
+            };
+            // 多副本：失败状态必须同步到 Redis，否则其它副本永远看到 RUNNING。
+            if let Some(st) = failed {
+                persist_task(&this.store, &st).await;
             }
         });
+        let mut hs = self.handles.lock().await;
+        hs.retain(|h| !h.is_finished());
+        hs.push(handle);
         Ok(task_id)
     }
 
     pub async fn get_export_status(&self, task_id: &str) -> Option<ExportTaskStatus> {
-        self.tasks.read().await.get(task_id).cloned()
+        if let Some(st) = self.tasks.read().await.get(task_id) {
+            return Some(st.clone());
+        }
+        // 多副本：本副本没有该任务时回落到 Redis 快照。
+        load_task(&self.store, task_id).await
     }
 
     pub async fn clean_expired_tasks(&self, max_age: Duration) {
@@ -126,9 +158,95 @@ impl ExportService {
         });
     }
 
-    pub async fn close(&self) {
-        // tokio task 无法 join（未保存 JoinHandle）；这里等待信号量全部归还即可视为在途任务结束。
-        let _ = self.sem.acquire_many(2).await;
+    /// S4：清理超过保留期的导出目录。运行中的任务会持续写文件，目录 mtime 会被刷新，
+    /// 因此按 mtime 判断不会误删在途任务；清理失败只返回错误由调用方告警。
+    pub fn clean_expired_files(&self, max_age: Duration) -> std::io::Result<usize> {
+        let base = std::path::absolute(&self.cfg.export.dir)?;
+        let entries = match std::fs::read_dir(&base) {
+            Ok(e) => e,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(0),
+            Err(e) => return Err(e),
+        };
+        let mut removed = 0usize;
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            let Ok(meta) = entry.metadata() else { continue };
+            let Ok(modified) = meta.modified() else {
+                continue;
+            };
+            let Ok(age) = SystemTime::now().duration_since(modified) else {
+                continue;
+            };
+            if age < max_age {
+                continue;
+            }
+            if std::fs::remove_dir_all(&path).is_ok() {
+                removed += 1;
+            }
+        }
+        Ok(removed)
+    }
+
+    /// 关闭：在宽限期内 join 所有在途导出任务；超时则**显式 abort** 剩余任务。
+    /// 只丢弃 join_all future 会让任务 detach，随后 db.close() 会与仍在写库的任务并发。
+    pub async fn close(&self, grace: Duration) -> bool {
+        let mut handles: Vec<tokio::task::JoinHandle<()>> = {
+            let mut hs = self.handles.lock().await;
+            std::mem::take(&mut *hs)
+        };
+        if handles.is_empty() {
+            return true;
+        }
+        info!(
+            tasks = handles.len(),
+            grace_seconds = grace.as_secs(),
+            "[导出任务] 等待后台任务结束"
+        );
+        let aborts: Vec<tokio::task::AbortHandle> =
+            handles.iter().map(|h| h.abort_handle()).collect();
+        // 顺序 await 与 join_all 等价（任务本身已并发运行），且超时后 JoinHandle 仍归本函数所有，
+        // 可以 abort 后再 join，避免 close 返回时任务仍停在同步 CSV/文件 I/O。
+        let wait_all = async {
+            for h in handles.iter_mut() {
+                let _ = h.await;
+            }
+        };
+        match tokio::time::timeout(grace, wait_all).await {
+            Ok(_) => {
+                info!("[导出任务] 后台任务已全部结束");
+                true
+            }
+            Err(_) => {
+                for a in &aborts {
+                    a.abort();
+                }
+                let drain = async {
+                    for h in handles.iter_mut() {
+                        let _ = h.await;
+                    }
+                };
+                // 500ms 是"放弃等待"上限，不是"确保停止"：CSV 使用同步 std::fs::File，
+                // 取消只能在下一次 await 点生效，同步 I/O 段落最长会再延后一次写盘。
+                if tokio::time::timeout(Duration::from_millis(500), drain)
+                    .await
+                    .is_err()
+                {
+                    warn!(
+                        tasks = aborts.len(),
+                        "[导出任务] abort 已发出，但 500ms 内任务仍停在同步 I/O；最长再延后一次写盘"
+                    );
+                }
+                warn!(
+                    tasks = aborts.len(),
+                    grace_seconds = grace.as_secs(),
+                    "[导出任务] 宽限期内仍有任务未结束，已中止剩余任务"
+                );
+                false
+            }
+        }
     }
 
     async fn execute_export_scroll(
@@ -276,15 +394,29 @@ impl ExportService {
     }
 
     async fn set_status(&self, task_id: &str, status: &str) {
-        if let Some(st) = self.tasks.write().await.get_mut(task_id) {
-            st.status = status.to_string();
+        let snapshot = {
+            let mut map = self.tasks.write().await;
+            map.get_mut(task_id).map(|st| {
+                st.status = status.to_string();
+                st.clone()
+            })
+        };
+        if let Some(st) = snapshot {
+            persist_task(&self.store, &st).await;
         }
     }
 
     async fn add_progress(&self, task_id: &str, delta: i64, parts: usize) {
-        if let Some(st) = self.tasks.write().await.get_mut(task_id) {
-            st.total_exported += delta;
-            st.file_part_count = parts;
+        let snapshot = {
+            let mut map = self.tasks.write().await;
+            map.get_mut(task_id).map(|st| {
+                st.total_exported += delta;
+                st.file_part_count = parts;
+                st.clone()
+            })
+        };
+        if let Some(st) = snapshot {
+            persist_task(&self.store, &st).await;
         }
     }
 
@@ -296,17 +428,58 @@ impl ExportService {
         total: i64,
         files: Option<Vec<String>>,
     ) {
-        if let Some(st) = self.tasks.write().await.get_mut(task_id) {
-            st.status = status.to_string();
-            st.finish_time = Some(now_ms());
-            st.total_exported = total;
-            if let Some(f) = files {
-                st.file_part_count = f.len();
-                st.file_paths = Some(f);
-            }
-            if !err.is_empty() {
-                st.error_message = Some(err.to_string());
-            }
+        let snapshot = {
+            let mut map = self.tasks.write().await;
+            map.get_mut(task_id).map(|st| {
+                st.status = status.to_string();
+                st.finish_time = Some(now_ms());
+                st.total_exported = total;
+                if let Some(ref f) = files {
+                    st.file_part_count = f.len();
+                    st.file_paths = Some(f.clone());
+                }
+                if !err.is_empty() {
+                    st.error_message = Some(err.to_string());
+                }
+                st.clone()
+            })
+        };
+        if let Some(st) = snapshot {
+            persist_task(&self.store, &st).await;
+        }
+    }
+}
+
+/// 把任务快照写入 Redis（失败只告警，不影响本副本内存状态）。
+/// 供 UnifiedExportService / LargeScaleQueryService 共用。
+pub async fn persist_task(store: &Option<Cache>, st: &ExportTaskStatus) {
+    let Some(store) = store else { return };
+    let Ok(json) = serde_json::to_string(st) else {
+        return;
+    };
+    if let Err(e) = store
+        .set_ttl(
+            &format!("{}{}", TASK_KEY_PREFIX, st.task_id),
+            json,
+            Duration::from_secs(TASK_REDIS_TTL_SECS),
+        )
+        .await
+    {
+        warn!(task_id = %st.task_id, err = %e, "[导出任务] 写入 Redis 任务状态失败");
+    }
+}
+
+/// 从 Redis 读取其它副本写入的任务快照。
+pub async fn load_task(store: &Option<Cache>, task_id: &str) -> Option<ExportTaskStatus> {
+    let store = store.as_ref()?;
+    match store
+        .get_json::<ExportTaskStatus>(&format!("{}{}", TASK_KEY_PREFIX, task_id))
+        .await
+    {
+        Ok(v) => v,
+        Err(e) => {
+            warn!(task_id, err = %e, "[导出任务] 读取 Redis 任务状态失败");
+            None
         }
     }
 }

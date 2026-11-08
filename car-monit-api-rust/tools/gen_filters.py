@@ -75,6 +75,13 @@ def access(name):
     return 'r#' + name if name in RUST_KEYWORDS else name
 
 
+def value_expr(rust_name, ty):
+    """构造传给 Cond 的字符串值：JString 已是 Cond 需要的类型，String 需要 into()。"""
+    if ty == 'JString':
+        return 'q.%s.clone()' % rust_name
+    return 'q.%s.clone().into()' % rust_name
+
+
 def emit_eq(field, column, model, fields, lines, like=False):
     entry = fields.get(norm(field))
     if not entry:
@@ -92,30 +99,33 @@ def emit_eq(field, column, model, fields, lines, like=False):
     if like:
         if ty in ('JString', 'String'):
             lines.append('    if %s {' % neg)
-            lines.append('        v.push(Cond::Like("%s", q.%s.clone().into()));' % (column, rust_name))
+            lines.append('        v.push(Cond::Like("%s", %s));' % (column, value_expr(rust_name, ty)))
             lines.append('    }')
         else:
             lines.append('    // 非字符串字段不支持 LIKE: %s' % field)
         return
     if ty in ('JString', 'String'):
         lines.append('    if %s {' % neg)
-        lines.append('        v.push(Cond::Eq("%s", q.%s.clone().into()));' % (column, rust_name))
+        lines.append('        v.push(Cond::Eq("%s", %s));' % (column, value_expr(rust_name, ty)))
         lines.append('    }')
     elif ty in ('JInt', 'JLong'):
         lines.append('    if let Some(x) = q.%s.get() {' % rust_name)
-        lines.append('        v.push(Cond::EqI64("%s", x as i64));' % column)
+        # JInt::get() 是 i32（需转 i64），JLong::get() 已是 i64（避免 clippy::unnecessary_cast）
+        if ty == 'JInt':
+            lines.append('        v.push(Cond::EqI64("%s", x as i64));' % column)
+        else:
+            lines.append('        v.push(Cond::EqI64("%s", x));' % column)
         lines.append('    }')
     elif ty in ('JFloat',):
         lines.append('    if let Some(x) = q.%s.get() {' % rust_name)
         lines.append('        v.push(Cond::EqF64("%s", x));' % column)
         lines.append('    }')
-    elif ty in ('Day',):
+    elif ty in ('Day', 'JDateTime', 'JIsoDateTime'):
+        # 核对 Java 侧：BaseController.initBinder 用 DateUtils.parseDate(text) 绑定所有 Date 字段
+        # （@JsonFormat 只影响序列化）。"2026-10-31" 解析为当日 00:00:00，
+        # "2026-10-31 12:34:56" 保留时分秒；因此 Day 也必须按实际时刻绑定，不能截断成日期。
         lines.append('    if let Some(t) = q.%s.utc() {' % rust_name)
-        lines.append('        v.push(Cond::Eq("%s", crate::utils::format_day(&t).into()));' % column)
-        lines.append('    }')
-    elif ty in ('JDateTime', 'JIsoDateTime'):
-        lines.append('    if let Some(t) = q.%s.utc() {' % rust_name)
-        lines.append('        v.push(Cond::Eq("%s", crate::utils::format_datetime(&t).into()));' % column)
+        lines.append('        v.push(Cond::EqTimestamp("%s", crate::utils::format_datetime(&t).into()));' % column)
         lines.append('    }')
     elif ty in ('JBool',):
         lines.append('    if let Some(x) = q.%s.get() {' % rust_name)
@@ -135,7 +145,7 @@ def emit_range(field, column, op, model, fields, lines):
     neg = '!q.%s.is_empty()' % rust_name
     if ty in ('JString', 'String'):
         lines.append('    if %s {' % neg)
-        lines.append('        v.push(Cond::%s("%s", q.%s.clone().into()));' % (op, column, rust_name))
+        lines.append('        v.push(Cond::%s("%s", %s));' % (op, column, value_expr(rust_name, ty)))
         lines.append('    }')
     elif ty in ('Day',):
         lines.append('    if let Some(t) = q.%s.utc() {' % rust_name)
@@ -244,8 +254,9 @@ def main():
             elif op == 'broken':
                 lines.append('    // PARITY: XML 引用了不存在的属性 #{%s}，Java 抛 BindingException -> 500。' % column)
                 rn = access(fields.get(norm(field), (field, ''))[0])
+                ty = fields.get(norm(field), (field, ''))[1]
                 lines.append('    if !q.%s.is_empty() {' % rn)
-                lines.append('        v.push(Cond::Eq("__mybatis_missing_property_%s__", q.%s.clone().into()));' % (column, rn))
+                lines.append('        v.push(Cond::Eq("__mybatis_missing_property_%s__", %s));' % (column, value_expr(rn, ty)))
                 lines.append('    }')
             total_fields += 1
         lines.append('    v')

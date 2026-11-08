@@ -343,40 +343,6 @@ fn enrich_from_station_ip(point: &mut TrailBo, ip: &OdsSzdnTollStationIp) {
     point.location_flag = "1".into();
 }
 
-/// 取出第一个括号平衡的 JSON 数组（对应 FastJSON parseArray「读到一个数组就停」）。
-fn json_array_prefix(s: &str) -> Option<&str> {
-    let bytes = s.as_bytes();
-    let start = bytes.iter().position(|b| *b == b'[')?;
-    let mut depth = 0usize;
-    let mut in_str = false;
-    let mut escaped = false;
-    for i in start..bytes.len() {
-        let b = bytes[i];
-        if in_str {
-            if escaped {
-                escaped = false;
-            } else if b == b'\\' {
-                escaped = true;
-            } else if b == b'"' {
-                in_str = false;
-            }
-            continue;
-        }
-        match b {
-            b'"' => in_str = true,
-            b'[' | b'{' => depth += 1,
-            b']' | b'}' => {
-                depth -= 1;
-                if depth == 0 && b == b']' {
-                    return Some(&s[start..=i]);
-                }
-            }
-            _ => {}
-        }
-    }
-    None
-}
-
 /// 供 SysUtilService 复用：按字段白名单提取轨迹点。
 pub fn parse_trail_points(raw: &str) -> Vec<TrailBo> {
     let mut s = raw.trim().to_string();
@@ -390,39 +356,24 @@ pub fn parse_trail_points(raw: &str) -> Vec<TrailBo> {
     s = s.replace("ZdTrails:", "");
     let arr: Vec<serde_json::Value> = match serde_json::from_str(&s) {
         Ok(v) => v,
-        // PARITY: 历史轨迹的 trailpoints 是 jsonb 里塞了一段被转义过的数组文本，
-        // Java 侧 replace 之后尾部仍残留引号/花括号等脏字符；FastJSON 的 parseArray
-        // 只要求前缀是一个完整数组就返回，serde 严格解析会整体失败 → trailList 空，
-        // 起终点经纬度也随之丢失。这里补一次「取平衡数组前缀」的重试。
-        Err(e) => match json_array_prefix(&s) {
-            Some(prefix) => match serde_json::from_str(prefix) {
-                Ok(v) => v,
-                Err(_) => {
-                    warn!(err = %e, raw = %s, "[轨迹查询] 轨迹点 JSON 解析失败");
-                    return vec![];
-                }
-            },
-            None => {
-                warn!(err = %e, raw = %s, "[轨迹查询] 轨迹点 JSON 解析失败");
-                return vec![];
-            }
-        },
+        Err(e) => {
+            warn!(err = %e, raw = %s, "[轨迹查询] 轨迹点 JSON 解析失败");
+            return vec![];
+        }
     };
     let mut out = Vec::with_capacity(arr.len());
     for obj in arr {
-        // PARITY: FastJSON 的 `JSONObject.getString(key)` 在 key 不存在时返回 **null**，
-        // 于是 Java 侧对应字段保持 null；之前 Rust 统一给成空串，响应里就多了
-        // `"orgCode": ""` 这种 Java 没有的值。这里改成 Option，缺键即 None。
-        let get = |k: &str| -> Option<String> {
-            obj.get(k).and_then(|v| match v {
-                serde_json::Value::Null => None,
-                serde_json::Value::String(s) => Some(s.clone()),
-                other => Some(other.to_string().trim_matches('"').to_string()),
-            })
+        let get = |k: &str| -> String {
+            obj.get(k)
+                .map(|v| match v {
+                    serde_json::Value::String(s) => s.clone(),
+                    other => other.to_string().trim_matches('"').to_string(),
+                })
+                .unwrap_or_default()
         };
         let mut bo = TrailBo::default();
         // PARITY: Java 只在含 "T" 时赋值 captureTime，其余保持空串。
-        let capture = get("captureTime").unwrap_or_default();
+        let capture = get("captureTime");
         if capture.contains('T') {
             if let Ok(t) = utils::parse_time(&capture) {
                 bo.capture_time = utils::format_datetime(&t).into();
@@ -436,16 +387,11 @@ pub fn parse_trail_points(raw: &str) -> Vec<TrailBo> {
         bo.section_code = get("sectionCode").into();
         bo.org_code = get("orgCode").into();
         bo.pileno = get("pileNo").into();
-        // Java: CommonUtil.isNotBlank(lon) → new BigDecimal(lon)
-        if let Some(lon) = get("lon") {
-            if !lon.trim().is_empty() {
-                bo.lon = parse_f64(&lon).into();
-            }
+        if !get("lon").trim().is_empty() {
+            bo.lon = parse_f64(&get("lon")).into();
         }
-        if let Some(lat) = get("lat") {
-            if !lat.trim().is_empty() {
-                bo.lat = parse_f64(&lat).into();
-            }
+        if !get("lat").trim().is_empty() {
+            bo.lat = parse_f64(&get("lat")).into();
         }
         out.push(bo);
     }
@@ -453,42 +399,68 @@ pub fn parse_trail_points(raw: &str) -> Vec<TrailBo> {
 }
 
 /// 对应 mapTrailBoList：同一 stateType+locationCode 4 分钟内只保留一条，图片逗号累加。
+///
+/// PARITY: Java 用 `Map<String, TrailBo>` 保存"最近一条门架/收费站抓拍"的对象引用，
+/// 合并图片时修改的是该对象自身。Rust 用 `SeenPoint { index, bo }` 等价表达：
+/// index 只在当前对象真正进入 out 时才有值，否则合并不产生可见影响（与 Java 一致）。
 pub fn dedupe_points(list: Vec<TrailBo>) -> Vec<TrailBo> {
+    struct SeenPoint {
+        index: Option<usize>,
+        bo: TrailBo,
+    }
     let mut out: Vec<TrailBo> = Vec::with_capacity(list.len());
-    let mut seen: HashMap<String, usize> = HashMap::new();
+    let mut seen: HashMap<String, SeenPoint> = HashMap::new();
     for bo in list {
         let key = format!("{}{}", bo.state_type.trim(), bo.location_code.trim());
         let images = utils::delete_end(&bo.images_arry);
         let remember =
             bo.state_type == DATA_TYPE_GANTRY_CAPTURE || bo.state_type == DATA_TYPE_STATION_CAPTURE;
-        if let Some(&idx) = seen.get(&key) {
-            let prev_time = out[idx].capture_time.clone();
+        let mut pushed = false;
+        if let Some(prev) = seen.get(&key) {
+            let prev_time = prev.bo.capture_time.clone();
             let curr_time = bo.capture_time.clone();
             if !curr_time.trim().is_empty() && !prev_time.trim().is_empty() {
                 match (utils::parse_time(&curr_time), utils::parse_time(&prev_time)) {
                     (Ok(t1), Ok(t2)) => {
-                        if (t2 - t1).num_minutes().abs() > 4 {
-                            out.push(bo);
+                        // PARITY: Java 用 Math.abs(ms 差) > 4*60*1000 判断，毫秒级比较；
+                        // 用 num_minutes() 会把 4m30s 截断成 4 而误合并。
+                        if (t2 - t1).num_milliseconds().abs() > 4 * 60 * 1000 {
+                            out.push(bo.clone());
+                            pushed = true;
                         } else if !images.is_empty() {
-                            let prev_images = utils::delete_end(&out[idx].images_arry);
-                            out[idx].images_arry = if prev_images.is_empty() {
-                                images.into()
-                            } else {
-                                format!("{},{}", prev_images, images).into()
-                            };
+                            // 只修改 Java map 里保存的那个对象（若它已进入 out）。
+                            if let Some(idx) = prev.index {
+                                let prev_images = utils::delete_end(&out[idx].images_arry);
+                                out[idx].images_arry = if prev_images.is_empty() {
+                                    images.into()
+                                } else {
+                                    format!("{},{}", prev_images, images).into()
+                                };
+                            }
                         }
                     }
-                    _ => out.push(bo),
+                    _ => {
+                        out.push(bo.clone());
+                        pushed = true;
+                    }
                 }
             } else {
-                out.push(bo);
+                out.push(bo.clone());
+                pushed = true;
             }
         } else {
-            out.push(bo);
+            out.push(bo.clone());
+            pushed = true;
         }
         if remember {
-            // 只记录最新一条（对应 Java 的 seen.put 覆盖）
-            seen.insert(key, out.len() - 1);
+            // 对应 Java 的 map.put(mapKey, trailBo)：无论是否入列都覆盖为当前对象。
+            seen.insert(
+                key,
+                SeenPoint {
+                    index: if pushed { Some(out.len() - 1) } else { None },
+                    bo,
+                },
+            );
         }
     }
     out

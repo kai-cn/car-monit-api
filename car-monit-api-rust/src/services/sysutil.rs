@@ -17,7 +17,7 @@
 //   3) captureTime 仅在含 "T" 时赋值（见 trail.rs）；
 //   4) mapTrailBoList 注释写 3 分钟，实际阈值 4 分钟。
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::de::DeserializeOwned;
@@ -28,7 +28,7 @@ use crate::cache::Cache;
 use crate::error::AppResult;
 use crate::models::*;
 use crate::repo::*;
-use crate::services::dict::{DictBundle, DictService};
+use crate::services::dict::DictService;
 use crate::services::trail::{dedupe_points, parse_trail_points};
 use crate::services::*;
 use crate::utils;
@@ -92,8 +92,12 @@ impl SysUtilService {
         Ok(())
     }
 
-    /// 对应 SysUtilServiceImpl#carTrackQueryNew：车名单来自缓存时先摊平进 carNoList。
-    fn fill_car_no_list(vo: &mut CarParaVO) {
+    pub async fn car_track_query_new(
+        &self,
+        vo: &mut CarParaVO,
+        limit: i64,
+        offset: i64,
+    ) -> AppResult<Vec<ZdataTrailTracks>> {
         if !vo.carlist.is_empty() {
             vo.car_no_list = vo
                 .carlist
@@ -102,31 +106,7 @@ impl SysUtilService {
                 .filter(|s| !s.trim().is_empty())
                 .collect();
         }
-    }
-
-    pub async fn car_track_query_new(
-        &self,
-        vo: &mut CarParaVO,
-    ) -> AppResult<Vec<ZdataTrailTracks>> {
-        Self::fill_car_no_list(vo);
-        self.trail.get_history_trail(vo, 0).await
-    }
-
-    /// 对应 `startPage()` + `carTrackQueryNew`：COUNT 与分页都下推到数据库，
-    /// 不再把全量轨迹读进内存切片（此前重点车名单一多就要拉全表，实测比 Java 慢一个数量级）。
-    pub async fn car_track_query_page(
-        &self,
-        vo: &mut CarParaVO,
-        limit: i64,
-        offset: i64,
-    ) -> AppResult<Vec<ZdataTrailTracks>> {
-        Self::fill_car_no_list(vo);
-        self.trail.history_trail_page(vo, limit, offset).await
-    }
-
-    pub async fn car_track_query_count(&self, vo: &mut CarParaVO) -> AppResult<i64> {
-        Self::fill_car_no_list(vo);
-        self.trail.history_trail_count(vo).await
+        self.trail.get_history_trail(vo, limit, offset).await
     }
 
     pub async fn build_trail_infos(
@@ -134,10 +114,6 @@ impl SysUtilService {
         list: Vec<ZdataTrailTracks>,
         clear_trail_points: bool,
     ) -> AppResult<Vec<TrailInfo>> {
-        // PARITY: 五张字典映射在**一次请求内只构造一遍**（见 DictService::bundle）。
-        // Java 的 changeData 是逐行去 Redis 取同一批 key，取到即用；Rust 的映射要拿整表 JSON
-        // 现搭，逐行重建会把一页放大成 5×N 次全量反序列化。语义不变，只是不再重复构造。
-        let bundle = self.dict_bundle(&list).await?;
         let mut out = Vec::with_capacity(list.len());
         for mut tracks in list {
             if tracks.trail_points.trim().is_empty() {
@@ -147,59 +123,18 @@ impl SysUtilService {
             if clear_trail_points {
                 tracks.trail_points.clear();
             }
-            let mut info = self.change_data_with(bundle.as_ref(), &mut tracks, points).await?;
+            let mut info = self.change_data(&mut tracks, points).await?;
             info.trail_uuid = tracks.plate_key.clone();
             out.push(info);
         }
         Ok(out)
     }
 
-    /// 只为「确实需要富集」的请求构造一次映射：trail_points 全空的列表不碰 Redis，
-    /// 与逐行 change_data 的行为（空点直接返回）保持一致。
-    async fn dict_bundle(&self, list: &[ZdataTrailTracks]) -> AppResult<Option<DictBundle>> {
-        if list.iter().all(|t| t.trail_points.trim().is_empty()) {
-            return Ok(None);
-        }
-        match &self.dict {
-            Some(d) => Ok(Some(d.bundle().await?)),
-            None => Ok(None),
-        }
-    }
-
     pub async fn change_data(
         &self,
         tracks: &mut ZdataTrailTracks,
-        points: Vec<TrailBo>,
-    ) -> AppResult<TrailInfo> {
-        // 空点列表和「字典未装配」两种情况都不需要映射，传 None 让下面提前返回，
-        // 避免在这些路径上多打一次 Redis（Java 同样不会走到取缓存那一步）。
-        if points.is_empty() || self.dict.is_none() {
-            return self.change_data_with(None, tracks, points).await;
-        }
-        let bundle = self.dict.as_ref().unwrap().bundle().await?;
-        self.change_data_with(Some(&bundle), tracks, points).await
-    }
-
-    /// `change_data` 的字典注入版本：`dict` 为一次请求内构造好的映射快照。
-    pub async fn change_data_with(
-        &self,
-        dict: Option<&DictBundle>,
-        tracks: &mut ZdataTrailTracks,
         mut points: Vec<TrailBo>,
     ) -> AppResult<TrailInfo> {
-        // PARITY: SysUtilServiceImpl L746-753 —— changeData 末尾无条件把 8 个「累加变量」
-        // 回写到 tracks 上。这些变量在 Java 里声明成 ""/null 后再没有被赋值（历史上的
-        // 循环内逻辑已被注释掉），所以效果是：入口站编号/名称/时间、车牌颜色、车型、车种、
-        // 通行介质类型全部被清空，轴数变成 null。Rust 若不清空，响应里就会带上 DB 原值。
-        tracks.firt_station_code = String::new().into();
-        tracks.firt_station_name = String::new().into();
-        tracks.firt_station_time = String::new().into();
-        tracks.plate_color = String::new().into();
-        tracks.car_type = String::new().into();
-        tracks.car_vehicle = String::new().into();
-        tracks.car_num = JLong(None);
-        tracks.pass_type = String::new().into();
-
         if points.is_empty() {
             return Ok(TrailInfo {
                 tracks: Some(Box::new(tracks.clone())),
@@ -207,7 +142,7 @@ impl SysUtilService {
                 ..Default::default()
             });
         }
-        let Some(dict) = dict else {
+        let Some(dict) = &self.dict else {
             warn!("[轨迹查询] 字典未装配，跳过 changeData 富集");
             return Ok(TrailInfo {
                 tracks: Some(Box::new(tracks.clone())),
@@ -215,11 +150,11 @@ impl SysUtilService {
                 ..Default::default()
             });
         };
-        let station_map = &dict.station;
-        let toll_map = &dict.toll;
-        let gantry_map = &dict.gantry;
-        let location_map = &dict.location;
-        let section_map = &dict.section;
+        let station_map = dict.station_ip_map().await?;
+        let toll_map = dict.toll_map().await?;
+        let gantry_map = dict.gantry_ip_map().await?;
+        let location_map = dict.location_map().await?;
+        let section_map = dict.section_map().await?;
 
         // PARITY: indexType 在循环外声明（Java 原样）
         let mut index_type = String::new();
@@ -236,7 +171,7 @@ impl SysUtilService {
 
             if !section_code.trim().is_empty() {
                 if let Some(section) = section_map.get(&section_code) {
-                    road_code = section.road_code.as_str().to_string().into();
+                    road_code = section.road_code.as_str().to_string();
                     trail_bo.road_code = road_code.clone().into();
                 }
             }
@@ -262,7 +197,7 @@ impl SysUtilService {
             match index_type.as_str() {
                 x if x == INDEX_TYPE_STATION => {
                     if let Some(station) = pick_from_map(
-                        station_map,
+                        &station_map,
                         &[&dev_location_code, &dev_code_id, &location_code],
                     ) {
                         trail_bo.dev_code = station.toll_code.as_str().to_string().into();
@@ -289,7 +224,7 @@ impl SysUtilService {
                 }
                 x if x == INDEX_TYPE_GANTRY => {
                     if let Some(gantry) = pick_from_map(
-                        gantry_map,
+                        &gantry_map,
                         &[&dev_location_code, &dev_code_id, &location_code],
                     ) {
                         trail_bo.dev_code = gantry.gantry_code.as_str().to_string().into();
@@ -469,6 +404,18 @@ impl SysUtilService {
             tracks.end_lat_dec = parse_f64(&tracks.end_lat).into();
         }
 
+        // PARITY: Java L746-753 在富集结束后无条件把入口站/车型等"瞬态字段"覆盖为
+        // 空值（这些局部变量在 Java 里从未被赋值）；Rust 必须同样清空，
+        // 否则调用方传入的旧值会被原样带回，前端看到与 Java 不一致的 tracks。
+        tracks.firt_station_code = "".into();
+        tracks.firt_station_name = "".into();
+        tracks.firt_station_time = "".into();
+        tracks.plate_color = "".into();
+        tracks.car_type = "".into();
+        tracks.car_vehicle = "".into();
+        tracks.car_num = JLong(None);
+        tracks.pass_type = "".into();
+
         Ok(TrailInfo {
             tracks: Some(Box::new(tracks.clone())),
             trail_list: points.into(),
@@ -552,14 +499,11 @@ impl SysUtilService {
     }
 
     /// 对应 select...ByQueryUuids(String)：逗号分隔 uuid → 对象 Map（/base/vehicleweight/map）。
-    /// 返回类型用 BTreeMap 而不是 HashMap：Java 侧是 LinkedHashMap（插入序，这里恰好等于
-    /// key 的字典序），Rust 用 HashMap 会让响应体里 data 的键顺序每次随机 —— 结构一致但
-    /// 字节不稳定（实测同一请求交替出现两种顺序）。
     pub async fn weight_capture_map(
         &self,
         uuids: &str,
-    ) -> BTreeMap<String, OdsSzdnProvinceBorderVehicleWeightNewstructure> {
-        let mut out = BTreeMap::new();
+    ) -> HashMap<String, OdsSzdnProvinceBorderVehicleWeightNewstructure> {
+        let mut out = HashMap::new();
         if uuids.trim().is_empty() {
             return out;
         }
