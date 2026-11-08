@@ -53,7 +53,7 @@
         <include refid="selectZdataTrailFittingVo"/>
         FROM jl_data01.zdata_trail_fitting t
         WHERE 1=1
-        <if test="id != null  and id != ''"> and t.id = #{id}</if>
+        <if test="cid != null  and cid != ''"> and t.cid = #{cid}</if>
         <if test="enaxlecount != null "> and t.enaxlecount = #{enaxlecount}</if>
         <if test="entime != null "> and t.entime = #{entime}</if>
         <if test="entolllaneid != null  and entolllaneid != ''"> and t.entolllaneid = #{entolllaneid}</if>
