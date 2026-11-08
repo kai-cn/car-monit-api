@@ -78,14 +78,17 @@ LABEL org.opencontainers.image.title="car-monit-api" \
       org.opencontainers.image.base.name="debian:${DEBIAN_RELEASE}-slim"
 
 # 运行库：
-#   libpq5  -> libpqxx/libpq 依赖
-#   libssl3 -> libpq(hiredis_ssl) 依赖
-#   curl    -> 仅供 HEALTHCHECK 使用（debian-slim 默认没有 curl）
+#   libpq5        -> libpqxx/libpq 依赖
+#   libssl3       -> libpq(hiredis_ssl) 依赖
+#   curl          -> 仅供 HEALTHCHECK 使用（debian-slim 默认没有 curl）
+#   ca-certificates/tzdata -> TLS 校验与 Asia/Shanghai 日志时间
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        libpq5 \
        libssl3 \
        curl \
+       ca-certificates \
+       tzdata \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system --gid 10001 carmonit \
     && useradd --system --uid 10001 --gid carmonit \
