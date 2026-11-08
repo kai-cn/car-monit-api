@@ -110,7 +110,7 @@ YAML 值中的 `${ENV}` / `${ENV:-默认值}` 在读取时展开；展开失败�
 | `GET /health` | 汇总 DB/Redis/Kafka/ES 状态；任一 DOWN 时 `status=DEGRADED`，**HTTP 仍为 200** | 进程存活/容器健康检查 |
 | `GET /metrics` | 默认 JSON 指标快照 | 调试 |
 | `GET /metrics?format=prometheus` | Prometheus 文本，供抓取 | 监控 |
-| `GET /api/v1/large/scale-level` | 只读运行时信息（不查 DB） | 非 DB 冒烟 |
+| `GET /progressive/scale-level` | 只读运行时分级信息（不查 DB） | 非 DB 冒烟 |
 
 关键指标：
 
