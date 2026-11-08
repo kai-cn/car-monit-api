@@ -49,7 +49,7 @@ import java.util.function.Function;
  * 性能保障 / Performance guarantees:
  *   A. BulkProcessor: 1000 条 / 10MB / 5s 先到先触发，并发 4，指数退避重试
  *   B. 游标分页(keyset): 复杂度 O(total)，避免 limit/offset 的 O(offset) 深翻页
- *   C. 背压队列(BlockingQueue, 10000): ES 写入过载时阻塞读取端，防 OOM
+ *   C. ES 写入依赖 BulkProcessor 内部批量队列，读取端不额外引入无消费者的缓冲队列
  *   D. Redis 水位: 真实读写，增量不重复、不漏读（留 10s 缓冲规避写入延迟）
  *
  * @author car-monit-api
@@ -86,12 +86,6 @@ public class LargeScaleDataSyncService {
 
     /** ES 索引名解析（与查询路由统一，确保同步与目标索引一致） / index name resolver (shared with query layer) */
     private final EsIndexManageService indexManageService;
-
-    /**
-     * 背压队列：DB 读取线程与 ES 写入线程之间的有界缓冲，避免内存无限增长
-     * Bounded back-pressure buffer between DB reader and ES writer.
-     */
-    private final BlockingQueue<Object> syncQueue = new LinkedBlockingQueue<>(10000);
 
     /** 统计计数器（并发安全） / atomic counters */
     private final AtomicLong totalReadCount = new AtomicLong(0);
@@ -416,8 +410,7 @@ public class LargeScaleDataSyncService {
             emptyCount = 0;
 
             for (Object record : batch) {
-                // 背压：队列满时阻塞读取端，自然限流
-                syncQueue.put(record);
+                // BulkProcessor 内部已有批量排队，此处直接分发，避免引入无消费者的队列
                 String id = task.idExtractor.apply(record);
                 dispatchToEs(task.indexName(indexManageService), id, record);
                 shardCount++;
