@@ -244,6 +244,18 @@ $env:CM_SERVER_PORT="9910"; $env:CM_LOG_LEVEL="debug"; .\build\car-monit-api.exe
 - 日志：控制台 + `logs/car-monit-api.log`（相对**工作目录**，请在工程根目录启动，否则请自行创建 `logs/`）。
 - 启动日志会打印实际端口、路由数（86）、调度任务数（10）。
 
+### 5.1 容器化、部署与运维
+
+| 资产 | 说明 |
+|---|---|
+| [Dockerfile](Dockerfile) / [.dockerignore](.dockerignore) | 多阶段生产镜像（非 root、内置 `/health` 健康检查） |
+| [docker-compose.yml](docker-compose.yml) | 本地一条命令起 PostgreSQL/Redis/Kafka/服务 |
+| [deploy/README.md](deploy/README.md) | 本地联调、环境变量、初始化 SQL 与 schema 限制 |
+| [deploy/k8s](deploy/k8s/README.md) | Deployment/Service/ConfigMap/Secret 示例/HPA/PDB |
+| [deploy/monitoring](deploy/monitoring) | Prometheus 抓取与告警、Grafana 面板 JSON |
+| [docs/RUNBOOK.md](docs/RUNBOOK.md) | 启停、配置优先级、常见故障、优雅重启与回滚 |
+| [docs/RELEASE.md](docs/RELEASE.md) | 版本构建、镜像标签、灰度与回滚检查清单 |
+
 ## 6. 验证启动成功
 
 ```powershell
