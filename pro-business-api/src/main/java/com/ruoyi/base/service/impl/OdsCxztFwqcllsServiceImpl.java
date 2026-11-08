@@ -10,10 +10,12 @@ import com.ruoyi.common.utils.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -53,29 +55,62 @@ public class OdsCxztFwqcllsServiceImpl extends ServiceImpl<OdsCxztFwqcllsMapper,
         return odsCxztFwqcllsMapper.selectOdsCxztFwqcllsList(odsCxztFwqclls);
     }
 
+    /**
+     * 单批查询的 UUID 数量上限
+     */
+    private static final int UUID_BATCH_SIZE = 1000;
+
+    /**
+     * 详情缓存时长（分钟）
+     */
+    private static final int DETAIL_CACHE_MINUTES = 10;
+
     @Override
     public Map<String, OdsCxztFwqclls> selectOdsCxztFwqcllsByQueryUuids(String queryUuids) {
         Map<String, OdsCxztFwqclls> map = new HashMap<>();
-        if (CommonUtil.isNotBlank(queryUuids)) {
-            List<String> uuidList = Arrays.stream(queryUuids.split(",")).collect(Collectors.toList());
-            for (String uuid : uuidList) {
-                if (CommonUtil.isNotBlank(uuid)) {
-                    // redis查找
-                    String key = Constants.DATE_SERVICE_AREA_CAPTURE + uuid;
-                    Object obj = redisCache.getCacheObject(key);
-                    if (null != obj) {
-                        map.put(uuid, (OdsCxztFwqclls) obj);
-                    } else {
-                        OdsCxztFwqclls querybo = new OdsCxztFwqclls();
-                        querybo.setDatauuid(uuid);
-                        List<OdsCxztFwqclls> list = odsCxztFwqcllsMapper.selectOdsCxztFwqcllsList(querybo);
-                        if (null!=list && list.size() > 0) {
-                            map.put(uuid, list.get(0));
-                            redisCache.setCacheObject(key, list.get(0));
-                        }else{
-                            redisCache.setCacheObject(key, querybo);
-                        }
+        if (CommonUtil.isBlank(queryUuids)) {
+            return map;
+        }
+        List<String> uuidList = Arrays.stream(queryUuids.split(","))
+                .filter(CommonUtil::isNotBlank)
+                .distinct()
+                .collect(Collectors.toList());
+        if (uuidList.isEmpty()) {
+            return map;
+        }
+
+        List<String> missList = new ArrayList<>();
+        for (String uuid : uuidList) {
+            String key = Constants.DATE_SERVICE_AREA_CAPTURE + uuid;
+            Object obj = redisCache.getCacheObject(key);
+            if (null != obj) {
+                map.put(uuid, (OdsCxztFwqclls) obj);
+            } else {
+                missList.add(uuid);
+            }
+        }
+        if (missList.isEmpty()) {
+            return map;
+        }
+
+        for (int i = 0; i < missList.size(); i += UUID_BATCH_SIZE) {
+            List<String> chunk = missList.subList(i, Math.min(i + UUID_BATCH_SIZE, missList.size()));
+            OdsCxztFwqclls querybo = new OdsCxztFwqclls();
+            querybo.setUuidList(chunk);
+            List<OdsCxztFwqclls> list = odsCxztFwqcllsMapper.selectOdsCxztFwqcllsList(querybo);
+            Map<String, OdsCxztFwqclls> loaded = new HashMap<>();
+            if (list != null) {
+                for (OdsCxztFwqclls row : list) {
+                    if (row.getDatauuid() != null) {
+                        loaded.putIfAbsent(row.getDatauuid(), row);
                     }
+                }
+            }
+            for (String uuid : chunk) {
+                OdsCxztFwqclls row = loaded.get(uuid);
+                if (row != null) {
+                    map.put(uuid, row);
+                    redisCache.setCacheObject(Constants.DATE_SERVICE_AREA_CAPTURE + uuid, row, DETAIL_CACHE_MINUTES, TimeUnit.MINUTES);
                 }
             }
         }
