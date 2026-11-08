@@ -85,6 +85,14 @@
             <artifactId>elasticsearch</artifactId>
         </dependency>
 
+        <!-- MySQL JDBC：仅用于读取 carmonitdb.plate_color 字典（单一事实源） -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>${mysql-connector-java.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
     </dependencies>
 
     <build>

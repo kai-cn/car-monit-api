@@ -1,5 +1,5 @@
 server:
-  port: 9901
+  port: 9902
   servlet:
     context-path: /
 spring:
@@ -294,3 +294,76 @@ monitoring:
   end-to-end-threshold-ms: 30000
   # 统计窗口大小（分钟）
   stats-window-minutes: 10
+
+# ==================== V3 架构（ES 主路径 + Outbox 同步 + 双路径导出） ====================
+# 设计文档：car-monit-backend-new/docs/architecture-traffic-query-design.md v1.3
+# 默认只读：auto-bootstrap / sync / reconcile 默认关闭，需要运维显式开启。
+traffic:
+  query:
+    # 安全默认：legacy（旧 GaussDB Mapper）。ES 初始化+回灌完成后显式切 es；
+    # 即使配置为 es，启动时若 ES/读别名不可用也会自动回退 legacy 并打 WARN。
+    # 可用环境变量 TRAFFIC_QUERY_ENGINE=es 覆盖，或在 /api/v3/es/activate 临时切换。
+    engine: legacy
+    max-page-size: 100
+    max-window: 10000
+    max-days: 365
+    default-days: 7
+    min-plate-fuzzy-length: 2
+    total-hits-cap: 10000
+  es:
+    # 启动自动创建 ILM/模板/月索引；生产建议 false，使用 scripts/v3/es-init.ps1
+    auto-bootstrap: false
+    bootstrap-months: 13
+    forward-months: 1
+    pit-keep-alive: 2m
+    read-alias-suffix: -read
+    write-alias-suffix: -write
+  plate:
+    color:
+      # 单一事实源：MySQL carmonitdb.sys_dict_type/sys_dict_data，dict_type=plate_color
+      # 启动加载 + 每 5 分钟刷新；MySQL 不可用时保留上次成功快照；代码内无码表兜底
+      dict:
+        enabled: true
+        url: jdbc:mysql://127.0.0.1:3307/carmonitdb?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&connectTimeout=3000&socketTimeout=3000
+        username: ${CARMONIT_MYSQL_USERNAME:}
+        password: ${CARMONIT_MYSQL_PASSWORD:}
+        dict-type: plate_color
+        refresh-interval-ms: 300000
+  sync:
+    # Outbox relay / Kafka 消费者总开关
+    enabled: false
+    topic: search-sync
+    group-id: search-sync-api
+    poll-interval-ms: 5000
+    batch-size: 500
+    max-retry: 5
+    bulk-size: 500
+    # car-warning 增量采集（阶段一按 update_time 扫描 -> outbox；生产首选 Debezium CDC）
+    car-warning-enabled: true
+    car-warning-poll-interval-ms: 30000
+    car-warning-lookback-days: 7
+  reconcile:
+    enabled: false
+    cron: "0 30 2 * * ?"
+    lookback-minutes: 60
+    bucket-minutes: 1
+    drift-ratio: 0.001
+    max-repair-buckets: 12
+  export:
+    dir: ${java.io.tmpdir}/car-monit-export
+    workers: 2
+    page-size: 1000
+    max-hours: 24
+  bigscreen:
+    # 预聚合查询开关：dws_* 未回填前保持 false，backend 会按契约回退 legacy
+    stats-enabled: false
+    query-timeout-ms: 2000
+    etl:
+      # 阶段一批量回填：MySQL carmonitdb -> GaussDB dws_*；生产最终由 Flink 承担
+      enabled: false
+      mysql-url: jdbc:mysql://127.0.0.1:3307/carmonitdb?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&connectTimeout=3000&socketTimeout=3000
+      username: ${CARMONIT_MYSQL_USERNAME:}
+      password: ${CARMONIT_MYSQL_PASSWORD:}
+      interval-ms: 600000
+      lookback-days: 2
+

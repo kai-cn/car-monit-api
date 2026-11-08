@@ -88,7 +88,7 @@ sudo bash setup_script/setup.sh --no-build-java
 bash setup_script/start-python.sh      # FastAPI 移植版，端口 9901
 curl http://127.0.0.1:9901/health
 
-bash setup_script/start-java.sh        # 原始 Spring Boot 版，端口 9901
+bash setup_script/start-java.sh        # 原始 Spring Boot 版，默认端口 9902
 ```
 
 > 两个启动脚本都会先 `source setup_script/.env.runtime`，把数据库地址/账号/
@@ -214,8 +214,8 @@ bash car-monit-api-python/scripts/smoke_test.py --live http://127.0.0.1:9901
 云端同一台机器上可以同时跑 Java 与 Python 两个版本，各自换端口：
 
 ```bash
-bash setup_script/start-java.sh   --server.port=9902
-bash setup_script/start-python.sh            # 9901
+bash setup_script/start-java.sh              # Java 版，默认 9902
+bash setup_script/start-python.sh            # Python 版，9901
 
 curl -s http://127.0.0.1:9901/health          > py.json
 curl -s http://127.0.0.1:9902/health          > java.json
