@@ -1,0 +1,1367 @@
+﻿.venv\Scripts\python.exe : D:\work\IdeaProjects\car-monit-api\car-monit-api-python\.venv\Lib\site-packages\fastapi\test
+client.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` ins
+tead.
+所在位置 行:15 字符: 1702
++ ... M = 'dumb'; .venv\Scripts\python.exe tools\smoke_all_routes.py 2>&1 | ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\work\IdeaPro...ttpx2` instead.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  from starlette.testclient import TestClient as TestClient  # noqa
+2026-11-07 18:55:34.693 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:246 - [ES索引管理] ILM 策略创建: car_monit_ilm_policy, status=201
+2026-11-07 18:55:34.694 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:149 - [ES索引管理] auto-create=false, 跳过索引自动创建。索引将需要手动初始化。
+2026-11-07 18:55:34.726 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:238 - [ES索引管理] ILM 策略已存在, 跳过创建: car_monit_ilm_policy
+2026-11-07 18:55:34.726 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:149 - [ES索引管理] auto-create=false, 跳过索引自动创建。索引将需要手动初始化。
+2026-11-07 18:55:34.726 [MainThread] INFO  com.ruoyi.base.service.optimization.LargeScaleQueryService:215 - [大规模查询服务] 初始化 ES 客户端 host=localhost, port=9200
+2026-11-07 18:55:34.752 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:238 - [ES索引管理] ILM 策略已存在, 跳过创建: car_monit_ilm_policy
+2026-11-07 18:55:34.752 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:149 - [ES索引管理] auto-create=false, 跳过索引自动创建。索引将需要手动初始化。
+2026-11-07 18:55:34.752 [MainThread] INFO  com.ruoyi.base.service.optimization.LargeScaleDataSyncService:355 - [数据同步服务] 初始化完成, ES=localhost:9200
+2026-11-07 18:55:34.981 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:238 - [ES索引管理] ILM 策略已存在, 跳过创建: car_monit_ilm_policy
+2026-11-07 18:55:34.982 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:149 - [ES索引管理] auto-create=false, 跳过索引自动创建。索引将需要手动初始化。
+2026-11-07 18:55:35.006 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:238 - [ES索引管理] ILM 策略已存在, 跳过创建: car_monit_ilm_policy
+2026-11-07 18:55:35.007 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:149 - [ES索引管理] auto-create=false, 跳过索引自动创建。索引将需要手动初始化。
+2026-11-07 18:55:35.019 [MainThread] INFO  app.routes.registry:486 - route registry: 24 controller(s), 85 route(s) registered
+2026-11-07 18:55:35.020 [MainThread] INFO  app.main:132 - Registered 85 controller route(s)
+
+=== sweep 85 route(s) =================================================
+2026-11-07 18:55:35.096 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/fwqjcxx/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:35.103 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/fwqjcxx/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:35.107 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/fwqjcxx/listAll "HTTP/1.1 200 OK"
+2026-11-07 18:55:35.114 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sfsjcxx/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:35.120 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sfsjcxx/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:35.125 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sfsjcxx/listAll "HTTP/1.1 200 OK"
+2026-11-07 18:55:35.131 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sfzjcxx/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:35.137 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sfzjcxx/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:35.142 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sfzjcxx/listAll "HTTP/1.1 200 OK"
+2026-11-07 18:55:35.158 [AnyIO worker thread] INFO  com.ruoyi.base.service.optimization.UnifiedQueryService:229 - [统一查询] ds=DataSource.SNAPSHOT, useEs=False, cost=0ms, page=1/20
+2026-11-07 18:55:35.159 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/api/v1/large/snapshot?startTime=2025-06-01+00%3A00%3A00&endTime=2025-06-02+00%3A00%3A00 "HTTP/1.1 200 OK"
+2026-11-07 18:55:35.166 [AnyIO worker thread] ERROR com.ruoyi.base.service.optimization.UnifiedQueryService:213 - [统一查询] 查询失败 ds=DataSource.FEE, useEs=True, 耗时=1ms
+Traceback (most recent call last):
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\service\optimization\UnifiedQueryService.py", line 206, in query
+    return self.queryFromEs(ds, startTime, endTime, fuzzyFields,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\service\optimization\UnifiedQueryService.py", line 346, in queryFromEs
+    response: SearchResponse = self.esClient.search(request, RequestOptions.DEFAULT)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 180, in search
+    index_names: List[str] = self._resolveIndices(request.indices())
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 243, in _resolveIndices
+    raise index_not_found_exception(name)
+org.elasticsearch.ElasticsearchException.ElasticsearchStatusException: Elasticsearch exception [type=index_not_found_exception, reason=no such index [fee_records]]
+2026-11-07 18:55:35.174 [AnyIO worker thread] WARNING com.ruoyi.base.service.optimization.UnifiedQueryService:217 - [统一查询] ES 查询失败，尝试降级到 MySQL, ds=DataSource.FEE
+2026-11-07 18:55:35.174 [AnyIO worker thread] INFO  com.ruoyi.base.service.optimization.UnifiedQueryService:229 - [统一查询] ds=DataSource.FEE, useEs=True, cost=9ms, page=1/20
+2026-11-07 18:55:35.175 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/api/v1/large/fee?startTime=2025-06-01+00%3A00%3A00&endTime=2025-06-02+00%3A00%3A00 "HTTP/1.1 200 OK"
+2026-11-07 18:55:35.181 [AnyIO worker thread] ERROR com.ruoyi.base.service.optimization.UnifiedQueryService:213 - [统一查询] 查询失败 ds=DataSource.TRAIL, useEs=True, 耗时=0ms
+Traceback (most recent call last):
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\service\optimization\UnifiedQueryService.py", line 206, in query
+    return self.queryFromEs(ds, startTime, endTime, fuzzyFields,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\service\optimization\UnifiedQueryService.py", line 346, in queryFromEs
+    response: SearchResponse = self.esClient.search(request, RequestOptions.DEFAULT)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 180, in search
+    index_names: List[str] = self._resolveIndices(request.indices())
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 243, in _resolveIndices
+    raise index_not_found_exception(name)
+org.elasticsearch.ElasticsearchException.ElasticsearchStatusException: Elasticsearch exception [type=index_not_found_exception, reason=no such index [trail_fitting]]
+2026-11-07 18:55:35.186 [AnyIO worker thread] WARNING com.ruoyi.base.service.optimization.UnifiedQueryService:217 - [统一查询] ES 查询失败，尝试降级到 MySQL, ds=DataSource.TRAIL
+2026-11-07 18:55:35.186 [AnyIO worker thread] INFO  com.ruoyi.base.service.optimization.UnifiedQueryService:229 - [统一查询] ds=DataSource.TRAIL, useEs=True, cost=5ms, page=1/20
+2026-11-07 18:55:35.186 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/api/v1/large/trail?startTime=2025-06-01+00%3A00%3A00&endTime=2025-06-02+00%3A00%3A00 "HTTP/1.1 200 OK"
+2026-11-07 18:55:35.191 [AnyIO worker thread] ERROR com.ruoyi.base.service.optimization.UnifiedQueryService:213 - [统一查询] 查询失败 ds=DataSource.TRAIL, useEs=True, 耗时=0ms
+Traceback (most recent call last):
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\service\optimization\UnifiedQueryService.py", line 206, in query
+    return self.queryFromEs(ds, startTime, endTime, fuzzyFields,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\service\optimization\UnifiedQueryService.py", line 346, in queryFromEs
+    response: SearchResponse = self.esClient.search(request, RequestOptions.DEFAULT)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 180, in search
+    index_names: List[str] = self._resolveIndices(request.indices())
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 243, in _resolveIndices
+    raise index_not_found_exception(name)
+org.elasticsearch.ElasticsearchException.ElasticsearchStatusException: Elasticsearch exception [type=index_not_found_exception, reason=no such index [trail_fitting]]
+2026-11-07 18:55:35.196 [AnyIO worker thread] WARNING com.ruoyi.base.service.optimization.UnifiedQueryService:217 - [统一查询] ES 查询失败，尝试降级到 MySQL, ds=DataSource.TRAIL
+2026-11-07 18:55:35.197 [AnyIO worker thread] INFO  com.ruoyi.base.service.optimization.UnifiedQueryService:229 - [统一查询] ds=DataSource.TRAIL, useEs=True, cost=6ms, page=1/20
+2026-11-07 18:55:35.197 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/api/v1/large/carTrackQueryByCarNo?carNo=1&startTime=2025-06-01+00%3A00%3A00&endTime=2025-06-02+00%3A00%3A00 "HTTP/1.1 200 OK"
+2026-11-07 18:55:35.202 [AnyIO worker thread] ERROR com.ruoyi.base.service.optimization.LargeScaleQueryService:397 - [统计查询] 聚合失败 type=snapshot
+Traceback (most recent call last):
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\service\optimization\LargeScaleQueryService.py", line 382, in aggregationStats
+    response = self.client.search(request, RequestOptions.DEFAULT)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 180, in search
+    index_names: List[str] = self._resolveIndices(request.indices())
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 243, in _resolveIndices
+    raise index_not_found_exception(name)
+org.elasticsearch.ElasticsearchException.ElasticsearchStatusException: Elasticsearch exception [type=index_not_found_exception, reason=no such index [snapshot_flow]]
+2026-11-07 18:55:35.208 [AnyIO worker thread] ERROR com.ruoyi.base.controller.LargeScaleQueryController:220 - [统计接口] 异常 type=snapshot
+Traceback (most recent call last):
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\service\optimization\LargeScaleQueryService.py", line 382, in aggregationStats
+    response = self.client.search(request, RequestOptions.DEFAULT)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 180, in search
+    index_names: List[str] = self._resolveIndices(request.indices())
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 243, in _resolveIndices
+    raise index_not_found_exception(name)
+org.elasticsearch.ElasticsearchException.ElasticsearchStatusException: Elasticsearch exception [type=index_not_found_exception, reason=no such index [snapshot_flow]]
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\controller\LargeScaleQueryController.py", line 211, in groupByStats
+    stats: Dict[str, int] = self.largeScaleQueryService.aggregationStats(
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\service\optimization\LargeScaleQueryService.py", line 398, in aggregationStats
+    raise RuntimeError("统计查询异常：" + str(error)) from error
+RuntimeError: 统计查询异常：Elasticsearch exception [type=index_not_found_exception, reason=no such index [snapshot_flow]]
+2026-11-07 18:55:35.218 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/api/v1/large/stats/group?startTime=2025-06-01+00%3A00%3A00&endTime=2025-06-02+00%3A00%3A00&groupBy=1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:35.223 [lq-worker-1] INFO  com.ruoyi.base.service.optimization.LargeScaleQueryService:439 - [导出任务] taskId=c0dd9ec8-873d-4746-9a18-d7ac42b1cfd5, type=snapshot 开始执行
+2026-11-07 18:55:35.223 [lq-worker-1] ERROR com.ruoyi.base.service.optimization.LargeScaleQueryService:418 - [导出任务] task=c0dd9ec8-873d-4746-9a18-d7ac42b1cfd5 执行异常
+Traceback (most recent call last):
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\service\optimization\LargeScaleQueryService.py", line 416, in _runExport
+    self.executeExportScroll(type, taskId, startTime, endTime, fuzzyFields)
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\service\optimization\LargeScaleQueryService.py", line 458, in executeExportScroll
+    scrollResp = self.client.search(searchRequest, RequestOptions.DEFAULT)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 180, in search
+    index_names: List[str] = self._resolveIndices(request.indices())
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 243, in _resolveIndices
+    raise index_not_found_exception(name)
+org.elasticsearch.ElasticsearchException.ElasticsearchStatusException: Elasticsearch exception [type=index_not_found_exception, reason=no such index [snapshot_flow]]
+2026-11-07 18:55:35.225 [MainThread] INFO  httpx:1025 - HTTP Request: POST http://testserver/api/v1/large/export/submit?startTime=2025-06-01+00%3A00%3A00&endTime=2025-06-02+00%3A00%3A00 "HTTP/1.1 200 OK"
+2026-11-07 18:55:35.233 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/api/v1/large/export/status/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:35.238 [Thread-14096] INFO  com.ruoyi.base.service.optimization.LargeScaleDataSyncService:450 - [全量同步] 开始, 时间范围: 2025-11-07 18:55:35.238633 ~ 2026-11-07 18:55:35.238633
+2026-11-07 18:55:35.250 [MainThread] INFO  httpx:1025 - HTTP Request: POST http://testserver/api/v1/large/sync/full "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.337 [MainThread] INFO  httpx:1025 - HTTP Request: POST http://testserver/api/v1/large/sync/incremental "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.344 [Thread-48400] INFO  com.ruoyi.base.service.optimization.LargeScaleDataSyncService:552 - [补同步] 开始 ds=DataSource.SNAPSHOT, 时间范围: 2025-06-01 00:00:00 ~ 2025-06-02 00:00:00
+2026-11-07 18:55:41.344 [MainThread] INFO  httpx:1025 - HTTP Request: POST http://testserver/api/v1/large/sync/repair?startTime=2025-06-01+00%3A00%3A00&endTime=2025-06-02+00%3A00%3A00 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.350 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/manager/fwqclls/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.355 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/manager/fwqclls/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.361 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/feeGantry/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.365 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/feeGantry/1 "HTTP/1.1 200 OK"
+查询范围参数：
+2026-11-07 18:55:41.371 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/feerecords/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.376 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/feerecords/listToExport "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.382 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/feerecords/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.388 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/feeStationEnter/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.393 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/feeStationEnter/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.399 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/feestationexit/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.404 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/feestationexit/1 "HTTP/1.1 200 OK"
+查询范围参数：
+2026-11-07 18:55:41.410 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/snapshotflow/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.416 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/snapshotflow/listToExport "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.422 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/snapshotflow/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.428 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/provcapture/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.432 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/provcapture/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.437 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/stationcapture/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.443 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/stationcapture/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.449 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/gantry/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.455 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/gantry/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.461 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/gantry/listAll "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.466 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/gantryIp/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.472 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/gantryIp/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.478 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/vehicleweight/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.483 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/vehicleweight/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.535 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/vehicleweight/map "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.542 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/section/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.547 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/section/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.552 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/section/listAll "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.558 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/toll/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.564 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/toll/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.570 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/toll/listAll "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.576 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/tollStationIp/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.581 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/tollStationIp/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.587 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/org/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.593 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/org/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.599 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/org/listAll "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.604 [AnyIO worker thread] INFO  com.ruoyi.base.service.optimization.ProgressiveQueryArchitectureService:289 - [渐进式查询] 门架抓拍流水，数据量级别=LEVEL_10M, 请求=QueryRequest{start=None, end=None, plate=None, gantry=None, pageSize=20}
+2026-11-07 18:55:41.604 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/progressive/snapshotflow/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.610 [AnyIO worker thread] INFO  com.ruoyi.base.service.optimization.ProgressiveQueryArchitectureService:388 - [渐进式查询] 收费流水，数据量级别=LEVEL_10M, 请求=QueryRequest{start=None, end=None, plate=None, gantry=None, pageSize=20}
+2026-11-07 18:55:41.611 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/progressive/feerecords/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.616 [AnyIO worker thread] INFO  com.ruoyi.base.service.optimization.ProgressiveQueryArchitectureService:431 - [渐进式查询] 轨迹拟合，数据量级别=LEVEL_10M, 请求=QueryRequest{start=None, end=None, plate=None, gantry=None, pageSize=20}
+2026-11-07 18:55:41.616 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/progressive/trailfitting/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.622 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/progressive/scale-level "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.628 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:135 - 每5分钟（同步当前轨迹轨迹）开始 2026-11-07 18:55:41
+2026-11-07 18:55:41.628 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:137 - 每5分钟（同步当前轨迹轨迹）结束 2026-11-07 18:55:41
+2026-11-07 18:55:41.628 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutilTest/syncCurrentTrack "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.634 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:141 - 每天凌晨0点执行（同步基础信息）开始 2026-11-07 18:55:41
+2026-11-07 18:55:41.634 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:150 - 每天凌晨0点执行（同步基础信息）结束 2026-11-07 18:55:41
+2026-11-07 18:55:41.634 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutilTest/syncBaseInfo "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.640 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:155 - 每天凌晨4点执行（同步历史轨迹）开始 2026-11-07 18:55:41
+2026-11-07 18:55:41.640 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:223 - 每天凌晨4点执行（同步历史轨迹）结束 2026-11-07 18:55:41
+2026-11-07 18:55:41.641 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutilTest/syncHistroyTrack "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.646 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:232 - 每天凌晨1点执行（同步可疑车俩）开始 2026-11-07 18:55:41
+2026-11-07 18:55:41.646 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.646 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.647 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.647 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.647 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.647 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.648 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.648 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.648 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.648 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.649 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.649 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.649 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.650 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.650 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.650 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.650 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.650 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.651 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.651 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.651 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.651 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.651 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:238 - 每天凌晨1点执行（同步可疑车俩）结束 2026-11-07 18:55:41
+2026-11-07 18:55:41.652 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.652 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.652 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.652 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.653 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.653 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.653 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.653 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.653 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.653 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.654 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.654 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutilTest/syncSuspiciousCar1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.654 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.654 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.655 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.655 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.655 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.655 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.655 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.656 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.656 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.656 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.656 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.657 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.657 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.658 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.658 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.658 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.659 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.659 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.659 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.660 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.660 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.660 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.660 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.661 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.661 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.662 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.662 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.662 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.663 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.663 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.663 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.663 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.664 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.664 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.664 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.664 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.665 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.665 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.665 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.666 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.666 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:243 - 每天凌晨1点15执行（同步可疑车俩）开始 2026-11-07 18:55:41
+2026-11-07 18:55:41.666 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.667 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.667 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.667 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.667 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.667 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.668 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.668 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.668 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.668 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.669 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.669 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.669 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.669 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.670 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.670 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.670 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.670 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.671 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.671 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.671 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.671 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.672 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.672 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.672 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.672 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.672 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.673 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:249 - 每天凌晨1点15点执行（同步可疑车俩）结束 2026-11-07 18:55:41
+2026-11-07 18:55:41.673 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.673 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.673 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.673 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.674 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.674 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.674 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.674 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.674 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.674 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.675 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.675 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.675 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.675 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.675 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.675 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.676 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.676 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.676 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutilTest/syncSuspiciousCar2 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.676 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.677 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.677 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.677 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.677 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.677 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.678 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.678 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.678 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.678 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.678 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.678 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.678 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.678 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.679 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.679 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.680 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.680 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.680 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.681 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.681 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.682 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.682 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.682 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.683 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.683 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.683 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.684 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.684 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.685 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.685 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.686 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.686 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.686 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.686 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.686 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.687 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.687 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.687 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:254 - 每天凌晨1点30执行（同步可疑车俩）开始 2026-11-07 18:55:41
+2026-11-07 18:55:41.688 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.694 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.694 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.694 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.695 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.695 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.695 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.696 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.696 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.696 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.697 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.697 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.697 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.697 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.697 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.697 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.697 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.698 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.698 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.698 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.698 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:260 - 每天凌晨1点30点执行（同步可疑车俩）结束 2026-11-07 18:55:41
+2026-11-07 18:55:41.698 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.698 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.699 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.699 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.699 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.699 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.700 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.700 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.700 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.700 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.700 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.701 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.701 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.701 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.701 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.701 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.701 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.701 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.702 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.702 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.702 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.702 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutilTest/syncSuspiciousCar3 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.703 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.703 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.703 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.703 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.703 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.704 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.704 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.704 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.704 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.704 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.704 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.705 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.705 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.705 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.705 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.705 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.705 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.705 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.706 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.706 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.706 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.706 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.707 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.707 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.708 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.708 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.708 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.709 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.709 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.709 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.710 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.710 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.711 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.711 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.711 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.711 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.712 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.712 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.713 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.713 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.714 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.714 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.715 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.715 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.716 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.716 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.716 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:265 - 每天凌晨1点45执行（同步可疑车俩）开始 2026-11-07 18:55:41
+2026-11-07 18:55:41.717 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.717 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.717 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.717 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.717 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.717 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.718 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.718 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.718 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.719 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.719 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:271 - 每天凌晨1点45点执行（同步可疑车俩）结束 2026-11-07 18:55:41
+2026-11-07 18:55:41.719 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.719 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.719 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.719 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.719 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.719 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.720 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.720 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.720 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.720 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.720 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.720 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.720 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.721 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.721 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.721 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.721 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.722 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.722 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.722 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.722 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.723 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutilTest/syncSuspiciousCar4 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.723 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.723 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.723 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.723 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.724 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.724 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.724 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.724 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.724 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.725 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.725 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.725 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.725 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.725 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.725 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.726 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.726 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.726 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.726 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.726 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.727 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.727 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.728 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.728 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.729 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.729 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.729 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.729 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.730 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.730 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.730 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.730 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.731 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.731 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.731 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.732 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.732 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.732 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.733 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.733 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.733 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.734 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.734 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.734 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.734 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.735 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.735 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.736 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.736 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.736 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.736 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:276 - 每天凌晨2点执行（同步可疑车俩）开始 2026-11-07 18:55:41
+2026-11-07 18:55:41.737 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.737 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.737 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.737 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.737 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.738 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.738 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.738 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.738 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.738 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.739 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.739 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.739 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.739 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.740 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.740 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.740 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.740 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.741 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.741 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.741 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.742 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.742 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.742 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.742 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.743 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.743 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.743 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.744 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.744 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.744 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.745 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.745 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.745 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.745 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.745 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:282 - 每天凌晨2点点执行（同步可疑车俩）结束 2026-11-07 18:55:41
+2026-11-07 18:55:41.746 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.746 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.746 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.746 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.747 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.747 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.747 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.747 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.748 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.748 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.748 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.748 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.748 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.749 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.749 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.749 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.749 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.749 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.750 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.750 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.750 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.750 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.751 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutilTest/syncSuspiciousCar5 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.751 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.751 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.751 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.752 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.752 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.752 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.752 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.752 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.753 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.753 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.753 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.753 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.753 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.753 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.753 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.754 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.754 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.754 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.754 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.754 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.755 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.755 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.755 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.755 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.755 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.755 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.756 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.756 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.756 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.757 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.757 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.757 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.758 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.758 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.758 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.758 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.759 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.759 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.759 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.760 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.760 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.760 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.761 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.761 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.762 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.762 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.762 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.762 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.763 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.763 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.764 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.764 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:287 - 每天凌晨2点15执行（同步可疑车俩）开始 2026-11-07 18:55:41
+2026-11-07 18:55:41.764 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.764 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.765 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.765 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.765 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.765 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.766 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.766 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.766 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.766 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.767 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.767 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.767 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.767 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.768 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.768 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.768 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.768 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.769 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.769 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.769 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.769 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.770 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.770 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.770 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.770 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.771 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.771 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.771 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.771 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:293 - 每天凌晨2点15点执行（同步可疑车俩）结束 2026-11-07 18:55:41
+2026-11-07 18:55:41.771 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.771 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.771 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.771 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.772 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.772 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.772 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.772 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.773 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.774 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.774 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.774 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.774 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.775 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.775 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.775 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.775 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.775 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.775 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.776 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.776 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.776 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.777 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutilTest/syncSuspiciousCar6 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.777 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.777 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.777 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.777 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.778 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.778 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.778 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.778 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.778 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.779 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.779 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.779 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.779 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.779 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.780 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.780 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.780 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.780 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.780 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.780 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.781 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.781 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.782 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.782 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.782 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.783 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.784 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.784 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.784 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.784 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.784 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.785 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.785 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.785 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.786 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.786 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.787 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.787 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.787 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.788 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.788 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.788 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.788 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.789 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.789 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.789 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.790 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.790 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.790 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:298 - 每天凌晨2点30执行（同步可疑车俩）开始 2026-11-07 18:55:41
+2026-11-07 18:55:41.791 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.791 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.791 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.791 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.791 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.792 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.792 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.792 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.792 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.793 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.793 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.793 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.793 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.793 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.794 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.794 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.794 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.794 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.795 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.795 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:304 - 每天凌晨2点30点执行（同步可疑车俩）结束 2026-11-07 18:55:41
+2026-11-07 18:55:41.795 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.795 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.796 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.796 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.796 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.796 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.796 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.796 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.796 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.796 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.796 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.796 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.796 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.796 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.796 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.797 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.797 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.797 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.797 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.797 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.798 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.798 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.799 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutilTest/syncSuspiciousCar7 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.799 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.799 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.799 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.800 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.800 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.800 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.800 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.800 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.800 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.801 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.801 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.801 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.801 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.801 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.801 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.802 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.802 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.802 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.802 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.802 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.803 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.803 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.804 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.804 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.805 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.805 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.805 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.805 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.805 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.806 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.806 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.807 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.807 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.807 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.807 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.807 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.808 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.808 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.808 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.809 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.809 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.810 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.810 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.810 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.810 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.811 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.811 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.812 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.812 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.812 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.812 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:309 - 每天凌晨2点45执行（同步可疑车俩）开始 2026-11-07 18:55:41
+2026-11-07 18:55:41.813 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.813 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.813 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.813 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.813 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.813 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.814 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.814 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.814 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.814 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.814 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.815 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.815 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.815 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.815 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.816 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.816 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.816 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.816 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.816 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.817 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.817 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.817 [ThreadTask-_30] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.817 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.818 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.818 [ThreadTask-_31] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.818 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.818 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:315 - 每天凌晨2点45点执行（同步可疑车俩）结束 2026-11-07 18:55:41
+2026-11-07 18:55:41.818 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.818 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.818 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.818 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.819 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.819 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.819 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.819 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.820 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.820 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.820 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.820 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.820 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.820 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.821 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.821 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.821 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.821 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.821 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.821 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.822 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.822 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.822 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.822 [ThreadTask-_30] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.822 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.823 [ThreadTask-_31] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.823 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.823 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.823 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutilTest/syncSuspiciousCar8 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.824 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.824 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.824 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.825 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.825 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.825 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.825 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.825 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.826 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.826 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.826 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.826 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.826 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.826 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.827 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.827 [ThreadTask-_30] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.827 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.827 [ThreadTask-_31] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.827 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.827 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.828 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.828 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.828 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.829 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.829 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.829 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.830 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.830 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.830 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.830 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.830 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.831 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.831 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.831 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.831 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.831 [ThreadTask-_30] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.832 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.832 [ThreadTask-_31] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.832 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.832 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.832 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.833 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.833 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.833 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.833 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.834 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.834 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.834 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.835 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.835 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.835 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.835 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.835 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.836 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.836 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.837 [ThreadTask-_30] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.837 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.837 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:320 - 每天凌晨3点执行（同步可疑车俩）开始 2026-11-07 18:55:41
+2026-11-07 18:55:41.837 [ThreadTask-_31] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.838 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.838 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.838 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.838 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.838 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.838 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.838 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.838 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.838 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.838 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.839 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.839 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.839 [ThreadTask-_1] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.839 [ThreadTask-_14] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.840 [ThreadTask-_15] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.840 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.840 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.840 [ThreadTask-_30] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.840 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.840 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:326 - 每天凌晨3点执行（同步可疑车俩）结束 2026-11-07 18:55:41
+2026-11-07 18:55:41.841 [ThreadTask-_31] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.841 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.841 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.841 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.841 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.841 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.841 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.841 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.841 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.842 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.842 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.842 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.842 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.842 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.842 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.842 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.844 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.844 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.844 [ThreadTask-_30] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.844 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.844 [ThreadTask-_31] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.845 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutilTest/syncSuspiciousCar9 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.845 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.845 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.846 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.846 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.846 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.846 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.846 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.846 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.846 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.847 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.847 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.847 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.847 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.847 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.847 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.848 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.848 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.848 [ThreadTask-_30] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.848 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.848 [ThreadTask-_31] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.849 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.849 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.850 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.850 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.851 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.851 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.851 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.851 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.852 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.852 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.852 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.852 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.853 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.853 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.853 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.853 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.854 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.854 [ThreadTask-_30] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.854 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.854 [ThreadTask-_31] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.855 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.855 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.855 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.856 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.856 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.856 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.856 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.857 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.857 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.857 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.858 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.858 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.858 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.859 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:331 - 每天凌晨3点15执行（同步可疑车俩）开始 2026-11-07 18:55:41
+2026-11-07 18:55:41.859 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.859 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.859 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.860 [ThreadTask-_20] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.860 [ThreadTask-_30] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.860 [ThreadTask-_16] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.860 [ThreadTask-_31] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.861 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.861 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.861 [ThreadTask-_23] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.861 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.861 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.862 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.862 [ThreadTask-_24] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.862 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.862 [ThreadTask-_2] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.863 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.863 [ThreadTask-_3] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.863 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.863 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.864 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:337 - 每天凌晨3点15执行（同步可疑车俩）结束 2026-11-07 18:55:41
+2026-11-07 18:55:41.864 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.864 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.864 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.864 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.865 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.865 [ThreadTask-_18] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.865 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.865 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.865 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.865 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.865 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.866 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1184 - 从缓存路段：取得节假日------：
+2026-11-07 18:55:41.866 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.867 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.867 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.867 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.867 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.868 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.868 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.868 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.868 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.869 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.869 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.869 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutilTest/syncSuspiciousCar10 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.869 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.869 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.870 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.870 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.870 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.870 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.870 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.870 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.871 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1187 - 本地配置------：local
+2026-11-07 18:55:41.871 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.871 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.871 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.871 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.872 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.872 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.872 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.872 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.872 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.872 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.873 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.873 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.873 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.874 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.874 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.875 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.875 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.875 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.875 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.876 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1197 - 分页配置：2000--时间范围2到4
+2026-11-07 18:55:41.876 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.876 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.877 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.877 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.877 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.877 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.878 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.878 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.878 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.878 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.879 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.879 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.879 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.880 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.880 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.880 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.880 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.880 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.880 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.880 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1249 - 查询时间范围2026-11-05 00:00:00到2026-11-05 23:59:59
+2026-11-07 18:55:41.881 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.881 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.881 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.882 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.882 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:342 - 每天同步门架信息开始 2026-11-07 18:55:41
+2026-11-07 18:55:41.882 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.882 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.883 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.883 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.883 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.883 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.884 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.884 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.884 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.884 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.884 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.885 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.885 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.885 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.885 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.885 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1917 - 门架抓拍流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.886 [ThreadTask-_26] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.886 [ThreadTask-_25] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.886 [ThreadTask-_27] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.886 [ThreadTask-_4] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.887 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:364 - 每天凌晨同步门架信息结束 2026-11-07 18:55:41
+2026-11-07 18:55:41.887 [ThreadTask-_28] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.887 [ThreadTask-_5] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.887 [ThreadTask-_6] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.887 [ThreadTask-_29] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.888 [ThreadTask-_19] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.888 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.888 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.888 [ThreadTask-_7] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.889 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.889 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.889 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.889 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.889 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.889 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.890 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.890 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1923 - 门架抓拍流水SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.891 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutilTest/syncOdsSzdnGantry "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.892 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.892 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.892 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.892 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.892 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.893 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.893 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.893 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.893 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.893 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1950 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.894 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.894 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.894 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.895 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.896 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.896 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.896 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.896 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.897 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.897 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1956 - 门架交易流水SQL开始查询----------Sat Nov 07 18:55:41  2026数据--0
+2026-11-07 18:55:41.897 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.897 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.898 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.898 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.898 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.898 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.899 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.899 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.900 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.900 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1296 - 轨迹点SQL开始查询----------Sat Nov 07 18:55:41  2026
+2026-11-07 18:55:41.900 [ThreadTask-_9] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.901 [ThreadTask-_8] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.901 [ThreadTask-_0] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.901 [ThreadTask-_21] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.902 [ThreadTask-_10] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.902 [ThreadTask-_11] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.902 [ThreadTask-_12] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.903 [ThreadTask-_22] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.903 [ThreadTask-_17] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.904 [ThreadTask-_13] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:1298 - 轨迹点SQL结束查询----------Sat Nov 07 18:55:41  2026--数据：0
+2026-11-07 18:55:41.904 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:369 - 每天凌晨4点30执行（同步可疑车辆到redis）开始 2026-11-07 18:55:41
+2026-11-07 18:55:41.906 [AnyIO worker thread] INFO  com.ruoyi.base.controller.SysTestController:372 - 每天凌晨4点30执行（同步可疑车辆到redis）结束 2026-11-07 18:55:41
+2026-11-07 18:55:41.906 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutilTest/separateSnapshotFlowTimeList "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.912 [AnyIO worker thread] INFO  com.ruoyi.base.service.impl.SysUtilServiceImpl:399 - 获取的配置信息：--本地配置：local
+2026-11-07 18:55:41.912 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutil/saveRedis "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.918 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutil/carTrackQueryByCarNo "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.924 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutil/carTrackQueryByTime "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.930 [MainThread] INFO  httpx:1025 - HTTP Request: POST http://testserver/base/sysutil/changeTrailInfo "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.935 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutil/getByTrailBo "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.941 [AnyIO worker thread] INFO  com.ruoyi.base.service.optimization.UnifiedQueryService:229 - [统一查询] ds=DataSource.SNAPSHOT, useEs=False, cost=0ms, page=1/20
+2026-11-07 18:55:41.942 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/api/v1/unified/snapshot/list?startTime=2025-06-01+00%3A00%3A00&endTime=2025-06-02+00%3A00%3A00 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.948 [export-worker-1] INFO  com.ruoyi.base.service.optimization.UnifiedExportService:292 - [统一导出] task=9327a747-f567-4dc8-9ad0-c899c9f2cf47 开始执行
+2026-11-07 18:55:41.948 [export-worker-1] ERROR com.ruoyi.base.service.optimization.UnifiedExportService:244 - [统一导出] task=9327a747-f567-4dc8-9ad0-c899c9f2cf47 执行失败
+Traceback (most recent call last):
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\service\optimization\UnifiedExportService.py", line 242, in _runExport
+    self.executeExportScroll(taskId, ds, startTime, endTime, fuzzyFields)
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\service\optimization\UnifiedExportService.py", line 318, in executeExportScroll
+    scrollResp = self.esClient.search(searchRequest, RequestOptions.DEFAULT)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 180, in search
+    index_names: List[str] = self._resolveIndices(request.indices())
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 243, in _resolveIndices
+    raise index_not_found_exception(name)
+org.elasticsearch.ElasticsearchException.ElasticsearchStatusException: Elasticsearch exception [type=index_not_found_exception, reason=no such index [snapshot_flow]]
+2026-11-07 18:55:41.948 [AnyIO worker thread] INFO  com.ruoyi.base.service.optimization.UnifiedExportService:251 - [统一导出] 已提交任务 taskId=9327a747-f567-4dc8-9ad0-c899c9f2cf47, ds=SNAPSHOT, time=2025-06-01 00:00:00~2025-06-02 00:00:00, fuzzyFields=0
+2026-11-07 18:55:41.953 [MainThread] INFO  httpx:1025 - HTTP Request: POST http://testserver/api/v1/unified/snapshot/export/submit?startTime=2025-06-01+00%3A00%3A00&endTime=2025-06-02+00%3A00%3A00 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.960 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/api/v1/unified/export/status/1 "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.965 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/trailtracks/list "HTTP/1.1 200 OK"
+2026-11-07 18:55:41.971 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/trailtracks/1 "HTTP/1.1 200 OK"
+
+=== status codes ======================================================
+  200=85
+  routes=85
+
+=== defects (5xx) =====================================================
+  none
+
+=== per controller ====================================================
+  DwdLcztFwqjcxxController                       n=3  200 200 200
+  DwdLcztSfsjcxxController                       n=3  200 200 200
+  DwdLcztSfzjcxxController                       n=3  200 200 200
+  LargeScaleQueryController                      n=10 200 200 200 200 200 200 200 200 200 200
+  OdsCxztFwqcllsController                       n=2  200 200
+  OdsLwzxsfsjFeeGantryFusion01Controller         n=2  200 200
+  OdsLwzxsfsjFeeRecords01Controller              n=3  200 200 200
+  OdsLwzxsfsjFeeStationEnter01Controller         n=2  200 200
+  OdsLwzxsfsjFeeStationExit01Controller          n=2  200 200
+  OdsRtSzdnSnapshotFlowAddcodeController         n=3  200 200 200
+  OdsRtSzdnSnapshotFlowProvcaptureAddcodeController n=2  200 200
+  OdsRtSzdnSnapshotFlowStationcaptureAddcodeController n=2  200 200
+  OdsSzdnGantryController                        n=3  200 200 200
+  OdsSzdnGantryIpController                      n=2  200 200
+  OdsSzdnProvinceBorderVehicleWeightNewstructureController n=3  200 200 200
+  OdsSzdnSectionController                       n=3  200 200 200
+  OdsSzdnTollController                          n=3  200 200 200
+  OdsSzdnTollStationIpController                 n=2  200 200
+  OdsYhglVBaseOrgController                      n=3  200 200 200
+  ProgressiveQueryController                     n=4  200 200 200 200
+  SysTestController                              n=15 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200
+  SysUtilController                              n=5  200 200 200 200 200
+  UnifiedQueryController                         n=3  200 200 200
+  ZdataTrailTracksController                     n=2  200 200
+
+=== targeted: ProgressiveQueryController ==============================
+2026-11-07 18:55:41.976 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/progressive/scale-level "HTTP/1.1 200 OK"
+  ok   scale-level: AjaxResult code=200
+  ok   scale-level: 3 张表
+  ok   scale-level: detectScaleLevel().name
+2026-11-07 18:55:41.982 [AnyIO worker thread] INFO  com.ruoyi.base.service.optimization.ProgressiveQueryArchitectureService:289 - [渐进式查询] 门架抓拍流水，数据量级别=LEVEL_10M, 请求=QueryRequest{start=2025-06-01 00:00:00, end=2025-06-02 00:00:00, plate=None, gantry=None, pageSize=20}
+2026-11-07 18:55:41.982 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/progressive/snapshotflow/list?startTime=2025-06-01+00%3A00%3A00&endTime=2025-06-02+00%3A00%3A00 "HTTP/1.1 200 OK"
+  ok   snapshotflow/list: rows 为 list
+  ok   snapshotflow/list: msg = '策略: ...'
+
+=== targeted: LargeScaleQueryController ===============================
+2026-11-07 18:55:41.986 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/api/v1/large/export/status/no-such-task "HTTP/1.1 200 OK"
+  ok   large export/status: 未知 taskId -> 404
+2026-11-07 18:55:41.992 [lq-worker-2] INFO  com.ruoyi.base.service.optimization.LargeScaleQueryService:439 - [导出任务] taskId=e6ab79f7-85bb-4622-b352-1a819a49e62a, type=snapshot 开始执行
+2026-11-07 18:55:41.992 [lq-worker-2] ERROR com.ruoyi.base.service.optimization.LargeScaleQueryService:418 - [导出任务] task=e6ab79f7-85bb-4622-b352-1a819a49e62a 执行异常
+Traceback (most recent call last):
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\service\optimization\LargeScaleQueryService.py", line 416, in _runExport
+    self.executeExportScroll(type, taskId, startTime, endTime, fuzzyFields)
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\service\optimization\LargeScaleQueryService.py", line 458, in executeExportScroll
+    scrollResp = self.client.search(searchRequest, RequestOptions.DEFAULT)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 180, in search
+    index_names: List[str] = self._resolveIndices(request.indices())
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 243, in _resolveIndices
+    raise index_not_found_exception(name)
+org.elasticsearch.ElasticsearchException.ElasticsearchStatusException: Elasticsearch exception [type=index_not_found_exception, reason=no such index [snapshot_flow]]
+2026-11-07 18:55:41.992 [MainThread] INFO  httpx:1025 - HTTP Request: POST http://testserver/api/v1/large/export/submit?startTime=2025-06-01+00%3A00%3A00&endTime=2025-06-02+00%3A00%3A00 "HTTP/1.1 200 OK"
+  ok   large export/submit: taskId
+
+=== targeted: UnifiedQueryController (submit -> poll) =================
+2026-11-07 18:55:41.999 [AnyIO worker thread] INFO  com.ruoyi.base.service.optimization.UnifiedExportService:251 - [统一导出] 已提交任务 taskId=72e8aeba-420b-4d4a-ac19-d0eeb5d28fee, ds=SNAPSHOT, time=2025-06-01 00:00:00~2025-06-02 00:00:00, fuzzyFields=0
+2026-11-07 18:55:41.999 [export-worker-2] INFO  com.ruoyi.base.service.optimization.UnifiedExportService:292 - [统一导出] task=72e8aeba-420b-4d4a-ac19-d0eeb5d28fee 开始执行
+2026-11-07 18:55:42.000 [export-worker-2] ERROR com.ruoyi.base.service.optimization.UnifiedExportService:244 - [统一导出] task=72e8aeba-420b-4d4a-ac19-d0eeb5d28fee 执行失败
+Traceback (most recent call last):
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\service\optimization\UnifiedExportService.py", line 242, in _runExport
+    self.executeExportScroll(taskId, ds, startTime, endTime, fuzzyFields)
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\pro-business-api\src\main\java\com\ruoyi\base\service\optimization\UnifiedExportService.py", line 318, in executeExportScroll
+    scrollResp = self.esClient.search(searchRequest, RequestOptions.DEFAULT)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 180, in search
+    index_names: List[str] = self._resolveIndices(request.indices())
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\work\IdeaProjects\car-monit-api\car-monit-api-python\org\elasticsearch\client\RestHighLevelClient.py", line 243, in _resolveIndices
+    raise index_not_found_exception(name)
+org.elasticsearch.ElasticsearchException.ElasticsearchStatusException: Elasticsearch exception [type=index_not_found_exception, reason=no such index [snapshot_flow]]
+2026-11-07 18:55:42.000 [MainThread] INFO  httpx:1025 - HTTP Request: POST http://testserver/api/v1/unified/snapshot/export/submit?startTime=2025-06-01+00%3A00%3A00&endTime=2025-06-02+00%3A00%3A00 "HTTP/1.1 200 OK"
+  ok   unified submit: taskId
+2026-11-07 18:55:42.008 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/api/v1/unified/export/status/72e8aeba-420b-4d4a-ac19-d0eeb5d28fee "HTTP/1.1 200 OK"
+  ok   unified status: code=200
+  FAIL unified status: COMPLETED
+       {"code": 200, "status": "FAILED", "totalExported": 0, "filePartCount": 0, "submitTime": 1794048941999, "errorMessage": "Elasticsearch exception [type=index_not_found_exception, reason=no such index [snapshot_flow]]"}
+  FAIL unified status: filePaths 为 list
+       {"code": 200, "status": "FAILED", "totalExported": 0, "filePartCount": 0, "submitTime": 1794048941999, "errorMessage": "Elasticsearch exception [type=index_not_found_exception, reason=no such index [snapshot_flow]]"}
+  FAIL unified status: costSeconds 为 int
+       {"code": 200, "status": "FAILED", "totalExported": 0, "filePartCount": 0, "submitTime": 1794048941999, "errorMessage": "Elasticsearch exception [type=index_not_found_exception, reason=no such index [snapshot_flow]]"}
+
+=== targeted: SysUtilController (nested bean binding) =================
+2026-11-07 18:55:42.016 [MainThread] INFO  httpx:1025 - HTTP Request: POST http://testserver/base/sysutil/changeTrailInfo "HTTP/1.1 200 OK"
+  ok   changeTrailInfo: 返回 TrailInfo 对象
+  ok   changeTrailInfo: 嵌套 tracks 已绑定
+  ok   changeTrailInfo: trailList[0].isQuery = '1'
+2026-11-07 18:55:42.022 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutil/carTrackQueryByCarNo?carNo=%E8%B5%A3A12345 "HTTP/1.1 200 OK"
+  ok   carTrackQueryByCarNo: rows 为 list
+2026-11-07 18:55:42.027 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/sysutil/getByTrailBo?captureTime=2025-06-01+10%3A00%3A00&stateType=gantryCapture&pointUuid=p1 "HTTP/1.1 200 OK"
+  ok   getByTrailBo: 返回 TrailBo 对象
+
+=== result ============================================================
+  routes   : 85, 5xx: 0
+  payload  : 3 failure(s)
+    - unified status: COMPLETED
+    - unified status: filePaths 为 list
+    - unified status: costSeconds 为 int

@@ -26,6 +26,11 @@ def main() -> int:
     print(f"statements       : {len(registry.statements)}")
     print(f"sql fragments    : {len(registry.fragments) // 2}")
     print()
+    exit_code = 1 if registry.failed_files else 0
+    if registry.failed_files:
+        print(f"XML parse failures: {len(registry.failed_files)}")
+        for item in registry.failed_files:
+            print(f"    {item}")
 
     for namespace in sorted(registry.mapper_xmls):
         mapper_xml = registry.mapper_xmls[namespace]
@@ -37,15 +42,43 @@ def main() -> int:
 
     report = get_registry().install()
     print(f"bound methods    : {report.patched_methods}")
-    if report.missing_statements:
-        print(f"without XML      : {len(report.missing_statements)}")
-        for item in report.missing_statements:
+    if report.failed_files:
+        print(f"install failures : {len(report.failed_files)}")
+        for item in report.failed_files:
             print(f"    {item}")
+        exit_code = 1
+    if report.missing_statements:
+        from app.db.registry import KNOWN_MISSING_STATEMENTS
+
+        unexpected = [item for item in report.missing_statements
+                      if item not in KNOWN_MISSING_STATEMENTS]
+        print(f"without XML      : {len(report.missing_statements)} "
+              f"(whitelisted: {len(report.missing_statements) - len(unexpected)})")
+        for item in report.missing_statements:
+            marker = "" if item in KNOWN_MISSING_STATEMENTS else "  <-- NOT WHITELISTED"
+            print(f"    {item}{marker}")
+        if unexpected:
+            print(f"unexpected missing statements: {len(unexpected)} -> exit 1")
+            exit_code = 1
     if report.orphan_statements:
         print(f"orphan statements: {len(report.orphan_statements)}")
         for item in report.orphan_statements:
             print(f"    {item}")
-    return 0
+
+    # P0-1：随包 XML（pro-business-api/src/main/resources）必须与 Java 源逐字节
+    # 一致，防止两树漂移；漂移/缺失时本工具 exit 1（CI 门禁）。
+    import subprocess
+
+    sync_script = Path(__file__).resolve().parent / "sync_mapper_xml.py"
+    result = subprocess.run([sys.executable, str(sync_script), "--check"],
+                            capture_output=True, text=True, encoding="utf-8")
+    if result.stdout:
+        print(result.stdout.rstrip())
+    if result.stderr:
+        print(result.stderr.rstrip(), file=sys.stderr)
+    if result.returncode != 0:
+        exit_code = 1
+    return exit_code
 
 
 if __name__ == "__main__":

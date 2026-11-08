@@ -48,7 +48,10 @@ class SimpleStringSchema(object):
         if isinstance(message, str):
             # Python 侧测试时可能直接喂字符串，宽松接受
             return message
-        return bytes(message).decode(self.charset)
+        # P2-4：Java 的 new String(bytes, UTF_8) 对非法序列输出替换字符
+        # （U+FFFD）而非抛错；严格 decode 会让一条坏消息毒化整个 source
+        #（Java 侧不会）。errors="replace" 与 Java 行为一致。
+        return bytes(message).decode(self.charset, errors="replace")
 
     def getProducedType(self) -> TypeInformation:
         """对应 ``TypeInformation<String> getProducedType()``。"""

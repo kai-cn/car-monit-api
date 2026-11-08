@@ -15,15 +15,57 @@ from __future__ import annotations
 
 import datetime as _dt
 import logging
+import os
 import platform
 import sys
 from typing import Any, Callable, Optional
 
 log = logging.getLogger(__name__)
 
-__all__ = ["HealthRegistry", "health_registry"]
+__all__ = ["HealthRegistry", "degraded_probe", "health_registry", "health_verbose"]
 
 STARTED_AT = _dt.datetime.now(tz=_dt.timezone.utc)
+
+
+def health_verbose() -> bool:
+    """P0-6：``/health`` 是否携带 ``config`` 细节（含中间件地址）。
+
+    默认仅 shim（开发）模式携带；prod 模式需显式 ``CAR_MONIT_HEALTH_VERBOSE=true``
+    （Java 侧没有 /health 端点，这是 Python 侧新增的生产收敛，不是契约变更）。
+    """
+    value = (os.environ.get("CAR_MONIT_HEALTH_VERBOSE") or "").strip().lower()
+    if value:
+        return value in ("1", "true", "yes", "on")
+    from app.runtime import runtime_mode
+
+    return runtime_mode() != "prod"
+
+
+def degraded_probe(name: str, backend_factory: Callable[[], Any],
+                   health_check: Optional[Callable[[Any], Any]] = None) -> Callable[[], Any]:
+    """把真实适配器的健康状态接进 readiness。
+
+    * 后端不存在（未配置 URL）→ ``{"mode": "shim"}``，UP；
+    * 后端是内存实现（无 ``degraded`` 属性）→ ``{"mode": "memory"}``，UP；
+    * 真实后端先执行主动探测（Redis PING / ES ping / Kafka list_topics），
+      失败会触发适配器记录降级（``fallback=error`` 时直接抛错）；
+    * 真实后端处于熔断降级 → 抛 ``RuntimeError``（组件 DOWN，readiness 503）。
+    """
+
+    def probe() -> Any:
+        backend = backend_factory()
+        if backend is None:
+            return {"mode": "shim"}
+        if not hasattr(backend, "degraded"):
+            return {"mode": "memory"}
+        if health_check is not None:
+            health_check(backend)
+        if bool(backend.degraded):
+            raise RuntimeError("%s 熔断降级中（真实服务不可用，已回落进程内替身）" % name)
+        return {"mode": "real"}
+
+    probe.__name__ = "%s_probe" % name
+    return probe
 
 
 class HealthRegistry:
@@ -57,12 +99,14 @@ health_registry = HealthRegistry()
 
 def health_payload(extra: Optional[dict] = None) -> dict[str, Any]:
     from app import __version__
+    from app.runtime import runtime_mode
 
     result = health_registry.run()
     payload: dict[str, Any] = {
         "status": result["status"],
         "app": "car-monit-api",
         "version": __version__,
+        "runtime": runtime_mode(),  # P0-6：shim/prod 可见，防止替身被误当生产
         "javaVersion": "1.8",
         "springBootVersion": "2.4.5",
         "python": platform.python_version(),

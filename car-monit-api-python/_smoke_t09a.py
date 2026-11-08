@@ -140,7 +140,9 @@ while time.time() < deadline and counter[0] < 3:
 scheduled.cancel()
 check("scheduler ran", counter[0] >= 3, True)
 scheduling.shutdown()
-check("scheduler closed", scheduler._executor is None, True)
+# P1-5 修正：现行 ThreadPoolTaskScheduler 替身 shutdown 后清空 _workers/_loops
+# （旧断言 scheduler._executor 是更早版本替身的内部属性）
+check("scheduler closed", scheduler._workers, [])
 
 # ------------------------------------------------------------------ 6) EcBusinessApiApplication
 context = EcBusinessApiApplication.main([])

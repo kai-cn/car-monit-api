@@ -33,9 +33,9 @@
    `nextInt(origin, bound)` 在 Java 是**左闭右开**，替身已还原该语义。
 7) `Thread.sleep(ms)` → `time.sleep(ms / 1000.0)`；`InterruptedException` →
    Python 的 `InterruptedError`（详见 simulateBatchReport 内注释）。
-8) `new BigDecimal(device.lon)` → `float(device.lon)`：实体字段在转写时
-   已按“BigDecimal → float”映射（见 OdsRtSzdnSnapshotFlowAddcode 的差异说明），
-   因此这里直接存 float，序列化出的 JSON 数值与 Java 一致。
+8) `new BigDecimal(device.lon)` → `Decimal(str(device.lon))`：实体字段
+   `OdsRtSzdnSnapshotFlowAddcode.lon/lat` 已映射为 `decimal.Decimal`，直接按
+   字符串构造可保住十进制精度（复核高危②：此前 float 会丢精度）。
 9) **原工程缺陷（忠实保留）**：`reportToKafka` 里
    `String jsonData = JSON.toJSONString(data);` 计算后**从未使用**
    （真正 send 的是 data 对象本身）。按“一比一”要求保留该行并标注。
@@ -46,6 +46,7 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 from com.alibaba.fastjson2.JSON import JSON
@@ -196,9 +197,9 @@ class DeviceDataSimulator(object):
 
         # 经纬度
         # 【Java→Python】Java 是 `new BigDecimal(device.lon)`；实体字段 lon/lat
-        # 在转写时已映射为 float，故直接存 float（见文件头第 8 条）。
-        data.setLon(float(device.lon))
-        data.setLat(float(device.lat))
+        # 为 decimal.Decimal，故按字符串构造 Decimal（复核高危②，不再经过 float）。
+        data.setLon(Decimal(str(device.lon)))
+        data.setLat(Decimal(str(device.lat)))
 
         # 车辆信息
         plateNumber: str = self.generatePlateNumber()

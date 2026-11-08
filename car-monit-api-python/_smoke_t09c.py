@@ -206,6 +206,9 @@ class DataScaleLevel(enum.Enum):
     LARGE = "LARGE"
     HUGE = "HUGE"
 
+    def name(self) -> str:  # 对齐真实替身的 Java 式 name() 方法（P1-5 修正）
+        return self._name_
+
 
 class QueryRequest:
     """桩：Java 的 QueryRequest 只有 setter，这里用 __getattr__ 记录字段。"""

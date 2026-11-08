@@ -62,8 +62,9 @@ _SCALARS: dict[str, type] = {
     "float": float,
     "java.lang.double": float,
     "java.lang.float": float,
-    "bigdecimal": float,
-    "java.math.bigdecimal": float,
+    # P1-1：BigDecimal → decimal.Decimal（十进制精确；float 会丢精度/尾零）
+    "bigdecimal": Decimal,
+    "java.math.bigdecimal": Decimal,
     "boolean": bool,
     "java.lang.boolean": bool,
     "date": datetime,

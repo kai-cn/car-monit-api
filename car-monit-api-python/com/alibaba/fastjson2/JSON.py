@@ -30,6 +30,9 @@ from __future__ import annotations
 
 import dataclasses
 import json as _json
+from decimal import Decimal
+
+import orjson
 import re
 import types
 import typing
@@ -63,8 +66,10 @@ class JSON(object):
     @staticmethod
     def toJSONString(value: Any) -> str:
         # 【Java→Python】fastjson 输出紧凑 JSON（无空格）；ensure_ascii=False 保留中文，
-        # 与 fastjson 的“不转义非 ASCII”一致。
-        return _json.dumps(_serialize(value), ensure_ascii=False, separators=(",", ":"))
+        # 与 fastjson 的“不转义非 ASCII”一致。P1-1 起用 orjson：唯一目的是原生支持
+        # ``orjson.Fragment``（Decimal 的精确十进制文本，见 _serialize 的 Decimal 分支；
+        # stdlib json.dumps 无法把 Decimal 输出为 JSON number）。
+        return orjson.dumps(_serialize(value)).decode("utf-8")
 
     # ------------------------------------------------------------------ 反序列化
     @staticmethod
@@ -82,7 +87,9 @@ class JSON(object):
             return JSONObject(dict(text))
         if isinstance(text, (list, tuple)):
             return JSONArray(list(text))
-        raw = _json.loads(text)
+        # P1-1/H1：fastjson 默认把小数解析为 BigDecimal；用 parse_float=Decimal
+        # 从文本层就保住 scale（1.50 不会先变成 float 1.5 再还原）。
+        raw = _json.loads(text, parse_float=Decimal)
         if isinstance(raw, dict):
             return JSONObject(raw)
         if isinstance(raw, list):
@@ -97,7 +104,7 @@ class JSON(object):
         if isinstance(text, (dict, JSONObject)):
             raw = dict(text)
         else:
-            raw = _json.loads(text)
+            raw = _json.loads(text, parse_float=Decimal)
         if clazz is None:
             return JSONObject(raw) if isinstance(raw, dict) else raw
         return _convert(raw, clazz)
@@ -107,7 +114,7 @@ class JSON(object):
         """等价 `parseArray(String)` / `parseArray(String, Class<T>)`。"""
         if text is None:
             return JSONArray()
-        raw = _json.loads(text) if isinstance(text, str) else list(text)
+        raw = _json.loads(text, parse_float=Decimal) if isinstance(text, str) else list(text)
         if clazz is None:
             return JSONArray(raw)
         return JSONArray(_convert(item, clazz) for item in raw)
@@ -125,6 +132,10 @@ def _serialize(value: Any) -> Any:
     """把 Java 对象图转成可 JSON 化的 Python 原生结构。"""
     if value is None or isinstance(value, (bool, int, float, str)):
         return value
+    if isinstance(value, Decimal):
+        # P1-1：Java fastjson 把 BigDecimal 输出为 JSON number（toString 文本）；
+        # Fragment 由 orjson.dumps 原样嵌入，保留 scale 与大数精度。
+        return orjson.Fragment(str(value))
     if isinstance(value, datetime):
         # 【Java→Python】fastjson 默认是毫秒数；这里用可读时间串（见模块注释第 3 条）
         return value.strftime("%Y-%m-%d %H:%M:%S")
@@ -224,6 +235,19 @@ def _convert(value: Any, target: Any) -> Any:
         if isinstance(value, bool):
             return value
         return str(value).strip().lower() in ("true", "1", "y", "yes")
+
+    if target is Decimal:
+        # H1：fastjson 的 BigDecimal 目标类型。json.loads 已用 parse_float=Decimal
+        # 保住文本 scale；整数/字符串同样按十进制精确构造（float 仅作最后兜底，
+        # 因为它在进入本函数前已经丢失精度）。
+        if isinstance(value, Decimal):
+            return value
+        if isinstance(value, bool):
+            return value  # Java 不支持 boolean → BigDecimal，保持宽松（见模块注释第 5 条）
+        try:
+            return Decimal(str(value))
+        except (ArithmeticError, TypeError, ValueError):
+            return value
 
     if target in (int, float, str):
         if isinstance(value, target):

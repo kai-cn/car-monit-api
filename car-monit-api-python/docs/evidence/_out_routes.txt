@@ -1,0 +1,36 @@
+﻿
+=== generated table =============================================
+controllers : 24
+handlers    : 85
+param kinds : body=3, model=25, param=65, param_map=5, path=23
+verbs       : GET=79, POST=6
+
+=== controllers =================================================
+ok           com.ruoyi.base.controller.DwdLcztFwqjcxxController
+ok           com.ruoyi.base.controller.DwdLcztSfsjcxxController
+ok           com.ruoyi.base.controller.DwdLcztSfzjcxxController
+ok           com.ruoyi.base.controller.LargeScaleQueryController
+ok           com.ruoyi.base.controller.OdsCxztFwqcllsController
+ok           com.ruoyi.base.controller.OdsLwzxsfsjFeeGantryFusion01Controller
+ok           com.ruoyi.base.controller.OdsLwzxsfsjFeeRecords01Controller
+ok           com.ruoyi.base.controller.OdsLwzxsfsjFeeStationEnter01Controller
+ok           com.ruoyi.base.controller.OdsLwzxsfsjFeeStationExit01Controller
+ok           com.ruoyi.base.controller.OdsRtSzdnSnapshotFlowAddcodeController
+ok           com.ruoyi.base.controller.OdsRtSzdnSnapshotFlowProvcaptureAddcodeController
+ok           com.ruoyi.base.controller.OdsRtSzdnSnapshotFlowStationcaptureAddcodeController
+ok           com.ruoyi.base.controller.OdsSzdnGantryController
+ok           com.ruoyi.base.controller.OdsSzdnGantryIpController
+ok           com.ruoyi.base.controller.OdsSzdnProvinceBorderVehicleWeightNewstructureController
+ok           com.ruoyi.base.controller.OdsSzdnSectionController
+ok           com.ruoyi.base.controller.OdsSzdnTollController
+ok           com.ruoyi.base.controller.OdsSzdnTollStationIpController
+ok           com.ruoyi.base.controller.OdsYhglVBaseOrgController
+ok           com.ruoyi.base.controller.ProgressiveQueryController
+ok           com.ruoyi.base.controller.SysTestController
+ok           com.ruoyi.base.controller.SysUtilController
+ok           com.ruoyi.base.controller.UnifiedQueryController
+ok           com.ruoyi.base.controller.ZdataTrailTracksController
+
+=== registration ================================================
+24 controller(s), 85 route(s) registered
+routes      : 85

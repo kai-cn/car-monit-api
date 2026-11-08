@@ -14,9 +14,10 @@
 5) ``(List) obj`` 强转：Java 泛型擦除后只做 List 类型检查，不符抛 ``ClassCastException``；
    Python 无强转，这里显式 ``isinstance(obj, list)`` 并抛 ``TypeError``
    （行为对齐：类型不符即失败，而不是静默把 str 当列表用）。
-6) ``new BigDecimal(String)`` → ``java.math.BigDecimal`` 替身 + 落库字段是 float
-   （t05 的统一映射：BigDecimal → float），故赋值处写成
-   ``float(BigDecimal(...))``，与 SysUtilServiceImpl 内的 ``_bdFloat`` 同一处理方式。
+6) ``new BigDecimal(String)`` → ``java.math.BigDecimal`` 替身 + 落库字段是 Decimal
+   （H1：实体 BigDecimal 字段统一映射为 ``decimal.Decimal``，不再经过 float），
+   故赋值处写成 ``BigDecimal(...)._value``，与 SysUtilServiceImpl 内的
+   ``_bdDecimal`` 同一处理方式。
 7) ``@GetMapping`` / ``@PostMapping`` / ``@RequestBody`` / ``@RequestParam`` 等注解
    在 Python 侧不自动注册路由：方法签名与 Java 一致，HTTP 方法/路径写在 docstring，
    请求体参数按 Java 的 ``@RequestBody`` 语义直接传对象。
@@ -182,13 +183,13 @@ class SysUtilController(BaseController):
             trailList: List[TrailBo] = trailInfo.getTrailList()
             if tracks is not None and trailList is not None and len(trailList) > 0:
                 if CommonUtil.isNotBlank(tracks.getStartLon()):
-                    tracks.setStartLonDec(float(BigDecimal(tracks.getStartLon())))
+                    tracks.setStartLonDec(BigDecimal(tracks.getStartLon())._value)
                 if CommonUtil.isNotBlank(tracks.getStratLat()):
-                    tracks.setStratLatDec(float(BigDecimal(tracks.getStratLat())))
+                    tracks.setStratLatDec(BigDecimal(tracks.getStratLat())._value)
                 if CommonUtil.isNotBlank(tracks.getEndLon()):
-                    tracks.setEndLonDec(float(BigDecimal(tracks.getEndLon())))
+                    tracks.setEndLonDec(BigDecimal(tracks.getEndLon())._value)
                 if CommonUtil.isNotBlank(tracks.getEndLat()):
-                    tracks.setEndLatDec(float(BigDecimal(tracks.getEndLat())))
+                    tracks.setEndLatDec(BigDecimal(tracks.getEndLat())._value)
                 for trailBo in trailList:
                     trailBo.setIsQuery("1")  # 需要查询数据-----------
                 carNo = CommonUtil.isNull(tracks.getPlateKey())

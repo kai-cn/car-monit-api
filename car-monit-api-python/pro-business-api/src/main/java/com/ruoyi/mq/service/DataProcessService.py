@@ -82,15 +82,19 @@ class DataProcessService(object):
         """处理数据：存入 MySQL 分表和 ES。
 
         【Java→Python】原方法带 ``@Transactional(rollbackFor = Exception.class)``；
-        Python 侧没有事务管理器，这里按原顺序执行，异常直接向上抛。
+        P0-4 起用 ``Database.transaction()``（app/db/engine.py，REQUIRED 传播）
+        还原该语义：MySQL 插入与 ES 写入在同一数据库事务内，任一失败则
+        MySQL 插入回滚（Java 的 rollbackFor = Exception 逐字对齐）。
         """
+        from app.db.engine import get_database
+
         log.debug("[数据处理服务] 开始处理数据, dataId=%s", data.getId())
+        with get_database().transaction():
+            # 1. 写入MySQL分表
+            self.insertIntoMysql(data)
 
-        # 1. 写入MySQL分表
-        self.insertIntoMysql(data)
-
-        # 2. 写入ES
-        self.insertIntoEs(data)
+            # 2. 写入ES
+            self.insertIntoEs(data)
 
         log.debug("[数据处理服务] 数据处理完成, dataId=%s", data.getId())
 

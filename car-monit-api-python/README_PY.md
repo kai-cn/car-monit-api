@@ -4,7 +4,8 @@
 > 本文件只讲一件事：**怎么把它跑起来，以及你会踩哪些坑。**
 >
 > 设计细节看 [`MIGRATION_GUIDE.md`](MIGRATION_GUIDE.md)；
-> 行为差异看 [`COMPATIBILITY.md`](COMPATIBILITY.md)。
+> 行为差异看 [`COMPATIBILITY.md`](COMPATIBILITY.md)；
+> 本机环境与真实中间件集成测试 runbook 看 [`docs/LOCAL-ENV.md`](docs/LOCAL-ENV.md)。
 
 ---
 
@@ -53,7 +54,8 @@ curl http://127.0.0.1:9901/health
 | Python | **3.12+** | 用了 `from __future__ import annotations`、`datetime.UTC` 风格、`list[str]` 内建泛型 |
 | 操作系统 | Windows / Linux / macOS | 已在 Windows 21H2 验证 |
 | 数据库 | GaussDB（PostgreSQL 协议） | **不是必需**：连不上也能启动，`/health` 会报 `DEGRADED` |
-| Redis / ES / Kafka / Pulsar / RocketMQ | **不需要** | 全部是进程内替身，见 `COMPATIBILITY.md` §3 |
+| Redis / ES / Kafka | **可选** | 未配置 URL 时为进程内替身；设置 `CAR_MONIT_REDIS_URL` / `CAR_MONIT_ES_URL` / `CAR_MONIT_KAFKA_URL` 切真实读写，见 `COMPATIBILITY.md` §2.3 |
+| Pulsar / RocketMQ | **不需要** | 仍是进程内替身（Java 侧本身未启用或无消费闭环） |
 
 > **虚拟环境是必须的**。系统 Python 里装这些东西会污染环境，而且本项目
 > 用 `.venv` 承载全部依赖（`pyproject.toml` 里 `package = false`，不装成 wheel）。
@@ -85,12 +87,12 @@ curl http://127.0.0.1:9901/health
 
 ```
 car-monit-api-python/
-├── app/            ← FastAPI 宿主（Java 无对应，26 个 .py）
-├── com/ java/ javax/ org/   ← JDK + 三方库替身（171 个 .py）
+├── app/            ← FastAPI 宿主（Java 无对应，含 middleware 适配层）
+├── com/ java/ javax/ org/   ← JDK + 三方库替身（172 个 .py）
 ├── pro-base-common/src/main/java/com/ruoyi/common/      ← 业务：公共模块（54 个 .py）
 ├── pro-business-api/src/main/java/com/ruoyi/            ← 业务：主模块（166 个 .py）
-├── tests/          ← pytest
-├── tools/          ← 16 个验证脚本
+├── tests/          ← pytest（单元 + SQL golden + 集成）
+├── tools/          ← 验证/门禁脚本（含 check_secrets）
 ├── scripts/        ← smoke_test.py
 ├── bootstrap.py    ← 把上面几个根塞进 sys.path（= Maven classpath）
 └── run.py          ← 入口（= java -jar）
@@ -117,24 +119,45 @@ car-monit-api-python/
 | `server.servlet.context-path` | `/` | — | 保持 `/`，路径前缀不额外拼接 |
 | `spring.datasource.dynamic.datasource.master.url` | `jdbc:postgresql://192.168.56.10:5432/RuoYi` | 改 yml | `jdbc:` 前缀会被剥掉交给 psycopg |
 | `spring.datasource.dynamic.datasource.master.username` | `gaussdb` | 改 yml | |
-| `spring.datasource.dynamic.datasource.master.password` | *(yml 内)* | 改 yml | **不要**提交真实密码 |
+| `spring.datasource.dynamic.datasource.master.password` | `${SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD:}` | 环境变量 / `application-local.yml` | **不要**提交真实密码（上线前必须轮换，见 §10） |
 | `spring.datasource.dynamic.druid.maxActive` | `20` | 改 yml | 连接池上限 |
-| `spring.redis.host` / `port` | `127.0.0.1:6379` | 改 yml | 只影响 `/health` 展示；真实读穿透走 `CAR_MONIT_REDIS_URL` |
-| `elasticsearch.host` / `port` | `localhost:9200` | 改 yml | ES 替身据此判定索引是否存在 |
-| `spring.kafka.bootstrap-servers` | `localhost:9092` | 改 yml | 只影响 `/health` 展示，无真实连接 |
+| `spring.redis.host` / `port` | `127.0.0.1:6379` | 改 yml | `/health` 展示；**真实读写**走 `CAR_MONIT_REDIS_URL` |
+| `elasticsearch.host` / `port` | `localhost:9200` | 改 yml | `/health` 展示；**真实读写**走 `CAR_MONIT_ES_URL` |
+| `spring.kafka.bootstrap-servers` | `localhost:9092` | 改 yml | `/health` 展示；**真实生产/消费**走 `CAR_MONIT_KAFKA_URL` |
 | `app.scheduler.enabled` | `true` | `set APP_SCHEDULER_ENABLED=false` | **Python 独有**开关，见 4.3 |
 | `isLocalhost` | `local` | 改 yml | `local` / `prod` 部署标记 |
 
-### 4.3 Python 侧新增的环境变量（**仅 5 个**，全部是宿主层行为，不改业务）
+### 4.3 Python 侧新增的环境变量（宿主层行为，不改业务）
+
+**运行模式与启动（V2 新增，见 `app/runtime.py`）**：
+
+| 变量 | 默认 | 作用 |
+|---|---|---|
+| `CAR_MONIT_RUNTIME` | `shim` | `shim`=开发/测试（替身可用）；`prod`=生产（**替身假成功操作抛错拒绝**：Kafka/ES/Redis 写等中间件替身在无真实适配器时会显式失败，等价 Java 中间件宕机路径） |
+| `CAR_MONIT_STARTUP_FAIL_FAST` | `true` | `false` → Mapper/路由/调度器启动失败仅记日志（应急排障用；默认与 Spring 一致失败即退出） |
+| `CAR_MONIT_DOCS_ENABLED` | shim 开 / prod 关 | `/docs` 与 `/openapi.json` 开关 |
+| `CAR_MONIT_HEALTH_VERBOSE` | shim 开 / prod 关 | `/health` 是否携带 `config`（中间件地址）细节 |
+| `APP_BEANS_ENABLED` | `false` | `true` → 启动 Java 侧 `@Service#@PostConstruct` 后台 Bean（全量/增量同步、Kafka 重试；**启用前须确认决策②③**，见 `app/beans.py`） |
+
+**连接与部署**：
 
 | 变量 | 默认 | 作用 |
 |---|---|---|
 | `CAR_MONIT_HOST` | `0.0.0.0` | uvicorn 绑定地址（对应 Tomcat 的 `address`） |
-| `CAR_MONIT_PORT` | `server.port` | uvicorn 端口 |
+| `CAR_MONIT_PORT` | `server.port` | uvicorn 端口（同时是 `settings.server_port` 的最高优先级） |
+| `CAR_MONIT_WORKERS` | `1` | uvicorn 进程数；**>1 会复制进程内状态**（调度器/内存替身/导出任务表），真实中间件接入前慎用 |
 | `CAR_MONIT_RELOAD` | `false` | `true` → 热重载（**仅开发用**，等价于 `spring-boot-devtools`） |
 | `CAR_MONIT_LOG_LEVEL` | `INFO` | `DEBUG` / `INFO` / `WARNING` |
-| `CAR_MONIT_REDIS_URL` | *(空)* | 如 `redis://127.0.0.1:6379/0`：`RedisCache` 对**未命中且为标量**的键向真实 Redis 取值。不设置则与之前完全一致（纯内存） |
+| `CAR_MONIT_REDIS_URL` | *(空)* | 如 `redis://127.0.0.1:6379/0`：Redis 全量读写走真实服务；不设置则纯内存 |
+| `CAR_MONIT_ES_URL` | *(空)* | 如 `http://127.0.0.1:9200`：ES 查询/写入走真实 REST/DSL；不设置则内存索引 |
+| `CAR_MONIT_KAFKA_URL` | *(空)* | 如 `127.0.0.1:9092`：生产/消费走真实 broker；不设置则内存 producer |
+| `CAR_MONIT_REDIS_FALLBACK` / `..._ES_FALLBACK` / `..._KAFKA_FALLBACK` | prod=`error`，shim=`memory` | `error`=失败抛错（Java 宕机语义）；`memory`=熔断回落替身（60s 半开、单探测） |
+| `CAR_MONIT_METRICS_ENABLED` | prod 关 / shim 开 | `/metrics` 开关（关闭时 404） |
 | `APP_SCHEDULER_ENABLED` | `true` | `false` → 不启动 10 个定时任务（自检时会用） |
+
+> **密钥（P0-6）**：随包 `application.yml` 只含 `${ENV:}` 占位符；真实口令写
+> `pro-business-api/src/main/resources/application-local.yml`（已 gitignore，
+> 优先级：环境变量 > local 文件 > yml > 占位符默认值），或经环境变量注入。
 
 ### 4.4 代码里怎么读配置
 
@@ -396,7 +419,7 @@ findstr /s /c:"shouldRouteToEs" pro-business-api\src\main\java\*.py
 ### 6.4 启动日志怎么看
 
 ```
-MyBatis: 22 mapper(s), 54 statement(s) (0 from annotations), 58 method(s) bound to SQL
+MyBatis: 23 mapper(s), 58 statement(s) (4 from annotations), 58 method(s) bound to SQL
 Scheduler: 10 task(s)
 Started EcBusinessApiApplication in 0.11 seconds
 ```
@@ -415,11 +438,11 @@ ERROR ... mapper method without statement: com.ruoyi.base.mapper.XxxMapper#yyy
 ## 7. 测试 / Tests
 
 ```bat
-:: 全部回归网（82 用例）
+:: 全部回归网（单元 + SQL golden + 23 个冒烟脚本；集成测试默认跳过）
 .venv\Scripts\pytest.exe -q
 
-:: 单个阶段
-.venv\Scripts\pytest.exe tests/test_phase2c.py -v
+:: 一键门禁（pytest/覆盖率 + check_* + secret 扫描 + 3 个 smoke，同 CI 顺序）
+powershell -ExecutionPolicy Bypass -File tools\run_checks.ps1
 ```
 
 | 文件 | 覆盖 |
@@ -429,6 +452,25 @@ ERROR ... mapper method without statement: com.ruoyi.base.mapper.XxxMapper#yyy
 | `tests/test_phase2c.py` | MyBatis XML 解释、QueryWrapper、分页 |
 | `tests/test_phase2d.py` | 调度器、CronExpression |
 | `tests/test_phase2e.py` | 中间件替身（Redis / ES / Kafka / Pulsar） |
+| `tests/test_v2_p0.py` | V2 P0 回归：运行时模式守卫、Bean 生命周期、事务、fail-fast、密钥 |
+| `tests/test_v2_p1.py` | V2 P1 回归：Decimal 精度、worker 线程、请求 ID/metrics |
+| `tests/test_v2_p2.py` | V2 P2 回归：Redis/ES/Kafka 真实适配、熔断窗口、FastJson 兼容、优雅关闭 |
+| `tests/business/test_smoke_scripts.py` | 23 个迁移期冒烟脚本（子进程隔离，清空真实中间件 URL） |
+| `tests/business/test_sql_golden.py` | 54 条 statement 渲染 SQL 逐字节锁定 |
+| `tests/business/test_integration_db.py` | 真实 GaussDB 集成（`CAR_MONIT_TEST_DB=1` 开启，默认跳过） |
+
+### 真实中间件集成测试（Redis / ES / Kafka）
+
+默认全部 skip。磁盘、端口与启动顺序见 [`docs/LOCAL-ENV.md`](docs/LOCAL-ENV.md)；
+满足前置条件后一条命令：
+
+```powershell
+$env:CAR_MONIT_IT_DATA_DIR = "E:\car-monit-it-data"   # 剩余 ≥8GB 的卷
+powershell -ExecutionPolicy Bypass -File scripts\run_integration.ps1 -DataDir $env:CAR_MONIT_IT_DATA_DIR
+```
+
+只复用已运行的中间件（不启动容器）：`-SkipStart`；
+测试 Linux VM：`-SkipStart -ServiceHost 192.168.56.10`。
 
 ### 验证工具（比 pytest 更适合"改完看有没有弄坏"）
 
@@ -490,3 +532,17 @@ GaussDB 通常跑在 VirtualBox/VMware 的 host-only 虚拟机上，需要：
 3. 改路由 → 改 `app/routes/generated.py`，同时更新 `"java"` 行的行号。
 4. 新增业务代码 → 放在镜像路径下，方法名保持 `camelCase`，加 `# Java:` 注释。
 5. 改完跑 `tools\check_parity.py`（Tier B 必须 0）和 `scripts\smoke_test.py`（必须全绿）。
+
+---
+
+## 10. 上线前检查清单 / Release checklist
+
+| # | 项 | 要求 | 验证方式 |
+|---|---|---|---|
+| 1 | **口令轮换（必须，阻断上线）** | GaussDB / Redis / ES / RabbitMQ 的历史口令曾出现在旧文档/注释中；上线前必须由运维在**生产侧轮换**，仓库内只保留 `${ENV:}` 占位符 | 运维工单 + `python tools\check_secrets.py` |
+| 2 | 密钥注入 | 真实口令只经环境变量或 `application-local.yml`（gitignored）注入；禁止写回 `application.yml` / 文档 / 注释 | `python tools\check_secrets.py` |
+| 3 | 运行模式 | `CAR_MONIT_RUNTIME=prod`（禁止 shim 替身承载生产流量） | `/health` 的 `runtime` 字段 = `prod` |
+| 4 | 中间件连接 | 按需设置 `CAR_MONIT_REDIS_URL` / `CAR_MONIT_ES_URL` / `CAR_MONIT_KAFKA_URL`，并确认 `/health/ready` 为 200 | `curl /health/ready` |
+| 5 | 启动 fail-fast | 保持 `CAR_MONIT_STARTUP_FAIL_FAST=true`（默认）；Mapper/路由缺失会拒绝启动 | 启动日志 `all gates` + 进程退出码 |
+| 6 | 端点收敛 | prod 默认关闭 `/docs`、`/openapi.json`、`/metrics`、`/health` 的 `config` 细节 | `curl /docs` 应为 404 |
+| 7 | 全量门禁 | `powershell -ExecutionPolicy Bypass -File tools\run_checks.ps1` 全绿 | 退出码 0 |

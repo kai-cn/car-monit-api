@@ -1,0 +1,36 @@
+﻿.venv\Scripts\python.exe : D:\work\IdeaProjects\car-monit-api\car-monit-api-python\.venv\Lib\site-packages\fastapi\test
+client.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` ins
+tead.
+所在位置 行:15 字符: 1702
++ ... nv:PAGER = 'more'; $env:TERM = 'dumb'; .venv\Scripts\python.exe -c @"
++                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\work\IdeaPro...ttpx2` instead.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  from starlette.testclient import TestClient as TestClient  # noqa
+2026-11-07 18:58:52.978 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:246 - [ES索引管理] ILM 策略创建: car_monit_ilm_policy, status=201
+2026-11-07 18:58:52.978 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:149 - [ES索引管理] auto-create=false, 跳过索引自动创建。索引将需要手动初始化。
+2026-11-07 18:58:53.010 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:238 - [ES索引管理] ILM 策略已存在, 跳过创建: car_monit_ilm_policy
+2026-11-07 18:58:53.010 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:149 - [ES索引管理] auto-create=false, 跳过索引自动创建。索引将需要手动初始化。
+2026-11-07 18:58:53.010 [MainThread] INFO  com.ruoyi.base.service.optimization.LargeScaleQueryService:215 - [大规模查询服务] 初始化 ES 客户端 host=localhost, port=9200
+2026-11-07 18:58:53.036 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:238 - [ES索引管理] ILM 策略已存在, 跳过创建: car_monit_ilm_policy
+2026-11-07 18:58:53.036 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:149 - [ES索引管理] auto-create=false, 跳过索引自动创建。索引将需要手动初始化。
+2026-11-07 18:58:53.036 [MainThread] INFO  com.ruoyi.base.service.optimization.LargeScaleDataSyncService:355 - [数据同步服务] 初始化完成, ES=localhost:9200
+2026-11-07 18:58:53.250 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:238 - [ES索引管理] ILM 策略已存在, 跳过创建: car_monit_ilm_policy
+2026-11-07 18:58:53.250 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:149 - [ES索引管理] auto-create=false, 跳过索引自动创建。索引将需要手动初始化。
+2026-11-07 18:58:53.276 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:238 - [ES索引管理] ILM 策略已存在, 跳过创建: car_monit_ilm_policy
+2026-11-07 18:58:53.277 [MainThread] INFO  com.ruoyi.base.service.optimization.EsIndexManageService:149 - [ES索引管理] auto-create=false, 跳过索引自动创建。索引将需要手动初始化。
+2026-11-07 18:58:53.292 [MainThread] INFO  app.routes.registry:486 - route registry: 24 controller(s), 85 route(s) registered
+2026-11-07 18:58:53.292 [MainThread] INFO  app.main:132 - Registered 85 controller route(s)
+2026-11-07 18:58:53.356 [MainThread] INFO  httpx:1025 - HTTP Request: GET http://testserver/base/gantry/list "HTTP/1.1 200 OK"
+GET 200 allow= None body= {"total":0,"rows":[],"code":200,"msg":"查询成功"}
+2026-11-07 18:58:53.361 [MainThread] INFO  httpx:1025 - HTTP Request: HEAD http://testserver/base/gantry/list "HTTP/1.1 405 Method Not Allowed"
+HEAD 405 allow= None body= 
+2026-11-07 18:58:53.365 [MainThread] INFO  httpx:1025 - HTTP Request: OPTIONS http://testserver/base/gantry/list "HTTP/1.1 405 Method Not Allowed"
+OPTIONS 405 allow= None body= {"timestamp":"2026-11-07T10:58:53.364+00:00","status":405,"error":"Method Not Al
+2026-11-07 18:58:53.368 [MainThread] INFO  httpx:1025 - HTTP Request: POST http://testserver/base/gantry/list "HTTP/1.1 405 Method Not Allowed"
+POST 405 allow= None body= {"timestamp":"2026-11-07T10:58:53.368+00:00","status":405,"error":"Method Not Al
+2026-11-07 18:58:53.372 [MainThread] INFO  httpx:1025 - HTTP Request: PUT http://testserver/base/gantry/list "HTTP/1.1 405 Method Not Allowed"
+PUT 405 allow= None body= {"timestamp":"2026-11-07T10:58:53.372+00:00","status":405,"error":"Method Not Al
+2026-11-07 18:58:53.376 [MainThread] INFO  httpx:1025 - HTTP Request: DELETE http://testserver/base/gantry/list "HTTP/1.1 405 Method Not Allowed"
+DELETE 405 allow= None body= {"timestamp":"2026-11-07T10:58:53.376+00:00","status":405,"error":"Method Not Al

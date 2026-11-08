@@ -24,7 +24,7 @@
 #
 # 已验证事实 / Verified facts（来自仓库实际配置，非推测）
 #   * application.yml: url=jdbc:postgresql://192.168.56.10:5432/RuoYi
-#                      username=gaussdb  password=OpenGauss@123
+#                      username=gaussdb  password=<通过 DB_PASSWORD 注入>
 #                      driver=org.postgresql.Driver
 #   * application.yml: spring.redis.host=127.0.0.1 port=6379 database=0
 #                      password 被注释掉 -> 默认无密码
@@ -53,7 +53,7 @@ ORIG_ARGS=("$@")
 # -----------------------------------------------------------------------------
 DB_NAME="RuoYi"                 # 与 application.yml 的 jdbc URL 末段一致（大小写敏感，需加引号）
 DB_USER="gaussdb"               # 与 yml username 一致
-DB_PASSWORD="OpenGauss@123"     # 与 yml password 一致（保持零配置即可启动）
+DB_PASSWORD=""                  # 必须通过 --db-password 或 DB_PASSWORD 环境变量注入
 DB_HOST="127.0.0.1"
 DB_PORT="5432"
 PG_VERSION="16"
@@ -107,7 +107,7 @@ car-monit-api 云端环境安装 / cloud provisioning
   sudo bash setup.sh [options]
 
 选项:
-  --db-password <pw>     数据库密码（默认取 application.yml 里的 OpenGauss@123）
+  --db-password <pw>     数据库密码（必须显式提供，或经 DB_PASSWORD 环境变量注入）
   --db-host <host>       数据库地址（默认 127.0.0.1）
   --db-port <port>       数据库端口（默认 5432）
   --db-name <name>       数据库名（默认 RuoYi）
@@ -154,6 +154,10 @@ while [ $# -gt 0 ]; do
     *) die "未知参数: $1（用 --help 查看用法）" ;;
   esac
 done
+
+if [ -z "$DB_PASSWORD" ]; then
+  die "必须通过 --db-password 或 DB_PASSWORD 环境变量提供数据库口令（仓库不再内置默认明文口令）"
+fi
 
 # Redis 的可选参数用数组承载：直接写 ${PW:+--requirepass "$PW"} 会被按空格
 # 切成两个词，密码里含空格时参数就错位了。

@@ -17,6 +17,13 @@ Java 侧来自 spring-kafka：`org.springframework.kafka.core.KafkaTemplate<K, V
 3) `KafkaTemplate` 在 Spring 里是**单例 Bean**；这里用模块级 `defaultKafkaTemplate()`
    还原“所有服务向同一个 Kafka 集群发送”的语义，测试也可直接检查已发送记录。
 4) `flush()` 在真实 Kafka 里是等待缓冲区清空；本替身无缓冲，等价空操作。
+5) **P2-4 真实后端挂载**：设置 ``CAR_MONIT_KAFKA_URL`` 后，本类构造时挂载
+   :class:`app.middleware.real_kafka.RealKafkaProducer`（进程级共享，等价
+   Spring 单例 Bean）。此后 ``send`` 把消息发往真实 broker（可靠性配置逐项
+   镜像业务 KafkaProducerConfig），ack 后由 librdkafka 回调线程完成
+   ListenableFuture；未设置 URL 时行为与纯替身完全一致（P0-2 守卫也只在此
+   路径触发）。原进程内存实现抽到 ``_send_memory``，供真实后端“熔断降级”
+   时复用（见 real_kafka.py 的降级语义说明）。
 """
 from __future__ import annotations
 
@@ -24,6 +31,8 @@ from typing import Any, List, Optional, Tuple
 
 from org.springframework.kafka.support.SendResult import RecordMetadata, SendResult
 from org.springframework.util.concurrent.ListenableFuture import ListenableFuture
+
+from app.runtime import reject_shim_operation
 
 __all__ = ["KafkaTemplate", "defaultKafkaTemplate"]
 
@@ -45,10 +54,26 @@ class KafkaTemplate(object):
         self._sent_records: List[Tuple[str, Any, Any]] = []
         self.fail_next: Optional[BaseException] = None  # 注入“下一次发送失败”
         self.always_fail = False  # 注入“持续发送失败”
+        # P2-4：CAR_MONIT_KAFKA_URL 设置时挂载真实生产者后端（惰性 import
+        # 避免循环依赖；进程级共享，等价 Spring 单例 Bean）。
+        from app.middleware.real_kafka import shared_kafka_producer
+        self._real = shared_kafka_producer()
 
     # ------------------------------------------------------------------ 发送
     def send(self, topic: str, key: Any = None, value: Any = None) -> ListenableFuture:
         """等价 `send(String topic, K key, V value)`；返回已完成的 ListenableFuture。"""
+        if self._real is not None:
+            return self._real.send(
+                topic, key, value,
+                memory=lambda: self._send_memory(topic, key, value))
+        # P0-2：prod 模式下拒绝"假成功"发送（消息只会进进程内存，broker 收不到）。
+        reject_shim_operation(
+            "KafkaTemplate.send",
+            "（真实 Kafka 适配器未实现，消息不会到达 broker。）")
+        return self._send_memory(topic, key, value)
+
+    def _send_memory(self, topic: str, key: Any, value: Any) -> ListenableFuture:
+        """进程内存实现（P2-4 抽出：真实后端熔断降级时复用同一份逻辑）。"""
         future = ListenableFuture()
 
         error = self._next_error()
@@ -70,10 +95,14 @@ class KafkaTemplate(object):
         return self.send(self.default_topic, None, value)  # type: ignore[attr-defined]
 
     def flush(self) -> None:
-        """等待缓冲区清空（本替身无缓冲，空操作）。"""
+        """等待缓冲区清空（本替身无缓冲，空操作；真实后端等待 broker ack）。"""
+        if self._real is not None:
+            self._real.flush()
         return None
 
     def close(self) -> None:
+        if self._real is not None:
+            self._real.close()
         return None
 
     # ------------------------------------------------------------------ 测试辅助

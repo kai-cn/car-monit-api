@@ -12,7 +12,8 @@
 | **P2** | 实现不同、外部行为一致 | 记录即可 |
 | **P3** | Python 独有新增 | 记录即可，Java 侧无对应 |
 
-**当前结论：P0 = 0 条，P1 = 3 条（均已标注、均有规避路径），P2 = 6 条，P3 = 4 条。**
+**当前结论：P0 = 0 条，P1 = 1 条（Flink 作业不可运行，见 §2.2），P2 = 6 条，P3 = 4 条。**
+（2026-11-08 修复轮次后，事务与中间件两项 P1 已关闭：§2.1 / §2.3。）
 
 **真实环境接口对等校验：75 / 75 一致（0 处差异）**，详见 §0。
 
@@ -79,7 +80,7 @@ D:/work/Git/bin/bash.exe _probe/run_compare.sh
 | 存在 Flyway / Liquibase | **0 处**（无迁移脚本目录） | **不引入 Alembic** | P2 |
 | 存在 Swagger / springdoc | **0 处** | FastAPI 自带 `/docs`、`/openapi.json`，标注为迁移辅助 | P3 |
 | 存在 Actuator / Micrometer | **0 处** | `/health`，标注为迁移辅助 | P3 |
-| 存在单元测试 | **无任何 `src/test`** | `tests/` 83 个 pytest 用例（**新增回归网**） | P3 |
+| 存在单元测试 | **无任何 `src/test`** | `tests/` pytest 回归网（单元 + SQL golden + 真实中间件集成测试骨架） | P3 |
 | 存在 Quartz | **无**，只有 `@Scheduled` | 自研 `CronExpression`（Spring 6 段语义） | P2 |
 
 > **错误码常量**：Java 侧没有独立的错误码枚举，`AjaxResult` 直接用
@@ -90,49 +91,30 @@ D:/work/Git/bin/bash.exe _probe/run_compare.sh
 
 ## 2. 无法复现的 Java 能力 / P1
 
-### 2.1 `@Transactional` —— 唯一的事务语义缺口 【P1】
+### 2.1 `@Transactional` —— 事务语义已补齐 【原 P1，已修复】
 
-**现象**：MySQL 写成功、ES 写失败时，Python 侧 **MySQL 不会回滚**（Java 会）。
+**现象（修复前）**：MySQL 写成功、ES 写失败时，Python 侧 MySQL 不会回滚。
 
-**根因**：全工程**仅 1 处** `@Transactional`，位于
-`pro-business-api/src/main/java/com/ruoyi/mq/service/DataProcessService.java:89`。
-Python 侧没有 `DataSource` / `SqlSession` 生命周期，也没有事务管理器。
-
-**Java 原文**：
-
-```java
-@Transactional(rollbackFor = Exception.class)
-public void process(OdsRtSzdnSnapshotFlowAddcode data) {
-    insertIntoMysql(data);   // 写 MySQL
-    insertIntoEs(data);      // 写 ES
-}
-```
-
-**Python 实现**：
+**现状**：`app/db/engine.py` 提供 `Database.transaction()`（REQUIRED 传播、
+异常回滚、同事务读可见），`DataProcessService.process` 已按 Java 的
+`@Transactional(rollbackFor = Exception.class)` 边界包住“写库 + 写 ES”：
 
 ```python
-# pro-business-api/.../mq/service/DataProcessService.py
-"""【Java→Python】原方法带 ``@Transactional(rollbackFor = Exception.class)``；
-Python 侧没有事务管理器，这里按原顺序执行，异常直接向上抛。"""
-def process(self, data) -> None:
+with database.transaction():
     self.insertIntoMysql(data)
     self.insertIntoEs(data)
 ```
 
-**影响面**：只影响 MQ 消费路径（`RocketMqConsumer` → `DataProcessService`）。
+**语义对照**：
+
+| Java | Python |
+|---|---|
+| `@Transactional(rollbackFor = Exception.class)` | `with Database.transaction():` |
+| 嵌套调用加入外层事务（REQUIRED） | 复用 `_TX_LOCAL` 上的同一个连接（无 savepoint，语义平铺） |
+| 运行时异常回滚 | `engine.begin()` 异常自动 rollback |
+
+**影响面**：只影响 MQ 消费路径（`RocketMqConsumer` → `DataProcessService`）；
 HTTP 接口全部只读或单表单写，不依赖事务。
-
-**规避方式**：
-
-* 若接真实库，改为显式事务：
-  ```python
-  with session.begin():          # SQLAlchemy 2.0，= @Transactional
-      self.insertIntoMysql(data)
-      self.insertIntoEs(data)
-  ```
-* 或改造为"MySQL 侧加 `INSERT ... ON CONFLICT` 幂等 + 失败重投"，
-  比回滚更符合消息消费的最终一致语义。
-* **不要**用装饰器假装事务 —— `@transactional` 在 Python 里不会自动生效。
 
 ### 2.2 Flink 作业不可运行 【P1】
 
@@ -150,45 +132,42 @@ HTTP 接口全部只读或单表单写，不依赖事务。
 **规避方式**：轨迹拟合作业**必须继续由 Java 侧的 Flink 服务承担**。
 Python 版不提供该能力。若必须用 Python，需要独立引入 `pyflink` 并重写拓扑。
 
-### 2.3 中间件默认用进程内替身 / 写操作不落外部 【P1】
+### 2.3 中间件默认为替身，可一键切换真实读写 【原 P1，已修复】
 
-**现象**：Redis / ES / Kafka / Pulsar / RocketMQ 的调用默认返回**进程内替身**的结果，
-不会访问网络。Redis 与 ES 可以按环境变量接到真实实例，但**只接读**（见下文）。
+**现象（修复前）**：Redis / ES / Kafka 的调用默认返回进程内替身，数据不出进程，
+多实例各自为政。
 
-**根因**：迁移目标是“行为等价”，不是“基础设施重建”。替身保证：
-* 方法签名、参数、返回值形状**完全一致**；
-* 调用顺序、日志输出**完全一致**；
-* 但数据是内存态，进程重启即丢失。
+**现状**：Python 侧已提供**真实读写适配器**（`app/middleware/real_*.py`），
+设置环境变量即切换；未设置时保持纯内存替身（开发/测试/CI 无需外部服务）。
 
-**与真实实例的对接入口**：
-
-| 环境变量 | 作用 | 读 | 写 |
-|---|---|---|---|
-| `CAR_MONIT_REDIS_URL`（如 `redis://127.0.0.1:6379/0`） | `RedisCache.getCacheObject` 未命中时向真实 Redis 取值，**仅放行标量** | ✅ | ❌ 仍写内存 |
-| `elasticsearch.host/port`（`application.yml`） | ES 替身按真实索引元数据判定 `index_not_found_exception` | 结构对齐 | ❌ 仍写内存 |
-
-**为什么只接读**：Java 与 Python 连的是同一个 Redis 库，而 Java 用 FastJson 把类型信息一起
-写进去（`{"@type":"com.ruoyi...", "vehicleWeight":52650L}`，后者甚至不是合法 JSON）。
-Python 回写一定破坏 Java 侧解析；把 FastJson 对象直接转 dict 返回又会改变响应结构
-（缺 `null` 键、日期格式不同）。因此：
-* **标量**（`sys_config:data_query` 这类配置）读穿透——与 Java 完全一致；
-* **对象**视为未命中，回源数据库——得到的实体与 Java 序列化结果一致；
-* 写永远在内存——避免污染 Java 正在读的缓存。
-
-**替身清单**：
-
-| 组件 | 替身位置 | 当前行为 |
+| 环境变量 | 作用 | 读写语义 |
 |---|---|---|
-| Redis | `com/ruoyi/common/core/redis/RedisCache.py`、`RedisUtil.py`、`_RespClient.py` | 进程内 dict + 过期时间；配了 `CAR_MONIT_REDIS_URL` 后对标量做只读穿透 |
-| Elasticsearch | `org/elasticsearch/**`（`QueryBuilders`、`SearchRequest`、`SearchSourceBuilder`、`SearchResponse`、`ElasticsearchException`…） | 构造查询 DSL 并返回内存命中；索引不存在时抛与真实 ES 一致的 `index_not_found_exception` |
-| Kafka | `org/apache/kafka/**` | `Producer`/`Consumer` 接口可用，不连 broker |
-| Pulsar | `org/apache/pulsar/**` | 同上 |
-| RocketMQ | `org/apache/rocketmq/**` | 同上；Java 侧只有 1 个 consumer |
-| RabbitMQ | **无替身** | Java 侧也只有 `application.yml` 配置、**零代码使用** |
-| Forest HTTP | `com/ruoyi/base/forest/` | 用 `httpx` 直连 |
+| `CAR_MONIT_REDIS_URL`（如 `redis://127.0.0.1:6379/0`） | 真实 Redis 读写 | 全量操作走 redis-py；编解码兼容 Java FastJson（`@type` 白名单、`52650L`、毫秒/文本日期） |
+| `CAR_MONIT_ES_URL`（如 `http://127.0.0.1:9200`） | 真实 Elasticsearch REST/DSL | 查询/写入/scroll/索引管理全部走 elasticsearch-py；响应 `parse_float=Decimal` 保留金额精度 |
+| `CAR_MONIT_KAFKA_URL`（如 `127.0.0.1:9092`） | 真实 Kafka 生产/消费 | `acks=all`、幂等、lz4、超时与 Java 配置对齐；消费者按 Flink `at-least-once` 语义提交位点 |
 
-**规避方式**：需要写入真实中间件时，用 Java 侧承担；Python 侧只做读穿透与行为回归。
-真实环境的接口对等结果见 §0，完整性检查见 `tools/check_middleware.py`。
+**降级与熔断**（`CAR_MONIT_REDIS_FALLBACK` / `..._ES_FALLBACK` / `..._KAFKA_FALLBACK`）：
+
+* `error`（prod 默认）：真实服务失败**抛错**，对齐 Java 的“中间件宕机”失败路径；
+* `memory`（shim 默认）：失败后熔断，后续请求回落进程内替身；窗口 60 秒，
+  半开只放行一个探测；**降级期间的写入不会回灌真实服务**；
+* 三者的 `degraded` 状态已接入 `/health` 与 `/health/ready`（熔断中 = 组件 DOWN）。
+
+**仍是替身的部分**：Pulsar / RocketMQ（Java 侧本身未启用或无消费闭环）、
+`JdbcTemplate`（空转）、Forest HTTP（直接 httpx）、Flink（见 §2.2）。
+
+| 组件 | 当前行为 |
+|---|---|
+| Redis | 配 URL → 真实读写；未配 → 进程内 dict + 过期时间 |
+| Elasticsearch | 配 URL → 真实 REST/DSL；未配 → 内存索引 + 与真实 ES 一致的 `index_not_found_exception` |
+| Kafka | 配 URL → 真实 producer/consumer；未配 → 内存 producer |
+| Pulsar / RocketMQ | 内存替身（沿用原迁移形态） |
+| RabbitMQ | **无替身**（Java 侧只有配置、零代码使用） |
+| Forest HTTP | `httpx` 直连 |
+
+**规避方式**：生产按 `README_PY.md` §10 上线检查清单设置 URL 与 fallback=error；离线回归保持未设置
+（或跑 `tools/run_checks.ps1`，冒烟脚本会主动清空 `CAR_MONIT_*_URL` 隔离真实集群）。
+真实环境接口对等结果见 §0，连通性检查见 `tools/check_middleware.py`。
 
 ---
 
@@ -303,7 +282,8 @@ def _invalid_bound_statement(namespace: str, method_name: str):
 | **内存模式** | 未进入 ASGI lifespan（`TestClient` 不用 `with`） | 返回内存 list（多为空），**不解析 XML** |
 | **真实模式** | `python run.py` 或 `TestClient` 用 `with` | 解析 22 个 XML，绑定 58 个方法，走 GaussDB |
 
-**这是刻意设计**：让 83 个 pytest 用例和 `tools/smoke_all_routes.py` 不依赖任何外部服务。
+**这是刻意设计**：让 pytest 回归网和 `tools/smoke_all_routes.py` 不依赖任何外部服务
+（冒烟脚本主动清空 `CAR_MONIT_*_URL`，真实集群只在 `tests/business` 集成测试中使用）。
 
 **注意**：内存模式下 `total` 与真实库不同（内存 list 长度 vs `count(0)` 结果）。
 断言 `total` 具体值的测试只能在真实模式下跑。
@@ -413,9 +393,12 @@ class JacksonResponse(Response):
 
 | 端点 | 说明 | 关掉方式 |
 |---|---|---|
-| `GET /health` | 存活/就绪探针，含 `db` / `scheduler` 探针 | 不建议关（自检依赖） |
-| `GET /docs` | Swagger UI | `FastAPI(docs_url=None)` |
-| `GET /openapi.json` | OpenAPI 3 描述（86 条 path） | `FastAPI(openapi_url=None)` |
+| `GET /health` | 组件探针（db / redis / elasticsearch / kafka），失败时 `DEGRADED` | `CAR_MONIT_HEALTH_VERBOSE=false` 隐藏 `config` 细节 |
+| `GET /health/live` | 纯存活探针（进程活着即 200） | 不建议关（容器 liveness） |
+| `GET /health/ready` | 就绪探针（任一组件 DOWN → 503） | 由负载均衡使用 |
+| `GET /metrics` | Prometheus 文本指标（QPS/错误/耗时/状态码） | prod 默认关闭；`CAR_MONIT_METRICS_ENABLED=true` 开启 |
+| `GET /docs` | Swagger UI | prod 默认关闭；`CAR_MONIT_DOCS_ENABLED` 可覆盖 |
+| `GET /openapi.json` | OpenAPI 3 描述（85 条业务 path） | 同上 |
 
 **这些在 Java 侧完全不存在**。已在 `app/main.py` 顶部声明为 deliberate difference。
 它们**不影响**任何业务路径（`server.servlet.context-path` 是 `/`，
@@ -431,7 +414,7 @@ class JacksonResponse(Response):
 | 端口 | `server.port` = 9901 | 同（可用 `CAR_MONIT_PORT` 覆盖） |
 | 绑定地址 | Tomcat `address`（默认全部） | `0.0.0.0`（`CAR_MONIT_HOST`） |
 | 进程退出 | JVM 等待非 daemon 线程 | 同上 → CLI 脚本需 `os._exit()` |
-| 优雅停机 | `SIGTERM` → `@PreDestroy` | `SIGTERM` → lifespan 退出段 |
+| 优雅停机 | `SIGTERM` → `@PreDestroy` | `SIGTERM` → lifespan 退出段（Bean → 调度器 → Kafka/ES/Redis/DB 连接池，见 `shutdown_middleware`） |
 | 热重载 | `spring-boot-devtools` | `CAR_MONIT_RELOAD=true`（只监听 `app/`） |
 | 日志 | Logback → 文件 + 控制台 | `logging` → 同格式；`logs/pro-business-api.log` |
 | 打包 | `mvn package` → jar | **不打包**，源码直跑（`package = false`） |
@@ -450,7 +433,9 @@ class JacksonResponse(Response):
 | 进程跑完不退出 | 线程池 worker 非 daemon | 脚本末尾加 `os._exit(code)` |
 | `ImportError: No module named 'com'` | 没 import `bootstrap` | 入口必须先 `import bootstrap` |
 | 改了业务文件热重载没生效 | reload 只监听 `app/` | 重启 `python run.py` |
-| `APScheduler` / `redis` / `elasticsearch` 装不上 | **不需要装** | 已在 `requirements.txt` 里注明移除理由 |
+| `redis` / `elasticsearch` / `confluent-kafka` 装不上 | 真实适配器依赖（即使不接真实服务，导入链也需要） | 已声明在 `requirements.txt`，用 `.venv` 安装 |
+| `/health/ready` 503、`redis / elasticsearch / kafka: DOWN` | 适配器熔断降级（真实服务不可达） | 检查 `CAR_MONIT_*_URL` 与真实服务；见 §2.3 |
+| `/metrics` 返回 404 | prod 默认收敛 | `CAR_MONIT_METRICS_ENABLED=true` 显式开启 |
 | 看到 `StringBuilder` 拼接字符串 | Java 习惯 | 这类只在替身层，业务代码用 `str.join` |
 | `RedisUtil.del` 不存在 | 关键字冲突 | 用 `delete`，见 §5 |
 
@@ -463,10 +448,11 @@ class JacksonResponse(Response):
 | 类/方法 | **100%** | `check_parity.py`：219/219 文件，Tier B = 0 |
 | 接口路径 & 字段 | **100%** | 85 条路由，三种响应契约逐一断言 |
 | 状态码 & 错误体 | **100%** | `BasicErrorController` 复刻 + `include-message=never` |
-| 业务规则 & 边界 | **100%** | 82 pytest + 10 smoke 脚本 |
+| 业务规则 & 边界 | **100%** | pytest 回归网 + 23 个迁移期冒烟脚本 |
 | 数据表 & SQL | **100%** | 直接解释原 `.xml`，未重写 |
-| 事务 | **不等价（1 处）** | §2.1，仅影响 MQ 消费路径 |
+| 事务 | **等价（已补齐）** | §2.1，`Database.transaction()` |
 | 分布式计算 | **不可运行** | §2.2 Flink |
-| 中间件连接 | **替身** | §2.3 |
+| 中间件连接 | **可接真实** | §2.3；未配置 URL 时保持进程内替身 |
 
-**唯一的硬缺口是 `@Transactional`（1 处）与 Flink（1 个作业类），其余差异或已补偿、或属 Java 侧本来就有的缺陷。**
+**唯一的硬缺口是 Flink（1 个作业类，需继续由 Java 侧承担）；事务与中间件已闭环，
+其余差异或已补偿、或属 Java 侧本来就有的缺陷。**

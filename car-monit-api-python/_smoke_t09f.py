@@ -28,6 +28,7 @@ import logging
 import os
 import sys
 from datetime import datetime
+from decimal import Decimal
 
 # ---------------------------------------------------------------------- 路径
 _ROOT = os.path.dirname(os.path.abspath(__file__))  # .../refactor
@@ -238,8 +239,8 @@ check(_gantry.getGantrycode() == "Gantry-001" and _gantry.getDeviceid() == "Gant
 check(_gantry.getSectionname() == "朝阳区段", "sectionname = district + 段")
 check(_gantry.getRoadcode() == "G101" and _gantry.getSectioncode() == "SEC-001",
       "roadcode / sectioncode 固定值")
-check(_gantry.getLon() == 116.404 and _gantry.getLat() == 39.915,
-      "new BigDecimal(lon/lat) → float 透传")
+check(_gantry.getLon() == Decimal("116.404") and _gantry.getLat() == Decimal("39.915"),
+      "new BigDecimal(lon/lat) → Decimal 透传")
 check(_gantry.getSnapshottimeunix() == int(_gantry.getSnapshottime().timestamp() * 1000),
       "snapshottimeunix = snapshottime.getTime()")
 check(_gantry.getReceivedtime() >= _gantry.getSnapshottime(),

@@ -43,6 +43,8 @@ from org.elasticsearch.client.indices.CreateIndexRequest import CreateIndexReque
 from org.elasticsearch.client.indices.CreateIndexResponse import CreateIndexResponse
 from org.elasticsearch.client.indices.GetIndexRequest import GetIndexRequest
 
+from app.runtime import reject_shim_operation
+
 __all__ = ["IndicesClient"]
 
 
@@ -56,7 +58,20 @@ class IndicesClient(object):
     # ------------------------------------------------------------------ 存在性
     def exists(self, request: GetIndexRequest, options: Any = None) -> bool:
         """对应 ``exists(GetIndexRequest, RequestOptions)``。"""
+        backend = getattr(self._owner, "_real", None)
+        if backend is not None:
+            return backend.indices_exists(
+                request, memory=lambda: self._exists_memory(request))
+        # P0-2：prod 模式下拒绝“假存在性”（内存元数据 ≠ 集群状态；抛错由
+        # EsIndexManageService.init 的 catch 吞掉告警，与 Java-ES-宕机一致）。
+        reject_shim_operation(
+            "IndicesClient.exists",
+            "（真实 ES 适配器未实现，存在性检查不会发往集群。）")
         self._ensureAvailable()
+        return self._exists_memory(request)
+
+    def _exists_memory(self, request: GetIndexRequest) -> bool:
+        """进程内存实现（P2-3 抽出：真实后端熔断降级时复用同一份逻辑）。"""
         status = self._owner
         for index_name in request.indices():
             if (index_name not in status._INDEX_METADATA
@@ -68,7 +83,19 @@ class IndicesClient(object):
     def create(self, request: CreateIndexRequest,
                options: Any = None) -> CreateIndexResponse:
         """对应 ``create(CreateIndexRequest, RequestOptions)``。"""
+        backend = getattr(self._owner, "_real", None)
+        if backend is not None:
+            return backend.indices_create(
+                request, memory=lambda: self._create_memory(request))
+        # P0-2：prod 模式下拒绝“假创建”。
+        reject_shim_operation(
+            "IndicesClient.create",
+            "（真实 ES 适配器未实现，索引不会在集群创建。）")
         self._ensureAvailable()
+        return self._create_memory(request)
+
+    def _create_memory(self, request: CreateIndexRequest) -> CreateIndexResponse:
+        """进程内存实现（P2-3 抽出）。"""
         index_name = request.index()
         metadata = self._owner._INDEX_METADATA
         if index_name in metadata:
@@ -85,7 +112,19 @@ class IndicesClient(object):
     def delete(self, request: DeleteIndexRequest,
                options: Any = None) -> AcknowledgedResponse:
         """对应 ``delete(DeleteIndexRequest, RequestOptions)``。"""
+        backend = getattr(self._owner, "_real", None)
+        if backend is not None:
+            return backend.indices_delete(
+                request, memory=lambda: self._delete_memory(request))
+        # P0-2：prod 模式下拒绝“假删除”。
+        reject_shim_operation(
+            "IndicesClient.delete",
+            "（真实 ES 适配器未实现，索引不会在集群删除。）")
         self._ensureAvailable()
+        return self._delete_memory(request)
+
+    def _delete_memory(self, request: DeleteIndexRequest) -> AcknowledgedResponse:
+        """进程内存实现（P2-3 抽出）。"""
         for index_name in request.indices():
             self._owner._INDEX_METADATA.pop(index_name, None)
             # 同步清空文档存储（真实 ES 删索引会连带删除数据）
@@ -96,7 +135,19 @@ class IndicesClient(object):
     def updateAliases(self, request: IndicesAliasesRequest,
                       options: Any = None) -> AcknowledgedResponse:
         """对应 ``updateAliases(IndicesAliasesRequest, RequestOptions)``。"""
+        backend = getattr(self._owner, "_real", None)
+        if backend is not None:
+            return backend.indices_updateAliases(
+                request, memory=lambda: self._updateAliases_memory(request))
+        # P0-2：prod 模式下拒绝“假别名更新”。
+        reject_shim_operation(
+            "IndicesClient.updateAliases",
+            "（真实 ES 适配器未实现，别名不会在集群更新。）")
         self._ensureAvailable()
+        return self._updateAliases_memory(request)
+
+    def _updateAliases_memory(self, request: IndicesAliasesRequest) -> AcknowledgedResponse:
+        """进程内存实现（P2-3 抽出）。"""
         metadata = self._owner._INDEX_METADATA
         for action in request.getAliasActions():
             for index_name in action.getIndices():
