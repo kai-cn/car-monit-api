@@ -1,0 +1,40 @@
+# Docker 构建上下文排除项（构建只需要 CMakeLists.txt、src、tests、third_party、configs）
+.git
+.gitignore
+.gitattributes
+.github
+.vscode
+
+# 构建产物与本地缓存
+build/
+build*/
+cmake-build-*/
+_deps/
+*.o
+*.obj
+*.pdb
+*.ilk
+
+# 日志、导出、运行重定向产物
+logs/
+*.log
+run.out
+run.err
+
+# 本地覆盖配置与凭据（禁止进入镜像层）
+configs/*.local.yaml
+configs/*.local.yml
+configs/*.bak
+configs/*.secret
+.env
+.env.*
+
+# 文档/契约/脚本/部署清单不参与编译
+docs/
+contracts/
+scripts/
+deploy/
+*.md
+docker-compose.yml
+Dockerfile
+.dockerignore
