@@ -26,7 +26,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
     container:
       image: openeuler/openeuler:24.03-lts
-    timeout-minutes: 30
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: car-monit-api-python
@@ -36,19 +36,24 @@ jobs:
         # checkout 前语言目录尚不存在，必须显式回到 workspace 根。
         working-directory: .
         run: |
-          dnf install -y git tar gzip unzip curl ca-certificates
+          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip curl ca-certificates
           # Python 3.12 不在 openEuler 24.03 仓库（OS/everything/EPOL 均未命中），
           # 由 setup-python 下载 standalone 到 tool cache（glibc 2.38 兼容）。
 
       - uses: actions/checkout@v4
 
+      # 不用 setup-python 的 cache: pip —— 它会调用 lsb_release，openEuler 镜像没有该命令。
+      - name: 缓存 pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('car-monit-api-python/requirements*.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
-          cache-dependency-path: |
-            car-monit-api-python/requirements.txt
-            car-monit-api-python/requirements.lock.txt
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -106,7 +111,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
     container:
       image: openeuler/openeuler:24.03-lts
-    timeout-minutes: 20
+    timeout-minutes: 30
     services:
       redis:
         image: redis:7
@@ -153,17 +158,21 @@ jobs:
         # checkout 前语言目录尚不存在，必须显式回到 workspace 根。
         working-directory: .
         run: |
-          dnf install -y git tar gzip unzip curl ca-certificates
+          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip curl ca-certificates
 
       - uses: actions/checkout@v4
+
+      - name: 缓存 pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('car-monit-api-python/requirements*.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
-          cache-dependency-path: |
-            car-monit-api-python/requirements.txt
-            car-monit-api-python/requirements.lock.txt
 
       - run: pip install -r requirements.txt
 

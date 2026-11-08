@@ -21,7 +21,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
     container:
       image: openeuler/openeuler:24.03-lts
-    timeout-minutes: 20
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: car-monit-api-go
@@ -31,7 +31,7 @@ jobs:
         # checkout 前语言目录尚不存在，必须显式回到 workspace 根，不能继承 defaults。
         working-directory: .
         run: |
-          dnf install -y git tar gzip unzip curl ca-certificates gcc
+          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip curl ca-certificates gcc
           # gcc 供 go test -race 的 cgo 使用；Go 1.26.10 由 setup-go 安装到 tool cache
           # （openEuler 仓库只有 golang 1.21.4，低于 go.mod 要求）。
 

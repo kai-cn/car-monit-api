@@ -72,7 +72,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
     container:
       image: openeuler/openeuler:24.03-lts
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -91,7 +91,7 @@ jobs:
         shell: bash
         working-directory: .
         run: |
-          dnf install -y git tar gzip ca-certificates gcc gcc-c++ clang cmake ninja-build make which libpq-devel openssl-devel
+          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip ca-certificates gcc gcc-c++ clang cmake ninja-build make libpq-devel openssl-devel
 
       - uses: actions/checkout@v4
 
@@ -115,7 +115,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
     container:
       image: openeuler/openeuler:24.03-lts
-    timeout-minutes: 45
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: car-monit-api-cpp
@@ -124,7 +124,7 @@ jobs:
         shell: bash
         working-directory: .
         run: |
-          dnf install -y git tar gzip ca-certificates gcc gcc-c++ clang cmake ninja-build make which libpq-devel openssl-devel
+          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip ca-certificates gcc gcc-c++ clang cmake ninja-build make libpq-devel openssl-devel
 
       - uses: actions/checkout@v4
 
@@ -148,7 +148,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
     container:
       image: openeuler/openeuler:24.03-lts
-    timeout-minutes: 20
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: car-monit-api-cpp
@@ -157,7 +157,7 @@ jobs:
         shell: bash
         working-directory: .
         run: |
-          dnf install -y git tar gzip ca-certificates cppcheck
+          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip ca-certificates cppcheck
 
       - uses: actions/checkout@v4
 
