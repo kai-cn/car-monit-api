@@ -48,6 +48,7 @@ Invoke-Gate "check_routes" { & $py (Join-Path $root "tools\check_routes.py") }
 Invoke-Gate "check_mappers (含 XML 同步校验)" { & $py (Join-Path $root "tools\check_mappers.py") }
 Invoke-Gate "check_parity" { & $py (Join-Path $root "tools\check_parity.py") }
 Invoke-Gate "check_env" { & $py (Join-Path $root "tools\check_env.py") }
+Invoke-Gate "check_secrets (secret 扫描)" { & $py (Join-Path $root "tools\check_secrets.py") }
 
 # 总覆盖率（信息展示，不作为门禁）+ HTML/XML 产物
 Write-Host ""

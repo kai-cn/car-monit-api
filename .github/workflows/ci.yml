@@ -42,6 +42,8 @@ jobs:
         run: python tools/check_parity.py
       - name: check_env
         run: python tools/check_env.py
+      - name: secret scan (gitleaks-equivalent)
+        run: python tools/check_secrets.py
       - name: smoke_test
         run: python scripts/smoke_test.py
       - name: smoke_all_routes

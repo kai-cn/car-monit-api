@@ -512,3 +512,17 @@ GaussDB 通常跑在 VirtualBox/VMware 的 host-only 虚拟机上，需要：
 3. 改路由 → 改 `app/routes/generated.py`，同时更新 `"java"` 行的行号。
 4. 新增业务代码 → 放在镜像路径下，方法名保持 `camelCase`，加 `# Java:` 注释。
 5. 改完跑 `tools\check_parity.py`（Tier B 必须 0）和 `scripts\smoke_test.py`（必须全绿）。
+
+---
+
+## 10. 上线前检查清单 / Release checklist
+
+| # | 项 | 要求 | 验证方式 |
+|---|---|---|---|
+| 1 | **口令轮换（必须，阻断上线）** | GaussDB / Redis / ES / RabbitMQ 的历史口令曾出现在旧文档/注释中；上线前必须由运维在**生产侧轮换**，仓库内只保留 `${ENV:}` 占位符 | 运维工单 + `python tools\check_secrets.py` |
+| 2 | 密钥注入 | 真实口令只经环境变量或 `application-local.yml`（gitignored）注入；禁止写回 `application.yml` / 文档 / 注释 | `python tools\check_secrets.py` |
+| 3 | 运行模式 | `CAR_MONIT_RUNTIME=prod`（禁止 shim 替身承载生产流量） | `/health` 的 `runtime` 字段 = `prod` |
+| 4 | 中间件连接 | 按需设置 `CAR_MONIT_REDIS_URL` / `CAR_MONIT_ES_URL` / `CAR_MONIT_KAFKA_URL`，并确认 `/health/ready` 为 200 | `curl /health/ready` |
+| 5 | 启动 fail-fast | 保持 `CAR_MONIT_STARTUP_FAIL_FAST=true`（默认）；Mapper/路由缺失会拒绝启动 | 启动日志 `all gates` + 进程退出码 |
+| 6 | 端点收敛 | prod 默认关闭 `/docs`、`/openapi.json`、`/metrics`、`/health` 的 `config` 细节 | `curl /docs` 应为 404 |
+| 7 | 全量门禁 | `powershell -ExecutionPolicy Bypass -File tools\run_checks.ps1` 全绿 | 退出码 0 |
