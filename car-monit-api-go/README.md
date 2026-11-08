@@ -439,21 +439,18 @@ dlv debug ./cmd/api -- -config configs/config.yaml
 
 ## 11. Go 版本锁定策略
 
-提示词要求 `go 1.26.x`。本机 / 当前 CI 工具链为 **go1.24.1**，`go` 指令高于本地版本会直接拒绝构建
-（`requires go >= 1.26`），因此 `go.mod` 暂定为：
+`go.mod` 已锁定 **`go 1.26.10`**（`toolchain` 行由 Go 自动省略，`go` 指令即最低工具链）：
 
 ```go
-go 1.24.1
+go 1.26.10
 ```
 
-生产镜像升级到 go1.26 后，只需改 `go.mod` 两行（无需改任何代码）：
+原因：`govulncheck` 对旧 go1.24.1 标准库报告 40+ 条可达漏洞，其中最高修复版本要求
+`go1.26.10`（如 `crypto/x509` GO-2026-6809）；升级后标准库漏洞归零，且模块依赖
+（x/net、x/text、klauspost/compress、pgx、go-redis）也同步升到修复版本。
 
-```go
-go 1.26.0
-toolchain go1.26.0
-```
-
-`go.mod` 里有同样的注释，避免下一个人以为是笔误。
+配套改动：`docker/go.Dockerfile` 构建阶段改为 `golang:1.26.10-bookworm`；
+CI `setup-go` 通过 `go-version-file: go.mod` 自动安装 1.26.10。
 
 ---
 
