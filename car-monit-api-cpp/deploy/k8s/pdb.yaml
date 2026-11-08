@@ -1,0 +1,14 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: car-monit-api
+  namespace: car-monit-api
+  labels:
+    app.kubernetes.io/name: car-monit-api
+spec:
+  # 滚动发布/节点排水时至少保留一个可用副本；
+  # 多副本下 Redis 选主会自动接管后台任务。
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: car-monit-api

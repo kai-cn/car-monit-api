@@ -1,0 +1,145 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: car-monit-api
+  namespace: car-monit-api
+  labels:
+    app.kubernetes.io/name: car-monit-api
+    app.kubernetes.io/component: api
+  annotations:
+    # 多实例单活前提：调度器与全量/增量同步由 Redis 分布式锁选主
+    # （cluster.leader-election，默认 key=car-monit:leader）。
+    # 所有副本必须连接同一个 Redis；Redis 不可用时 fail-open=false 会暂停后台任务，
+    # 但 HTTP 仍继续服务（/health 会显示 DEGRADED）。详见 docs/RUNBOOK.md。
+    car-monit-api/leader-election: "redis-lock:car-monit:leader"
+spec:
+  # 副本数 > 1 时依赖 Redis 选主；HPA 扩缩容不会破坏单活语义。
+  replicas: 2
+  revisionHistoryLimit: 5
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: car-monit-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: car-monit-api
+        app.kubernetes.io/component: api
+    spec:
+      terminationGracePeriodSeconds: 45
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: car-monit-api
+          image: registry.example.com/car-monit-api:0.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 9901
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: car-monit-api-config
+          env:
+            # 口令只从 Secret 注入；ConfigMap/镜像里不得出现明文。
+            - name: CM_PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: car-monit-api-secret
+                  key: CM_PG_PASSWORD
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+          # 说明：/health 在依赖 DOWN 时仍返回 HTTP 200（body.status=DEGRADED），
+          # 因此探针只判断“进程可服务”。不要改成解析 body 的 exec 探针：
+          # DB/Redis/Kafka 任一抖动都会把全部副本摘除，放大故障。
+          # 依赖级就绪判定与告警见 deploy/monitoring/alerts.yml。
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 36
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              # 给负载均衡/Service 端点摘除留出时间；随后进程处理 SIGTERM，
+              # 最多等待 server.shutdown-timeout-ms（默认 30s）排空在途请求。
+              exec:
+                command: ["/bin/sh", "-c", "sleep 10"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: logs
+              mountPath: /app/logs
+            - name: export
+              mountPath: /data/export
+            - name: tmp
+              mountPath: /tmp
+            # 可选：ES 口令等没有 CM_* 覆盖的配置，通过 Secret 挂载 config.local.yaml。
+            # 需要先创建 car-monit-api-local-config Secret（见 examples/secret.example.yaml）。
+            # - name: local-config
+            #   mountPath: /app/configs/config.local.yaml
+            #   subPath: config.local.yaml
+            #   readOnly: true
+      volumes:
+        - name: logs
+          emptyDir:
+            sizeLimit: 2Gi
+        - name: export
+          emptyDir:
+            sizeLimit: 4Gi
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
+        # - name: local-config
+        #   secret:
+        #     secretName: car-monit-api-local-config
+        #     items:
+        #       - key: config.local.yaml
+        #         path: config.local.yaml
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchExpressions:
+                    - key: app.kubernetes.io/name
+                      operator: In
+                      values: ["car-monit-api"]
