@@ -639,17 +639,19 @@ bool KafkaProducer::send(const std::string& topic, const std::string& key,
     headers = rd_kafka_headers_new(1);
     rd_kafka_header_add(headers, "__TypeId__", -1, type_id.c_str(), -1);
   }
+  // RD_KAFKA_V_VALUE 的类型检查要求 void*；MSG_F_COPY 只做只读拷贝，const_cast 安全。
 #if defined(RD_KAFKA_V_HEADERS)
   rd_kafka_resp_err_t err = rd_kafka_producev(
       impl_->rk, RD_KAFKA_V_TOPIC(topic.c_str()),
       RD_KAFKA_V_KEY(actual_key.data(), actual_key.size()),
-      RD_KAFKA_V_VALUE(payload.data(), payload.size()), RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY),
+      RD_KAFKA_V_VALUE(const_cast<char*>(payload.data()), payload.size()),
+      RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY),
       RD_KAFKA_V_OPAQUE(ctx), RD_KAFKA_V_HEADERS(headers), RD_KAFKA_V_END);
 #else
   rd_kafka_resp_err_t err =
       rd_kafka_producev(impl_->rk, RD_KAFKA_V_TOPIC(topic.c_str()),
                         RD_KAFKA_V_KEY(actual_key.data(), actual_key.size()),
-                        RD_KAFKA_V_VALUE(payload.data(), payload.size()),
+                        RD_KAFKA_V_VALUE(const_cast<char*>(payload.data()), payload.size()),
                         RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY), RD_KAFKA_V_OPAQUE(ctx),
                         RD_KAFKA_V_END);
 #endif
@@ -693,7 +695,8 @@ bool KafkaProducer::send_sync(const std::string& topic, const std::string& key,
   std::unique_ptr<Impl::DeliveryCtx> guard(ctx);
   rd_kafka_resp_err_t err = rd_kafka_producev(
       impl_->rk, RD_KAFKA_V_TOPIC(topic.c_str()),
-      RD_KAFKA_V_KEY(key.data(), key.size()), RD_KAFKA_V_VALUE(payload.data(), payload.size()),
+      RD_KAFKA_V_KEY(key.data(), key.size()),
+      RD_KAFKA_V_VALUE(const_cast<char*>(payload.data()), payload.size()),
       RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY), RD_KAFKA_V_OPAQUE(ctx), RD_KAFKA_V_END);
   if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
     if (error) *error = rd_kafka_err2str(err);

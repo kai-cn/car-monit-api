@@ -129,7 +129,8 @@ bool Redis::connect_locked(const std::string& host, int port, const std::string&
       return false;
     }
     if (redisInitiateSSLWithContext(ctx_, ssl_ctx_) != REDIS_OK) {
-      CM_LOG_WARN("cache.redis") << "TLS 握手失败: " << (ctx_->errstr ? ctx_->errstr : "unknown");
+      CM_LOG_WARN("cache.redis") << "TLS 握手失败: "
+                                << (ctx_->errstr[0] ? ctx_->errstr : "unknown");
       close_unlocked();
       return false;
     }
@@ -137,7 +138,8 @@ bool Redis::connect_locked(const std::string& host, int port, const std::string&
 
   auto check_reply = [&](redisReply* reply) -> bool {
     if (reply == nullptr) {
-      CM_LOG_WARN("cache.redis") << "初始化命令失败: " << (ctx_->errstr ? ctx_->errstr : "unknown");
+      CM_LOG_WARN("cache.redis") << "初始化命令失败: "
+                                << (ctx_->errstr[0] ? ctx_->errstr : "unknown");
       return false;
     }
     const bool ok = reply->type != REDIS_REPLY_ERROR;
@@ -185,7 +187,7 @@ std::optional<std::string> Redis::cmd_locked(const std::vector<std::string>& arg
   redisReply* reply = static_cast<redisReply*>(
       redisCommandArgv(ctx_, static_cast<int>(argv.size()), argv.data(), argvlen.data()));
   if (reply == nullptr) {
-    std::string err = ctx_ && ctx_->errstr ? ctx_->errstr : "unknown";
+    std::string err = ctx_ && ctx_->errstr[0] ? ctx_->errstr : "unknown";
     close_unlocked();
     throw RedisError("Redis 读取响应失败: " + err);
   }
