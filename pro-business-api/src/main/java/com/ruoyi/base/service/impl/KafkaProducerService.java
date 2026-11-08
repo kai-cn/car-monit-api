@@ -106,8 +106,8 @@ public class KafkaProducerService {
         // 2. 调用可靠性服务发送消息
         String messageId = reliabilityService.sendReliableMessage(data, dataId, snapshotFlowTopic);
 
-        // 3. 记录上报消息ID（用于数据丢失检测）
-        lossDetectionService.recordReportedMessage(messageId, extractDeviceId(data), System.currentTimeMillis());
+        // 3. 记录上报业务主键（用于数据丢失检测，必须与数据库 big_id 同一命名空间）
+        lossDetectionService.recordReportedMessage(dataId, extractDeviceId(data), System.currentTimeMillis());
 
         log.info("[Kafka生产者] 发送消息: dataId={}, messageId={}", dataId, messageId);
         return messageId;

@@ -479,7 +479,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
             String sectionCode = CommonUtil.isNull(trailBo.getSectionCode());
             String pileno = CommonUtil.isNull(trailBo.getPileno());
             BigDecimal lon = trailBo.getLon();
-            BigDecimal lat = trailBo.getLon();
+            BigDecimal lat = trailBo.getLat();
             String roadCode = "";
 
             // 这个要查询数据库拿---
@@ -2056,6 +2056,9 @@ public class SysUtilServiceImpl implements ISysUtilService {
                         // 步骤2：使用DateTimeFormatter转字符串
                         String formattedDateStr = format2.format(dateTime);
                         trailBo.setCaptureTime(formattedDateStr);
+                    } else {
+                        // 标准格式原样保留，避免时间字段被清空导致排序/展示异常
+                        trailBo.setCaptureTime(captureTime);
                     }
                     trailBo.setStateType(stateType);
                     trailBo.setPlatenumber(platenumber);

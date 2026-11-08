@@ -65,6 +65,12 @@ public class DataLossDetectionService {
     @Value("${detection.loss-threshold-percent:5}")
     private double lossThresholdPercent;
 
+    /**
+     * 单次检测允许加载的最大数据库记录数，防止窗口内数据量异常时内存膨胀
+     */
+    @Value("${detection.max-window-records:200000}")
+    private int maxWindowRecords;
+
     // ==================== Redis Key 常量 ====================
 
     /**
@@ -94,19 +100,19 @@ public class DataLossDetectionService {
     }
 
     /**
-     * 记录上报的消息ID
+     * 记录上报的业务主键（bigId）
      *
-     * 思路：设备上报数据时，将消息ID记录到Redis集合中
-     * 用于后续与数据库数据进行对比
+     * 说明：数据库侧比对的是 bigId，因此上报侧必须记录同一命名空间的主键，
+     * 否则差集恒接近全部上报记录，丢失率会长期误报。
      *
-     * @param messageId 消息ID
+     * @param businessId 业务主键（与数据库 big_id 对齐）
      * @param deviceId 设备ID
      * @param timestamp 上报时间戳
      */
-    public void recordReportedMessage(String messageId, String deviceId, long timestamp) {
+    public void recordReportedMessage(String businessId, String deviceId, long timestamp) {
         // 按小时分组存储，便于后续按时间窗口查询
         String hourKey = REPORTED_MSG_PREFIX + DateUtils.formatHour(new Date(timestamp));
-        redisTemplate.opsForSet().add(hourKey, messageId);
+        redisTemplate.opsForSet().add(hourKey, businessId);
         redisTemplate.expire(hourKey, 48, TimeUnit.HOURS);
 
         // 设备上报计数
@@ -124,7 +130,7 @@ public class DataLossDetectionService {
      * 3. 对比找出丢失的数据
      * 4. 生成检测报告
      */
-    @Scheduled(fixedRateString = "${detection.interval-minutes:30}000")
+    @Scheduled(fixedRateString = "${detection.interval-minutes:30}", timeUnit = TimeUnit.MINUTES)
     public void scheduledDetection() {
         detectionExecutor.submit(() -> {
             try {
@@ -235,6 +241,8 @@ public class DataLossDetectionService {
         LambdaQueryWrapper<OdsRtSzdnSnapshotFlowAddcode> wrapper = new LambdaQueryWrapper<>();
         wrapper.between(OdsRtSzdnSnapshotFlowAddcode::getSnapshottime, startTime, endTime);
         wrapper.select(OdsRtSzdnSnapshotFlowAddcode::getBigId);
+        // 只取主键列并限制最大行数，避免异常窗口把整窗记录拉进堆内存
+        wrapper.last("LIMIT " + maxWindowRecords);
         return snapshotFlowMapper.selectList(wrapper);
     }
 
