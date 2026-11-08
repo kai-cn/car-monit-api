@@ -15,6 +15,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -44,6 +45,9 @@ type Config struct {
 	Monitoring    MonitoringConfig   `mapstructure:"monitoring"`
 	Logging       LoggingConfig      `mapstructure:"logging"`
 	App           AppConfig          `mapstructure:"app"`
+
+	// loadedOverride 记录本次实际合并的本地覆盖文件（不参与 mapstructure 解析）。
+	loadedOverride string
 }
 
 // ServerConfig 对应 application.yml:1-4
@@ -308,6 +312,9 @@ type AppConfig struct {
 // 显式顺序复刻：配置文件 → 环境变量（前缀 APP_，`.` 变 `_`）→ 代码默认值。
 // 注意 Viper 不会做类型校验，所以 Load 末尾必须显式 Validate()。
 func Load(path string) (*Config, error) {
+	var cfg Config
+	var loadedOverride string
+
 	v := viper.New()
 	v.SetConfigFile(path)
 	v.SetConfigType("yaml")
@@ -360,15 +367,58 @@ func Load(path string) (*Config, error) {
 	if err := v.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("读取配置 %s 失败: %w", path, err)
 	}
-	var cfg Config
+
+	// 本地覆盖（报告 02 P0-3 收尾）：与主配置同目录的 <name>.local.yaml 若存在则合并。
+	//
+	// 用途：仓库内的 config.yaml 只保留非敏感基线，真实口令放 config.local.yaml（已 gitignore）。
+	// 优先级：主配置 < 本地覆盖 < APP_ 环境变量 < 代码 defaults（与 Spring 的
+	// profile > env > yaml 顺序一致）。
+	//
+	// 注意：这里只支持"同目录 + .local 后缀"的约定，不做任意路径搜索 —— 避免不同工作目录
+	// 下静默加载到不同的覆盖文件，导致"同样的命令、不同的配置"。
+	if localPath := localOverridePath(path); localPath != "" {
+		if _, statErr := os.Stat(localPath); statErr == nil {
+			f, openErr := os.Open(localPath)
+			if openErr != nil {
+				return nil, fmt.Errorf("打开本地覆盖配置 %s 失败: %w", localPath, openErr)
+			}
+			defer f.Close()
+			if mergeErr := v.MergeConfig(f); mergeErr != nil {
+				return nil, fmt.Errorf("合并本地覆盖配置 %s 失败: %w", localPath, mergeErr)
+			}
+			loadedOverride = localPath
+		}
+	}
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("解析配置失败: %w", err)
 	}
+	cfg.loadedOverride = loadedOverride
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
 	return &cfg, nil
 }
+
+// localOverridePath 由主配置路径推导本地覆盖文件路径。
+//
+//	configs/config.yaml        → configs/config.local.yaml
+//	configs/config.verify.yaml → configs/config.verify.local.yaml
+//
+// 该文件应被 .gitignore 忽略（见仓库根的 .gitignore 与 docs/deploy.md）。
+func localOverridePath(path string) string {
+	dir := filepath.Dir(path)
+	base := filepath.Base(path)
+	ext := filepath.Ext(base)
+	if ext == "" {
+		return ""
+	}
+	return filepath.Join(dir, strings.TrimSuffix(base, ext)+".local"+ext)
+}
+
+// LoadedOverride 返回本次加载实际合并的本地覆盖文件路径（未合并时为空串）。
+//
+// 启动日志会打印它（只有路径，不含口令），便于确认"到底用了哪份配置"。
+func (c *Config) LoadedOverride() string { return c.loadedOverride }
 
 // Validate 手工校验必填项。
 //

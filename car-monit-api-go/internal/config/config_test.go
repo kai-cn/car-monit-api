@@ -3,12 +3,14 @@ package config
 // 配置加载与新增开关的回归护栏（报告 01 Q7 / 报告 02 P0-3/P0-5/P0-7/P1-8）。
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
 
-// TestLoadExampleConfig 保证仓库里的配置模板能被真实解析并通过校验，
+// TestLoadExampleConfig 保证仓库里的最小示例能被真实解析并通过校验，
 // 同时确认新增开关的默认值与文档一致。
 func TestLoadExampleConfig(t *testing.T) {
 	path := filepath.Join("..", "..", "configs", "config.example.yaml")
@@ -31,6 +33,123 @@ func TestLoadExampleConfig(t *testing.T) {
 	}
 	if cfg.Server.RequestTimeout != 0 {
 		t.Errorf("server.request-timeout 默认值 = %v，期望 0（关闭，保持 Java 行为）", cfg.Server.RequestTimeout)
+	}
+}
+
+// TestLoadMergesLocalOverride 锁住「基线 + 本地覆盖」的合并语义（凭据卫生的基石）：
+// 主文件不含口令，口令只在 <name>.local.yaml 里；合并后应拿到覆盖值。
+func TestLoadMergesLocalOverride(t *testing.T) {
+	dir := t.TempDir()
+	base := filepath.Join(dir, "config.yaml")
+	writeFile(t, base, `
+spring:
+  datasource:
+    dynamic:
+      datasource:
+        master:
+          url: jdbc:postgresql://db.example.internal:5432/RuoYi
+          username: gaussdb
+          password: ""
+redis:
+  host: 127.0.0.1
+`)
+	local := filepath.Join(dir, "config.local.yaml")
+	writeFile(t, local, `
+spring:
+  datasource:
+    dynamic:
+      datasource:
+        master:
+          password: "from-local-override"
+`)
+
+	cfg, err := Load(base)
+	if err != nil {
+		t.Fatalf("加载失败: %v", err)
+	}
+	if got := cfg.Datasource.Master().Password; got != "from-local-override" {
+		t.Fatalf("密码未被本地覆盖文件合并，实际 %q", got)
+	}
+	// 未在覆盖文件里出现的键必须保留基线的值
+	if got := cfg.Datasource.Master().Username; got != "gaussdb" {
+		t.Fatalf("覆盖合并破坏了基线键，username = %q", got)
+	}
+	if cfg.LoadedOverride() != local {
+		t.Fatalf("LoadedOverride = %q，期望 %q", cfg.LoadedOverride(), local)
+	}
+}
+
+// TestLoadWithoutOverride 确认没有本地覆盖文件时行为不变（LoadedOverride 为空）。
+func TestLoadWithoutOverride(t *testing.T) {
+	dir := t.TempDir()
+	base := filepath.Join(dir, "config.yaml")
+	writeFile(t, base, `
+spring:
+  datasource:
+    dynamic:
+      datasource:
+        master:
+          url: jdbc:postgresql://db.example.internal:5432/RuoYi
+          username: gaussdb
+          password: "p@ss"
+redis:
+  host: 127.0.0.1
+`)
+
+	cfg, err := Load(base)
+	if err != nil {
+		t.Fatalf("加载失败: %v", err)
+	}
+	if cfg.LoadedOverride() != "" {
+		t.Fatalf("没有覆盖文件时 LoadedOverride 应为空，实际 %q", cfg.LoadedOverride())
+	}
+	if cfg.Datasource.Master().Password != "p@ss" {
+		t.Fatalf("密码读取错误: %q", cfg.Datasource.Master().Password)
+	}
+}
+
+// TestBaselineConfigsContainNoSecrets 是凭据卫生的回归护栏：
+// 入库的三份配置（config.yaml / config.verify.yaml / config.example.yaml）不得出现口令。
+//
+// 做法：把每份文件复制到临时目录（不带 .local 覆盖）再 Load，
+// 这样校验的是"入库内容本身"，而不是本机 config.local.yaml 合并后的结果。
+func TestBaselineConfigsContainNoSecrets(t *testing.T) {
+	files := []string{"config.yaml", "config.verify.yaml", "config.example.yaml"}
+	for _, name := range files {
+		src := filepath.Join("..", "..", "configs", name)
+		raw, err := os.ReadFile(src)
+		if err != nil {
+			t.Fatalf("读取 %s 失败: %v", name, err)
+		}
+		if strings.Contains(string(raw), "OpenGauss") || strings.Contains(string(raw), "changeme") {
+			t.Fatalf("%s 仍包含已知历史口令字面量", name)
+		}
+
+		dir := t.TempDir()
+		isolated := filepath.Join(dir, "config.yaml")
+		writeFile(t, isolated, string(raw))
+		cfg, err := Load(isolated)
+		if err != nil {
+			t.Fatalf("%s 必须能独立加载（口令为空也应通过 Validate）: %v", name, err)
+		}
+		secrets := map[string]string{
+			"database": cfg.Datasource.Master().Password,
+			"redis":    cfg.Redis.Password,
+			"es":       cfg.Elasticsearch.Password,
+			"rabbitmq": cfg.RabbitMQ.Password,
+		}
+		for label, secret := range secrets {
+			if secret != "" {
+				t.Fatalf("%s 的 %s 口令写进了入库配置（应为空，由 env/local 覆盖注入）", name, label)
+			}
+		}
+	}
+}
+
+func writeFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("写入 %s 失败: %v", path, err)
 	}
 }
 

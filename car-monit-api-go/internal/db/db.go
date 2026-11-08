@@ -32,6 +32,8 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
+
+	"github.com/ruoyi/car-monit-api-go/internal/utils"
 )
 
 // Client 是数据库门面。业务层只依赖它，不直接摸 gorm.DB，
@@ -59,7 +61,8 @@ type Config struct {
 func Open(ctx context.Context, cfg Config) (*Client, error) {
 	dsn, err := BuildDSN(cfg)
 	if err != nil {
-		return nil, err
+		// 脱敏：BuildDSN 的报错会回显原始 url，可能带 user:password@ 形式的凭据。
+		return nil, utils.RedactError(err, cfg.Password)
 	}
 
 	logLevel := gormlogger.Warn
@@ -83,12 +86,13 @@ func Open(ctx context.Context, cfg Config) (*Client, error) {
 		PrepareStmt: false,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("连接数据库失败: %w", err)
+		// 脱敏：pgx 的连接错误偶尔会回显完整 DSN（含 password=xxx）。
+		return nil, fmt.Errorf("连接数据库失败: %w", utils.RedactError(err, cfg.Password))
 	}
 
 	raw, err := gdb.DB()
 	if err != nil {
-		return nil, err
+		return nil, utils.RedactError(err, cfg.Password)
 	}
 	if cfg.MaxOpenConns > 0 {
 		raw.SetMaxOpenConns(cfg.MaxOpenConns)
@@ -103,7 +107,7 @@ func Open(ctx context.Context, cfg Config) (*Client, error) {
 	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	if err := raw.PingContext(pingCtx); err != nil {
-		return nil, fmt.Errorf("数据库 Ping 失败: %w", err)
+		return nil, fmt.Errorf("数据库 Ping 失败: %w", utils.RedactError(err, cfg.Password))
 	}
 
 	return &Client{gorm: gdb.WithContext(ctx)}, nil

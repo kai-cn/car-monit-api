@@ -19,9 +19,10 @@ spring:
       datasource:
         master:
           # application.yml:42 —— GaussDB（openGauss）以 PostgreSQL 协议兼容
-          url: jdbc:postgresql://192.168.56.10:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai
+          # 差分校验副本：真实地址/口令放 config.verify.local.yaml（gitignored）
+          url: jdbc:postgresql://db.example.internal:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai
           username: gaussdb
-          password: OpenGauss@123
+          password: ""
           driver-class-name: org.postgresql.Driver
           # Go 侧新增：Druid initial-size / maxActive / maxWait 的等价物
           max-open-conns: 20
@@ -78,7 +79,7 @@ rabbitmq:
   host: localhost                                          # application.yml:173
   port: 5672                                               # application.yml:174
   username: guest                                          # application.yml:175
-  password: guest                                          # application.yml:176
+  password: ""                                             # application.yml:176
   virtual-host: /                                          # application.yml:177
   enabled: false                                           # Go 侧新增：未接 AMQP 时保持关闭，避免启动期连不上
 
@@ -87,7 +88,7 @@ elasticsearch:
   port: 9200                 # application.yml:191
   scheme: http               # application.yml:192
   username: elastic          # application.yml:193
-  password: changeme         # application.yml:194
+  password: ""               # application.yml:194
   connection-timeout: 30s    # application.yml:195（Java 是毫秒数字，Go 用时间字符串）
   socket-timeout: 30s        # application.yml:196
   index:
@@ -156,5 +157,5 @@ logging:
 
 app:
   env: local                                      # application.yml:141（isLocalhost: local）
-  sysbase-url: http://223.84.150.189:26066/prod-api  # application.yml:142
+  sysbase-url: http://sys-api.example.internal/prod-api  # application.yml:142
   timezone: Asia/Shanghai                         # Go 侧新增（报告 01 Q7）

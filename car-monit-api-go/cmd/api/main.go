@@ -91,8 +91,8 @@ func run(configPath string) error {
 		return err
 	}
 	time.Local = loc
-	slog.Info("开始装配应用", "version", version, "config", configPath, "env", cfg.App.Env,
-		"timezone", loc.String())
+	slog.Info("开始装配应用", "version", version, "config", configPath, "override", cfg.LoadedOverride(),
+		"env", cfg.App.Env, "timezone", loc.String())
 
 	// ctx 在收到 Ctrl+C / SIGTERM 时取消，向下传递到消费者、调度器与 HTTP Server。
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

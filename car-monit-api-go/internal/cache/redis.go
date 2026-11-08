@@ -27,6 +27,8 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/sync/singleflight"
+
+	"github.com/ruoyi/car-monit-api-go/internal/utils"
 )
 
 // Client 是 Redis 门面。
@@ -56,7 +58,8 @@ func New(ctx context.Context, o Options) (*Client, error) {
 	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	if err := rdb.Ping(pingCtx).Err(); err != nil {
-		return nil, fmt.Errorf("连接 Redis %s 失败: %w", o.Addr, err)
+		// 脱敏：go-redis 的错误可能带 AUTH 参数回显。
+		return nil, fmt.Errorf("连接 Redis %s 失败: %w", o.Addr, utils.RedactError(err, o.Password))
 	}
 	return &Client{rdb: rdb}, nil
 }
