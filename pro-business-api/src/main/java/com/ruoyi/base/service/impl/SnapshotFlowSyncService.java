@@ -64,7 +64,17 @@ public class SnapshotFlowSyncService {
         log.info("开始全量同步数据");
         try {
             // 从Redis获取上次同步的最后一条ID，支持断点续传
-            String lastSyncId = (String) redisTemplate.opsForValue().get(LAST_SYNC_ID_KEY);
+            // 历史版本可能把该 key 写成 Integer/Long（序列化类型不一致），这里统一转字符串，
+            // 避免 Integer cannot be cast to String 导致全量同步线程直接退出。
+            Object cachedId = redisTemplate.opsForValue().get(LAST_SYNC_ID_KEY);
+            String lastSyncId = null;
+            if (cachedId != null) {
+                if (!(cachedId instanceof String)) {
+                    log.warn("全量同步断点 key 类型异常: {}，实际类型 {}，已按字符串兼容处理",
+                            LAST_SYNC_ID_KEY, cachedId.getClass().getName());
+                }
+                lastSyncId = String.valueOf(cachedId);
+            }
 
             while (true) {
                 // 创建MyBatis-Plus查询条件构造器
@@ -120,7 +130,8 @@ public class SnapshotFlowSyncService {
         while (true) {
             try {
                 // 从Redis获取上次同步的时间点
-                Date lastSyncTime = (Date) redisTemplate.opsForValue().get(LAST_SYNC_TIME_KEY);
+                Object cachedTime = redisTemplate.opsForValue().get(LAST_SYNC_TIME_KEY);
+                Date lastSyncTime = toDate(cachedTime);
                 // 获取当前时间作为本次同步的截止时间
                 Date currentTime = new Date();
 
@@ -171,6 +182,27 @@ public class SnapshotFlowSyncService {
                     break;
                 }
             }
+        }
+    }
+
+    /**
+     * 兼容 Redis 中历史类型：Date / epoch millis / 数字字符串。
+     */
+    private Date toDate(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Date) {
+            return (Date) value;
+        }
+        if (value instanceof Number) {
+            return new Date(((Number) value).longValue());
+        }
+        try {
+            return new Date(Long.parseLong(String.valueOf(value)));
+        } catch (NumberFormatException e) {
+            log.warn("增量同步断点 key 类型异常: {}，无法转 Date，按首次同步处理", value);
+            return null;
         }
     }
 }
