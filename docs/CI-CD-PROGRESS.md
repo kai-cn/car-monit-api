@@ -10,7 +10,7 @@
 | 0 | 事实核查（远端/分支/子仓归属/现有 workflow/工具链） | 完成 | 1796547 |
 | 1 | 方案矩阵表 + 两个待确认项 + 缺口清单（本文件与方案文档） | 完成 | 1796547 |
 | 2 | PR 流水线：`pr.yml` + `_java/_cpp/_go/_python/_rust.yml`，移除 Python-only `ci.yml` | 完成 | 本次提交 |
-| 3 | 主分支流水线：`main.yml`（全量构建/测试/覆盖率/产物） | 已写待提交 | - |
+| 3 | 主分支流水线：`main.yml`（全量构建/测试/覆盖率/产物） | 完成 | 本次提交 |
 | 4 | 发布流水线：`release.yml`（tag + Release 资产）、`deploy.yml` 占位 | 已写待提交 | - |
 | 5 | YAML 自检（PyYAML + actionlint 全绿）；GitHub 实跑未验证 | 完成 | - |
 
