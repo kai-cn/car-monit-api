@@ -9,7 +9,7 @@
 | 项目 | 结论 |
 | --- | --- |
 | 远端 | `origin https://github.com/kai-cn/car-monit-api.git` |
-| 当前分支 | `master`（本地）；**远端默认分支实际是 `main`**（`git ls-remote --symref origin HEAD`），需在 GitHub Settings 手动改为 `master`，本机无凭据无法修改 |
+| 当前分支 | `master`（本地）；已推送到 `origin/master`（`5c8b89a`，快进）。**远端默认分支仍是 `main`**（`git ls-remote --symref origin HEAD`），本机无 gh/凭据无法修改，需在 GitHub Settings 手动改为 `master` |
 | 分支口径 | 所有 workflow 的触发/PR 基线统一为 `master`，不再保留 `main` 兼容分支 |
 | 仓库形态 | **单仓库多目录**：`car-monit-api-cpp/go/python/rust` 均无独立 `.git`，非 submodule（无 `.gitmodules`） |
 | Rust 目录 | 仍被根 [.gitignore L77](../.gitignore) `car-monit-api-rust/` **整体忽略**，`git ls-files` 为空 → 该语言流水线**当前不会在 GitHub 触发**（代码写好后需先取消忽略并入库） |
@@ -64,7 +64,7 @@ PR / 主分支 / 发布三套入口只负责触发、路径分诊与汇总，不
 | 项 | 状态 |
 | --- | --- |
 | YAML 语法 | 本机 PyYAML 解析通过；actionlint 0 findings（10 个 workflow，含常量 `if` 检查） |
-| GitHub 实跑 | **未验证**：未 push master，未在远端触发 |
+| GitHub 实跑 | **未确认**：`master` 已推送（`5c8b89a`）；Actions API 在无凭据下 404（私有仓库），无法确认是否触发/通过 |
 | 本地长构建/全量测试 | **未执行**（按用户要求，重启前不做） |
 | Rust 流水线 | 已写好；`master` 上目录未入库 → 跳过；分支已推送但为旧快照（见 §11） |
 | CD | **已实现（GHCR + K8s），未实跑**：无 K8s 集群/凭据，`kubectl` 步骤未验证 |
