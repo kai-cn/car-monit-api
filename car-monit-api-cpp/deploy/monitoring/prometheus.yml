@@ -1,0 +1,37 @@
+# =============================================================================
+# Prometheus 抓取配置示例（本地 compose 使用）
+#
+# 对应服务端点：GET /metrics?format=prometheus（默认 JSON，必须带 format 参数）。
+# 部署到 Kubernetes 时把 targets 换成 Service DNS 或使用 ServiceMonitor/PodMonitor。
+# =============================================================================
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: car-monit-api-local
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  - job_name: car-monit-api
+    metrics_path: /metrics
+    # 关键：不传 format 时返回 JSON，Prometheus 无法解析。
+    params:
+      format: [prometheus]
+    static_configs:
+      - targets: ["api:9901"]
+        labels:
+          service: car-monit-api
+          instance: car-monit-api-local
+
+  # ---------------------------------------------------------------------------
+  # 进程内存/线程数来自 cAdvisor（服务 /metrics 未暴露 process_* 指标）。
+  # 本地 compose 没有内置 cAdvisor；需要时单独启动并解除下面的注释。
+  # Kubernetes 集群通常已由平台提供 cAdvisor，可直接抓取 kubelet 的 /metrics/cadvisor。
+  # ---------------------------------------------------------------------------
+  # - job_name: cadvisor
+  #   scheme: http
+  #   metrics_path: /metrics
+  #   static_configs:
+  #     - targets: ["cadvisor:8080"]

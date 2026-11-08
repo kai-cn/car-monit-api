@@ -1,0 +1,149 @@
+# =============================================================================
+# car-monit-api 告警规则（Prometheus rule_files 格式）
+#
+# 指标来源：/metrics?format=prometheus（见 src/router/routes.cpp）。
+# 服务端指标是单序列（没有 route/status 维度），因此告警只做全局阈值；
+# 按接口/状态码细分需要后续在业务代码中增加 labels（本支线不改业务代码）。
+#
+# 进程内存/线程相关告警依赖 cAdvisor；没有 cAdvisor 时该组规则不会触发
+# （no data），不影响其它规则。
+# =============================================================================
+groups:
+  - name: car-monit-api-availability
+    interval: 30s
+    rules:
+      - alert: CarMonitApiDependencyDown
+        expr: carmonit_dependency_up == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: car-monit-api
+        annotations:
+          summary: "依赖 {{ $labels.component }} 不可用（car-monit-api）"
+          description: >-
+            carmonit_dependency_up{component="{{ $labels.component }}"} 连续 2 分钟为 0。
+            排查顺序：连接配置/网络 -> 中间件健康 -> 凭据/认证（见 docs/RUNBOOK.md）。
+            注意 /health 仍可能返回 HTTP 200（DEGRADED），不要只看探针。
+
+      - alert: CarMonitApiNoTraffic
+        expr: rate(carmonit_requests_total[10m]) == 0
+        for: 10m
+        labels:
+          severity: warning
+          service: car-monit-api
+        annotations:
+          summary: "car-monit-api 过去 10 分钟没有请求"
+          description: >-
+            可能是流量入口/Service/Ingress 配置问题，或实例已不可用但探针仍通过。
+            结合请求方与负载均衡指标确认。
+
+  - name: car-monit-api-latency
+    interval: 30s
+    rules:
+      - alert: CarMonitApiErrorRateHigh
+        expr: carmonit_error_rate > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          service: car-monit-api
+        annotations:
+          summary: "car-monit-api 错误率 > 5%（持续 5 分钟）"
+          description: >-
+            carmonit_error_rate 当前为 {{ $value | humanizePercentage }}。
+            对照 carmonit_responses_total_5xx 与日志中的 requestId 定位失败接口。
+
+      - alert: CarMonitApiErrorRateWarning
+        expr: carmonit_error_rate > 0.01
+        for: 10m
+        labels:
+          severity: warning
+          service: car-monit-api
+        annotations:
+          summary: "car-monit-api 错误率 > 1%（持续 10 分钟）"
+          description: "当前错误率 {{ $value | humanizePercentage }}。"
+
+      - alert: CarMonitApiP99LatencyHigh
+        expr: carmonit_request_duration_ms_p99 > 1000
+        for: 10m
+        labels:
+          severity: warning
+          service: car-monit-api
+        annotations:
+          summary: "car-monit-api P99 延迟 > 1s（持续 10 分钟）"
+          description: >-
+            当前 P99={{ $value }}ms。先看 carmonit_dependency_latency_ms{component="db|redis"}
+            与 worker pool 队列深度，再结合慢查询/大表扫描排查。
+
+      - alert: CarMonitApiP99LatencyCritical
+        expr: carmonit_request_duration_ms_p99 > 3000
+        for: 5m
+        labels:
+          severity: critical
+          service: car-monit-api
+        annotations:
+          summary: "car-monit-api P99 延迟 > 3s（持续 5 分钟）"
+          description: "当前 P99={{ $value }}ms。"
+
+      - alert: CarMonitApiDependencyLatencyHigh
+        expr: carmonit_dependency_latency_ms{component=~"db|redis"} > 500
+        for: 5m
+        labels:
+          severity: warning
+          service: car-monit-api
+        annotations:
+          summary: "依赖 {{ $labels.component }} 探活延迟 > 500ms"
+          description: "当前 {{ $value }}ms；检查中间件负载、网络与连接池。"
+
+  - name: car-monit-api-capacity
+    interval: 30s
+    rules:
+      - alert: CarMonitApiWorkerPoolBacklog
+        expr: carmonit_worker_pool_pending > 100
+        for: 10m
+        labels:
+          severity: warning
+          service: car-monit-api
+        annotations:
+          summary: "后台线程池积压 > 100（持续 10 分钟）"
+          description: >-
+            carmonit_worker_pool_pending={{ $value }}。
+            常见原因：DB/ES 慢、导出/同步任务堆积、Kafka 不可用导致重试占用线程。
+
+      - alert: CarMonitApiWorkerPoolSaturated
+        expr: >-
+          carmonit_worker_pool_active / clamp_min(carmonit_worker_pool_capacity, 1) > 0.9
+        for: 10m
+        labels:
+          severity: critical
+          service: car-monit-api
+        annotations:
+          summary: "后台线程池接近饱和（active/capacity > 90%）"
+          description: "active={{ $value | humanizePercentage }} of capacity；需要扩容或修复下游依赖。"
+
+      - alert: CarMonitApiDbPoolExhausted
+        expr: >-
+          carmonit_db_pool_live / clamp_min(carmonit_db_pool_max, 1) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+          service: car-monit-api
+        annotations:
+          summary: "数据库连接池使用率 > 90%"
+          description: >-
+            liveConnections/maxConnections 接近上限；检查慢查询与连接泄漏，
+            必要时调整 druid.maxActive（config.yaml）。
+
+      - alert: CarMonitApiMemoryGrowth
+        expr: >-
+          (container_memory_working_set_bytes{container="car-monit-api"}
+           - container_memory_working_set_bytes{container="car-monit-api"} offset 1h)
+           > 0.2 * (container_memory_working_set_bytes{container="car-monit-api"} offset 1h)
+        for: 30m
+        labels:
+          severity: warning
+          service: car-monit-api
+        annotations:
+          summary: "car-monit-api 容器内存 1 小时增长超过 20%"
+          description: >-
+            需要 cAdvisor 指标（container_memory_working_set_bytes）。
+            结合 container_threads 观察线程是否持续增长；若持续增长需抓取堆/线程快照。
