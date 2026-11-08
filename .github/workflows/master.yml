@@ -16,16 +16,18 @@ permissions:
   contents: read
 
 jobs:
-  # rust 目录仍被 .gitignore L77 忽略、未入库；先探测存在性，避免调用必然失败的 job。
+  # rust 目录被 .gitignore L77 忽略；C++ 完整源码在 car-monit-api-cpp 分支，
+  # master 只有 11 个文件。先探测存在性，避免调用必然失败的 job。
   presence:
     name: presence
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       rust: ${{ steps.check.outputs.rust }}
+      cpp: ${{ steps.check.outputs.cpp }}
     steps:
       - uses: actions/checkout@v4
-      - name: 检查 car-monit-api-rust 是否已入库
+      - name: 检查 rust / cpp 源码是否已入库
         id: check
         shell: bash
         run: |
@@ -34,6 +36,12 @@ jobs:
           else
             echo "rust=false" >> "$GITHUB_OUTPUT"
             echo "::notice::car-monit-api-rust 未入库（.gitignore L77），跳过 Rust 流水线"
+          fi
+          if [ -f car-monit-api-cpp/src/main.cpp ]; then
+            echo "cpp=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "cpp=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::master 缺少 C++ 入口 src/main.cpp（完整源码在 car-monit-api-cpp 分支），跳过 C++ 流水线"
           fi
 
   java:
@@ -45,6 +53,8 @@ jobs:
 
   cpp:
     name: cpp
+    needs: presence
+    if: needs.presence.outputs.cpp == 'true'
     uses: ./.github/workflows/_cpp.yml
     with:
       mode: master
@@ -70,10 +80,65 @@ jobs:
     with:
       mode: master
 
+  # ---- 镜像构建 + GHCR 推送（master 上额外产出 latest 标签）----
+  image-java:
+    name: image java
+    uses: ./.github/workflows/_image.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      language: java
+      push: true
+
+  image-python:
+    name: image python
+    uses: ./.github/workflows/_image.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      language: python
+      push: true
+
+  image-go:
+    name: image go
+    uses: ./.github/workflows/_image.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      language: go
+      push: true
+
+  image-cpp:
+    name: image cpp
+    needs: presence
+    if: needs.presence.outputs.cpp == 'true'
+    uses: ./.github/workflows/_image.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      language: cpp
+      push: true
+
+  image-rust:
+    name: image rust
+    needs: presence
+    if: needs.presence.outputs.rust == 'true'
+    uses: ./.github/workflows/_image.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      language: rust
+      push: true
+
   master-gate:
     name: Master Gate
     if: always()
-    needs: [presence, java, cpp, go, python, rust]
+    needs: [presence, java, cpp, go, python, rust, image-java, image-python, image-go, image-cpp, image-rust]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

@@ -1,0 +1,119 @@
+name: _image
+
+# 可复用 workflow：按语言构建镜像并推送到 GHCR。
+# 镜像命名：ghcr.io/<github.repository_owner>/<service>，owner 取仓库实际归属（kai-cn），不写死。
+# 标签策略：
+#   * sha-<7位短哈希>   每次构建必打
+#   * <semver>          tag v*.*.* 触发时由 metadata-action 生成
+#   * latest            仅 refs/heads/master 上生成
+# 认证：GITHUB_TOKEN（需 packages: write），不依赖 PAT。
+on:
+  workflow_call:
+    inputs:
+      language:
+        description: "java | python | go | cpp | rust"
+        required: true
+        type: string
+      push:
+        description: "true=推送 GHCR；false=只构建校验"
+        required: false
+        type: boolean
+        default: true
+      extra-tag:
+        description: "额外显式 tag（deploy 指定 image-tag 时使用）；留空则不加"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: image ${{ inputs.language }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 解析构建参数并校验上下文
+        id: cfg
+        shell: bash
+        env:
+          LANG_INPUT: ${{ inputs.language }}
+        run: |
+          case "$LANG_INPUT" in
+            java)
+              name="car-monit-api"; context="."; dockerfile="docker/java.Dockerfile"; required="pom.xml" ;;
+            python)
+              name="car-monit-api-python"; context="car-monit-api-python"; dockerfile="car-monit-api-python/Dockerfile"; required="car-monit-api-python/Dockerfile" ;;
+            go)
+              name="car-monit-api-go"; context="car-monit-api-go"; dockerfile="docker/go.Dockerfile"; required="car-monit-api-go/go.mod" ;;
+            cpp)
+              name="car-monit-api-cpp"; context="car-monit-api-cpp"; dockerfile="docker/cpp.Dockerfile"; required="car-monit-api-cpp/src/main.cpp" ;;
+            rust)
+              name="car-monit-api-rust"; context="car-monit-api-rust"; dockerfile="docker/rust.Dockerfile"; required="car-monit-api-rust/Cargo.toml" ;;
+            *)
+              echo "::error::未知语言: $LANG_INPUT"; exit 1 ;;
+          esac
+
+          if [ ! -e "$required" ]; then
+            echo "::error::构建上下文缺失：$required（源码未入库，不能产出镜像）"
+            exit 1
+          fi
+          if [ ! -f "$dockerfile" ]; then
+            echo "::error::Dockerfile 缺失：$dockerfile"
+            exit 1
+          fi
+
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "context=$context" >> "$GITHUB_OUTPUT"
+          echo "dockerfile=$dockerfile" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: 登录 GHCR
+        if: inputs.push
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 计算镜像标签
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ steps.cfg.outputs.name }}
+          tags: |
+            type=sha,prefix=sha-,format=short
+            type=semver,pattern={{version}}
+            type=raw,value=${{ inputs.extra-tag }},enable=${{ inputs.extra-tag != '' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+
+      - name: 构建并推送
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ steps.cfg.outputs.context }}
+          file: ${{ steps.cfg.outputs.dockerfile }}
+          push: ${{ inputs.push }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ inputs.language }}
+          cache-to: type=gha,mode=max,scope=${{ inputs.language }}
+
+      - name: 输出摘要
+        shell: bash
+        env:
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          {
+            echo "### 镜像 ${{ inputs.language }}"
+            echo '```'
+            echo "$IMAGE_TAGS"
+            echo "digest: ${IMAGE_DIGEST:-<未推送>}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
