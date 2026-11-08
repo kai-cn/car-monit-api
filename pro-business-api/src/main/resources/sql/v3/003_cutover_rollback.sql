@@ -76,7 +76,7 @@ BEGIN
                     || quote_ident(v_src) INTO v_max;
             EXECUTE 'SELECT count(*) FROM jl_data01.' || quote_ident(v_legacy)
                     || ' WHERE ' || quote_ident(v_time_col) || ' > '
-                    || quote_literal(coalesce(v_max, to_timestamp('1970-01-01', 'YYYY-MM-DD'))::text)
+                    || quote_literal(coalesce(v_max, '1970-01-01'::timestamp)::text)
                     INTO v_delta;
 
             RAISE NOTICE '[V3] 已回滚: % -> %（分区表保留为 %）', v_cur, v_src, v_legacy;
