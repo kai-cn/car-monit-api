@@ -90,8 +90,8 @@ RUN apt-get update \
        ca-certificates \
        tzdata \
     && rm -rf /var/lib/apt/lists/* \
-    && groupadd --system --gid 10001 carmonit \
-    && useradd --system --uid 10001 --gid carmonit \
+    && groupadd --gid 10001 carmonit \
+    && useradd --uid 10001 --gid carmonit --no-create-home \
        --home-dir /app --shell /usr/sbin/nologin carmonit
 
 WORKDIR /app
