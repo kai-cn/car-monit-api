@@ -344,6 +344,8 @@ traffic:
     batch-size: 500
     max-retry: 5
     bulk-size: 500
+    # 运维回灌允许略大于在线查询窗口（es-init.ps1 默认回灌 13+1 个月）
+    backfill-max-days: 400
     # car-warning 增量采集（阶段一按 update_time 扫描 -> outbox；生产首选 Debezium CDC）
     car-warning-enabled: true
     car-warning-poll-interval-ms: 30000

@@ -130,8 +130,9 @@ public class TrafficReconciliationService {
                 long bucketEnd = Math.min(bucketStart + bucketMs, alignedEnd);
                 ReconcileResult result = reconcileBucket(table, bucketStart, bucketEnd);
                 boolean wasDrift = alreadyDrift(table, bucketStart);
-                if (!result.drift && wasDrift) {
-                    // 已收敛的桶写 REPAIRED，供运维区分「修复成功」与「仍在漂移」
+                if (!result.drift && "OK".equals(result.status) && wasDrift) {
+                    // 只有本轮真实对账成功（非 ERROR）且上轮为 DRIFT 才写 REPAIRED；
+                    // 且下轮因为 alreadyDrift 只认 DRIFT 会恢复写 OK，不会永久停留。
                     result.status = "REPAIRED";
                 }
                 writeResult(table, bucketStart, bucketEnd, result);
@@ -229,8 +230,10 @@ public class TrafficReconciliationService {
         Set<String> existing = new HashSet<>();
         for (int i = 0; i < esDocs.size(); i += 1000) {
             List<EsDocRef> chunk = esDocs.subList(i, Math.min(i + 1000, esDocs.size()));
-            String sql = "SELECT " + pk + " FROM " + table.getSourceTable()
-                    + " WHERE " + time + " >= ? AND " + time + " < ? AND " + pk + " IN ("
+            // ES _id 一律是 String，而抓拍/收费的 big_id 是 bigint、轨迹的 cid 是 varchar。
+            // 直接把 String 绑定到 bigint 列会被 PG/openGauss 拒绝，统一把列转成文本比较。
+            String sql = "SELECT CAST(" + pk + " AS VARCHAR) FROM " + table.getSourceTable()
+                    + " WHERE " + time + " >= ? AND " + time + " < ? AND CAST(" + pk + " AS VARCHAR) IN ("
                     + placeholders(chunk.size()) + ")";
             Object[] args = new Object[chunk.size() + 2];
             args[0] = TrafficTimeUtils.toDbTimestamp(start);
@@ -285,9 +288,13 @@ public class TrafficReconciliationService {
                 }
             }
             if (response.hasFailures()) {
-                log.warn("[V3对账] 孤儿删除部分失败 table={}: {}", table, response.buildFailureMessage());
+                // 不能把部分失败当成成功计数返回，否则漂移会一直被误判为已清理
+                throw new IllegalStateException("[V3对账] 孤儿删除部分失败 table=" + table
+                        + ": " + response.buildFailureMessage());
             }
             log.warn("[V3对账] 已删除孤儿文档 table={}, count={}", table, deleted);
+        } catch (IllegalStateException e) {
+            throw e;
         } catch (Exception e) {
             log.warn("[V3对账] 孤儿删除失败 table={}: {}", table, e.getMessage());
             return 0;
@@ -363,7 +370,7 @@ public class TrafficReconciliationService {
         try {
             Integer count = jdbc.queryForObject(
                     "SELECT count(*) FROM jl_data01.search_sync_reconcile "
-                            + "WHERE table_name = ? AND bucket_start = ? AND status IN ('DRIFT','REPAIRED')",
+                            + "WHERE table_name = ? AND bucket_start = ? AND status = 'DRIFT'",
                     Integer.class, table.getIndexBase(), TrafficTimeUtils.toDbTimestamp(bucketStart));
             return count != null && count > 0;
         } catch (Exception e) {

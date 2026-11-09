@@ -108,6 +108,8 @@ public class TrafficV3Properties {
         private int maxRetry = 5;
         /** bulk 批大小 */
         private int bulkSize = 500;
+        /** 运维回灌单次窗口上限（天）；在线查询仍用 query.max-days=365 */
+        private int backfillMaxDays = 400;
         /** car-warning 增量采集开关 */
         private boolean carWarningEnabled = true;
         private long carWarningPollIntervalMs = 30000L;

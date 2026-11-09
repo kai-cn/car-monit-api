@@ -898,19 +898,52 @@ public class ExportTaskService {
             boolean needQuote = value.indexOf(',') >= 0 || value.indexOf('"') >= 0
                     || value.indexOf('\n') >= 0 || value.indexOf('\r') >= 0;
             String v = value.replace("\"", "\"\"");
-            // CSV 公式注入：以 = + - @ TAB/CR 开头的业务文本在 Excel/WPS 中会被当公式执行。
-            // 前置单引号使其成为文本；负数（'-' 后跟数字）保持原样，避免破坏金额列。
-            if (!value.isEmpty()) {
-                char first = value.charAt(0);
-                boolean formula = first == '=' || first == '+' || first == '@'
-                        || first == '\t' || first == '\r'
-                        || (first == '-' && (value.length() == 1
-                                || !Character.isDigit(value.charAt(1))));
-                if (formula) {
-                    v = "'" + v;
-                }
+            // CSV 公式注入：单元格首字符为 = + - @ TAB/CR 时 Excel/WPS 会当公式执行。
+            // 单元格内的换行同样会开启新行，需要逐段检查；合法数字负数保持原样。
+            if (looksLikeFormula(value)) {
+                v = "'" + v;
             }
             return needQuote ? "\"" + v + "\"" : v;
+        }
+
+        private boolean looksLikeFormula(String value) {
+            if (value.isEmpty()) {
+                return false;
+            }
+            for (int i = 0; i < value.length(); i++) {
+                if (i > 0 && value.charAt(i - 1) != '\n' && value.charAt(i - 1) != '\r') {
+                    continue;
+                }
+                char c = value.charAt(i);
+                if (c == '=' || c == '+' || c == '@' || c == '\t' || c == '\r') {
+                    return true;
+                }
+                if (c == '-' && !isNumericLiteral(value)) {
+                    // -1+1、-2+cmd 这类表达式不是数字，必须转义
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private boolean isNumericLiteral(String value) {
+            int i = value.charAt(0) == '-' ? 1 : 0;
+            if (i >= value.length()) {
+                return false;
+            }
+            boolean dot = false;
+            for (; i < value.length(); i++) {
+                char c = value.charAt(i);
+                if (c == '.') {
+                    if (dot) {
+                        return false;
+                    }
+                    dot = true;
+                } else if (!Character.isDigit(c)) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         @Override

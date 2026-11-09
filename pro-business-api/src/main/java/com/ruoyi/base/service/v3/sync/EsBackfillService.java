@@ -64,13 +64,16 @@ public class EsBackfillService {
      * 提交回灌任务（异步，最多 2 并发）。
      */
     public BackfillTask submit(TrafficTable table, long startMillis, long endMillis) {
-        long maxMillis = TimeUnit.DAYS.toMillis(properties.getQuery().getMaxDays());
+        // 回灌是离线运维操作，窗口可比在线查询（365 天）略大；
+        // es-init.ps1 默认回灌「13 个月历史 + 1 个月预建」，约 14 个月。
+        int maxDays = Math.max(properties.getQuery().getMaxDays(),
+                properties.getSync().getBackfillMaxDays());
+        long maxMillis = TimeUnit.DAYS.toMillis(maxDays);
         if (endMillis <= startMillis) {
             throw new IllegalArgumentException("回灌时间范围非法：结束时间必须晚于开始时间");
         }
         if (endMillis - startMillis > maxMillis) {
-            throw new IllegalArgumentException("回灌时间范围不能超过 "
-                    + properties.getQuery().getMaxDays() + " 天");
+            throw new IllegalArgumentException("回灌时间范围不能超过 " + maxDays + " 天");
         }
         BackfillTask task = new BackfillTask();
         task.setTaskId(UUID.randomUUID().toString().replace("-", ""));
