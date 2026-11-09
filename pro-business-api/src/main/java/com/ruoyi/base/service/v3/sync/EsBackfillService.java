@@ -22,6 +22,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -63,6 +64,14 @@ public class EsBackfillService {
      * 提交回灌任务（异步，最多 2 并发）。
      */
     public BackfillTask submit(TrafficTable table, long startMillis, long endMillis) {
+        long maxMillis = TimeUnit.DAYS.toMillis(properties.getQuery().getMaxDays());
+        if (endMillis <= startMillis) {
+            throw new IllegalArgumentException("回灌时间范围非法：结束时间必须晚于开始时间");
+        }
+        if (endMillis - startMillis > maxMillis) {
+            throw new IllegalArgumentException("回灌时间范围不能超过 "
+                    + properties.getQuery().getMaxDays() + " 天");
+        }
         BackfillTask task = new BackfillTask();
         task.setTaskId(UUID.randomUUID().toString().replace("-", ""));
         task.setTable(table);
@@ -106,6 +115,10 @@ public class EsBackfillService {
                     docs.add(new EsBulkIndexer.IndexDoc(table, id, doc, eventTime));
                 }
                 int indexed = bulkIndexer.bulkIndex(docs);
+                if (indexed != docs.size()) {
+                    // 游标只能在本批全部写入后推进，否则失败批次会被永久跳过
+                    throw new IllegalStateException("回灌批次未全部写入 ES: " + indexed + "/" + docs.size());
+                }
                 task.setRowsIndexed(task.getRowsIndexed() + indexed);
 
                 Map<String, Object> last = rows.get(rows.size() - 1);

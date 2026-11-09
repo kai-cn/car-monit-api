@@ -144,8 +144,8 @@ public class EsBulkIndexer {
             try {
                 index = indexService.ensureIndexForEventTime(table, eventTime);
             } catch (Exception e) {
-                log.warn("[V3同步] 确保月索引失败 table={}, time={}: {}", table, eventTime, e.getMessage());
-                continue;
+                // 不能静默跳过：跳过后回灌游标仍会前进，这批数据永久不进 ES
+                throw new IllegalStateException("确保月索引失败 table=" + table + ", time=" + eventTime, e);
             }
             byIndex.computeIfAbsent(index, k -> new ArrayList<>()).add(doc);
         }
@@ -159,26 +159,39 @@ public class EsBulkIndexer {
             }
             try {
                 BulkResponse response = esClient.bulk(bulk, RequestOptions.DEFAULT);
+                int ok = entry.getValue().size();
                 if (response.hasFailures()) {
+                    ok = 0;
+                    String firstFailure = null;
                     for (BulkItemResponse item : response.getItems()) {
                         if (item.isFailed()) {
                             log.warn("[V3同步] bulk 单条失败 index={}, id={}: {}",
                                     entry.getKey(), item.getId(), item.getFailureMessage());
+                            if (firstFailure == null) {
+                                firstFailure = item.getId() + ":" + item.getFailureMessage();
+                            }
                         } else {
-                            success++;
+                            ok++;
                         }
                     }
-                } else {
-                    success += entry.getValue().size();
+                    if (ok != entry.getValue().size()) {
+                        throw new IllegalStateException("ES bulk 部分失败 index=" + entry.getKey()
+                                + " ok=" + ok + "/" + entry.getValue().size() + " first=" + firstFailure);
+                    }
                 }
+                success += ok;
             } catch (Exception e) {
                 log.error("[V3同步] bulk 失败 index={}, size={}", entry.getKey(), entry.getValue().size(), e);
+                // 抛出异常让回灌任务置 FAILED，而不是 DONE + 游标推进后永久丢数据
+                throw new IllegalStateException("ES bulk 失败 index=" + entry.getKey()
+                        + " size=" + entry.getValue().size(), e);
             }
         }
         return success;
     }
 
-    private void toDlq(SearchSyncEvent event, Exception error) {
+    /** 写入 DLQ（car-warning 等非三表索引的消费者共用）。 */
+    public void toDlq(SearchSyncEvent event, Exception error) {
         try {
             jdbc.update("INSERT INTO jl_data01.search_sync_dlq "
                             + "(event_id, table_name, pk, op, event_time, payload, error_message, retry_count) "

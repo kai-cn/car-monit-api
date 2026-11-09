@@ -25,10 +25,13 @@ import java.util.Map;
 /**
  * V3 运维接口：ES 初始化、回灌、对账、Outbox relay 手动触发。
  *
- * <p><b>安全警告（P1-12）：本类端点当前无鉴权</b>（工程内 SecurityInterceptor/WebConfig
- * 仍被注释，见 docs/v3-auth-options.md）。这些端点可切换查询引擎、触发重负载回灌、
- * 删除 ES 孤儿文档，<b>禁止在对内网以外的任何网络暴露</b>；生产必须先做网络隔离
- * （内网绑定/安全组/网关认证）再上线。</p>
+ * <p>这些端点可切换查询引擎、触发重负载回灌、删除 ES 孤儿文档，统一由
+ * {@code InternalEndpointGuardConfig} 保护：配置 traffic.security.internal-token 后必须携带
+ * {@code X-Internal-Token}，未配置时仅允许本机回环调用。多机部署必须配置同一令牌，
+ * 并叠加内网绑定/安全组；该边界不替代设计文档 §5.7 的租户权限模型。</p>
+ *
+ * <p>回灌/对账/孤儿清理的时间范围由各 Service 统一按 traffic.query.max-days 校验，
+ * 桶数上限由 TrafficReconciliationService 限制，避免单次请求打满 DB/ES。</p>
  */
 @Slf4j
 @RestController

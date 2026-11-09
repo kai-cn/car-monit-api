@@ -1,5 +1,7 @@
 package com.ruoyi.base.controller.v3;
 
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import com.ruoyi.base.service.v3.export.ExportRequest;
 import com.ruoyi.base.service.v3.export.ExportTask;
 import com.ruoyi.base.service.v3.export.ExportTaskService;
@@ -59,7 +61,7 @@ public class ExportV3Controller {
                     : exportTaskService.submitFull(request);
             result.put("code", 200);
             result.put("message", "导出任务已提交");
-            result.put("data", task);
+            result.put("data", publicView(task));
         } catch (Exception e) {
             log.error("[V3导出] 提交失败", e);
             result.put("code", 400);
@@ -78,8 +80,15 @@ public class ExportV3Controller {
             return result;
         }
         result.put("code", 200);
-        result.put("data", task);
+        result.put("data", publicView(task));
         return result;
+    }
+
+    /** 不向调用方暴露 filePath 等服务端绝对路径。 */
+    private JSONObject publicView(ExportTask task) {
+        JSONObject view = JSON.parseObject(JSON.toJSONString(task));
+        view.remove("filePath");
+        return view;
     }
 
     @PostMapping("/cancel/{taskId}")

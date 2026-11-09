@@ -31,18 +31,23 @@ public class SearchSyncConsumer {
     )
     public void onMessage(String message) {
         if (message == null || message.trim().isEmpty()) {
-            return;
+            throw new IllegalStateException("search-sync 收到空消息");
         }
         try {
             SearchSyncEvent event = JSON.parseObject(message, SearchSyncEvent.class);
             if (event == null) {
-                log.warn("[V3同步] 收到空事件，忽略");
-                return;
+                throw new IllegalStateException("search-sync 收到空事件");
             }
-            if (isCarWarning(event.getTable())) {
-                carWarningIndexWriter.indexOne(event);
-            } else {
-                indexer.indexOne(event);
+            boolean indexed = isCarWarning(event.getTable())
+                    ? carWarningIndexWriter.indexOne(event)
+                    : indexer.indexOne(event);
+            if (!indexed) {
+                // 返回 false 不能静默 ack：否则事件被提交 offset 后永久丢失，
+                // 而 GaussDB(SoR) 有数据、ES 没有，且默认对账关闭时无人发现。
+                if (isCarWarning(event.getTable())) {
+                    indexer.toDlq(event, new IllegalStateException("car-warning 写入 ES 失败"));
+                }
+                throw new IllegalStateException("search-sync 事件写入 ES 失败 eventId=" + event.getEventId());
             }
         } catch (Exception e) {
             log.error("[V3同步] 消费失败，消息进入 DLQ 由运维重放: {}", e.getMessage());

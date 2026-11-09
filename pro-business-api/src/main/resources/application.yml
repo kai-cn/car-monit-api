@@ -299,6 +299,10 @@ monitoring:
 # 设计文档：car-monit-backend-new/docs/architecture-traffic-query-design.md v1.3
 # 默认只读：auto-bootstrap / sync / reconcile 默认关闭，需要运维显式开启。
 traffic:
+  # 内部端点（/api/v3/**、/api/v1/large/export/**）服务间令牌。
+  # 为空时仅允许回环调用；多机部署必须配置为同一令牌，并由 backend/运维脚本注入 X-Internal-Token。
+  security:
+    internal-token: ${TRAFFIC_INTERNAL_TOKEN:}
   # 业务时区：查询解析/JDBC 时间窗/导出格式化统一口径（容器默认 UTC 时避免偏 8 小时）
   timezone: Asia/Shanghai
   query:

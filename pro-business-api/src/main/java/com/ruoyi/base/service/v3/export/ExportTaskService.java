@@ -126,6 +126,11 @@ public class ExportTaskService {
             validateDisplayFields(table, request);
         }
         validateDimensionCodes(table, request);
+        // 颜色码会拼进 LIKE '%_<code>'：不校验时传 %/_ 会让过滤退化为匹配全表
+        if (request.getColorCode() != null && !request.getColorCode().trim().isEmpty()
+                && !request.getColorCode().trim().matches("[0-9]{1,3}")) {
+            throw new IllegalArgumentException("plateColor 必须是数字颜色码（如 0/1/93）");
+        }
         long now = System.currentTimeMillis();
         Long start = TrafficTimeUtils.parse(request.getStartTime(), false);
         Long end = TrafficTimeUtils.parse(request.getEndTime(), true);
@@ -152,7 +157,9 @@ public class ExportTaskService {
         task.setEndMillis(end);
         task.setRequestedBy(request.getRequestedBy());
         task.setPurpose(request.getPurpose());
-        task.setFilePath(buildFilePath(task.getTaskId()));
+        final String finalPath = buildFilePath(task.getTaskId());
+        final String partPath = finalPath + ".part";
+        task.setFilePath(partPath);
         tasks.put(task.getTaskId(), task);
 
         executor.submit(() -> {
@@ -165,11 +172,24 @@ public class ExportTaskService {
                     runFull(task, request);
                 }
                 if (task.isCancelRequested()) {
+                    // 半成品文件不发布：删除 .part，避免重启后被当成完成文件下载
+                    deleteQuietly(partPath);
                     task.setStatus("canceled");
                 } else {
+                    File part = new File(partPath);
+                    File target = new File(finalPath);
+                    if (target.exists() && !target.delete()) {
+                        throw new IllegalStateException("无法覆盖旧导出文件: " + finalPath);
+                    }
+                    if (!part.renameTo(target)) {
+                        throw new IllegalStateException("导出文件发布失败: " + partPath);
+                    }
+                    task.setFilePath(finalPath);
                     task.setStatus("done");
                 }
             } catch (Exception e) {
+                // 失败/超时同样只留下 .part（随后删除），resolveFinishedFile 不会误判为完成
+                deleteQuietly(partPath);
                 task.setStatus("failed");
                 task.setError(e.getMessage());
                 log.error("[V3导出] 失败 taskId={}", task.getTaskId(), e);
@@ -201,6 +221,9 @@ public class ExportTaskService {
         if (task == null) {
             return false;
         }
+        if (isFinished(task)) {
+            return false;
+        }
         task.setCancelRequested(true);
         PreparedStatement ps = runningStatements.get(taskId);
         if (ps != null) {
@@ -227,7 +250,7 @@ public class ExportTaskService {
         if (request.getDimensionCodes() != null) {
             req.getDimensionCodes().putAll(request.getDimensionCodes());
         }
-        req.setPageSize(properties.getQuery().getMaxPageSize());
+        req.setPageSize(properties.getExport().getPageSize());
         req.setPageNum(1);
         req.setNeedTotal(true);
         req.setKeepPit(true);
@@ -875,6 +898,18 @@ public class ExportTaskService {
             boolean needQuote = value.indexOf(',') >= 0 || value.indexOf('"') >= 0
                     || value.indexOf('\n') >= 0 || value.indexOf('\r') >= 0;
             String v = value.replace("\"", "\"\"");
+            // CSV 公式注入：以 = + - @ TAB/CR 开头的业务文本在 Excel/WPS 中会被当公式执行。
+            // 前置单引号使其成为文本；负数（'-' 后跟数字）保持原样，避免破坏金额列。
+            if (!value.isEmpty()) {
+                char first = value.charAt(0);
+                boolean formula = first == '=' || first == '+' || first == '@'
+                        || first == '\t' || first == '\r'
+                        || (first == '-' && (value.length() == 1
+                                || !Character.isDigit(value.charAt(1))));
+                if (formula) {
+                    v = "'" + v;
+                }
+            }
             return needQuote ? "\"" + v + "\"" : v;
         }
 

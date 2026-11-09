@@ -23,7 +23,8 @@ param(
     [switch]$Activate,
     [string]$ApiBaseUrl = "http://localhost:9902",
     [string]$EsUser = $env:ES_USERNAME,
-    [string]$EsPassword = $env:ES_PASSWORD
+    [string]$EsPassword = $env:ES_PASSWORD,
+    [string]$InternalToken = $env:TRAFFIC_INTERNAL_TOKEN
 )
 
 $ErrorActionPreference = "Stop"
@@ -38,6 +39,10 @@ $esJsonDir = Join-Path $here "..\..\pro-business-api\src\main\resources\es\v3"
 $esJsonDir = (Resolve-Path $esJsonDir).Path
 
 $headers = @{ "Content-Type" = "application/json" }
+$apiHeaders = @{}
+if (-not [string]::IsNullOrWhiteSpace($InternalToken)) {
+    $apiHeaders["X-Internal-Token"] = $InternalToken.Trim()
+}
 if (-not [string]::IsNullOrWhiteSpace($EsUser)) {
     $pair = "${EsUser}:${EsPassword}"
     $b64 = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($pair))
@@ -141,7 +146,7 @@ if ($Backfill) {
     foreach ($table in @("snapshot", "fee", "trail")) {
         $uri = "$ApiBaseUrl/api/v3/sync/backfill?table=$table&startTime=$([uri]::EscapeDataString($start))&endTime=$([uri]::EscapeDataString($end))"
         try {
-            $resp = Invoke-RestMethod -Uri $uri -Method Post -ContentType "application/json"
+            $resp = Invoke-RestMethod -Uri $uri -Method Post -ContentType "application/json" -Headers $apiHeaders
             Write-Host "[Backfill] $table -> $($resp | ConvertTo-Json -Compress)"
         } catch {
             Write-Host "[Backfill] $table -> FAILED: $($_.Exception.Message)" -ForegroundColor Yellow
@@ -154,7 +159,7 @@ if ($Backfill) {
 # 5. 就绪检查与可选启用 es（运行期临时生效）
 # -----------------------------------------------------------------------------
 try {
-    $ready = Invoke-RestMethod -Uri "$ApiBaseUrl/api/v3/es/readiness" -Method Get
+    $ready = Invoke-RestMethod -Uri "$ApiBaseUrl/api/v3/es/readiness" -Method Get -Headers $apiHeaders
     Write-Host "[Readiness] $($ready.data | ConvertTo-Json -Compress)"
 } catch {
     Write-Host "[Readiness] 查询失败（API 未启动或不可达）: $($_.Exception.Message)" -ForegroundColor Yellow
@@ -162,7 +167,7 @@ try {
 
 if ($Activate) {
     try {
-        $act = Invoke-RestMethod -Uri "$ApiBaseUrl/api/v3/es/activate?engine=es" -Method Post
+        $act = Invoke-RestMethod -Uri "$ApiBaseUrl/api/v3/es/activate?engine=es" -Method Post -Headers $apiHeaders
         Write-Host "[Activate] $($act | ConvertTo-Json -Compress)"
         if ($act.code -ne 200) {
             Write-Host "[Activate] 未就绪，保持 legacy；请先完成 bootstrap/回灌。" -ForegroundColor Yellow

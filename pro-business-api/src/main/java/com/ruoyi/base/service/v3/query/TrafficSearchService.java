@@ -83,9 +83,12 @@ public class TrafficSearchService {
      * 展示字段导出/回灌内部使用：允许更大的 size（上限 1000）。
      */
     public TrafficSearchResult searchForExport(TrafficSearchRequest req, int maxSize) {
+        int desired = Math.min(Math.max(1, req.getPageSize()), Math.max(1, maxSize));
+        // 在线查询的 pageSize≤100 只约束交互式分页；导出是内部 PIT+search_after，
+        // 允许更大页。校验时临时钳到在线上限，校验后恢复导出页大小。
+        req.setPageSize(Math.min(desired, properties.getQuery().getMaxPageSize()));
         validateAndNormalize(req);
-        int size = Math.min(Math.max(1, req.getPageSize()), Math.max(1, maxSize));
-        req.setPageSize(size);
+        req.setPageSize(desired);
         req.setPageNum(1);
         // 导出必须使用 search_after 深翻页
         return searchInternal(req);
@@ -157,9 +160,14 @@ public class TrafficSearchService {
             }
         }
 
-        boolean openPit = req.getPitId() == null || req.getPitId().isEmpty();
+        boolean useSearchAfter = req.getSearchAfter() != null && !req.getSearchAfter().isEmpty();
         String pitId = req.getPitId();
+        // 普通 from/size 分页不创建 PIT：每次多两次 ES 往返并占用 2 分钟搜索上下文，
+        // 高并发或 keepPit=true 的滥用会打满 max_open_scroll_context。
+        boolean openPit = (pitId == null || pitId.isEmpty())
+                && (useSearchAfter || req.isKeepPit());
         String readAlias = table.readAlias();
+        boolean completed = false;
 
         try {
             if (openPit) {
@@ -183,7 +191,6 @@ public class TrafficSearchService {
             source.sort(timeSort);
             source.sort(pkSort);
 
-            boolean useSearchAfter = req.getSearchAfter() != null && !req.getSearchAfter().isEmpty();
             if (useSearchAfter) {
                 source.searchAfter(req.getSearchAfter().toArray());
             } else {
@@ -206,6 +213,7 @@ public class TrafficSearchService {
             TrafficSearchResult result = parseResponse(response, req, plateCore, size);
             result.setTookMs(System.currentTimeMillis() - t0);
             result.setPitId(req.isKeepPit() ? pitId : null);
+            completed = true;
             return result;
         } catch (IOException e) {
             throw TrafficQueryException.unavailable(
@@ -216,7 +224,10 @@ public class TrafficSearchService {
             throw TrafficQueryException.unavailable(
                     "ES 查询异常（模糊查询禁止回退 GaussDB）：" + e.getMessage(), e);
         } finally {
-            if (openPit && !req.isKeepPit() && pitId != null && !pitId.isEmpty()) {
+            // 请求失败时即便调用方要求保留 PIT，也必须关闭本次新建的上下文，
+            // 否则异常路径持续泄漏搜索上下文。
+            if (openPit && pitId != null && !pitId.isEmpty()
+                    && (!completed || !req.isKeepPit())) {
                 closePitQuietly(pitId);
             }
         }

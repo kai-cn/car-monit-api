@@ -47,6 +47,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Service
 public class TrafficReconciliationService {
 
+    /** 单次对账每张表最多遍历的桶数，防止超大窗口打满 DB/ES。 */
+    private static final long MAX_BUCKETS_PER_TABLE = 10000L;
+
     private final JdbcTemplate jdbc;
     private final RestHighLevelClient esClient;
     private final EsBackfillService backfillService;
@@ -106,6 +109,16 @@ public class TrafficReconciliationService {
         if (alignedEnd <= alignedStart) {
             throw new IllegalArgumentException("对账时间范围为空（需至少一个桶）");
         }
+        long maxMillis = TimeUnit.DAYS.toMillis(properties.getQuery().getMaxDays());
+        if (end - start > maxMillis) {
+            throw new IllegalArgumentException("对账时间范围不能超过 "
+                    + properties.getQuery().getMaxDays() + " 天");
+        }
+        long bucketsPerTable = (alignedEnd - alignedStart + bucketMs - 1) / bucketMs;
+        if (bucketsPerTable > MAX_BUCKETS_PER_TABLE) {
+            throw new IllegalArgumentException("对账桶数过多（" + bucketsPerTable + " 桶/表，上限 "
+                    + MAX_BUCKETS_PER_TABLE + "），请缩小时间窗或增大 bucketMinutes");
+        }
 
         int repairs = 0;
         int driftBuckets = 0;
@@ -117,11 +130,17 @@ public class TrafficReconciliationService {
                 long bucketEnd = Math.min(bucketStart + bucketMs, alignedEnd);
                 ReconcileResult result = reconcileBucket(table, bucketStart, bucketEnd);
                 boolean wasDrift = alreadyDrift(table, bucketStart);
+                if (!result.drift && wasDrift) {
+                    // 已收敛的桶写 REPAIRED，供运维区分「修复成功」与「仍在漂移」
+                    result.status = "REPAIRED";
+                }
                 writeResult(table, bucketStart, bucketEnd, result);
                 totalBuckets++;
                 if (result.drift) {
                     driftBuckets++;
-                    if (repairs < properties.getReconcile().getMaxRepairBuckets() && !wasDrift) {
+                    // 同一 DRIFT 桶必须允许后续对账重复补偿，否则回灌失败后漂移永久固化；
+                    // 仅用 maxRepairBuckets 限制单次运行的补偿数量。
+                    if (repairs < properties.getReconcile().getMaxRepairBuckets()) {
                         backfillService.submit(table, bucketStart, bucketEnd);
                         repairs++;
                         log.warn("[V3对账] {} 桶存在漂移，已提交回灌: {} ~ {}",
@@ -160,15 +179,22 @@ public class TrafficReconciliationService {
      * 最后 bulk delete。单次最多扫描 {@code traffic.reconcile.orphan-sweep-max-docs} 条。</p>
      */
     public int sweepOrphanDocs(TrafficTable table, long start, long end) {
+        long maxMillis = TimeUnit.DAYS.toMillis(properties.getQuery().getMaxDays());
+        if (end <= start || end - start > maxMillis) {
+            throw new IllegalArgumentException("孤儿清理时间范围非法或超过 "
+                    + properties.getQuery().getMaxDays() + " 天");
+        }
         int maxDocs = Math.max(1, properties.getReconcile().getOrphanSweepMaxDocs());
         String pk = table.getPkField();
         String time = table.getTimeField();
 
-        List<String> esIds = new ArrayList<>();
+        // 必须保留命中的具体月索引：read alias 指向多个索引且无 is_write_index，
+        // 对别名执行 delete 会被 ES 拒绝，孤儿文档永远删不掉。
+        List<EsDocRef> esDocs = new ArrayList<>();
         List<Object> searchAfter = new ArrayList<>();
         try {
-            while (esIds.size() < maxDocs) {
-                int size = Math.min(1000, maxDocs - esIds.size());
+            while (esDocs.size() < maxDocs) {
+                int size = Math.min(1000, maxDocs - esDocs.size());
                 SearchSourceBuilder source = new SearchSourceBuilder()
                         .query(QueryBuilders.rangeQuery(time)
                                 .format("epoch_millis").gte(start).lt(end))
@@ -185,7 +211,7 @@ public class TrafficReconciliationService {
                     break;
                 }
                 for (SearchHit hit : hits) {
-                    esIds.add(hit.getId());
+                    esDocs.add(new EsDocRef(hit.getId(), hit.getIndex()));
                 }
                 if (hits.length < size || hits[hits.length - 1].getSortValues() == null) {
                     break;
@@ -196,13 +222,13 @@ public class TrafficReconciliationService {
             log.warn("[V3对账] 孤儿扫描失败 table={}: {}", table, e.getMessage());
             return 0;
         }
-        if (esIds.isEmpty()) {
+        if (esDocs.isEmpty()) {
             return 0;
         }
 
         Set<String> existing = new HashSet<>();
-        for (int i = 0; i < esIds.size(); i += 1000) {
-            List<String> chunk = esIds.subList(i, Math.min(i + 1000, esIds.size()));
+        for (int i = 0; i < esDocs.size(); i += 1000) {
+            List<EsDocRef> chunk = esDocs.subList(i, Math.min(i + 1000, esDocs.size()));
             String sql = "SELECT " + pk + " FROM " + table.getSourceTable()
                     + " WHERE " + time + " >= ? AND " + time + " < ? AND " + pk + " IN ("
                     + placeholders(chunk.size()) + ")";
@@ -210,7 +236,7 @@ public class TrafficReconciliationService {
             args[0] = TrafficTimeUtils.toDbTimestamp(start);
             args[1] = TrafficTimeUtils.toDbTimestamp(end);
             for (int j = 0; j < chunk.size(); j++) {
-                args[j + 2] = chunk.get(j);
+                args[j + 2] = chunk.get(j).id;
             }
             try {
                 existing.addAll(jdbc.queryForList(sql, String.class, args));
@@ -220,10 +246,10 @@ public class TrafficReconciliationService {
             }
         }
 
-        List<String> orphans = new ArrayList<>();
-        for (String id : esIds) {
-            if (!existing.contains(id)) {
-                orphans.add(id);
+        List<EsDocRef> orphans = new ArrayList<>();
+        for (EsDocRef doc : esDocs) {
+            if (!existing.contains(doc.id)) {
+                orphans.add(doc);
             }
         }
         if (orphans.isEmpty()) {
@@ -243,12 +269,14 @@ public class TrafficReconciliationService {
         return sb.toString();
     }
 
-    private int deleteFromEs(TrafficTable table, List<String> ids) {
+    private int deleteFromEs(TrafficTable table, List<EsDocRef> orphans) {
         int deleted = 0;
         try {
             BulkRequest bulk = new BulkRequest();
-            for (String id : ids) {
-                bulk.add(new DeleteRequest(table.readAlias(), id));
+            for (EsDocRef doc : orphans) {
+                // 按具体月索引删除；对多索引 read alias 执行 delete 会报
+                // "no write index is defined for alias"，导致孤儿永远残留。
+                bulk.add(new DeleteRequest(doc.index, doc.id));
             }
             BulkResponse response = esClient.bulk(bulk, RequestOptions.DEFAULT);
             for (org.elasticsearch.action.bulk.BulkItemResponse item : response.getItems()) {
@@ -349,6 +377,17 @@ public class TrafficReconciliationService {
 
     private String truncate(String value) {
         return value.length() > 500 ? value.substring(0, 500) : value;
+    }
+
+    /** ES 命中的文档及其所在月索引。 */
+    private static class EsDocRef {
+        private final String id;
+        private final String index;
+
+        EsDocRef(String id, String index) {
+            this.id = id;
+            this.index = index;
+        }
     }
 
     private static class ReconcileResult {
