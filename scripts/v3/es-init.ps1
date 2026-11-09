@@ -165,7 +165,7 @@ if ($Backfill) {
             }
         }
     }
-    Write-Host "[Backfill] 已提交 $submitted 个分片任务，失败分片数标记为 $backfillFailed。"
+    Write-Host "[Backfill] 已提交 $submitted 个分片任务，是否存在失败分片：$backfillFailed。"
     Write-Host "[Backfill] 任务为异步执行；请先轮询 /api/v3/sync/backfill/status/{taskId} 确认完成，再切换 es。"
 }
 

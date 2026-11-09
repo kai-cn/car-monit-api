@@ -30,7 +30,8 @@ import java.util.Map;
  * {@code X-Internal-Token}，未配置时仅允许本机回环调用。多机部署必须配置同一令牌，
  * 并叠加内网绑定/安全组；该边界不替代设计文档 §5.7 的租户权限模型。</p>
  *
- * <p>回灌/对账/孤儿清理的时间范围由各 Service 统一按 traffic.query.max-days 校验，
+ * <p>对账/孤儿清理按 traffic.query.max-days 校验；回灌按
+ * max(traffic.query.max-days, traffic.sync.backfill-max-days) 校验；
  * 桶数上限由 TrafficReconciliationService 限制，避免单次请求打满 DB/ES。</p>
  */
 @Slf4j
