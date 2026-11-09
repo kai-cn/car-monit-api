@@ -180,6 +180,9 @@ public class EsBulkIndexer {
                     }
                 }
                 success += ok;
+            } catch (IllegalStateException e) {
+                // 保留上面拼好的失败明细（含首个失败 id + 原因），供回灌任务状态查询
+                throw e;
             } catch (Exception e) {
                 log.error("[V3同步] bulk 失败 index={}, size={}", entry.getKey(), entry.getValue().size(), e);
                 // 抛出异常让回灌任务置 FAILED，而不是 DONE + 游标推进后永久丢数据

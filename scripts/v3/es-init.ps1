@@ -140,18 +140,32 @@ if (Test-EsIndex "car-warning") {
 # -----------------------------------------------------------------------------
 # 4. 可选：触发回灌（API 异步任务）
 # -----------------------------------------------------------------------------
+$backfillFailed = $false
 if ($Backfill) {
-    $start = $now.AddMonths(-($Months - 1)).ToString("yyyy-MM-01 00:00:00")
-    $end = $now.AddMonths($ForwardMonths + 1).ToString("yyyy-MM-01 00:00:00")
-    foreach ($table in @("snapshot", "fee", "trail")) {
-        $uri = "$ApiBaseUrl/api/v3/sync/backfill?table=$table&startTime=$([uri]::EscapeDataString($start))&endTime=$([uri]::EscapeDataString($end))"
-        try {
-            $resp = Invoke-RestMethod -Uri $uri -Method Post -ContentType "application/json" -Headers $apiHeaders
-            Write-Host "[Backfill] $table -> $($resp | ConvertTo-Json -Compress)"
-        } catch {
-            Write-Host "[Backfill] $table -> FAILED: $($_.Exception.Message)" -ForegroundColor Yellow
+    # 按月分片：单任务窗口恒为 1 个月，既不受 sync.backfill-max-days 限制，
+    # 也便于失败重放；整段窗口 = 过去 Months-1 个月 + 当月 + 预建 ForwardMonths 个月。
+    $submitted = 0
+    for ($m = -($Months - 1); $m -le $ForwardMonths; $m++) {
+        $chunkStart = $now.AddMonths($m).ToString("yyyy-MM-01 00:00:00")
+        $chunkEnd = $now.AddMonths($m + 1).ToString("yyyy-MM-01 00:00:00")
+        foreach ($table in @("snapshot", "fee", "trail")) {
+            $uri = "$ApiBaseUrl/api/v3/sync/backfill?table=$table&startTime=$([uri]::EscapeDataString($chunkStart))&endTime=$([uri]::EscapeDataString($chunkEnd))"
+            try {
+                $resp = Invoke-RestMethod -Uri $uri -Method Post -ContentType "application/json" -Headers $apiHeaders
+                # 管理端点失败时返回 HTTP 200 + code:500，PowerShell 不会进 catch，必须显式判业务码
+                if ($null -eq $resp -or $resp.code -ne 200) {
+                    $backfillFailed = $true
+                    Write-Host "[Backfill] $table $chunkStart -> REJECTED: $($resp | ConvertTo-Json -Compress)" -ForegroundColor Red
+                } else {
+                    $submitted++
+                }
+            } catch {
+                $backfillFailed = $true
+                Write-Host "[Backfill] $table $chunkStart -> FAILED: $($_.Exception.Message)" -ForegroundColor Red
+            }
         }
     }
+    Write-Host "[Backfill] 已提交 $submitted 个分片任务，失败分片数标记为 $backfillFailed。"
     Write-Host "[Backfill] 任务为异步执行；请先轮询 /api/v3/sync/backfill/status/{taskId} 确认完成，再切换 es。"
 }
 
@@ -165,7 +179,9 @@ try {
     Write-Host "[Readiness] 查询失败（API 未启动或不可达）: $($_.Exception.Message)" -ForegroundColor Yellow
 }
 
-if ($Activate) {
+if ($Activate -and $backfillFailed) {
+    Write-Host "[Activate] 回灌存在失败分片，拒绝切换 es（保持 legacy），请先修复并重放回灌。" -ForegroundColor Red
+} elseif ($Activate) {
     try {
         $act = Invoke-RestMethod -Uri "$ApiBaseUrl/api/v3/es/activate?engine=es" -Method Post -Headers $apiHeaders
         Write-Host "[Activate] $($act | ConvertTo-Json -Compress)"

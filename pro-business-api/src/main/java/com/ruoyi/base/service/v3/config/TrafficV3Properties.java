@@ -108,8 +108,12 @@ public class TrafficV3Properties {
         private int maxRetry = 5;
         /** bulk 批大小 */
         private int bulkSize = 500;
-        /** 运维回灌单次窗口上限（天）；在线查询仍用 query.max-days=365 */
-        private int backfillMaxDays = 400;
+        /**
+         * 运维回灌单次窗口上限（天）；在线查询仍用 query.max-days=365。
+         * es-init.ps1 默认「13 个月历史 + 1 个月预建」= 14 个整月，最长 428 天，
+         * 因此取 450 天留出余量；脚本本身按月分片，单任务仅 1 个月。
+         */
+        private int backfillMaxDays = 450;
         /** car-warning 增量采集开关 */
         private boolean carWarningEnabled = true;
         private long carWarningPollIntervalMs = 30000L;
