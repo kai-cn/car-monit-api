@@ -103,16 +103,7 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
-                <configuration>
-                    <source>${maven.compiler.source}</source>
-                    <target>${maven.compiler.target}</target>
-                    <encoding>${project.build.sourceEncoding}</encoding>
-                </configuration>
-            </plugin>
+            <!-- 编译配置统一由父 POM 的 release 选项管理（JDK 17/21/25 只改父 POM 属性） -->
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
