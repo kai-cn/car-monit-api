@@ -48,7 +48,7 @@ jobs:
     uses: ./.github/workflows/_java.yml
     with:
       mode: release
-      jdk-version: "8"
+      jdk-version: "17"
 
   cpp:
     name: cpp

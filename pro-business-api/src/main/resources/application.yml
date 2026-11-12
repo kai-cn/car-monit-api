@@ -6,6 +6,10 @@ spring:
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
+  main:
+    # Boot 2.6+ 默认禁止循环引用/Bean 覆盖；存量装配保持 JDK 8 时期的行为。
+    allow-circular-references: true
+    allow-bean-definition-overriding: true
   # 排除 Druid 自动配置
   autoconfigure:
     exclude: com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceAutoConfigure

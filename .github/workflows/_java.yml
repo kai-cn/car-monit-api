@@ -1,15 +1,15 @@
 name: _java
 
-# 可复用 workflow：Java 主仓库（Spring Boot 2.4.5 / source-target 1.8）。
+# 可复用 workflow：Java 主仓库（Spring Boot 2.7.18 / JDK 17 工具链）。
 # 由 pr.yml / master.yml / release.yml 调用，避免三套入口复制检查逻辑。
-# 运行环境：openEuler 24.03 容器（GitHub 托管 runner）+ openEuler dnf 的 OpenJDK 8。
-#   JDK 发行版差异说明：pom 只要求 source/target=1.8，OpenJDK 8 与 Temurin 8 行为等价；
-#   CI 不再使用手写 jdk-version 选择（统一 JDK 8），避免出现"传 21 仍装 8"的假象。
+# 运行环境：openEuler 24.03 容器（GitHub 托管 runner）+ openEuler dnf 的 OpenJDK 17。
+#   jdk-version 输入固定 17，pr/master/release 三个入口必须传入同一值，
+#   避免出现「传入 A 却装了 B」的假象。
+# pom 的 maven.compiler.release=17，必须由 JDK 17+ 编译。
 #
 # 已知缺口（不在 CI 任务内顺手修）：
-#   * pro-base-common / pro-business-api 无 src/test，pom 未配置 checkstyle/spotbugs；
+#   * pro-base-common / pro-business-api 单测覆盖有限，pom 未配置 checkstyle/spotbugs；
 #     因此门禁只到"可编译可打包"。
-#   * pulsar-client 2.10.4 在 pom 注释中自述需 JDK 11+，与 JDK 8 目标冲突，未验证。
 on:
   workflow_call:
     inputs:
@@ -19,43 +19,43 @@ on:
         type: string
         default: pr
       jdk-version:
-        description: "主项目固定 8；未来 Kotlin 等 JVM 模块按自身需要显式传入（21/25），不要共用"
+        description: "主项目固定 17；其他 JVM 模块按自身需要显式传入，不要共用"
         required: false
         type: string
-        default: "8"
-      jdk-distribution:
-        description: "JDK 发行版"
-        required: false
-        type: string
-        default: temurin
+        default: "17"
 
 permissions:
   contents: read
 
 jobs:
   build:
-    name: java (OpenJDK 8 / openEuler)
-    # openEuler 24.03 自带的 java-1.8.0-openjdk-devel 可直接编译 source/target=1.8；
-    # 不依赖 Temurin（欧拉仓库无 Temurin）。Maven 走 Apache 官方 tarball（仓库只有 maven-plugin）。
+    name: java (JDK 17 / openEuler)
+    # openEuler 24.03 自带的 java-17-openjdk-devel 可编译 release 17；不依赖 Temurin。
+    # Maven 走 Apache 官方 tarball（欧拉仓库只有 maven-plugin）。
     runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
     container:
       image: openeuler/openeuler:24.03-lts
     timeout-minutes: 45
     steps:
-      - name: 安装 JDK8 / Maven / 基础工具（openEuler dnf）
+      - name: 安装 JDK 17 + Maven（openEuler 容器）
         shell: bash
         working-directory: .
         run: |
-          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 java-1.8.0-openjdk-devel tar gzip curl ca-certificates git
+          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 java-${{ inputs.jdk-version }}-openjdk-devel tar gzip curl ca-certificates git
           curl -fsSL https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz -o /tmp/maven.tgz
           tar -xzf /tmp/maven.tgz -C /opt
           echo "/opt/apache-maven-3.9.9/bin" >> "$GITHUB_PATH"
+          export PATH="/opt/apache-maven-3.9.9/bin:$PATH"
           JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v javac)")")")"
           echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
           export JAVA_HOME
-          export PATH="/opt/apache-maven-3.9.9/bin:$PATH"
           java -version
           mvn -version
+
+      - name: 校验 JDK 版本与 workflow 入参一致
+        run: |
+          java -version 2>&1 | grep -q '${{ inputs.jdk-version }}\.' || {
+            echo "::error::expected JDK ${{ inputs.jdk-version }}"; exit 1; }
 
       - uses: actions/checkout@v4
 
@@ -78,7 +78,7 @@ jobs:
             echo "### Java 门禁口径"
             echo "- 模块：pro-base-common / pro-business-api"
             echo "- 已执行：JDK ${{ inputs.jdk-version }} 下 mvn clean package"
-            echo "- 未执行：单元测试（无 src/test）、checkstyle/spotbugs（pom 未配置）"
+            echo "- 未执行：完整单元测试、checkstyle/spotbugs（pom 未配置）"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: 上传 jar
