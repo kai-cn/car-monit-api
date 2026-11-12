@@ -50,7 +50,7 @@ jobs:
     uses: ./.github/workflows/_java.yml
     with:
       mode: master
-      jdk-version: "8"
+      jdk-version: "21"
 
   cpp:
     name: cpp
