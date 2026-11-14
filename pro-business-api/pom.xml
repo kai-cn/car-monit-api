@@ -33,6 +33,29 @@
             <artifactId>spring-boot-starter-kafka</artifactId>
         </dependency>
 
+        <!-- ==================== Flink 实时轨迹 Job（JDK 17+ / Flink 1.20.3） ====================
+             Flink 1.13(Scala 2.11) 无法在 JDK 17 上运行，升级到 1.20.3（最后一个 1.x 稳定线，官方支持 Java 17）。
+             作用域统一为 provided：Job 由 Flink 集群/`flink run` 提交执行，不打进 Boot fat jar，
+             避免与 spring-kafka 的 kafka-clients 4.x 在同一运行期反复抢版本。 -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-streaming-java</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-clients</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-connector-kafka</artifactId>
+            <version>${flink-connector-kafka.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Apache Pulsar 客户端（版本由 Boot 4 BOM 的 pulsar-bom 管理） -->
         <dependency>
             <groupId>org.apache.pulsar</groupId>

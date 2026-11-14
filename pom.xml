@@ -40,6 +40,9 @@
         <rocketmq.version>2.3.5</rocketmq.version>
         <!-- Elasticsearch 客户端按服务端 7.x 对齐（Boot 4 BOM 只管理 9.x 客户端） -->
         <elasticsearch.version>7.17.0</elasticsearch.version>
+        <!-- Flink 实时轨迹 Job：1.20.3 是最后一个 1.x 稳定线，官方支持 JDK 17+（1.13/Scala2.11 不行） -->
+        <flink.version>1.20.3</flink.version>
+        <flink-connector-kafka.version>3.3.0-1.20</flink-connector-kafka.version>
         <!-- Jedis 4.x：JedisCluster/HostAndPort 用法与 4.x 对齐，5/6 起构造 API 变化 -->
         <jedis.version>4.4.8</jedis.version>
         <fastjson2.version>2.0.66</fastjson2.version>
