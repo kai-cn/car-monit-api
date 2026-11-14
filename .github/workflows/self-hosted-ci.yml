@@ -184,7 +184,7 @@ jobs:
           # regression guard: every delivery entry must carry the required flag
           for f in docker/java.Dockerfile deploy/standalone/config/java.env.example \
                    deploy/standalone/systemd/car-monit-api-java.service deploy/standalone/README.md; do
-            grep -q -- '--add-opens=java.base/java.lang=ALL-UNNAMED' "$f" || {
+            grep -Fq -- '--add-opens=java.base/java.lang=ALL-UNNAMED' "$f" || {
               echo "::error::$f missing --add-opens flag"
               exit 1
             }
@@ -193,6 +193,9 @@ jobs:
           SPEC=$(java -XshowSettings:properties -version 2>&1 | awk '/java.specification.version/ {print $3}')
           CLASS_FILE=$(find pro-business-api/target/classes -name '*.class' -print -quit)
           MAJOR=$(javap -verbose "$CLASS_FILE" | awk '/major version/ {print $3}')
+          test -n "$SPEC" || { echo "::error::cannot read java.specification.version"; exit 1; }
+          test -n "$CLASS_FILE" || { echo "::error::no compiled class found"; exit 1; }
+          test -n "$MAJOR" || { echo "::error::cannot read class major version"; exit 1; }
           EXPECTED=$((44 + SPEC))
           echo "java.specification.version=$SPEC class_major=$MAJOR expected=$EXPECTED"
           [ "$MAJOR" = "$EXPECTED" ] || { echo "::error::bytecode $MAJOR does not match JDK $SPEC"; exit 1; }
