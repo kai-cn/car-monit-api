@@ -114,6 +114,23 @@
                 <configuration>
                     <includeSystemScope>true</includeSystemScope>
                     <mainClass>com.ruoyi.EcBusinessApiApplication</mainClass>
+                    <!-- 镜像瘦身：Boot repackage 默认会把 provided 依赖也打进 BOOT-INF/lib。
+                         VehicleTrackFlinkJob 由 flink run 提交到集群执行，运行时不需要这些类，
+                         显式排除可去掉约 50MB（21 个 flink-* jar）。 -->
+                    <excludeGroupIds>org.apache.flink</excludeGroupIds>
+                    <!-- 只保留 linux-x86_64 的 native 包，去掉 macOS / Windows / aarch64 变体 -->
+                    <excludes>
+                        <exclude><groupId>io.netty</groupId><artifactId>netty-transport-native-epoll</artifactId><classifier>linux-aarch_64</classifier></exclude>
+                        <exclude><groupId>io.netty</groupId><artifactId>netty-transport-native-io_uring</artifactId><classifier>linux-aarch_64</classifier></exclude>
+                        <exclude><groupId>io.netty</groupId><artifactId>netty-transport-native-kqueue</artifactId><classifier>osx-x86_64</classifier></exclude>
+                        <exclude><groupId>io.netty</groupId><artifactId>netty-transport-native-kqueue</artifactId><classifier>osx-aarch_64</classifier></exclude>
+                        <exclude><groupId>io.netty</groupId><artifactId>netty-resolver-dns-native-macos</artifactId><classifier>osx-x86_64</classifier></exclude>
+                        <exclude><groupId>io.netty</groupId><artifactId>netty-resolver-dns-native-macos</artifactId><classifier>osx-aarch_64</classifier></exclude>
+                        <exclude><groupId>io.netty</groupId><artifactId>netty-codec-native-quic</artifactId><classifier>linux-aarch_64</classifier></exclude>
+                        <exclude><groupId>io.netty</groupId><artifactId>netty-codec-native-quic</artifactId><classifier>osx-x86_64</classifier></exclude>
+                        <exclude><groupId>io.netty</groupId><artifactId>netty-codec-native-quic</artifactId><classifier>osx-aarch_64</classifier></exclude>
+                        <exclude><groupId>io.netty</groupId><artifactId>netty-codec-native-quic</artifactId><classifier>windows-x86_64</classifier></exclude>
+                    </excludes>
                 </configuration>
                 <executions>
                     <execution>
