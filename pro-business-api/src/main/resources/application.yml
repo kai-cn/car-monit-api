@@ -3,16 +3,12 @@ server:
   servlet:
     context-path: /
 spring:
-  mvc:
-    pathmatch:
-      matching-strategy: ant_path_matcher
   main:
-    # Boot 2.6+ 默认禁止循环引用/Bean 覆盖；存量装配保持 JDK 8 时期的行为。
-    allow-circular-references: true
+    # Spring Framework 6.2 起循环引用永久禁止（allow-circular-references 已移除），只保留 Bean 覆盖开关
     allow-bean-definition-overriding: true
-  # 排除 Druid 自动配置
+  # 排除 Druid 自动配置（Boot 4 专用 starter 的包名为 spring.boot4）
   autoconfigure:
-    exclude: com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceAutoConfigure
+    exclude: com.alibaba.druid.spring.boot4.autoconfigure.DruidDataSourceAutoConfigure
   datasource:
     dynamic:
       # 启用 p6spy 对数据源的全局代理，打印完整 SQL
@@ -38,6 +34,11 @@ spring:
         maxPoolPreparedStatementPerConnectionSize: 20
         # 配置监控统计拦截的filters，去掉后监控界面sql无法统计，'wall'用于防火墙
         filters: stat,wall,slf4j
+        # druid 1.2.2x 的 PostgreSQL/OpenGauss wall 对「恒真条件」判定更严，
+        # 而存量 Mapper 大量使用 WHERE 1 = 1，这里显式关闭该检查（其余注入拦截保持默认）
+        wall:
+          multi-statement-allow: true
+          select-where-alway-true-check: false
         # 通过connectProperties属性来打开mergeSql功能；慢SQL记录
         connectionProperties: druid.stat.mergeSql\=true;druid.stat.slowSqlMillis\=5000
       datasource:
@@ -47,20 +48,20 @@ spring:
           username: gaussdb
           password: ${SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD:}
           driver-class-name: org.postgresql.Driver
-  #redis 配置
-  redis:
-    database: 0
-#    host: 172.30.100.102
-    host: 127.0.0.1
-    port: 6379
-#    password: <通过 SPRING_REDIS_PASSWORD 注入，禁止写入仓库>
-    lettuce:
-      pool:
-        max-active: 8   #最大连接数据库连接数,设 0 为没有限制
-        max-idle: 8     #最大等待连接中的数量,设 0 为没有限制
-        max-wait: -1ms  #最大建立连接等待时间。如果超过此时间将接到异常。设为-1表示无限制。
-        min-idle: 0     #最小等待连接中的数量,设 0 为没有限制
-      shutdown-timeout: 100ms
+  #redis 配置（Boot 3 起前缀由 spring.redis 迁移为 spring.data.redis）
+  data:
+    redis:
+      database: 0
+      host: 127.0.0.1
+      port: 6379
+      # password: <通过 SPRING_DATA_REDIS_PASSWORD 注入，禁止写入仓库>
+      lettuce:
+        pool:
+          max-active: 8   #最大连接数据库连接数,设 0 为没有限制
+          max-idle: 8     #最大等待连接中的数量,设 0 为没有限制
+          max-wait: -1ms  #最大建立连接等待时间。如果超过此时间将接到异常。设为-1表示无限制。
+          min-idle: 0     #最小等待连接中的数量,设 0 为没有限制
+        shutdown-timeout: 100ms
 
   kafka:
     bootstrap-servers: localhost:9092

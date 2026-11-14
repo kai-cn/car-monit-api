@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -229,6 +230,42 @@ public class RetRedisCacheWriter implements RedisCacheWriter {
 
     private static byte[] createCacheLockKey(String name) {
         return (name + "~lock").getBytes(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Spring Data Redis 4.x（Boot 4）为 RedisCacheWriter 新增的抽象方法：
+     * 按 pattern 清理某个 cache 下的所有 key，用于批量失效。
+     */
+    @Override
+    public void clear(String name, byte[] pattern) {
+        Assert.notNull(name, "Name must not be null!");
+        Assert.notNull(pattern, "Pattern must not be null!");
+        this.execute(name, (connection) -> {
+            Set<byte[]> keys = connection.keys(pattern);
+            if (keys == null || keys.isEmpty()) {
+                return 0L;
+            }
+            return connection.del(keys.toArray(new byte[0][]));
+        });
+    }
+
+    /** Spring Data Redis 4.x 新增的异步检索契约：本地实现为同步 get 的已完成 Future。 */
+    @Override
+    public CompletableFuture<byte[]> retrieve(String name, byte[] key, Duration ttl) {
+        return CompletableFuture.completedFuture(get(name, key));
+    }
+
+    /** Spring Data Redis 4.x 新增的异步写入契约：本地实现为同步 put 的已完成 Future。 */
+    @Override
+    public CompletableFuture<Void> store(String name, byte[] key, byte[] value, @Nullable Duration ttl) {
+        put(name, key, value, ttl);
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /** Spring Data Redis 4.x 把 remove 拆为 evict（不等待）与 remove（默认实现）。 */
+    @Override
+    public void evict(String name, byte[] key) {
+        remove(name, key);
     }
 
     @Override

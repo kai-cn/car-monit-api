@@ -14,9 +14,8 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.util.concurrent.ListenableFutureCallback;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -197,17 +196,12 @@ public class DataReliabilityService {
      * 发送到Kafka并处理回调
      */
     private void sendToKafka(ReliableMessageWrapper wrapper, String topic, String messageId) {
-        kafkaTemplate.send(topic, wrapper.getDataId(), wrapper).addCallback(new ListenableFutureCallback<SendResult<String, Object>>() {
-            @Override
-            public void onSuccess(SendResult<String, Object> result) {
-                // Kafka确认收到消息
-                handleKafkaAck(messageId, result.getRecordMetadata().offset());
-            }
-
-            @Override
-            public void onFailure(Throwable ex) {
-                // Kafka发送失败，立即重试
+        // Spring Framework 6 起 ListenableFuture 已移除，改用 CompletableFuture.whenComplete
+        kafkaTemplate.send(topic, wrapper.getDataId(), wrapper).whenComplete((result, ex) -> {
+            if (ex != null) {
                 handleSendFailure(messageId, ex.getMessage());
+            } else {
+                handleKafkaAck(messageId, result.getRecordMetadata().offset());
             }
         });
     }
