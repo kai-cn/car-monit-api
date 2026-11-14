@@ -1,7 +1,7 @@
 /*
 package com.ruoyi.common.config.interceptor;
 
-import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson2.JSON;
 import com.ruoyi.common.config.annotation.PermissionAnon;
 import com.ruoyi.common.config.annotation.ValidHeader;
 import com.ruoyi.common.config.base.Result;
@@ -15,8 +15,8 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.Objects;
 
 @Slf4j

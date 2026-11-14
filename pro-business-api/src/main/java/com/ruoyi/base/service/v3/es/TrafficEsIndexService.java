@@ -1,7 +1,7 @@
 package com.ruoyi.base.service.v3.es;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.ruoyi.base.service.v3.config.TrafficV3Properties;
 import com.ruoyi.base.service.v3.model.TrafficTable;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +19,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -319,7 +319,8 @@ public class TrafficEsIndexService {
             }
             String body = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
             JsonNode node = MAPPER.readTree(body);
-            node.fieldNames().forEachRemaining(indices::add);
+            // Jackson 3：JsonNode.fieldNames() 更名 propertyNames()
+            node.propertyNames().forEach(indices::add);
         } catch (Exception e) {
             log.debug("[V3 ES] 读取别名 {} 失败（按不存在处理）: {}", alias, e.getMessage());
         }

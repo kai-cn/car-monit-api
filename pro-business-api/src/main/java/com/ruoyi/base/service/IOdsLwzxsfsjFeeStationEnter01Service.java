@@ -5,7 +5,7 @@ import com.ruoyi.base.domain.OdsLwzxsfsjFeeStationEnter01;
 import java.util.List;
 import java.util.Map;
 
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 
 /**
  * 收费站入口数据Service接口
