@@ -12,6 +12,10 @@ on:
       - .github/workflows/self-hosted-ci.yml
       - pom.xml
       - pro-business-api/**
+      - pro-base-common/**
+      - docker/java.Dockerfile
+      - deploy/standalone/**
+      - .github/workflows/**
 
 permissions:
   contents: read
@@ -155,6 +159,44 @@ jobs:
 
       - name: Unit tests
         run: mvn -B -q -DskipTests=false -pl pro-business-api -am test
+
+      - name: Startup prerequisite smoke (add-opens, bytecode, delivery entries)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/AddOpensSmoke.java <<'JAVA_EOF'
+          import java.lang.reflect.Method;
+          public class AddOpensSmoke {
+            public static void main(String[] args) throws Exception {
+              Method m = Object.class.getDeclaredMethod("clone");
+              m.setAccessible(true);
+              System.out.println("add-opens is effective");
+            }
+          }
+          JAVA_EOF
+          javac -d /tmp /tmp/AddOpensSmoke.java
+          # Orika fails at startup on JDK 17+ without this flag; prove the runner JDK enforces strong encapsulation
+          if java -cp /tmp AddOpensSmoke >/dev/null 2>&1; then
+            echo "::error::JDK unexpectedly allows Object#clone reflection without --add-opens"
+            exit 1
+          fi
+          java --add-opens=java.base/java.lang=ALL-UNNAMED -cp /tmp AddOpensSmoke
+          # regression guard: every delivery entry must carry the required flag
+          for f in docker/java.Dockerfile deploy/standalone/config/java.env.example \
+                   deploy/standalone/systemd/car-monit-api-java.service deploy/standalone/README.md; do
+            grep -q -- '--add-opens=java.base/java.lang=ALL-UNNAMED' "$f" || {
+              echo "::error::$f missing --add-opens flag"
+              exit 1
+            }
+          done
+          # compiled bytecode must match the branch JDK major version (44 + java.specification.version)
+          SPEC=$(java -XshowSettings:properties -version 2>&1 | awk '/java.specification.version/ {print $3}')
+          CLASS_FILE=$(find pro-business-api/target/classes -name '*.class' -print -quit)
+          MAJOR=$(javap -verbose "$CLASS_FILE" | awk '/major version/ {print $3}')
+          EXPECTED=$((44 + SPEC))
+          echo "java.specification.version=$SPEC class_major=$MAJOR expected=$EXPECTED"
+          [ "$MAJOR" = "$EXPECTED" ] || { echo "::error::bytecode $MAJOR does not match JDK $SPEC"; exit 1; }
+          echo "startup-prerequisite smoke passed"
 
   deploy:
     name: deploy-to-k3s

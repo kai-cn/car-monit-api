@@ -92,7 +92,7 @@ public class VehicleTrackFlinkJob {
     // ==================== 主方法：Flink Job 入口 ====================
 
     public static void main(String[] args) throws Exception {
-        log.info("[Flink Job] 开始启动车辆轨迹处理 Job（Flink 1.13.2 + JDK 1.8）");
+        log.info("[Flink Job] 开始启动车辆轨迹处理 Job（Flink 1.20.3 + JDK 17+）");
 
         // ========== 步骤 1：创建 Flink 执行环境 ==========
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -196,7 +196,7 @@ public class VehicleTrackFlinkJob {
     private static KafkaSource<String> buildKafkaSource(
             String topic, String groupId, Properties props) {
         return KafkaSource.<String>builder()
-                .setBootstrapServers(KAFKA_BOOTSTRAP_SERVERS)
+                .setBootstrapServers(props.getProperty("bootstrap.servers", KAFKA_BOOTSTRAP_SERVERS))
                 .setTopics(topic)
                 .setGroupId(groupId)
                 .setStartingOffsets(OffsetsInitializer.latest())
