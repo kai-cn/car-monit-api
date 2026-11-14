@@ -21,7 +21,8 @@
 | Elasticsearch | 9200 | `<ES_HOST>` |
 | Kafka | 9092 | `<KAFKA_HOST>` |
 
-服务监听端口：Java/Python/Go 均为 **9901**（来自仓库 `application.yml` / `configs/config.yaml`）。
+服务监听端口：Java 为 **9902**（`pro-business-api/src/main/resources/application.yml` 的 `server.port`，
+也是 `docker/java.Dockerfile` 的 `EXPOSE`）；Python / Go / C++ / Rust 实现为 **9901**（各自 `configs/config.yaml` / Dockerfile）。
 
 ## 安装
 
@@ -45,7 +46,9 @@ bash install.sh --prefix "$PWD/opt" --log-dir "$PWD/log" --unit-dir "$PWD/units"
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable --now car-monit-api-java
-curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:9901/health
+# Java 服务端口为 9902（Python/Go/C++/Rust 为 9901）；未引入 actuator，用内部端点做连通性探测
+# 未带令牌预期 403，带 X-Internal-Token 预期 200，两者都说明服务已监听
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:9902/api/v3/es/readiness
 ```
 
 ## 卸载

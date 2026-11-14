@@ -44,7 +44,8 @@ spring:
       datasource:
         master:
 #          url: jdbc:postgresql://172.30.100.109:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
-          url: jdbc:postgresql://192.168.56.10:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+          # 连接串由环境注入；默认值仅用于本机/WSL 直连，生产必须显式设置
+          url: ${SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_URL:jdbc:postgresql://127.0.0.1:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai}
           username: gaussdb
           password: ${SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD:}
           driver-class-name: org.postgresql.Driver
@@ -141,10 +142,10 @@ forest:
   retry-count: 2
   max-retry-interval: 1000
 rediscluster:
-  clusterNodes: 36.200.31.15:22400
+  clusterNodes: ${REDISCLUSTER_CLUSTERNODES:36.200.31.15:22400}
   refresh-interval-ms: 300000      # 字典数据刷新间隔（毫秒）
 isLocalhost: local # 是否本地 prod生成
-sysbaseUrl: http://223.84.150.189:26066/prod-api
+sysbaseUrl: ${SYSBASE_URL:http://223.84.150.189:26066/prod-api}
 
 
 kafka:

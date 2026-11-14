@@ -41,9 +41,14 @@ public class RetRedisCacheWriter implements RedisCacheWriter {
     }
 
     public RetRedisCacheWriter(RedisConnectionFactory connectionFactory, Duration sleepTime) {
-        this.statistics = CacheStatisticsCollector.create();
+        this(connectionFactory, sleepTime, CacheStatisticsCollector.create());
+    }
+
+    public RetRedisCacheWriter(RedisConnectionFactory connectionFactory, Duration sleepTime,
+                               CacheStatisticsCollector statistics) {
         Assert.notNull(connectionFactory, "ConnectionFactory must not be null!");
         Assert.notNull(sleepTime, "SleepTime must not be null!");
+        this.statistics = statistics == null ? CacheStatisticsCollector.create() : statistics;
         this.connectionFactory = connectionFactory;
         this.sleepTime = sleepTime;
     }
@@ -62,13 +67,21 @@ public class RetRedisCacheWriter implements RedisCacheWriter {
 
             return "OK";
         });
+        this.statistics.incPuts(name);
     }
 
     @Override
     public byte[] get(String name, byte[] key) {
         Assert.notNull(name, "Name must not be null!");
         Assert.notNull(key, "Key must not be null!");
-        return this.execute(name, connection -> connection.get(key));
+        this.statistics.incGets(name);
+        byte[] value = this.execute(name, connection -> connection.get(key));
+        if (value == null) {
+            this.statistics.incMisses(name);
+        } else {
+            this.statistics.incHits(name);
+        }
+        return value;
     }
 
     @Override
@@ -76,6 +89,7 @@ public class RetRedisCacheWriter implements RedisCacheWriter {
         Assert.notNull(name, "Name must not be null!");
         Assert.notNull(key, "Key must not be null!");
         Assert.notNull(value, "Value must not be null!");
+        this.statistics.incPuts(name);
         return this.execute(name, connection -> {
             if (this.isLockingCacheWriter()) {
                 this.doLock(name, connection);
@@ -130,7 +144,7 @@ public class RetRedisCacheWriter implements RedisCacheWriter {
         } else {
             this.execute(name, connection -> connection.del(new byte[][]{key}));
         }
-
+        this.statistics.incDeletes(name);
     }
 
     @Override
@@ -240,13 +254,14 @@ public class RetRedisCacheWriter implements RedisCacheWriter {
     public void clear(String name, byte[] pattern) {
         Assert.notNull(name, "Name must not be null!");
         Assert.notNull(pattern, "Pattern must not be null!");
-        this.execute(name, (connection) -> {
+        Long deleted = this.execute(name, (connection) -> {
             Set<byte[]> keys = connection.keys(pattern);
             if (keys == null || keys.isEmpty()) {
                 return 0L;
             }
             return connection.del(keys.toArray(new byte[0][]));
         });
+        this.statistics.incDeletesBy(name, deleted == null ? 0 : deleted.intValue());
     }
 
     /** Spring Data Redis 4.x 新增的异步检索契约：本地实现为同步 get 的已完成 Future。 */
@@ -275,10 +290,15 @@ public class RetRedisCacheWriter implements RedisCacheWriter {
 
     @Override
     public void clearStatistics(String name) {
+        Assert.notNull(name, "Name must not be null!");
+        this.statistics.reset(name);
     }
 
+    /**
+     * 返回一个持有调用方 collector 的新 writer（RedisCacheWriter 契约：不改原实例统计归属）。
+     */
     @Override
     public RetRedisCacheWriter withStatisticsCollector(CacheStatisticsCollector cacheStatisticsCollector) {
-        return this;
+        return new RetRedisCacheWriter(this.connectionFactory, this.sleepTime, cacheStatisticsCollector);
     }
 }

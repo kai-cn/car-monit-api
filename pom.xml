@@ -24,7 +24,7 @@
       - JSON 主线切 Jackson 3（tools.jackson.*）；fastjson 1.x 统一收敛到 fastjson2。
       - Flink 实时轨迹 Job 予以保留：Flink 1.13.2（Scala 2.11）不支持 JDK 17，
         升级到 1.20.3 + flink-connector-kafka 3.3.0-1.20（provided 作用域，见第 4 节）。
-      - 升级到 JDK 21 时只需修改 java.version；JDK 25 另需 maven-compiler-plugin <proc>full>。
+      - 升级到 JDK 21 时只需修改 java.version；JDK 25 另需 maven-compiler-plugin 的 proc=full。
     -->
     <properties>
         <skipTests>true</skipTests>
