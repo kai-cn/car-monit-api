@@ -122,10 +122,28 @@ curl -H "X-Internal-Token: <与 backend TRAFFIC_API_INTERNAL_TOKEN 一致>" http
 
 ## 8. JDK 21 / 25
 
-`car-monit-api-jdk21` / `-jdk25` 与本分支差异仅为：
+`car-monit-api-jdk21` / `-jdk25` 与本分支差异：
 
 ```xml
-<java.version>21</java.version>   <!-- 或 25 -->
+<java.version>21</java.version>   <!-- jdk21 分支 -->
+<java.version>25</java.version>   <!-- jdk25 分支 -->
 ```
 
-注意点：JDK 24+ 移除 `SecurityManager`；`--add-opens` 仍然需要（Orika）。Pulsar / RocketMQ / ES 7.17 客户端在 21 上均可用；ES 7.17 的 `RestHighLevelClient` 在 25 上未做官方验证，如遇反射告警按需补 `add-opens`。
+注意点：
+
+1. **JDK 25 分支必须加 `-proc:full`**：JDK 23 起 `javac` 默认不跑注解处理器，Lombok 生成的构造器/Getter 会成片报
+   `constructor ... cannot be applied to given types` / `cannot find symbol`。jdk25 的 `maven-compiler-plugin`
+   增加 `<proc>full</proc>`（该取值 JDK 21 才有，17/21 分支不要加）。
+2. **字节码基线**：升级前 api 的 jdk25 分支把 `release` 锁在 21（Spring 5.3 内嵌 ASM 只认到 major 65，
+   Boot 2.7 的 repackage 在 major 69 上直接报错）。升级到 Boot 4.1.2 后 ASM 已支持 major 69，
+   故 jdk25 分支改为 `release=25`，真正产出 Java 25 字节码。
+3. JDK 24+ 移除 `SecurityManager`；`--add-opens=java.base/java.lang=ALL-UNNAMED` 仍然需要（Orika）。
+4. Pulsar 4.1.3 / RocketMQ 2.3.5 / ES 7.17 客户端在 21 与 25 上均通过实机验证（列表查询、内部端点、令牌门禁）。
+
+### 8.1 三支实机验收结论（2026-11-14）
+
+| 分支 | 编译/打包 | 启动 | `/api/v3/es/readiness` | 令牌门禁(无令牌) | section/gantry/org/snapshotflow 列表 |
+| --- | --- | --- | --- | --- | --- |
+| jdk17 (17.0.21) | ✅ | ✅ | 200 | 403 | 200 / 200 / 200 / 200 |
+| jdk21 (21.0.12) | ✅ | ✅ | 200 | 403 | 200 / 200 / 200 / 200 |
+| jdk25 (25.0.4.1) | ✅（含 `-proc:full`） | ✅ | 200 | 403 | 200 / 200 / 200 / 200 |
