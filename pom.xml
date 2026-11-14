@@ -22,9 +22,9 @@
         （spring-boot-starter-parent 4.1.2 的 java.version 基线是 17）。
       - 命名空间切 jakarta.*（Servlet 6.1 / Validation 3.x / Annotation 3.x）。
       - JSON 主线切 Jackson 3（tools.jackson.*）；fastjson 1.x 统一收敛到 fastjson2。
-      - Flink 1.13.2（Scala 2.11）无法在 JDK 17 运行且工程内无任何调用点，本轮移除依赖与
-        未被引用的 VehicleTrackFlinkJob（详见 docs/v3/springboot4-migration.md）。
-      - 升级到 JDK 21/25 时只需修改 java.version 一个属性。
+      - Flink 实时轨迹 Job 予以保留：Flink 1.13.2（Scala 2.11）不支持 JDK 17，
+        升级到 1.20.3 + flink-connector-kafka 3.3.0-1.20（provided 作用域，见第 4 节）。
+      - 升级到 JDK 21 时只需修改 java.version；JDK 25 另需 maven-compiler-plugin <proc>full>。
     -->
     <properties>
         <skipTests>true</skipTests>

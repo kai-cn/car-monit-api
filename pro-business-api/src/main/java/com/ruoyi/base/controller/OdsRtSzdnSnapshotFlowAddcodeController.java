@@ -122,13 +122,12 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
     }
 
     private void decorate(List<OdsRtSzdnSnapshotFlowAddcode> list) {
+        if (list.removeIf(java.util.Objects::isNull)) {
+            // MyBatis 对「所有映射列均为 NULL」的结果行会返回 null 元素（默认语义），
+            // 这里显式剔除，避免整页 500 / rows 里出现 null；如长期出现需排查数据源侧的脏行。
+            log.warn("[抓拍列表] 结果集中存在全列 NULL 的行，已剔除");
+        }
         for (OdsRtSzdnSnapshotFlowAddcode rtn : list) {
-            if (rtn == null) {
-                // MyBatis 对「所有映射列均为 NULL」的结果行会返回 null 元素（默认语义），
-                // 这里显式跳过，避免整页 500；如长期出现需排查数据源侧的脏行。
-                log.warn("[抓拍列表] 结果集中存在全列 NULL 的行，已跳过");
-                continue;
-            }
             rtn.setId(StringUtils.getUUID());
             if (null != rtn.getSnapshottime()) {
                 rtn.setSnapshottimeStr(DateUtils.parseDateToStr(
@@ -228,6 +227,7 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
                 odsRtSzdnSnapshotFlowAddcodeService
                         .selectOdsRtSzdnSnapshotFlowAddcodeList(odsRtSzdnSnapshotFlowAddcode);
         if (null != list && list.size() > 0) {
+            list.removeIf(java.util.Objects::isNull);
             for (OdsRtSzdnSnapshotFlowAddcode rtn : list) {
                 rtn.setId(StringUtils.getUUID());
                 if (null != rtn.getSnapshottime()) {

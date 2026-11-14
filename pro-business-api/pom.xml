@@ -63,10 +63,9 @@
         </dependency>
 
         <!--
-          Flink 1.13.2（Scala 2.11）已于本轮移除：
-          1) JDK 17 下 Flink 1.13 运行期需要大量 add-opens 参数，akka 2.11 反射在 17 上不稳定；
-          2) 工程内 VehicleTrackFlinkJob 无任何调用点（既不是 Bean 也没有 main 启动脚本）。
-          需要实时计算时按 Flink 1.20+ 重新引入并重写该 Job（见迁移文档）。
+          VehicleTrackFlinkJob 保留：Flink 1.20.3 依赖见本文件上方（provided 作用域）。
+          运行方式：用 flink run 提交到 Flink 集群；Boot 应用本身不加载该 Job，
+          因此 fat jar 中不打包 org.apache.flink.*。
         -->
 
         <!-- RocketMQ Spring Boot Starter -->

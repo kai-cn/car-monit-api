@@ -279,6 +279,6 @@ public class RetRedisCacheWriter implements RedisCacheWriter {
 
     @Override
     public RetRedisCacheWriter withStatisticsCollector(CacheStatisticsCollector cacheStatisticsCollector) {
-        return null;
+        return this;
     }
 }
