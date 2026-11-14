@@ -11,8 +11,8 @@ spring:
     exclude: com.alibaba.druid.spring.boot4.autoconfigure.DruidDataSourceAutoConfigure
   datasource:
     dynamic:
-      # 启用 p6spy 对数据源的全局代理，打印完整 SQL
-      p6spy: true
+      # 容器化部署默认关闭 p6spy（其 StdoutLogger 不受日志级别约束）；调试时用 P6SPY_ENABLED=true 打开
+      p6spy: ${P6SPY_ENABLED:false}
       druid: # 全局druid参数，绝大部分值和默认保持一致。(现已支持的参数如下,不清楚含义不要乱设置)
         # 连接池的配置信息
         # 初始化大小，最小，最大
@@ -120,16 +120,16 @@ mybatis-plus:
       # 默认数据库表下划线命名
       table-underline: true
   configuration:
-    # 这个配置会将执行的sql打印出来，在开发或测试的时候可以用org.apache.ibatis.logging.nologging.NoLoggingImpl
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # 容器化部署统一 ERROR：stdout 实现会绕过 logback 直接打印 SQL，必须关闭
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
     # 返回类型为Map,显示null对应的字段
     call-setters-on-nulls: true
     map-underscore-to-camel-case: true
-#Mybatis输出sql日志
+# 日志级别：容器化部署仅 ERROR（覆盖 logback-spring.xml；可由 LOG_ROOT_LEVEL 注入）
 logging:
   level:
-    root: INFO
-    web: DEBUG
+    root: ${LOG_ROOT_LEVEL:error}
+    web: error
 forest:
   bean-id: forestConfiguration
   backend: httpclient
@@ -137,7 +137,7 @@ forest:
   max-route-connections: 500 # 每个路由的最大连接数，默认值为500
   timeout: 60000 # 请求超时时间，单位为毫秒, 默认值为3000
   connect-timeout: 60000 # 连接超时时间，单位为毫秒, 默认值为2000
-  logEnabled: true # 打开或关闭日志，默认为true
+  logEnabled: false # 容器化部署统一 ERROR，关闭 Forest 自身的请求日志
   retryer: com.dtflys.forest.retryer.BackOffRetryer
   retry-count: 2
   max-retry-interval: 1000
