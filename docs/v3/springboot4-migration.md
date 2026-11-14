@@ -178,3 +178,35 @@ curl -H "X-Internal-Token: <与 backend TRAFFIC_API_INTERNAL_TOKEN 一致>" http
 | jdk17 (17.0.21) | ✅ | ✅ | 200 | 403 | 200 / 200 / 200 / 200 |
 | jdk21 (21.0.12) | ✅ | ✅ | 200 | 403 | 200 / 200 / 200 / 200 |
 | jdk25 (25.0.4.1) | ✅（含 `-proc:full`） | ✅ | 200 | 403 | 200 / 200 / 200 / 200 |
+
+## 9. 独立复核遗留项闭环（2026-11-14 第二轮）
+
+| # | 遗留项 | 处理 |
+| --- | --- | --- |
+| 1 | `deploy/standalone/README.md` 把 Java 端口写成 9901 | 明确 Java=9902（与 `application.yml` / Dockerfile 一致），其它语言实现=9901；健康检查示例改为内部端点并写明 403/200 预期 |
+| 2 | `.github/workflows/_java.yml` 注释仍写 Boot 2.7.18 / jdk25「字节码基线固定 21」 | 三分支统一改为 Boot 4.1.2，jdk25 改为 `java.version/release=25`（major 69）；补「门禁口径」说明 |
+| 3 | CI 未做 Java 启动验收，`--add-opens` 生效性只靠本机实机 | 在 `self-hosted-ci` 增加 `Startup prerequisite smoke`：用 `Object#clone` 反射证明 JDK 强封装生效且 `--add-opens` 能解除；校验 class major = `44 + java.specification.version`；grep 四个交付入口都带该参数。完整 Spring Boot 启动仍依赖外部 DB/Redis/Kafka，只在实机验收覆盖，CI 不重复拉起 |
+| 4 | `RetRedisCacheWriter` 缓存统计恒为空 | 实现 `incGets/incHits/incMisses/incPuts/incDeletes/incDeletesBy`、`clearStatistics→reset`、`withStatisticsCollector` 返回持有新 collector 的实例（不再返回 `this`） |
+
+### 9.1 顺带修订（复核其它非阻断建议）
+
+- `self-hosted-ci.yml` 的 `paths` 增加 `pro-base-common/**`、`docker/java.Dockerfile`、`deploy/standalone/**`、`.github/workflows/**`，避免公共模块/交付文件改动不触发 CI。
+- `application.yml` 的 openGauss 连接串、Redis 集群地址、sysbaseUrl 改为 `${ENV:默认值}`，生产可完全外置；`java.env.example` 同步补占位键。
+- `VehicleTrackFlinkJob` 启动日志改为 Flink 1.20.3；`buildKafkaSource` 使用传入 `props` 的 `bootstrap.servers`（消除未使用形参）。
+- 根 `pom.xml` 注释里的 `<proc>full>` 笔误改为 `proc=full`。
+- **CI 触发口径（书面确认）**：`car-monit-api-jdk17/21/25` 的 push 只触发 `self-hosted-ci`（compile + test + smoke + k3d deploy）；`pr.yml` / `master.yml` / `release.yml` 的 GitHub 托管全量流水线在合入 `master` / `car-monit-api-java-V3` 或手动 dispatch 时执行。当前托管 runner 账单受限，故不把三个 jdk 分支加入托管流水线触发列表。
+
+### 9.2 Flink Job 的提交方式（补文档）
+
+`VehicleTrackFlinkJob` 是 `main` 入口的独立 Job，**不是 Spring Bean**，Boot fat jar 内不含 `org.apache.flink.*`
+（三个依赖均为 `provided`）。提交到 Flink 集群时：
+
+```bash
+mvn -pl pro-business-api -am -DskipTests package
+# 由 Flink 集群提供 flink-streaming-java / flink-clients 1.20.3，
+# 并把 flink-connector-kafka:3.3.0-1.20 放入 $FLINK_HOME/lib 或随 job jar 提供
+$FLINK_HOME/bin/flink run -c com.ruoyi.base.flink.VehicleTrackFlinkJob <job-jar>
+```
+
+Job 默认从 `localhost:9092` 的 `snapshot-flow-cdc` / `device-raw-data` 主题按 latest 消费，
+偏移由 checkpoint 管理（精确一次）。

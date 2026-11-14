@@ -1,15 +1,17 @@
 name: _java
 
-# 可复用 workflow：Java 主仓库（Spring Boot 2.7.18 / JDK 25 工具链）。
+# 可复用 workflow：Java 主仓库（Spring Boot 4.1.2 / JDK 25 工具链）。
 # 由 pr.yml / master.yml / release.yml 调用，避免三套入口复制检查逻辑。
 # 运行环境：openEuler 24.03 容器（GitHub 托管 runner）+ Eclipse Temurin 25 官方 tarball（欧拉仓库无 JDK 25）。
 #   jdk-version 输入固定 25，pr/master/release 三个入口必须传入同一值，
 #   避免出现「传入 A 却装了 B」的假象。
-# 本分支以 JDK 25 作为工具链/运行时，pom 的字节码基线固定 21（Spring Boot 2.7.18 ASM 上限）。
+# 本分支以 JDK 25 作为工具链/运行时，pom 的 java.version / maven.compiler.release = 25（Boot 4.1 的 ASM 支持 major 69）。
 #
-# 已知缺口（不在 CI 任务内顺手修）：
+# 门禁口径：本 workflow 覆盖编译 / 打包；jdk 分支的 self-hosted-ci 另做单测与
+# 「启动前置 smoke」（--add-opens 生效性、字节码版本、交付入口参数回归校验）。
+# 已知缺口：
 #   * pro-base-common / pro-business-api 单测覆盖有限，pom 未配置 checkstyle/spotbugs；
-#     因此门禁只到"可编译可打包"。
+#   * 完整 Spring Boot 启动仍依赖外部 DB/Redis/Kafka，仅在本机实机验收中覆盖，CI 不重复拉起。
 on:
   workflow_call:
     inputs:
