@@ -62,7 +62,7 @@ bash uninstall.sh --prefix "$PWD/opt" --log-dir "$PWD/log" --unit-dir "$PWD/unit
 仓库未提供生产固定 JVM 参数。`config/java.env.example` 中给出保守基线：
 
 ```
-JAVA_OPTS=-Xms256m -Xmx512m
+JAVA_OPTS=-Xms256m -Xmx512m --add-opens=java.base/java.lang=ALL-UNNAMED
 ```
 
 请按机器内存与 GC 目标调整；unit 通过 `EnvironmentFile` 读取。
@@ -72,3 +72,6 @@ JAVA_OPTS=-Xms256m -Xmx512m
 - 包内不含任何真实口令或内网地址。
 - Python 生产必须 `CAR_MONIT_RUNTIME=prod`；缺少中间件时启动会失败并输出明确错误。
 - Go/Python 的配置模板为最小占位结构，实际键名以仓库 `configs/config.yaml` / `application.yml` 为准。
+
+> --add-opens=java.base/java.lang=ALL-UNNAMED is REQUIRED by Orika 1.5.4 on JDK 17+;
+> removing it makes startup fail with InaccessibleObjectException. See docs/v3/springboot4-migration.md.
