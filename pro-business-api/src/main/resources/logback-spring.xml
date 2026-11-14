@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration debug="false">
+
+	<statusListener class="ch.qos.logback.core.status.NopStatusListener" />
 	<!--定义日志文件的存储地址 -->
 	<property name="LOG_HOME" value="../logs" />
 
@@ -28,14 +30,14 @@
 		</encoder>
 	</appender>
 
-	<!--myibatis log configure -->
-	<logger name="com.apache.ibatis" level="TRACE" />
-	<logger name="java.sql.Connection" level="DEBUG" />
-	<logger name="java.sql.Statement" level="DEBUG" />
-	<logger name="java.sql.PreparedStatement" level="DEBUG" />
+	<!--myibatis log configure：容器化部署统一 ERROR，避免 DEBUG/TRACE 覆盖 root 级别 -->
+	<logger name="com.apache.ibatis" level="ERROR" />
+	<logger name="java.sql.Connection" level="ERROR" />
+	<logger name="java.sql.Statement" level="ERROR" />
+	<logger name="java.sql.PreparedStatement" level="ERROR" />
 
-	<!-- 日志输出级别 -->
-	<root level="INFO">
+	<!-- 日志输出级别：仅 ERROR（可由启动参数 logging.level.root 覆盖） -->
+	<root level="ERROR">
 		<appender-ref ref="STDOUT" />
 		<appender-ref ref="FILE" />
 	</root>
