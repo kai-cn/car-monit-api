@@ -5,7 +5,7 @@ import com.ruoyi.base.domain.OdsRtSzdnSnapshotFlowStationcaptureAddcode;
 import java.util.List;
 import java.util.Map;
 
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 
 /**
  * 收费站抓拍Service接口

@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.7.18</version>
+        <version>4.1.2</version>
         <relativePath/>
     </parent>
 
@@ -17,42 +17,35 @@
     <packaging>pom</packaging>
 
     <!--
-      JDK 25 分支说明（car-monit-api-jdk25）：
-      - 保持 javax.* 命名空间，Spring Boot 使用 2.x 最终维护版 2.7.18。
-      - 本分支的 JDK 25 指「构建工具链与运行时」：CI / 本机均用 Temurin 25 构建并启动。
-        字节码基线固定为 Java 21（maven.compiler.release=21），原因见下方「字节码上限」。
-      - 字节码上限（实测 2026-11-11）：Spring Framework 5.3.39 内嵌 ASM 最高只识别
-        class file major 65（Java 21）；spring-boot-maven-plugin 2.7.18 的 repackage
-        在 major 69 上直接报 "Unsupported class file major version 69"。若需要真正的
-        Java 25 字节码，必须先完成 Spring Boot 3.x / Jakarta EE 命名空间的独立迁移。
-      - 使用编译器 release 选项而非 source/target；spring-kafka / spring-boot-starter-amqp
-        与 Boot BOM 对齐；显式锁定 lombok 1.18.48（17/21/25 全系列可用）。
-      - 在 JDK 25 上编译需要显式声明 Lombok 注解处理器（见 maven-compiler-plugin 的
-        annotationProcessorPaths）；否则 @Slf4j 的 log 与 @Data 的 setter 会批量「找不到符号」。
+      JDK 17 迁移说明（car-monit-api-jdk17）第二阶段：
+      - Spring Boot 4.1.2（Spring Framework 7.0.x）为 JDK 17 可运行的最新稳定版
+        （spring-boot-starter-parent 4.1.2 的 java.version 基线是 17）。
+      - 命名空间切 jakarta.*（Servlet 6.1 / Validation 3.x / Annotation 3.x）。
+      - JSON 主线切 Jackson 3（tools.jackson.*）；fastjson 1.x 统一收敛到 fastjson2。
+      - Flink 1.13.2（Scala 2.11）无法在 JDK 17 运行且工程内无任何调用点，本轮移除依赖与
+        未被引用的 VehicleTrackFlinkJob（详见 docs/v3/springboot4-migration.md）。
+      - 升级到 JDK 21/25 时只需修改 java.version 一个属性。
     -->
     <properties>
         <skipTests>true</skipTests>
         <api.version>1.0</api.version>
-        <!-- 语言/字节码基线 21；运行时 JDK 为 25，由 CI 与启动脚本保证 -->
-        <java.version>21</java.version>
-        <maven.compiler.release>21</maven.compiler.release>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <druid.version>1.2.20</druid.version>
-        <mybatis-plus.version>3.5.5</mybatis-plus.version>
+        <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <druid.version>1.2.28</druid.version>
+        <mybatis-plus.version>3.5.18</mybatis-plus.version>
+        <dynamic-datasource.version>4.6.0</dynamic-datasource.version>
+        <pagehelper.boot.version>4.1.1</pagehelper.boot.version>
         <mysql-connector-java.version>8.0.27</mysql-connector-java.version>
-        <dynamic-datasource-spring-boot-starter.version>3.4.0</dynamic-datasource-spring-boot-starter.version>
-        <spring-kafka.version>2.8.11</spring-kafka.version>
-        <!-- RocketMQ版本 -->
-        <rocketmq.version>2.2.3</rocketmq.version>
-        <!-- Elasticsearch版本 -->
+        <!-- RocketMQ Spring Boot Starter -->
+        <rocketmq.version>2.3.5</rocketmq.version>
+        <!-- Elasticsearch 客户端按服务端 7.x 对齐（Boot 4 BOM 只管理 9.x 客户端） -->
         <elasticsearch.version>7.17.0</elasticsearch.version>
-        <flink.version>1.13.2</flink.version>
-        <pulsar-client.version>2.10.4</pulsar-client.version>
+        <!-- Jedis 4.x：JedisCluster/HostAndPort 用法与 4.x 对齐，5/6 起构造 API 变化 -->
+        <jedis.version>4.4.8</jedis.version>
+        <fastjson2.version>2.0.66</fastjson2.version>
+        <hutool.version>5.8.48</hutool.version>
+        <forest.version>1.8.0</forest.version>
         <lombok.version>1.18.48</lombok.version>
-        <!-- 覆盖 spring-boot-starter-parent 2.7.18 的 5.3.31，与 backend 保持同一安全补丁级别 -->
-        <spring-framework.version>5.3.39</spring-framework.version>
     </properties>
 
     <modules>
@@ -74,49 +67,45 @@
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
             </dependency>
-            <!-- ==================== Flink 依赖 ==================== -->
-            <!-- Flink Core + Java API -->
+            <!-- 阿里数据库连接池（Boot 4 专用 starter） -->
             <dependency>
-                <groupId>org.apache.flink</groupId>
-                <artifactId>flink-java</artifactId>
-                <version>${flink.version}</version>
+                <groupId>com.alibaba</groupId>
+                <artifactId>druid-spring-boot-4-starter</artifactId>
+                <version>${druid.version}</version>
             </dependency>
-            <!-- Flink Streaming Java（Scala 2.11 版本） -->
+            <!-- mybatis-plus（Boot 4 专用 starter） -->
             <dependency>
-                <groupId>org.apache.flink</groupId>
-                <artifactId>flink-streaming-java_2.11</artifactId>
-                <version>${flink.version}</version>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
             </dependency>
-            <!-- Flink 客户端（用于 StreamExecutionEnvironment.getExecutionEnvironment） -->
             <dependency>
-                <groupId>org.apache.flink</groupId>
-                <artifactId>flink-clients_2.11</artifactId>
-                <version>${flink.version}</version>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-extension</artifactId>
+                <version>${mybatis-plus.version}</version>
             </dependency>
-            <!-- Flink Kafka Connector（FlinkKafkaConsumer 所在依赖） -->
             <dependency>
-                <groupId>org.apache.flink</groupId>
-                <artifactId>flink-connector-kafka_2.11</artifactId>
-                <version>${flink.version}</version>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-jsqlparser-4.9</artifactId>
+                <version>${mybatis-plus.version}</version>
             </dependency>
-            <!-- Flink 状态后端（用于 TTL 状态管理，1.13 已合并到 core，但显式声明更保险） -->
+            <!-- 与 backend 保持一致：jsqlparser 4.9 供 MP 与 PageHelper 共用 -->
             <dependency>
-                <groupId>org.apache.flink</groupId>
-                <artifactId>flink-runtime_2.11</artifactId>
-                <version>${flink.version}</version>
+                <groupId>com.github.jsqlparser</groupId>
+                <artifactId>jsqlparser</artifactId>
+                <version>4.9</version>
             </dependency>
-
+            <!-- 动态数据源（Boot 4 专用 starter） -->
             <dependency>
-                <groupId>org.apache.pulsar</groupId>
-                <artifactId>pulsar-client</artifactId>
-                <version>${pulsar-client.version}</version>
+                <groupId>com.baomidou</groupId>
+                <artifactId>dynamic-datasource-spring-boot4-starter</artifactId>
+                <version>${dynamic-datasource.version}</version>
             </dependency>
-
-            <!-- Spring Kafka -->
+            <!-- 分页插件（4.x 对应 Spring Boot 4 / mybatis-spring-boot 4.0.x） -->
             <dependency>
-                <groupId>org.springframework.kafka</groupId>
-                <artifactId>spring-kafka</artifactId>
-                <version>${spring-kafka.version}</version>
+                <groupId>com.github.pagehelper</groupId>
+                <artifactId>pagehelper-spring-boot-starter</artifactId>
+                <version>${pagehelper.boot.version}</version>
             </dependency>
             <!-- RocketMQ Spring Boot Starter -->
             <dependency>
@@ -124,19 +113,50 @@
                 <artifactId>rocketmq-spring-boot-starter</artifactId>
                 <version>${rocketmq.version}</version>
             </dependency>
-            <!-- RabbitMQ Starter 由 Boot 2.7.18 parent BOM 直接管理版本，
-                 此处不再声明（当前 POM 的无版本条目会遮蔽 parent 的版本管理）。 -->
-            <!-- Elasticsearch High Level REST Client -->
+            <!-- Elasticsearch：排除 org.elasticsearch:jna（同为 com.sun.jna.* 包名，会与官方 JNA 冲突） -->
             <dependency>
                 <groupId>org.elasticsearch.client</groupId>
                 <artifactId>elasticsearch-rest-high-level-client</artifactId>
                 <version>${elasticsearch.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.elasticsearch</groupId>
+                        <artifactId>jna</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
-            <!-- Elasticsearch Core -->
             <dependency>
                 <groupId>org.elasticsearch</groupId>
                 <artifactId>elasticsearch</artifactId>
                 <version>${elasticsearch.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.elasticsearch</groupId>
+                        <artifactId>jna</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <!-- Jedis：固定在 4.x，保持 JedisCluster 构造用法不变 -->
+            <dependency>
+                <groupId>redis.clients</groupId>
+                <artifactId>jedis</artifactId>
+                <version>${jedis.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.fastjson2</groupId>
+                <artifactId>fastjson2</artifactId>
+                <version>${fastjson2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-all</artifactId>
+                <version>${hutool.version}</version>
+            </dependency>
+            <!-- Forest 声明式 HTTP 客户端：官方无 Boot 4 starter，boot3 starter 的自动配置机制在 Boot 4 兼容 -->
+            <dependency>
+                <groupId>com.dtflys.forest</groupId>
+                <artifactId>forest-spring-boot3-starter</artifactId>
+                <version>${forest.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -146,26 +166,20 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
+                <version>3.14.0</version>
                 <configuration>
-                    <release>${maven.compiler.release}</release>
+                    <release>${java.version}</release>
                     <encoding>${project.build.sourceEncoding}</encoding>
                     <parameters>true</parameters>
-                    <!-- 显式声明 Lombok 为注解处理器：JDK 25 下 classpath 自动发现
-                         处理器会失败，导致 Lombok 生成符号缺失 -->
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version>
-                        </path>
-                    </annotationProcessorPaths>
+                    <!-- JDK 23 起 javac 默认不再自动执行注解处理器（Lombok 生成的构造器/Getter 会全部缺失），
+                         必须显式 -proc:full。该参数 JDK 21 才引入，故只在本分支声明。 -->
+                    <proc>full</proc>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.1.2</version>
+                <version>3.5.4</version>
             </plugin>
         </plugins>
 

@@ -123,6 +123,12 @@ public class OdsRtSzdnSnapshotFlowAddcodeController extends BaseController {
 
     private void decorate(List<OdsRtSzdnSnapshotFlowAddcode> list) {
         for (OdsRtSzdnSnapshotFlowAddcode rtn : list) {
+            if (rtn == null) {
+                // MyBatis 对「所有映射列均为 NULL」的结果行会返回 null 元素（默认语义），
+                // 这里显式跳过，避免整页 500；如长期出现需排查数据源侧的脏行。
+                log.warn("[抓拍列表] 结果集中存在全列 NULL 的行，已跳过");
+                continue;
+            }
             rtn.setId(StringUtils.getUUID());
             if (null != rtn.getSnapshottime()) {
                 rtn.setSnapshottimeStr(DateUtils.parseDateToStr(

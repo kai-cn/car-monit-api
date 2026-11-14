@@ -1,7 +1,7 @@
 package com.ruoyi.base.service.v3.query;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.ruoyi.base.service.v3.config.TrafficV3Properties;
 import com.ruoyi.base.service.v3.es.TrafficEsIndexService;
 import com.ruoyi.base.service.v3.model.TrafficTable;

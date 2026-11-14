@@ -10,10 +10,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
-import org.springframework.util.concurrent.ListenableFuture;
-import org.springframework.util.concurrent.ListenableFutureCallback;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -133,45 +131,22 @@ public class KafkaProducerService {
         // - topic: 目标主题
         // - key: dataId，确保相同dataId的消息发送到同一个分区，保证顺序
         // - value: 消息内容，从JSON反序列化为对象
-        ListenableFuture<SendResult<String, Object>> future = 
-            kafkaTemplate.send(record.getTopic(), record.getDataId(), JSON.parse(record.getMessageJson()));
-        
-        // 注册回调函数，处理异步发送结果
-        future.addCallback(new ListenableFutureCallback<SendResult<String, Object>>() {
-            
-            /**
-             * 发送成功回调
-             * 
-             * 思路：更新数据库状态为成功，记录发送时间和offset
-             * 目的：标记消息已成功送达
-             */
-            @Override
-            public void onSuccess(SendResult<String, Object> result) {
-                log.info("[Kafka生产者] 消息发送成功: dataId={}, offset={}", record.getDataId(), 
-                    result.getRecordMetadata().offset());
-                // 更新数据库状态为1（成功），并记录发送时间
-                kafkaMessageRecordMapper.updateStatusById(record.getId(), 1, new Date());
-                
-                // 通知可靠性服务Kafka已确认
-                reliabilityService.handleKafkaAck(record.getDataId(), result.getRecordMetadata().offset());
-            }
-
-            /**
-             * 发送失败回调
-             * 
-             * 思路：更新数据库状态为失败，记录错误信息，增加重试次数
-             * 目的：为后续重试做准备
-             */
-            @Override
-            public void onFailure(Throwable ex) {
-                log.error("[Kafka生产者] 消息发送失败: dataId={}, error={}", record.getDataId(), ex.getMessage());
-                // 增加重试次数，记录错误信息，状态设为2（失败）
-                kafkaMessageRecordMapper.incrementRetryCount(record.getId(), ex.getMessage());
-                
-                // 通知可靠性服务发送失败
-                reliabilityService.handleSendFailure(record.getDataId(), ex.getMessage());
-            }
-        });
+        // Spring Framework 6 起 ListenableFuture 已移除，KafkaTemplate.send 返回 CompletableFuture
+        kafkaTemplate.send(record.getTopic(), record.getDataId(), JSON.parse(record.getMessageJson()))
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        // 发送失败：增加重试次数，记录错误信息，状态设为2（失败）
+                        log.error("[Kafka生产者] 消息发送失败: dataId={}, error={}", record.getDataId(), ex.getMessage());
+                        kafkaMessageRecordMapper.incrementRetryCount(record.getId(), ex.getMessage());
+                        reliabilityService.handleSendFailure(record.getDataId(), ex.getMessage());
+                        return;
+                    }
+                    // 发送成功：更新数据库状态为1（成功），并记录发送时间
+                    log.info("[Kafka生产者] 消息发送成功: dataId={}, offset={}", record.getDataId(),
+                            result.getRecordMetadata().offset());
+                    kafkaMessageRecordMapper.updateStatusById(record.getId(), 1, new Date());
+                    reliabilityService.handleKafkaAck(record.getDataId(), result.getRecordMetadata().offset());
+                });
     }
 
     /**

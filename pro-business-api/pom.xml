@@ -26,49 +26,28 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Spring Kafka -->
+        <!-- Spring Kafka：Boot 4 把 KafkaAutoConfiguration 拆成独立模块，
+             必须用 starter 才能拿到 kafkaListenerContainerFactory（原来只引 spring-kafka） -->
         <dependency>
-            <groupId>org.springframework.kafka</groupId>
-            <artifactId>spring-kafka</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-kafka</artifactId>
         </dependency>
 
-        <!-- Apache Pulsar 客户端（替换 Kafka 的消息队列功能） -->
-        <!-- pulsar-client 是 Pulsar 的官方 Java 客户端，提供 Producer/Consumer API -->
-        <!-- 注意：Pulsar 2.10+ 要求 JDK 11+；如果使用 JDK 8，请使用 pulsar-client:2.9.x -->
+        <!-- Apache Pulsar 客户端（版本由 Boot 4 BOM 的 pulsar-bom 管理） -->
         <dependency>
             <groupId>org.apache.pulsar</groupId>
             <artifactId>pulsar-client</artifactId>
         </dependency>
 
-        <!-- ==================== Flink 依赖（JDK 1.8 兼容，Scala 2.11，Flink 1.13.2） ==================== -->
-        <!-- Flink Core + Java API（核心依赖，提供基础的 DataSet / DataStream API） -->
-        <dependency>
-            <groupId>org.apache.flink</groupId>
-            <artifactId>flink-java</artifactId>
-        </dependency>
-        <!-- Flink Streaming Java（流处理核心，包含 DataStream API 及算子） -->
-        <dependency>
-            <groupId>org.apache.flink</groupId>
-            <artifactId>flink-streaming-java_2.11</artifactId>
-        </dependency>
-        <!-- Flink 客户端（StreamExecutionEnvironment.getExecutionEnvironment() 所需） -->
-        <dependency>
-            <groupId>org.apache.flink</groupId>
-            <artifactId>flink-clients_2.11</artifactId>
-        </dependency>
-        <!-- Flink Kafka Connector（FlinkKafkaConsumer / FlinkKafkaProducer 所在依赖） -->
-        <dependency>
-            <groupId>org.apache.flink</groupId>
-            <artifactId>flink-connector-kafka_2.11</artifactId>
-        </dependency>
-        <!-- Flink Runtime（状态后端、StateTtlConfig、Checkpoint 等核心运行时组件） -->
-        <dependency>
-            <groupId>org.apache.flink</groupId>
-            <artifactId>flink-runtime_2.11</artifactId>
-        </dependency>
+        <!--
+          Flink 1.13.2（Scala 2.11）已于本轮移除：
+          1) JDK 17 下 Flink 1.13 运行期需要大量 add-opens 参数，akka 2.11 反射在 17 上不稳定；
+          2) 工程内 VehicleTrackFlinkJob 无任何调用点（既不是 Bean 也没有 main 启动脚本）。
+          需要实时计算时按 Flink 1.20+ 重新引入并重写该 Job（见迁移文档）。
+        -->
 
         <!-- RocketMQ Spring Boot Starter -->
-         <dependency>
+        <dependency>
             <groupId>org.apache.rocketmq</groupId>
             <artifactId>rocketmq-spring-boot-starter</artifactId>
         </dependency>
@@ -93,9 +72,8 @@
 
         <!-- MySQL JDBC：仅用于读取 carmonitdb.plate_color 字典（单一事实源） -->
         <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>${mysql-connector-java.version}</version>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
 
@@ -103,18 +81,17 @@
 
     <build>
         <plugins>
-            <!-- 编译配置统一由父 POM 的 release 选项管理（JDK 17/21/25 只改父 POM 属性） -->
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>3.3.1</version>
             </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <includeSystemScope>true</includeSystemScope>
+                    <mainClass>com.ruoyi.EcBusinessApiApplication</mainClass>
                 </configuration>
                 <executions>
                     <execution>
@@ -125,22 +102,6 @@
                 </executions>
             </plugin>
         </plugins>
-
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>true</filtering>
-            </resource>
-            <resource>
-                <directory>src/main/java</directory>
-                <includes>
-                    <include>**/*.xml</include>
-                    <include>**/*.json</include>
-                    <include>**/*.ftl</include>
-                    <include>**/*.xls</include>
-                </includes>
-            </resource>
-        </resources>
     </build>
 
 </project>
