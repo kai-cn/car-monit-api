@@ -8,7 +8,7 @@ Type=simple
 User=@USER@
 WorkingDirectory=@PREFIX@/java
 EnvironmentFile=@PREFIX@/java/java.env
-ExecStart=/bin/sh -c 'exec /usr/bin/java $JAVA_OPTS -jar @PREFIX@/java/app.jar'
+ExecStart=/bin/sh -c 'exec /usr/bin/java $JAVA_OPTS --add-opens=java.base/java.lang=ALL-UNNAMED -jar @PREFIX@/java/app.jar'
 Restart=always
 RestartSec=10
 LimitNOFILE=65535

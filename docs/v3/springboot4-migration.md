@@ -20,7 +20,7 @@
 | Kafka | `spring-kafka` 2.8.11 | **`spring-boot-starter-kafka`**（spring-kafka 4.1.2） | Boot 4 把 KafkaAutoConfiguration 拆成独立模块 |
 | RocketMQ | `rocketmq-spring-boot-starter` 2.2.3 | 2.3.5 | |
 | Pulsar | pulsar-client 2.10.4 | Boot 4 `pulsar-bom` 4.1.3 | |
-| Flink | 1.13.2（Scala 2.11） | **移除**（见第 4 节） | |
+| Flink | 1.13.2（Scala 2.11） | **1.20.3**（Job 保留，见第 4 节） | 1.13 不支持 JDK 17 |
 | 接口文档 | knife4j 3.0.3（springfox 内核） | **移除**（工程内无任何 swagger 注解） | |
 | MySQL 驱动 | `mysql:mysql-connector-java` 8.0.27 | `com.mysql:mysql-connector-j`（BOM 9.7.0） | 仅用于读 carmonitdb 的 plate_color 字典 |
 | Jedis | 4.3.1 | 4.4.8（显式钉版） | Jedis 5/6 的 `JedisCluster` 构造 API 变化，先钉 4.x |
@@ -47,7 +47,7 @@
 | `RetRedisCacheWriter` | Spring Data Redis 4.x 给 `RedisCacheWriter` 加了 4 个抽象方法：`retrieve` / `store` / `evict` / `clear`，按同步实现补齐 |
 | `SecurityInterceptor` | `com.alibaba.fastjson.JSON` → `com.alibaba.fastjson2.JSON` |
 | `TrafficEsIndexService` | `JsonNode.fieldNames()` → `propertyNames()`（Jackson 3 更名） |
-| `VehicleTrackFlinkJob` | 删除（无调用点，见第 4 节） |
+| `VehicleTrackFlinkJob` | 保留并适配 Flink 1.20.3（见第 4 节） |
 
 ### 2.3 配置（`pro-business-api/src/main/resources/application.yml`）
 | 迁移前 | 迁移后 | 原因 |
