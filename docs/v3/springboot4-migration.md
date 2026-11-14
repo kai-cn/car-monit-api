@@ -75,13 +75,25 @@
    - 该表数据在联调期间持续增长（total 251 → 936），出现脏行后就会整页 500；JDK 17/21/25 表现一致；
    - 修复：`decorate()` 跳过 null 元素并打 WARN（不静默吞掉，便于追数据源）。
 
-## 4. 为什么移除 Flink 1.13.2（决策记录）
+## 4. Flink 实时轨迹 Job：保留并升级到 1.20.3
 
-- Flink 1.13（Scala 2.11）在 JDK 17 上需要大量 `add-opens`，akka 2.11 的反射调用在 17 上不稳定；
-- 工程内 `VehicleTrackFlinkJob` **没有任何调用点**：不是 `@Component`，没有 per-job 启动脚本，也没有任何 CI/运维入口调用；
-- 保留它等于为了死代码把 40MB+ 的不兼容依赖塞进 fat jar，并持续污染类路径。
-- 后续若要做实时轨迹计算：按 Flink 1.20+（或 Flink 2.x）重新引入，并按新 API 重写该 Job（`FlinkKafkaConsumer` 已在 1.18 移除，改用 `KafkaSource`）。
-- 需要历史实现时：`git log --diff-filter=D -- pro-business-api/src/main/java/com/ruoyi/base/flink/VehicleTrackFlinkJob.java`。
+`VehicleTrackFlinkJob` 予以保留（不删代码），但 Flink 1.13.2 + Scala 2.11 无法在 JDK 17 上运行，
+因此整体升级到 **Flink 1.20.3**（最后一个 1.x 稳定线，官方支持 Java 17+）。
+
+| 项 | 迁移前 | 迁移后 |
+| --- | --- | --- |
+| Flink | 1.13.2（`flink-*_2.11`） | 1.20.3（`flink-streaming-java` / `flink-clients`） |
+| Kafka 连接器 | `flink-connector-kafka_2.11` 1.13.2 | `flink-connector-kafka` 3.3.0-1.20 |
+| Kafka 源 API | `FlinkKafkaConsumer<String>` | `KafkaSource<String>` + `env.fromSource(..., WatermarkStrategy.noWatermarks(), name)` |
+| 状态 TTL | `StateTtlConfig.newBuilder(Time)` | `newBuilder(Duration.ofMillis(...))` |
+
+依赖作用域统一为 `provided`：Job 由 `flink run` 提交到集群执行，不打进 Boot fat jar
+（实测 `pro-business-api-1.0.jar` 内 `org/apache/flink` 条目为 0），避免与 `spring-kafka` 的
+kafka-clients 4.x 在同一运行期抢版本。
+
+> 定时器 / 键控状态 / 广播状态（`KeyedBroadcastProcessFunction`）/ `SourceFunction` 等用法在 1.20 仍然可用，
+> 仅 `FlinkKafkaConsumer` 被移除；后续若要升到 Flink 2.x，需把 `SourceFunction`/`SinkFunction` 改为新的
+> Source/Sink API（1.20 是最后一个保留它们的版本）。
 
 ## 5. 实机验收记录（2026-11-14，Windows + JDK 17.0.21）
 
@@ -98,6 +110,25 @@ JVM：`-Xms512m -Xmx1024m --add-opens=java.base/java.lang=ALL-UNNAMED`，端口 
 | 7 | `GET /base/snapshotflow/list` | 200，total=251 |
 | 8 | backend → `GET /api/v1/bigscreen/stats/warning-top`、`/stats/income` | 令牌校验通过（非 403），api 侧按 `traffic.bigscreen.stats-enabled=false` 返回 503，backend 按契约回退 `LEGACY_DB` |
 | 9 | backend `POST /manager/bigScreen/export/display` | 200，返回 taskId（跨服务导出提交打通） |
+
+### 5.1 ES 7.15.2 + Kafka 4.0.0 实机联调（2026-11-14 补测）
+
+ES（`D:\work\elasticsearch-7.15.2`，堆按 512m 限制）与 Kafka 4.0.0（KRaft 单节点，`-Xms256m -Xmx512m`）启动后：
+
+| # | 用例 | 结果 |
+| --- | --- | --- |
+| 1 | `GET /_cluster/health` | `status=yellow`，1 节点，56 活跃主分片（沿用历史数据） |
+| 2 | api 以 `TRAFFIC_QUERY_ENGINE=es` + `--traffic.es.auto-bootstrap=true` 启动 | 成功，无 ES 相关 WARN |
+| 3 | `GET /api/v3/es/readiness` | `ready=true`、`activeEngine=es`、`esAvailable=true`，read/write alias + 当月索引齐全 |
+| 4 | `GET /base/snapshotflow/list?applyTime1=2025-11-01&applyTime2=2025-11-30` | 200，total=142（与 ES 索引 `snapshot-flow-202511` 文档数一致） |
+| 5 | 同上，窗口 2025-11-14 单日 | 200，total=107（ES 时间窗过滤生效） |
+| 6 | Kafka `search-sync` 生产一条事件（Java kafka-clients 投递，offset 713） | 生产成功 |
+| 7 | api `SearchSyncConsumer`（`@KafkaListener`，group `search-sync-api`）消费并写 ES | 消费者组 lag 归零，`snapshot-flow-202511/_doc/sb4-test-1` 命中，内容与投递 payload 一致 |
+| 8 | 清理测试数据 | 测试文档已删除 |
+
+**注意（踩坑）**：`kafka-console-producer.bat` 在 Windows/PowerShell 管道下会投递**空消息**，导致
+`SearchSyncConsumer` 抛 `search-sync 收到空消息` 并连重 10 次、阻塞同分区后续消息（消费组 offset 卡住）。
+联调请改用 Java `KafkaProducer`（见 `D:\work\runtime-logs\ProduceSearchSync.java`）。
 
 ## 6. 复现步骤
 
