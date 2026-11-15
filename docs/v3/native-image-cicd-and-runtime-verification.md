@@ -523,17 +523,18 @@ issue 中 `-R:MinHeapSize=512m` **未能规避**。据此更合理的解释是**
 
 ## 9. jdk21 / jdk17 推进记录
 
-> **状态：工具链与 CICD 已就绪，原生编译未执行。** 用户设定的顺序是「jdk25 业务完整启动
-> 成功 → 稳定性/对比实测 → 再跑 jdk21/17」，前置条件未满足，因此按约定不提前跑编译。
+> **状态（21:58 更新）：jdk21 Linux 原生构建进行中，jdk17 待安装。** 由于 jdk25 Windows 产物
+> 的段错误高度疑似上游缺陷 GR-74266（§8.2.3），按用户要求把 jdk21/17 提前为并行验证路径，
+> 用 Linux 产物验证业务完整启动；这不再以 jdk25 前置条件为前提。
 
 **已完成（有证据）**：
 
 | 项 | 结果 |
 | --- | --- |
 | 六分支 pom / workflow | jdk17/21/25 × api/backend 均已同步 AOT Registrar、405 处 XML 全限定名、agent 反射元数据、`native-image.yml` / `native-image-cloud.yml`；六分支本地 commit 完成 |
-| 远端推送 | `push-pending-branches.log`：api-jdk17/25、backend-jdk17/21/25 已 PUSHED；**`car-monit-api-jdk21` 仍 `STILL_PENDING after 12 attempts`**（Windows Git schannel/openssl 经代理断连），需重跑 `bash scripts/v3/ops/v3-push-pending-branches.sh` |
+| 远端推送 | **六分支全部已 PUSHED**（21:34 重试，`evidence/push-fastjson2-fix.log`，均 `schannel attempt=1`），此前 `car-monit-api-jdk21` 的 `STILL_PENDING` 已清零 |
 | self-host canary | `run 43716127318`（api）/`43716152235`（backend）均 success；`ensure-selfhost-build-workflow.log` 显示两个仓库 master 的 `native-image.yml` 已写入 |
-| Mandrel Linux 21/17 | `download-mandrel-21-17.log`：java21 `mandrel-java21-linux-amd64-23.1.13.0-Final.tar.gz` 262,698,482 B / sha256 `ac437f47…`；java17 `mandrel-java17-linux-amd64-23.0.6.0-Final.tar.gz` 244,052,887 B / sha256 `8b7c4262…`，两个均 SHA256_OK。**仅下载到 `D:\jdk`，尚未在 WSL ext4 安装/冒烟** |
+| Mandrel Linux 21/17 | `download-mandrel-21-17.log`：java21 tarball 262,698,482 B / sha256 `ac437f47…`，java17 244,052,887 B / sha256 `8b7c4262…`，均 SHA256_OK。**Mandrel 21 已于 21:50 在 WSL ext4 安装并冒烟通过**（`evidence/setup-mandrel-linux21.log`：`SETUP_OK mandrel=/home/dev/tools/mandrel-21`，Java 21.0.13，`hello native` 成功）；Mandrel 17 仍在 `D:\jdk` 未安装 |
 | 版本核对 | 六分支 `fastjson2.version` 均 `2.0.66`、`spring-boot.version` 均 `4.1.2`，`java.version` 分别 25/21/17 → §8.2 的修复对六个组合同样适用 |
 | 对比脚本 | `v3-compare-native-jvm.sh`（Linux）、`v3-compare-native-jvm.ps1`（Windows）静态校验通过，未实跑 |
 
@@ -554,9 +555,26 @@ python scripts/v3/ops/v3-github-actions-dispatch.py dispatch \
   --ref car-monit-api-jdk21 --input app=api --input jdk=21
 ```
 
-**风险（未验证）**：Spring Boot 4.1.2 / Spring 7 AOT 产物在 GraalVM 23.0(java17) / 23.1(java21)
-上的兼容性未实测；Mandrel 23.x 与本项目依赖（grpc-netty-shaded、MyBatis-Plus AOT）是否有
-额外 `--initialize-at-*` 需求也未知。不能假定「jdk25 参数原样套用即成功」。
+**jdk21 首轮实测（21:50–21:58，`evidence/native-api-jdk21-linux.log`）**：Maven install 与 Spring AOT
+均成功（Registrar patch 了 **23** 个 MapperFactoryBean），native-image 阶段 5m59s 后失败：
+
+```
+The configured GraalVM reachability metadata repository ... provides a
+reachability-metadata schema, but your GraalVM installation at
+/home/dev/tools/mandrel-21 does not. Please update your GraalVM installation...
+```
+
+原因：native-maven-plugin 1.1.14 默认拉取的 reachability metadata 使用新 schema，
+Mandrel 21（GraalVM 23.1 线）不支持。项目已自带 tracing-agent 元数据
+（`META-INF/native-image/com.ruoyi/pro-business-api-agent/reachability-metadata.json`），
+因此在 `car-monit-api-jdk21/pro-business-api/pom.xml` 的 native 插件配置中加
+`<metadataRepository><enabled>false</enabled></metadataRepository>`（原文件备份
+`backup/pom-jdk21-before-metadata-disable.xml`），并重跑 `api-jdk21-linux-r2`。
+若 r2 成功，需把该配置固化进 jdk17 分支并在 CICD 文档中说明；JDK25 分支保持开启（Mandrel 25 支持新 schema）。
+
+**风险（未验证）**：Spring Boot 4.1.2 / Spring 7 AOT 产物在 GraalVM 23.0(java17) 上的兼容性未实测；
+禁用 metadata repository 后第三方库（lucene / mysql-connector / jna 等）的反射元数据只能依赖项目
+自带 agent 文件，需业务接口实测覆盖。
 
 ---
 
