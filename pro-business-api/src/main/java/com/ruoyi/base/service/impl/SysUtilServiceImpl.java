@@ -5,7 +5,7 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.ruoyi.base.domain.*;
-import com.ruoyi.base.forest.HttpSysUtilApiService;
+import com.ruoyi.base.forest.SysBaseClient;
 import com.ruoyi.base.service.*;
 import com.ruoyi.common.constant.Constants;
 import com.ruoyi.common.constant.HttpStatus;
@@ -116,7 +116,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
     private IOdsSzdnTollService odsSzdnTollService;
 
     @Resource
-    private HttpSysUtilApiService httpSysUtilApiService;
+    private SysBaseClient sysBaseClient;
 
 
     /**
@@ -2676,7 +2676,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         suspiciousCarVO.setSignature(signature);
         suspiciousCarVO.setTrailInfoList(trailInfoList);
         log.info("调用接口开始--------："+new Date());
-        JSONObject jsonObject = httpSysUtilApiService.syncSuspiciousCarTask(suspiciousCarVO);
+        JSONObject jsonObject = sysBaseClient.syncSuspiciousCarTask(suspiciousCarVO);
         Integer responseCode = jsonObject.getInteger(AjaxResult.CODE_TAG);
         log.info("调用接口结束--------："+new Date());
         log.info(jsonObject.toJSONString());
