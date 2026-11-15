@@ -144,6 +144,12 @@
                 <groupId>org.graalvm.buildtools</groupId>
                 <artifactId>native-maven-plugin</artifactId>
                 <configuration>
+                    <!-- Mandrel 21 (GraalVM 23.1) predates the reachability-metadata
+                         schema downloaded by native-maven-plugin 1.1.14; the project
+                         ships its own tracing-agent metadata, so disable the repo. -->
+                    <metadataRepository>
+                        <enabled>false</enabled>
+                    </metadataRepository>
                     <!-- grpc-netty-shaded 由 pulsar-client 传递引入（应用在用，不可排除）。
                          其 tcnative JNI 静态引用在 image build 期初始化会 UnsatisfiedLinkError。
                          具体类优先于包级规则，逐个显式延迟到运行时。 -->
