@@ -369,7 +369,7 @@ JVM 对照组（同一份代码、同一 DB）：
 | `java --add-opens=java.base/java.lang=ALL-UNNAMED -jar` | **8 秒端口就绪，完整启动** |
 | 同上 + `--mybatis-plus.type-aliases-package=`（模拟 native 无扫描） | **8 秒端口就绪，完整启动**（证明 XML 全限定名修复有效） |
 
-### 8.2 第三个阻塞：native image 段错误（如实记录）
+### 8.2 第三个阻塞：native image 段错误（根因已定位，修复验证被暂停）
 
 第三次构建的 exe 启动只打印 Spring Boot banner 与
 `[native-aot] explicit sqlSessionFactory reference patched into 0 ...` 后进程退出，
