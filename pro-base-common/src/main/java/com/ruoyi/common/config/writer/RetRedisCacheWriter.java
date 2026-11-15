@@ -250,7 +250,7 @@ public class RetRedisCacheWriter implements RedisCacheWriter {
      * Spring Data Redis 4.x（Boot 4）为 RedisCacheWriter 新增的抽象方法：
      * 按 pattern 清理某个 cache 下的所有 key，用于批量失效。
      */
-    @Override
+    // Spring Data Redis 4.x 才有该契约；3.x 下保留为扩展方法（不参与接口实现）。
     public void clear(String name, byte[] pattern) {
         Assert.notNull(name, "Name must not be null!");
         Assert.notNull(pattern, "Pattern must not be null!");
@@ -278,7 +278,7 @@ public class RetRedisCacheWriter implements RedisCacheWriter {
     }
 
     /** Spring Data Redis 4.x 把 remove 拆为 evict（不等待）与 remove（默认实现）。 */
-    @Override
+    // Spring Data Redis 4.x 才有该契约；3.x 下保留为扩展方法。
     public void evict(String name, byte[] key) {
         remove(name, key);
     }

@@ -1,9 +1,9 @@
 package com.ruoyi.common.config;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import tools.jackson.core.StreamReadFeature;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.core.StreamReadFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.type.BaseTypeHandler;
 import org.apache.ibatis.type.JdbcType;
@@ -31,9 +31,10 @@ import java.sql.SQLException;
 @MappedJdbcTypes(JdbcType.VARCHAR)
 public class JSONHandler<T extends Object> extends BaseTypeHandler<T> {
 
+    // Boot 3 / Jackson 2：Builder 用 serializationInclusion 设置全局 INCLUDE 策略
+    // （Jackson 3 的 changeDefaultPropertyInclusion 在 2.x 不存在）。
     private static final ObjectMapper mapper = JsonMapper.builder()
-            .disable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION)
-            .changeDefaultPropertyInclusion(inclusion -> inclusion.withValueInclusion(JsonInclude.Include.NON_NULL))
+            .serializationInclusion(JsonInclude.Include.NON_NULL)
             .build();
 
     private Class<T> clazz;
@@ -64,7 +65,12 @@ public class JSONHandler<T extends Object> extends BaseTypeHandler<T> {
      */
     private T toObject(String json) {
         if (json != null && !json.isEmpty()) {
-            return mapper.readValue(json, clazz);
+            try {
+                // Jackson 2 的 readValue 抛受检 JsonProcessingException（Jackson 3 为非受检）。
+                return mapper.readValue(json, clazz);
+            } catch (Exception e) {
+                log.error(">>>> covert json string to object failed, error message:{} <<<<", e.getMessage());
+            }
         }
         return null;
     }

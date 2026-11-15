@@ -1,7 +1,7 @@
 package com.ruoyi.base.service.v3.es;
 
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ruoyi.base.service.v3.config.TrafficV3Properties;
 import com.ruoyi.base.service.v3.model.TrafficTable;
 import lombok.extern.slf4j.Slf4j;
@@ -319,8 +319,8 @@ public class TrafficEsIndexService {
             }
             String body = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
             JsonNode node = MAPPER.readTree(body);
-            // Jackson 3：JsonNode.fieldNames() 更名 propertyNames()
-            node.propertyNames().forEach(indices::add);
+            // Boot 3 / Jackson 2：字段名枚举 API 是 fieldNames()（Jackson 3 改成 propertyNames()）
+            node.fieldNames().forEachRemaining(indices::add);
         } catch (Exception e) {
             log.debug("[V3 ES] 读取别名 {} 失败（按不存在处理）: {}", alias, e.getMessage());
         }
