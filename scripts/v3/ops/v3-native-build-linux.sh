@@ -91,36 +91,14 @@ echo "==== [1/2] install reactor modules (JVM jar) ===="
 cd "$PROJ"
 "$MVN" -B -ntp -DskipTests -Dmaven.repo.local="$MAVEN_REPO" install -pl "$MOD" -am
 
-# ---------- stage 2: clean + AOT ----------
+# ---------- stage 2: AOT + native-image ----------
 # clean is mandatory: the default JVM build leaves VehicleTrackFlinkJob.class in
 # target/classes; the native-flink-exclude profile drops it at compile time because
 # its Flink deps are provided and absent from the native classpath.
-echo "==== [2/3] clean + process-aot ===="
+echo "==== [2/2] AOT + native-image ===="
 T0=$(date +%s)
 "$MVN" -B -ntp -Pnative,native-flink-exclude -DskipTests -Dmaven.repo.local="$MAVEN_REPO" \
-  -pl "$MOD" clean process-aot
-
-# ---------- stage 2b: inject pulsar shaded-XZ patch (optional) ----------
-# pulsar-client-4.2.5.jar ships shaded commons-compress classes whose signatures
-# reference org.apache.pulsar.shade.org.tukaani.xz.* but omits those classes.
-# MyBatis-Plus 3.5.18 AOT treats the shaded commons-compress CLI as a "main
-# class" and getDeclaredMethods() on its package tree throws NoClassDefFoundError.
-# PULSAR_XZ_PATCH points at a jar containing both original and relocated xz
-# classes; injecting them into target/classes makes analysis succeed. JVM builds
-# are unaffected. Set to empty string to disable.
-PATCH_JAR="${PULSAR_XZ_PATCH:-/mnt/d/work/runtime-logs/v3-ops/patch/pulsar-client-xz-patch-1.0.jar}"
-if [[ -n "$PATCH_JAR" && -f "$PATCH_JAR" ]]; then
-  echo "injecting pulsar xz patch: $PATCH_JAR"
-  unzip -oq "$PATCH_JAR" -d "$PROJ/$MOD/target/classes"
-  echo "injected_classes=$(unzip -Z1 "$PATCH_JAR" | grep -c '\.class$')"
-elif [[ -n "$PATCH_JAR" ]]; then
-  echo "WARN: PULSAR_XZ_PATCH set but file missing: $PATCH_JAR"
-fi
-
-# ---------- stage 3: native-image ----------
-echo "==== [3/3] native:compile ===="
-"$MVN" -B -ntp -Pnative,native-flink-exclude -DskipTests -Dmaven.repo.local="$MAVEN_REPO" \
-  -pl "$MOD" native:compile
+  -pl "$MOD" clean native:compile
 T1=$(date +%s)
 
 BIN="$PROJ/$MOD/target/$MOD"

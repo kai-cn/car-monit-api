@@ -603,10 +603,16 @@ Error: java.util.concurrent.ExecutionException: java.lang.NoClassDefFoundError:
   `org.tukaani:xz:1.12` 为源，生成补丁 jar，同时含**原始** `org/tukaani/xz/*` 与
   **重定位** `org/apache/pulsar/shade/org/tukaani/xz/*` 两份 class（123×2=246 类）。
   产物 `runtime-logs/v3-ops/patch/pulsar-client-xz-patch-1.0.jar`（327,938 B）。
-- `v3-native-build-linux.sh` 把原 `clean native:compile` 拆为 `clean process-aot` →
-  注入补丁类到 `target/classes` → `native:compile`；仅影响 native 构建，JVM fat jar 不变。
+- 落地方式：把补丁 class 解压到 `pro-business-api/src/main/resources/`，由 Maven
+  resources 阶段自动复制到 `target/classes`（native-image 的 classpath 首项）。这样不改
+  构建脚本、不加 pom 依赖、对云/自托管 CICD 天然友好。代价：这 246 个 class 会进入 JVM
+  fat jar（约 328KB，且与真实依赖无冲突）；已记录为待优化项，可在 native-only profile
+  中用 resources exclude 排除。
+- 曾尝试把 `clean native:compile` 拆成 `clean process-aot` + 注入 + `native:compile`，
+  但 `process-aot` 不是合法 Maven 生命周期阶段，且 `native:compile` 内部会重跑 AOT，
+  该拆分已撤销（保留证据于本条，避免重复踩坑）。
 - JVM 最小复现验证：打补丁后 `...shade...LZMACompressorInputStream.getDeclaredMethods()` 由
-  `FAIL NoClassDefFoundError` 变为 `OK methods=8`；r3 完整 native 构建进行中。
+  `FAIL NoClassDefFoundError` 变为 `OK methods=8`；r4 完整 native 构建进行中。
 
 **风险（未验证）**：补丁类只在 native 编译期补齐反射签名、运行期 Pulsar 业务路径（Debezium/
 快照消费）不依赖 7z/LZMA 解码，理论无副作用，仍待 r3 产物启动实测确认。Spring Boot 4.1.2 /
