@@ -130,17 +130,21 @@ logging:
   level:
     root: ${LOG_ROOT_LEVEL:error}
     web: error
-forest:
-  bean-id: forestConfiguration
-  backend: httpclient
-  max-connections: 1000 # 连接池最大连接数，默认值为500
-  max-route-connections: 500 # 每个路由的最大连接数，默认值为500
-  timeout: 60000 # 请求超时时间，单位为毫秒, 默认值为3000
-  connect-timeout: 60000 # 连接超时时间，单位为毫秒, 默认值为2000
-  logEnabled: false # 容器化部署统一 ERROR，关闭 Forest 自身的请求日志
-  retryer: com.dtflys.forest.retryer.BackOffRetryer
-  retry-count: 2
-  max-retry-interval: 1000
+# Forest 已在 V3 native 适配中停止使用（原单点调用改为 Spring RestClient，
+# 见 com.ruoyi.base.forest.SysBaseClient）。此处保留注释仅作历史说明：
+# native image 下 `forest.retryer` 之类"字符串转 Class"的配置会因缺少反射元数据
+# 直接启动失败（ClassNotFoundException: com.dtflys.forest.retryer.BackOffRetryer）。
+# forest:
+#   bean-id: forestConfiguration
+#   backend: httpclient
+#   max-connections: 1000
+#   max-route-connections: 500
+#   timeout: 60000
+#   connect-timeout: 60000
+#   logEnabled: false
+#   retryer: com.dtflys.forest.retryer.BackOffRetryer
+#   retry-count: 2
+#   max-retry-interval: 1000
 rediscluster:
   clusterNodes: ${REDISCLUSTER_CLUSTERNODES:36.200.31.15:22400}
   refresh-interval-ms: 300000      # 字典数据刷新间隔（毫秒）

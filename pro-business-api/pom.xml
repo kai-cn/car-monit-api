@@ -151,7 +151,15 @@
                     <plugin>
                 <groupId>org.graalvm.buildtools</groupId>
                 <artifactId>native-maven-plugin</artifactId>
+                <!-- Boot 3.5 的 BOM 管理到 0.10.6，它对 Mandrel 21 的版本探测会误判
+                     （"GraalVM version 22 is required but 21 has been detected"）。
+                     与 Boot4 分支保持一致，固定到 1.1.14。 -->
+                <version>1.1.14</version>
                 <configuration>
+                    <!-- Mandrel 21 的 native-image 版本号是 21.0.13（底层 GraalVM 23.1.13），
+                         Boot 3.5 的默认 requiredVersion 会把它判成"过低"而中止，
+                         这里显式声明实际版本。 -->
+                    <requiredVersion>21.0</requiredVersion>
                     <!-- Mandrel 21 (GraalVM 23.1) predates the reachability-metadata
                          schema downloaded by native-maven-plugin 1.1.14; the project
                          ships its own tracing-agent metadata, so disable the repo. -->
