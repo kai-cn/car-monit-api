@@ -107,6 +107,14 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
                 <version>3.3.1</version>
+                <configuration>
+                    <!-- src/main/resources is filtered=true in the parent pom.
+                         The pulsar-xz native patch ships binary .class files there;
+                         exclude them from filtering to avoid MalformedInputException. -->
+                    <nonFilteredFileExtensions>
+                        <nonFilteredFileExtension>class</nonFilteredFileExtension>
+                    </nonFilteredFileExtensions>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -157,14 +165,25 @@
                         <buildArg>--initialize-at-run-time=io.grpc.netty.shaded</buildArg>
                         <buildArg>--initialize-at-run-time=io.grpc.netty.shaded.io.netty.internal.tcnative</buildArg>
                         <buildArg>--initialize-at-run-time=io.grpc.netty.shaded.io.netty.handler.ssl</buildArg>
-                        <buildArg>--initialize-at-run-time=io.grpc.netty.shaded.io.netty.util.internal.SystemPropertyUtil</buildArg>
-                        <buildArg>--initialize-at-run-time=io.grpc.netty.shaded.io.netty.util.ResourceLeakDetectorFactory</buildArg>
                         <buildArg>--initialize-at-build-time=ch.qos.logback</buildArg>
                         <buildArg>--exclude-config</buildArg>
                         <buildArg>.*fastjson2.*[.]jar</buildArg>
                         <buildArg>^/META-INF/native-image/</buildArg>
                         <buildArg>--initialize-at-run-time=com.alibaba.fastjson2</buildArg>
                         <buildArg>--initialize-at-build-time=ch.qos.logback.classic.Logger</buildArg>
+                        <!-- Mandrel 21 的 ClassInitializationFeature 比 Mandrel 25 严格：
+                             凡是"声明为 run-time 但构建期实际被初始化"的类都会中断构建。
+                             下列声明让策略与事实一致（实测 r14 构建通过，见
+                             docs/v3/native-image-cicd-and-runtime-verification.md §9）。 -->
+                        <buildArg>--initialize-at-run-time=io.netty.handler.ssl</buildArg>
+                        <buildArg>--initialize-at-run-time=io.netty.channel.kqueue</buildArg>
+                        <buildArg>--initialize-at-build-time=org.slf4j,org.apache.commons.logging,org.apache.logging.slf4j,org.apache.logging.log4j</buildArg>
+                        <buildArg>--initialize-at-build-time=org.springframework.core.SpringProperties,org.springframework.core.KotlinDetector</buildArg>
+                        <buildArg>--initialize-at-build-time=org.springframework.util.ClassUtils,org.springframework.util.ConcurrentReferenceHashMap</buildArg>
+                        <buildArg>--initialize-at-build-time=org.springframework.data.core.SerializableLambdaReader</buildArg>
+                        <buildArg>--initialize-at-build-time=io.grpc.netty.shaded.io.netty.util.internal.PlatformDependent0</buildArg>
+                        <buildArg>--initialize-at-build-time=io.grpc.netty.shaded.io.netty.util.internal.SystemPropertyUtil</buildArg>
+                        <buildArg>--initialize-at-build-time=io.grpc.netty.shaded.io.netty.util.ResourceLeakDetectorFactory</buildArg>
                     </buildArgs>
                 </configuration>
             </plugin>
