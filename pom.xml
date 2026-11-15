@@ -155,12 +155,6 @@
                 <artifactId>hutool-all</artifactId>
                 <version>${hutool.version}</version>
             </dependency>
-            <!-- Forest 声明式 HTTP 客户端：官方无 Boot 4 starter，boot3 starter 的自动配置机制在 Boot 4 兼容 -->
-            <dependency>
-                <groupId>com.dtflys.forest</groupId>
-                <artifactId>forest-spring-boot3-starter</artifactId>
-                <version>${forest.version}</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 
