@@ -162,6 +162,8 @@
                          其 tcnative JNI 静态引用在 image build 期初始化会 UnsatisfiedLinkError。
                          具体类优先于包级规则，逐个显式延迟到运行时。 -->
                     <buildArgs>
+                        <!-- 迭代期快速构建（-Ob）；交付构建去掉本行恢复 -O2。 -->
+                        <buildArg>-Ob</buildArg>
                         <buildArg>--initialize-at-run-time=io.grpc.netty.shaded</buildArg>
                         <buildArg>--initialize-at-run-time=io.grpc.netty.shaded.io.netty.internal.tcnative</buildArg>
                         <buildArg>--initialize-at-run-time=io.grpc.netty.shaded.io.netty.handler.ssl</buildArg>
