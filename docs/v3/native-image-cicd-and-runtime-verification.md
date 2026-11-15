@@ -570,11 +570,48 @@ Mandrel 21（GraalVM 23.1 线）不支持。项目已自带 tracing-agent 元数
 因此在 `car-monit-api-jdk21/pro-business-api/pom.xml` 的 native 插件配置中加
 `<metadataRepository><enabled>false</enabled></metadataRepository>`（原文件备份
 `backup/pom-jdk21-before-metadata-disable.xml`），并重跑 `api-jdk21-linux-r2`。
-若 r2 成功，需把该配置固化进 jdk17 分支并在 CICD 文档中说明；JDK25 分支保持开启（Mandrel 25 支持新 schema）。
+JDK25 分支保持 metadata repository 开启（Mandrel 25 支持新 schema）。
 
-**风险（未验证）**：Spring Boot 4.1.2 / Spring 7 AOT 产物在 GraalVM 23.0(java17) 上的兼容性未实测；
-禁用 metadata repository 后第三方库（lucene / mysql-connector / jna 等）的反射元数据只能依赖项目
-自带 agent 文件，需业务接口实测覆盖。
+**jdk21 r2 实测（22:09，`evidence/native-api-jdk21-linux-r2.log`）**：禁用 metadata repository 后
+native-image 进入分析阶段（1m39s）后失败：
+
+```
+Error: java.util.concurrent.ExecutionException: java.lang.NoClassDefFoundError:
+       org/apache/pulsar/shade/org/tukaani/xz/LZMAInputStream
+    at com.baomidou.mybatisplus.aot.FeatureUtils.registerSerializationLambdaCapturingClass(FeatureUtils.java:364)
+    at com.baomidou.mybatisplus.aot.MybatisPlusFeature.lambda$serializedLambda$0(MybatisPlusFeature.java:69)
+```
+
+**根因（已用反编译 + JVM 最小复现确认，非 JDK25 的 fastjson2/GR-74266 问题）**：
+
+- MyBatis-Plus 3.5.18 的 `MybatisPlusFeature` 在 analysis 阶段调用
+  `findMainPackages()`，把 classpath 上**所有带 `public static void main` 的类**当作主类，
+  再对其包树里每个类调 `Class.getDeclaredMethods()` 找 `$deserializeLambda$`。
+- `pulsar-client-4.2.5.jar` 内含 shaded commons-compress 的
+  `org.apache.pulsar.shade.org.apache.commons.compress.archivers.sevenz.CLI`（带 main 方法），
+  被误判为主类 → 其包树里的 `LZMADecoder` / `LZMACompressorInputStream` 方法签名引用
+  `org.apache.pulsar.shade.org.tukaani.xz.LZMAInputStream` 等类。
+- 但 `pulsar-client-4.2.5.jar` **整个 shaded tukaani 包都缺失**（`unzip -l | grep -ci tukaani` = 0；
+  两仓库 jar SHA256 一致 `5f730532…`，非本地损坏），是上游打包缺陷。
+- 因此 `getDeclaredMethods()` 抛 `NoClassDefFoundError` 中断分析。JDK25 Windows 构建之所以能过，
+  是因为其 Windows classpath 顺序/可达性不同，扫描未触达该残缺包，属"侥幸通过"，非根本差异
+  （同一 JVM 25 上直接 `getDeclaredMethods()` 该 shaded 类同样抛异常）。
+
+**修复（生产最小侵入，不改业务代码与依赖版本）**：
+
+- 新增可复现脚本 `scripts/v3/ops/v3-build-pulsar-xz-patch.py`：以本地仓库
+  `org.tukaani:xz:1.12` 为源，生成补丁 jar，同时含**原始** `org/tukaani/xz/*` 与
+  **重定位** `org/apache/pulsar/shade/org/tukaani/xz/*` 两份 class（123×2=246 类）。
+  产物 `runtime-logs/v3-ops/patch/pulsar-client-xz-patch-1.0.jar`（327,938 B）。
+- `v3-native-build-linux.sh` 把原 `clean native:compile` 拆为 `clean process-aot` →
+  注入补丁类到 `target/classes` → `native:compile`；仅影响 native 构建，JVM fat jar 不变。
+- JVM 最小复现验证：打补丁后 `...shade...LZMACompressorInputStream.getDeclaredMethods()` 由
+  `FAIL NoClassDefFoundError` 变为 `OK methods=8`；r3 完整 native 构建进行中。
+
+**风险（未验证）**：补丁类只在 native 编译期补齐反射签名、运行期 Pulsar 业务路径（Debezium/
+快照消费）不依赖 7z/LZMA 解码，理论无副作用，仍待 r3 产物启动实测确认。Spring Boot 4.1.2 /
+Spring 7 AOT 产物在 GraalVM 23.0(java17) 上的兼容性未实测；禁用 metadata repository 后第三方库
+（lucene / mysql-connector / jna 等）的反射元数据只能依赖项目自带 agent 文件，需业务接口实测覆盖。
 
 ---
 
@@ -584,9 +621,13 @@ Mandrel 21（GraalVM 23.1 线）不支持。项目已自带 tracing-agent 元数
 - `graalvm/setup-graalvm` 对 `distribution: mandrel` + java17/21 的实际解析结果尚未在云端验证
   （云 runner 被拒）。本地侧固定版本清单已确认三个 Mandrel release 均存在。
 - **段错误根因仍在收敛**：v2 已用 `--exclude-config` + 全包 run-time 消除 fastjson2 的
-  7 条 `Unsafe` 偏移警告并成功构建，但运行**仍段错误**；对照发现早前能正常进入业务异常的
-  aotfix exe 也带同样 7 条警告，故 fastjson2 不是充分原因。v3 正移除剩余两条 logback
-  build-time 规则，结果待验证。
+  7 条 `Unsafe` 偏移警告并成功构建（`evidence/native-fastjson2-runtime-v2.log`，`NATIVE_OK`），
+  但运行**仍段错误**（栈顶 `AlignedChunkRememberedSet.walkObjects`）；对照发现早前能正常进入
+  业务异常的 aotfix exe 也带同样 7 条警告，故 fastjson2 不是充分原因。v3 移除剩余两条 logback
+  build-time 规则后**构建失败**（`evidence/native-runtime-only-v3.log`：
+  `An object of type 'ch.qos.logback.classic.Logger' was found in the image heap`），
+  证明 logback build-time 规则不能删，该方向已证伪。当前定位到 JDK25 Windows 段错误极可能是
+  上游 GR-74266（见下条），项目侧参数收敛无法解决。
 - `native-iterate.py` 的「逐类追加 build-time」自动收敛在 fastjson2 场景是反模式，
   10 轮 `MAX_ROUNDS_REACHED` 已证伪；该脚本仅适用于 Logback/grpc 那类「类初始化时机」问题。
 - **`--exclude-config` 的路径正则不能含 Windows 反斜杠**（`@argfile` 会改写），
