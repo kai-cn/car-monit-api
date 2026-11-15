@@ -18,11 +18,11 @@
 | Spring Boot 4 AOT + MyBatis | **根因定位并修复**：AOT 生成的 `Mapper__BeanDefinitions` 丢弃 `AUTOWIRE_BY_TYPE`，`sqlSessionFactory` 未注入。新增 `NativeMapperSqlSessionFactoryRegistrar` 显式写入 `RuntimeBeanReference` |
 | MyBatis type alias | **根因定位并修复**：native image 无 `.class` 文件，`type-aliases-package` 扫描静默失效。六分支 90 个 XML、405 处简写别名改为全限定类名 |
 | 数据源认证 | Windows 经 WSL2 端口转发访问 openGauss 时源 IP 走 `0.0.0.0/0 md5` 规则，必须注入密码；已用容器 env 运行时读取，不落盘、不入库 |
-| 新发现：native 段错误 | 第三个阻塞：产物运行到 Spring refresh 早期发生 **GC 扫描 image heap 段错误**（非 Java 异常）。**根因已定位**：fastjson2 2.0.66 jar 自带的 `native-image.properties` 把 `JDKUtils` 等 22 个类设为 build-time，固化了 `Unsafe.objectFieldOffset` 构建期偏移（7 条 `RecomputeFieldValue` 失败警告）。修复方向已生成参数，但**验证构建被暂停，未得出结论**，见 §8.2 |
+| 新发现：native 段错误 | 第三个阻塞：产物运行到 Spring refresh 早期发生 **GC 扫描 image heap 段错误**（非 Java 异常）。fastjson2 的 `Unsafe` 偏移固化是**已确认的错误配置**（v2 已消除全部 7 条 `RecomputeFieldValue` 警告），但**不是段错误的充分原因**——早前 aotfix exe 同样带 7 条警告却能正常进入业务异常。鉴别仍在继续，见 §8.2 |
 | 业务完整启动 | 尚未达成（被段错误阻断），见 §8 |
 | 稳定性 / native-JVM 对比 | **未执行**（前置条件「业务完整启动」未满足），见 §8 |
 | jdk21 / jdk17 | CICD 模板与三套 Mandrel 工具链已就绪；**原生编译未执行**。见 §9 |
-| 本次会话状态 | 2026-11-15 21:26 应用户要求**暂停**；后台编译已终止，无残留 java/native-image 进程，WSL 保持 Stopped |
+| 本次会话状态 | 2026-11-15 21:44 恢复执行中：fastjson2 修复已推送六分支；v2 构建成功（14m29s）但运行仍段错误；v3（移除全部手动 build-time）构建中。WSL 编译期保持 Stopped |
 
 ---
 
@@ -369,7 +369,7 @@ JVM 对照组（同一份代码、同一 DB）：
 | `java --add-opens=java.base/java.lang=ALL-UNNAMED -jar` | **8 秒端口就绪，完整启动** |
 | 同上 + `--mybatis-plus.type-aliases-package=`（模拟 native 无扫描） | **8 秒端口就绪，完整启动**（证明 XML 全限定名修复有效） |
 
-### 8.2 第三个阻塞：native image 段错误（根因已定位，修复验证被暂停）
+### 8.2 第三个阻塞：native image 段错误（fastjson2 修复已验证无效，继续收敛中）
 
 第三次构建的 exe 启动只打印 Spring Boot banner 与
 `[native-aot] explicit sqlSessionFactory reference patched into 0 ...` 后进程退出，
@@ -464,6 +464,27 @@ powershell -NoProfile -Command "& 'D:\work\runtime-logs\v3-ops\native-retry-from
 成功后顺序：`python scripts/v3/ops/v3-fix-fastjson2-init.py --apply` → 六分支 commit →
 启动 WSL → `v3-run-native-with-db.ps1` 验证业务完整启动 → `v3-compare-native-jvm.ps1` → §9。
 
+**8.2.3 v2 构建成功但段错误依旧 → 根因判断修正（21:43–21:47）**
+
+v2 重跑得到 `NATIVE_OK`（`evidence/native-fastjson2-runtime-v2.log`，14m29s，
+Peak RSS 9.94GB，产物 350,167,040 B / sha256 `c9871f5f29a6d8882cf08860c22fefe74283c4ba2a942cb34c5b8001661fd4ae`），
+构建期 `RecomputeFieldValue=0`、image-heap 对象错误=0。但
+`v3-run-native-with-db.ps1` 启动后进程仍在 Spring refresh 早期段错误
+（`native-run-api-jdk25-win-fastjson2-v2-20261115-214428.err.log`，栈顶仍是
+`AlignedChunkRememberedSet.walkObjects`）。
+
+**推翻「fastjson2 是唯一根因」的关键对照**：`native-api-jdk25-aotfix.log`（19:25 的 exe，
+能走到 MyBatis 业务异常、无段错误）与 `native-api-jdk25-aliasfix.log`（19:40 的 exe，段错误）
+**构建期都有同样的 7 条 `RecomputeFieldValue` 失败警告**。也就是说那 7 条警告本身并不必然导致
+段错误；段错误只在业务启动走得更深（aliasfix 修复了 MyBatis 注入与 XML 别名之后）才暴露。
+fastjson2 整包 build-time 仍是**错误配置**（v2 已纠正），但不是本次崩溃的充分原因。
+
+**v3 实验（进行中）**：当前全部手动 build-time 规则只剩
+`--initialize-at-build-time=ch.qos.logback` 与 `...Logger` 两条，且「整包 build-time」与当初
+fastjson2 的错误模式同类。生成 `evidence/argfiles/native-image-runtime-only-v3.args`
+（v2 基础上移除这两条），启动构建 `native-runtime-only-v3.log`。v3 若仍段错误，
+则按同样思路收敛 grpc 的五条 runtime 规则或改用 JVM 侧 tracing agent 重新采集元数据。
+
 ### 8.3 稳定性 / native-JVM 对比
 
 **未执行**。用户设定的前置条件是「业务可以完整启动成功后」。当前 native 产物被 8.2 的
@@ -520,16 +541,17 @@ python scripts/v3/ops/v3-github-actions-dispatch.py dispatch \
 - 云 runner 账单受限，本轮云端编译**未实跑**；云 workflow 只做了静态校验与默认分支写入。
 - `graalvm/setup-graalvm` 对 `distribution: mandrel` + java17/21 的实际解析结果尚未在云端验证
   （云 runner 被拒）。本地侧固定版本清单已确认三个 Mandrel release 均存在。
-- **段错误根因已定位但未修复验证**：`fastjson2` 官方自带 `native-image.properties`（22 类 build-time）
-  + 项目整包 build-time 规则，共同固化了 `Unsafe.objectFieldOffset` 偏移。
-  `--exclude-config` + 全包 run-time 的修复参数已生成（`evidence/argfiles/`），
-  **v2 构建被暂停，成功与否未知**；即使启动成功，仍需业务接口验证 fastjson2 序列化行为。
+- **段错误根因仍在收敛**：v2 已用 `--exclude-config` + 全包 run-time 消除 fastjson2 的
+  7 条 `Unsafe` 偏移警告并成功构建，但运行**仍段错误**；对照发现早前能正常进入业务异常的
+  aotfix exe 也带同样 7 条警告，故 fastjson2 不是充分原因。v3 正移除剩余两条 logback
+  build-time 规则，结果待验证。
 - `native-iterate.py` 的「逐类追加 build-time」自动收敛在 fastjson2 场景是反模式，
   10 轮 `MAX_ROUNDS_REACHED` 已证伪；该脚本仅适用于 Logback/grpc 那类「类初始化时机」问题。
 - **`--exclude-config` 的路径正则不能含 Windows 反斜杠**（`@argfile` 会改写），
   CICD 跨 Windows/Linux 必须用 `.*fastjson2.*[.]jar` 这类可移植写法。
 - `ch.qos.logback` 整包 build-time 同样是"整包"策略，若段错误仍复现需按同一思路收敛。
-- `car-monit-api-jdk21` 分支最后一次推送仍失败，远端缺少该分支最新的 CICD 提交。
+- `car-monit-api-jdk21` 分支此前推送失败已于 21:34 重试成功（schannel 一次通过，
+  证据 `evidence/push-fastjson2-fix.log`）；六分支远端均已含最新 CICD + fastjson2 修复提交。
 - 云 workflow 的 `graalvm/setup-graalvm` 对 mandrel java17/21 的实际解析尚未在云端验证
   （云 runner 被拒）；本地固定版本清单已确认三个 release 存在。
 - 编译期 native-image 峰值 RSS 10.1–10.2 GB，Windows 编译必须先关闭 WSL；
