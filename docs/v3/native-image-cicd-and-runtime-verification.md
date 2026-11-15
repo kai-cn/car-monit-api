@@ -610,6 +610,33 @@ native image 里没有注册构造器元数据。处理：新增
 > ~10-25 分钟，改完立刻重跑验证；候选类型按"运行期反射/动态字节码"特征排查
 > （Orika=javassist 生成 mapper、Forest=注解扫描+代理、PageHelper=Class.newInstance）。
 
+**r5 运行（`evidence/native-run-linux-api-jdk25-linux-r5-clean.log`、`manual-native-start-18080.log`）——当前最后一个阻断点**：
+
+- PageHelper 反射配置生效，`PageHelper.instantiationException` 不再出现。
+- 应用能走到 Web 容器阶段并且**端口可服务**（r3 轮曾实测 `port_ready=1`、`http_root_code=404`，
+  即 Tomcat 已对外响应）。
+- 仍存在两个相互关联的问题：
+  1. **native 内取不到 JDBC 连接**：`PlateColorDictionary` 持续报
+     `Failed to obtain JDBC Connection`。同一时刻用容器内 `gsql` 执行 `select 1` 是成功的，
+     说明是 native 侧的驱动/认证链路问题（openGauss 走 md5/sha256 认证，PostgreSQL 驱动在
+     native 里需要对应的 `java.security` 服务与 provider 元数据），**不是网络或账号问题**。
+  2. **启动在此之后挂住**：进程存活（RSS ~290MB）、不绑定端口、日志不再推进；
+     显式 `--server.port=18080` 亦不绑定，说明不是 9902 冲突，而是 DB 失败后主线程阻塞
+     （`SnapshotFlowSyncService` 的重试线程同时在刷 `has not been refreshed yet`）。
+- 附带发现：native 日志里**看不到 Spring 的 INFO 启动日志**（只有 banner 与 ERROR），
+  因为 `--initialize-at-build-time=ch.qos.logback` 把日志系统固化在构建期；
+  排查启动卡点时应临时去掉该 buildArg，或改用 `-H:+PrintClassInitialization`/线程转储。
+- 另：AOT 日志中 `[native-aot] ... patched into 0 MapperFactoryBean definition(s)`，
+  而 JVM 构建是 23 个——native profile（`-Pnative,native-flink-exclude`）下 AOT 处理器
+  没看到 MapperFactoryBean 定义，需与 `sqlSessionFactory` 注入问题一并复核。
+
+**下一步（按优先级，均可直接复现）**：
+1. 先用 JVM 对照确认 DB 正常：`bash scripts/v3/ops/v3-run-jvm-linux.sh <jar> jdk25-jvm 20 9902`；
+2. native 侧补 `java.security` 相关 native-image 元数据/参数，验证 `select 1` 能否通过；
+3. 修好 DB 后再看是否还存在启动阻塞；若能完整启动，再用
+   `v3-compare-native-jvm.sh` 做 A/B（启动时间 / RSS / CPU / HTTP 延迟）；
+4. 交付级构建去掉 `-Ob`、保留 `--no-fallback` 与 `-H:+SharedArenaSupport`。
+
 ---
 
 ## 9. jdk21 / jdk17 推进记录
@@ -870,3 +897,96 @@ Spring Boot 4.1.2 / Spring 7 AOT 产物在 GraalVM 23.1 上的兼容性问题（
 - 编译期 native-image 峰值 RSS 10.1–10.2 GB，Windows 编译必须先关闭 WSL；
   Linux 编译需临时 12GB/6核 配额，不能与 Windows 编译并行。
 - docker 未引用卷约 4.995 GB 未擅自清理。
+
+---
+
+## 11. Spring Boot 3 分支（jdk17 / jdk21 的 native 可行路径）
+
+**动机**：§9 已实测确认 Spring Boot 4.1.2 的 native 只支持 Java 25
+（`NativeImageRequirementsException: ... must support at least Java 25 but Java 17 was detected`）。
+JDK17/JDK21 若要真正跑原生镜像，只能回到 Spring Boot 3.x（最后一条支持 Java 17/21 的线）。
+
+**分支**：`car-monit-api-jdk21` 的 `feature/springboot3`（api 侧先做，backend 同法）。
+
+**迁移工具**：`scripts/v3/ops/v3-migrate-to-boot3.py`
+（默认 dry-run，`--apply` 才写；pom 规则 + Jackson 3→2 的 import 重写）。
+
+pom 规则（实测必需，逐条都踩过）：
+
+| Boot 4 | Boot 3.5.6 | 说明 |
+| --- | --- | --- |
+| `spring-boot-starter-parent 4.1.2` | `3.5.6` | 最新 3.x 稳定线 |
+| `spring-boot-starter-webmvc` | `spring-boot-starter-web` | Boot 4 拆出的 webmvc starter |
+| `spring-boot-starter-aspectj` | `spring-boot-starter-aop` | 同上 |
+| `spring-boot-starter-kafka`（groupId `org.springframework.boot`） | `org.springframework.kafka:spring-kafka` | Boot 4 才有该 starter，且 groupId 不同 |
+| `druid-spring-boot-4-starter` | `druid-spring-boot-3-starter` | |
+| `mybatis-plus-spring-boot4-starter` | `mybatis-plus-spring-boot3-starter` | |
+| `dynamic-datasource-spring-boot4-starter` | `dynamic-datasource-spring-boot3-starter` | 版本 4.6.0 → 4.3.0 |
+| `pagehelper-spring-boot-starter 4.1.1` | `2.1.0` | Boot 3 线 |
+
+源码级差异（`--apply` 处理大部分，剩余手改）：
+
+1. `tools.jackson.*` → `com.fasterxml.jackson.*`（Jackson 3→2，4 个文件）；
+2. `JsonMapper.builder().changeDefaultPropertyInclusion(...)` 在 Jackson 2 不存在 →
+   改 `serializationInclusion(JsonInclude.Include.NON_NULL)`；
+3. Jackson 2 的 `readValue` / `writeValueAsString` **抛受检异常**（Jackson 3 不抛）→ 必须 try/catch；
+4. `JsonNode.propertyNames()`（Jackson 3）→ `JsonNode.fieldNames()` + `forEachRemaining`（Jackson 2）；
+5. Spring Data Redis 4 才有的 `RedisCacheWriter#clear(name, pattern)` / `evict(name, key)`
+   在 3.x 不存在 → 去掉 `@Override`（保留为扩展方法，不参与接口实现）。
+
+**jdk21 实测结果（03:25）**：
+
+```
+[INFO] pro-api ................. SUCCESS
+[INFO] pro-base-common ......... SUCCESS
+[INFO] pro-business-api ........ SUCCESS
+[INFO] BUILD SUCCESS   Total time: 01:43 min
+```
+
+即 **`feature/springboot3` 分支的 JVM 构建已通过**，提交 `a80b338`。
+下一步是 Boot3 的原生镜像构建与实机启动验证（Mandrel 21 / Mandrel 17），
+脚本与 jdk25 完全一致：`v3-native-build-linux.sh api 21 <repo> <label>`。
+
+### 11.1 Boot3 原生镜像实测（jdk21 + Mandrel 21）
+
+构建脚本与 jdk25 完全一致，实测轮次如下（每轮 ~12–15 分钟）：
+
+| 轮次 | 动作 | 结果 |
+| --- | --- | --- |
+| r1 | 首次构建 | 失败：Spring Boot 3.5 的 BOM 把 `native-maven-plugin` 管到 0.10.6，报 `GraalVM version 22 is required but 21 has been detected` |
+| r2 | 固定插件 1.1.14 | 同上（版本校验来自插件/父 POM 默认 `requiredVersion`） |
+| r3 | 加 `<requiredVersion>21.0</requiredVersion>` | **构建成功**：ELF 271,125,216 B，12.6 min |
+| r3 运行 | 启动验证 | 失败：`forest.retryer` 属性绑定 `ClassNotFoundException: BackOffRetryer` |
+| r4 | 注释掉 `forest:` 配置块 | 构建成功；运行失败：Forest **自动配置** `ForestBeanRegister` 里 `Class.newInstance(DefaultLogHandler)` → `NoSuchMethodException` |
+| r5 | **彻底移除 Forest**（starter/依赖/残留接口/配置） | 构建成功（269,945,568 B）；运行推进到数据源创建 |
+| r6 | `dynamic-datasource` 4.3.0 → 4.6.0（boot3 starter） | 构建成功（269,814,496 B）；运行仍在同一处失败 |
+
+**当前最后的阻断点（r5/r6 一致）**：
+
+```
+Caused by: java.lang.NullPointerException
+    at com.alibaba.druid.pool.DruidDataSource.setConnectProperties(DruidDataSource.java:640)
+    at com.baomidou.dynamic.datasource.creator.druid.DruidDataSourceCreator.createDataSource
+    at ...YmlDynamicDataSourceProvider.loadDataSources
+Caused by: Error creating bean with name 'dataSource': null
+```
+
+即 Boot3 线（Druid 1.2.28 + dynamic-datasource boot3 starter）在 native 下
+`DruidDataSource.setConnectProperties(null)` 触发 NPE，导致 `dataSource` → `sqlSessionFactory`
+→ 全部 Mapper 连锁失败。Boot4 线（dynamic-datasource 4.6.0 + 同一 Druid 版本）**没有**这个问题，
+说明是 Boot3 starter 的 Druid 创建器与属性绑定的组合差异。
+
+**下一步（明确可执行）**：
+1. 给 native 运行加独立 profile（如 `application-native.yml`，
+   `SPRING_PROFILES_ACTIVE=native`），把 `spring.datasource.dynamic.type` 切成
+   `com.zaxxer.hikari.HikariDataSource`，绕开 Druid 创建器；JVM 生产仍用 Druid；
+2. 或修 `DruidDataSourceCreator` 传入的 `connectProperties`（补一个空 `Properties` 默认值），
+   用 `-H:ConfigurationFileDirectories` 或打补丁类的方式注入；
+3. 通过后再补 PageHelper 反射配置（同 jdk25 的 `v3-native-hints/reflect-config.json`，
+   Boot3 分支尚未添加）与 Lettuce 的 `-H:+SharedArenaSupport`；
+4. 最后做 native vs jar 的 A/B（`v3-compare-native-jvm.sh`，端口用 19902/19903，
+   因为 WSL 内 9902 被一个 IPv6 双栈监听占用）。
+
+**端口坑（重要）**：WSL 内 `9902` 被 `[::]:9902` 的 IPv6 监听占用（uid 0，非本项目进程），
+IPv4 绑定会直接 `BindException`，而 `ss -lntp` 看不到。用
+`evidence/who-port.sh` 读 `/proc/net/tcp6` 才能定位。验证端口建议用 `19902`。

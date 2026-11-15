@@ -45,6 +45,13 @@ POM_RULES = [
     ("mybatis-plus-spring-boot4-starter", "mybatis-plus-spring-boot3-starter"),
     ("dynamic-datasource-spring-boot4-starter", "dynamic-datasource-spring-boot3-starter"),
     ("spring-boot-starter-webmvc", "spring-boot-starter-web"),
+    # Boot 4 split these out of the core; Boot 3 has the aop starter and a plain
+    # spring-kafka artifact published under org.springframework.kafka.
+    ("<groupId>org.springframework.boot</groupId>\n"
+     "            <artifactId>spring-boot-starter-kafka</artifactId>",
+     "<groupId>org.springframework.kafka</groupId>\n"
+     "            <artifactId>spring-kafka</artifactId>"),
+    ("spring-boot-starter-aspectj", "spring-boot-starter-aop"),
     ("<pagehelper.boot.version>4.1.1</pagehelper.boot.version>",
      "<pagehelper.boot.version>2.1.0</pagehelper.boot.version>"),
     ("<dynamic-datasource.version>4.6.0</dynamic-datasource.version>",
