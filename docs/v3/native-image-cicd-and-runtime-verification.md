@@ -519,6 +519,97 @@ issue 中 `-R:MinHeapSize=512m` **未能规避**。据此更合理的解释是**
 
 已有的 JVM 基线数据（供后续对比）：启动 **8 秒**（`jvm-control-aotfix2.log`、`jvm-preverify-noalias.log`）。
 
+### 8.4 JDK25 的 Linux 路线（绕过 Windows 段错误）
+
+Windows + GraalVM 25 的段错误（GR-74266）无法在项目侧规避，因此 JDK25 改用
+**Linux ELF** 作为交付形态（生产本来也是 Linux）。构建机为 WSL2 + Mandrel 25.0.4.1，
+脚本 `scripts/v3/ops/v3-native-build-linux.sh`。
+
+**r1 构建（`evidence/native-api-jdk25-linux-r1.log`）**：成功，但产物 **342,756,064 B**，
+并额外生成 `libjvm.so / libawt.so / libfontmanager.so` 等 JDK 库——说明当时是
+**fallback 镜像**（JDK25 pom 未加 `--no-fallback`）。构建耗时 37m56s，
+分析阶段 Peak RSS 7.73GB，宿主 13.8GB 内存被打满（GC 占 50% 时间）。
+
+**r1 运行（`evidence/native-run-linux-api-jdk25-linux-r1.log`）**：Spring Banner 正常，
+AOT 生效（`[native-aot] explicit sqlSessionFactory reference patched ...`），随后失败于：
+
+```
+Field sysUtilService in com.ruoyi.base.controller.SysTestController required a bean of type
+'com.ruoyi.base.forest.HttpSysUtilApiService' that could not be found.
+```
+
+根因：**Forest 1.8 没有任何 GraalVM 支持**（`forest-core` / `forest-spring` /
+`forest-spring-boot3-starter` 三个 jar 中 native-image 相关文件数均为 0），
+其客户端 bean 依赖启动期注解扫描 + 动态代理，AOT/native 下拿不到 bean 定义。
+
+**修复（生产最小改动，单点替换）**：新增
+`com.ruoyi.base.forest.SysBaseClient`，用 Spring 自带 `RestClient` 复刻原 Forest 调用：
+`POST {sysbaseUrl}/manager/suspicious/syncSuspiciousCarTask`，请求体仍用 fastjson2 序列化、
+响应仍用 fastjson2 解析为 `JSONObject`，`SysUtilServiceImpl` 的注入点从
+`HttpSysUtilApiService` 换成 `SysBaseClient`（全仓库仅 1 处调用）。同时在 JDK25 pom
+的 `buildArgs` 补 `--no-fallback`，避免再产出 342MB 的 fallback 镜像。
+
+**数据库连接已单独验证**：`docker exec` 进 openGauss 用 `gsql -d RuoYi -U gaussdb` 执行
+`select 1` 通过；native 产物在 DEBUG 下可见 PostgreSQL 驱动正常发起 5 次
+`Connecting with URL: jdbc:postgresql://127.0.0.1:5432/RuoYi?...` 且无鉴权异常。
+早前日志里的 `Failed to obtain JDBC Connection` 来自一次手工运行（shell 转义把密码变量
+吃空），非应用缺陷。
+
+**r2 运行（`evidence/native-run-linux-api-jdk25-linux-r2.log`）**：Forest 缺失已修复，
+启动继续推进（RSS 258MB / 16 线程 / CPU 3s），随后出现第二个 native 不兼容点：
+
+```
+Error creating bean with name 'orikaMapperConfig': Instantiation of supplied bean failed
+```
+
+排查：全仓库只有 `pro-base-common/.../config/OrikaMapperConfig.java` 一处提到 Orika，
+**没有任何 `MapperFacade.map(...)` 调用**——该 bean 是死代码。Orika 在运行期用
+javassist 生成 mapper 字节码，native image 无法支持。处理：删除该配置类（git 历史保留），
+同时静态排查确认项目源码没有使用 javassist / byte-buddy / janino / reflections / groovy。
+
+**迭代加速**：单次 O2 构建受宿主 13.8GB 内存限制要 30+ 分钟，迭代期在 JDK25 pom
+加 `-Ob`（只做基本优化），把单轮压到 ~10 分钟；业务启动跑通后再去掉做交付级 -O2 构建。
+
+**r3 运行（`evidence/native-run-linux-api-jdk25-linux-r3.log`）——三个新发现**：
+
+1. **服务端口是 9902**（`application.yml` 的 `server.port: 9902`），不是 Spring 默认 8080。
+   首次探活用 8080 导致误判"未启动"；改用 9902 后 `port_ready=1`、`http_root_code=404`
+   （根路径无映射，404 属正常），Tomcat 已实际对外服务。
+2. **Lettuce 7 需要 `-H:+SharedArenaSupport`**：Redis 连接线程抛
+   `com.oracle.svm.core.jdk.UnsupportedFeatureError: Support for Arena.ofShared is not active`
+   → `RedisException: Connection is closed`，Redis 相关功能全废。已加入 JDK25 pom buildArgs。
+3. **构建脚本必须先 clean**：`mvn install`（不带 clean）不会删除 `target/classes` 里已删除源
+   文件留下的旧 class，`pro-base-common` 的旧 `OrikaMapperConfig.class` 因此仍被打进 jar，
+   native 镜像里 bean 依旧存在。已把 stage 1 改为 `clean install`。
+4. orika bean 仍在 `r3-port9902` 运行中报错并导致 `Application run failed`，但此时
+   Tomcat 已绑定端口、定时任务已运行，说明**只剩这一个 bean** 阻断完整启动。
+
+**已知环境缺口**：WSL 内 6379 端口被占用（`docker run redis` 绑定失败），Redis 不可用；
+Kafka / Elasticsearch / MySQL 容器在编译期被停掉以释放内存。因此本轮只验证"应用能完整
+启动并对外服务"，业务链路（Redis 缓存、Kafka 消费、ES 检索）需在补齐依赖后单独验。
+
+**r4 运行（`evidence/native-run-linux-api-jdk25-linux-r4.log`）**：Orika 已消失（clean 生效），
+暴露第三个 native 不兼容点：
+
+```
+Caused by: com.github.pagehelper.PageException:
+  java.lang.InstantiationException: com.github.pagehelper.PageHelper
+Caused by: java.lang.NoSuchMethodException: com.github.pagehelper.PageHelper.<init>()
+    at com.github.pagehelper.util.ClassUtil.newInstance
+    at com.github.pagehelper.PageInterceptor.setProperties
+    at PageHelperAutoConfiguration.afterPropertiesSet
+```
+
+PageHelper 的 `PageInterceptor` 用 `Class.newInstance()` 反射实例化 `PageHelper` 与方言类，
+native image 里没有注册构造器元数据。处理：新增
+`src/main/resources/META-INF/native-image/com.ruoyi/v3-native-hints/reflect-config.json`，
+注册 `PageHelper` / `PageInterceptor` / `ClassUtil` 与 15 个 `dialect.helper.*Dialect`
+的 `allDeclaredConstructors`（脚本化生成，条目随 pagehelper 版本可重新生成）。
+
+> **native 适配的通用方法**：每轮只修"当前最先抛出的那一个"阻断点，用 `-Ob` 把单轮压到
+> ~10-25 分钟，改完立刻重跑验证；候选类型按"运行期反射/动态字节码"特征排查
+> （Orika=javassist 生成 mapper、Forest=注解扫描+代理、PageHelper=Class.newInstance）。
+
 ---
 
 ## 9. jdk21 / jdk17 推进记录
@@ -597,27 +688,156 @@ Error: java.util.concurrent.ExecutionException: java.lang.NoClassDefFoundError:
   是因为其 Windows classpath 顺序/可达性不同，扫描未触达该残缺包，属"侥幸通过"，非根本差异
   （同一 JVM 25 上直接 `getDeclaredMethods()` 该 shaded 类同样抛异常）。
 
-**修复（生产最小侵入，不改业务代码与依赖版本）**：
+**第一次修复尝试（补 pulsar-xz，已验证"打地鼠"，不足以解决）**：
 
-- 新增可复现脚本 `scripts/v3/ops/v3-build-pulsar-xz-patch.py`：以本地仓库
-  `org.tukaani:xz:1.12` 为源，生成补丁 jar，同时含**原始** `org/tukaani/xz/*` 与
-  **重定位** `org/apache/pulsar/shade/org/tukaani/xz/*` 两份 class（123×2=246 类）。
-  产物 `runtime-logs/v3-ops/patch/pulsar-client-xz-patch-1.0.jar`（327,938 B）。
-- 落地方式：把补丁 class 解压到 `pro-business-api/src/main/resources/`，由 Maven
-  resources 阶段自动复制到 `target/classes`（native-image 的 classpath 首项）。这样不改
-  构建脚本、不加 pom 依赖、对云/自托管 CICD 天然友好。代价：这 246 个 class 会进入 JVM
-  fat jar（约 328KB，且与真实依赖无冲突）；已记录为待优化项，可在 native-only profile
-  中用 resources exclude 排除。
-- 曾尝试把 `clean native:compile` 拆成 `clean process-aot` + 注入 + `native:compile`，
-  但 `process-aot` 不是合法 Maven 生命周期阶段，且 `native:compile` 内部会重跑 AOT，
-  该拆分已撤销（保留证据于本条，避免重复踩坑）。
-- JVM 最小复现验证：打补丁后 `...shade...LZMACompressorInputStream.getDeclaredMethods()` 由
-  `FAIL NoClassDefFoundError` 变为 `OK methods=8`；r4 完整 native 构建进行中。
+- 新增脚本 `scripts/v3/ops/v3-build-pulsar-xz-patch.py`：以本地仓库
+  `org.tukaani:xz:1.12` 为源生成补丁，同时含**原始** `org/tukaani/xz/*` 与**重定位**
+  `org/apache/pulsar/shade/org/tukaani/xz/*` 两份 class（123×2=246 类，327,938 B）。
+- 落地方式：补丁 class 解压到 `pro-business-api/src/main/resources/`，由 Maven resources
+  阶段复制进 `target/classes`（native-image classpath 首项），不改构建脚本与 pom 依赖。
+  注意父 pom 对 `src/main/resources` 设了 `<filtering>true</filtering>`，二进制 class 会被当
+  文本过滤而损坏（r4 报 `MalformedInputException`），故在 api 子模块
+  `maven-resources-plugin` 加 `nonFilteredFileExtensions` 豁免 `.class`
+  （脚本 `scripts/v3/ops/v3-add-nonfiltered-class.py`，三分支 api pom 已同步）。
+- **r5 实测（22:31，`evidence/native-api-jdk21-linux-r5.log`）**：LZMA 卡点越过，
+  但立刻暴露出下一个缺类 `org/apache/log4j/Priority`（66 次）。说明这是**系统性问题**，
+  逐类补不可行。
 
-**风险（未验证）**：补丁类只在 native 编译期补齐反射签名、运行期 Pulsar 业务路径（Debezium/
-快照消费）不依赖 7z/LZMA 解码，理论无副作用，仍待 r3 产物启动实测确认。Spring Boot 4.1.2 /
-Spring 7 AOT 产物在 GraalVM 23.0(java17) 上的兼容性未实测；禁用 metadata repository 后第三方库
-（lucene / mysql-connector / jna 等）的反射元数据只能依赖项目自带 agent 文件，需业务接口实测覆盖。
+**全量埋雷审计（新增可复现工具，一次性算清而不是逐轮试）**：
+
+- 新增脚本 `scripts/v3/ops/v3-native-scan-audit.py`：解析真实 `-cp`（从构建日志
+  `Executing: native-image -cp ...` 提取，307 个条目），按 MyBatis-Plus 的规则复现扫描
+  （找出所有 `public static void main(String[])` 类的包作为递归前缀），再用最小 class
+  文件解析器检查每个类的字段/方法描述符是否引用了 classpath 上不存在的类型。
+- **实测结果（`evidence/scan-audit-api-jdk21.json`）**：93,606 个类 → 104 个 main 类 →
+  **70 个扫描根包 → 26,912 个被扫类 → 159 个埋雷**。根包覆盖
+  `org/springframework/boot`、`org/apache/kafka/*`、`org/elasticsearch/*`、`org/bouncycastle`、
+  `io/netty/util`、`org/apache/catalina/*`、`org/apache/pulsar/shade/*` 等整片依赖。
+  缺的类型是 micrometer、actuator、testcontainers、log4j2、OSGi、docker-compose 等
+  可选依赖——都不在、也不该在 native classpath 上。
+- 结论：**`MybatisPlusFeature` 的"全 classpath 找 main 类"兜底扫描在 Spring Boot fat
+  classpath 上是设计缺陷**；补类路线彻底放弃。
+
+**为什么 JDK25 分支能过**：Mandrel 25（GraalVM 25）的 hosted
+`NativeImageClassLoader` 对缺失类型容忍，`getDeclaredMethods()` 不抛
+`NoClassDefFoundError`；Mandrel 21（GraalVM 23.1）不容忍。证据：
+`evidence/native-api-jdk25-linux.log` 中 `NoClassDefFoundError` 计数为 0。
+这也意味着 JDK25 Windows 构建"通过"并非 classpath 侥幸，而是版本行为差异。
+
+**最终修复（收敛扫描范围，不改业务代码与依赖版本）**：
+
+- 关键事实：应用自己生成的
+  `target/classes/META-INF/native-image/com.ruoyi/pro-business-api/native-image.properties`
+  已声明 `Args = -H:Class=com.ruoyi.EcBusinessApiApplication`，即
+  `CollectUtils.findMainClassesFromNativeImageProperties()` 本来就能得到正确的主类。
+  有害的只是第二个来源——全 classpath 的 `findClasses(isMainClass)`。
+- 新增脚本 `scripts/v3/ops/v3-patch-mybatis-aot-scan.py`：把
+  `com.baomidou.mybatisplus.aot.CollectUtils.findMainClasses()` 的方法体改写为
+  `return findMainClassesFromNativeImageProperties();`（字节码
+  `2a b6 01a4 b0`，只复用已有常量池项 #420，不新增常量）。同一 class 的其余方法与
+  `findMainPackages()`、`registerSerializationLambdaCapturingClass()`、
+  MyBatis mapper/XML 注册、Wrapper 注册全部保持原样，因此
+  `com.ruoyi` 包内的 lambda 捕获类仍会被 `RuntimeSerialization` 注册。
+- 落地方式与 xz 补丁一致：补丁后的 `com/baomidou/mybatisplus/aot/CollectUtils.class`
+  放入 `src/main/resources`，在 `target/classes` 中**遮蔽** jar 内同名类
+  （classpath 首项优先），无需替换 jar、无需 `--exclude-config`。
+- 已排除的更差方案：
+  - `--allow-incomplete-classpath`：实测无效（r6，缺类从 log4j 1.x 变成 log4j2
+    `PropertiesConfigurationFactory`，仍无产物）；
+  - `--exclude-config` 掉 `mybatis-plus-spring-boot-native-image` 的
+    `Args = --features=...`：会连同 MyBatis mapper 注册与 lambda 注册一起失效，
+    而业务确实在用 `LambdaQueryWrapper`（`DataLossDetectionService`、
+    `SnapshotFlowSyncService`），风险高于范围收敛；
+  - 拆 `clean native:compile` 为 `clean process-aot` + 注入 + `native:compile`：
+    `process-aot` 不是合法生命周期阶段，且 `native:compile` 内部会重跑 AOT，已撤销。
+
+**r7 实测（`evidence/native-api-jdk21-linux-r7.log`）**：`CollectUtils` 补丁生效，
+`NoClassDefFoundError` 归零、`org/apache/log4j/Priority` 与 pulsar-xz 全部消失；
+构建推进到分析结束，只剩 Mandrel 21 的
+`Error: Classes that should be initialized at run time got initialized during image building`。
+
+**第二轮收敛：class-init 冲突（r8–r14，每轮约 2 分钟）**。
+在 r5 的真实 `native-image` 命令上做重放（脚本 `evidence/replay-r8..r14.sh`），
+用 `--trace-class-initialization` 逐一定位触发者：
+
+| 轮次 | 关键动作 | 结果 |
+| --- | --- | --- |
+| r8 | 追踪 `MarkerFactory` / `ByteBufUtil` / `SLF4JProvider` | 触发者 = `org.springframework.data.core.TypedPropertyPathFeature.<clinit>` → `LogFactory.getLog`；另一条 = `io.netty.handler.ssl.JdkSslServerContext.<clinit>` → `ByteBufUtil` |
+| r9 | 同一类同时声明 run-time + build-time | 失败：`Incompatible change of initialization policy` |
+| r10 | `--initialize-at-run-time=io.netty.handler.ssl` + logging 全链 build-time | log4j2/slf4j 冲突消失 |
+| r11 | 继续追踪 | 触发者 = `io.netty.channel.kqueue.KQueue.<clinit>`（macOS 专用，Linux 上也在构建期被初始化）、`io.grpc.netty.shaded...PlatformDependent0`、`org.springframework.data.core.SerializableLambdaReader` |
+| r12 | 三者改 run-time | 冲突变成"声明 run-time 但实际 build-time"，未解决 |
+| r13 | `--initialize-at-build-time=org.springframework.core,...` 整包 | 失败：`VfsUtils.<clinit>` 缺 `org.jboss.vfs.VFS`（Spring `core` 不能整包 build-time） |
+| r14 | 精确到类 + kqueue/SSL run-time | **构建成功**：`Produced artifacts: target/pro-business-api-r14`，3m16s，Peak RSS 4.44GB |
+
+**r15 实测（`evidence/native-api-jdk21-linux-r15.log`）**：把 r14 参数写进 pom、改由 Maven
+正式构建后 **构建成功**：ELF 93,915,872 B，总耗时 8m01s（native-image 3m18s，
+Peak RSS 4.06GB），`BUILD_OK label=api-jdk21-linux-r15`。
+
+**r15 运行实测：AOT initializer 缺失**
+
+```
+org.springframework.boot.AotInitializerNotFoundException: Startup with AOT mode enabled failed:
+  AOT initializer com.ruoyi.EcBusinessApiApplication__ApplicationContextInitializer could not be found
+```
+
+排查结论：`process-aot` 确实执行了（日志第 214 行），AOT 产物也已复制进
+`target/classes`（`...__ApplicationContextInitializer.class` 存在，且是 `-cp` 首项），
+AOT 生成的 `META-INF/native-image/com.ruoyi/pro-business-api/reachability-metadata.json`
+（793KB、1362 条反射项、81 条资源项）也包含该类的注册：
+
+```json
+{ "type": "com.ruoyi.EcBusinessApiApplication__ApplicationContextInitializer",
+  "condition": { "typeReached": "com.ruoyi.EcBusinessApiApplication" },
+  "methods": [{ "name": "<init>", "parameterTypes": [] }] }
+```
+
+但镜像里就是没有这个类。**r17 实验（`evidence/native-api-jdk21-linux-r17.log`）证实了原因**：
+额外用 `-H:ConfigurationFileDirectories` 传入一份**无条件**的 `reflect-config.json`
+（内容同上、去掉 `condition`）后，该类立即被正确包含——说明
+**Mandrel 21（GraalVM 23.1）不识别 reachability-metadata 的 `condition.typeReached`
+条件项，会把带条件的条目静默忽略**；Mandrel 25 支持该字段，所以 JDK25 分支不需要这个处理。
+可行的工程化修法：在 `process-aot` 之后把 AOT metadata 展开成无条件的
+`reflect-config.json` / `resource-config.json`，用 `-H:ConfigurationFileDirectories` 注入。
+
+**结论（关键，改变后续路线）：Spring Boot 4.1.2 的 native 只支持 Java 25。**
+r17 修好 AOT initializer 后，镜像继续往下跑，被 Spring Boot 自己的硬性检查拦下：
+
+```
+org.springframework.boot.SpringApplication$NativeImageRequirementsException:
+  Native Image requirements not met. Native Image must support at least Java 25
+  but Java 17 was detected
+    at org.springframework.boot.SpringApplication.addAotGeneratedInitializerIfNecessary(SpringApplication.java:425)
+```
+
+即：**JDK21/JDK17 分支无法产出可运行的 Spring Boot 4 原生镜像**，与项目 pom 参数无关
+（构建能成功，运行被框架版本门槛拒绝）。因此：
+
+- **JDK25 是 Spring Boot 4 唯一可行的 native 目标**；JDK21/JDK17 继续以 JVM jar 交付。
+- JDK21/17 若将来必须上 native，只有两条路：升级 Spring Boot（等上游放宽），
+  或把这两个分支锁在 Spring Boot 3.x + GraalVM 23.1 的依赖组合上（Netty 4.1 /
+  Spring Data 3.x），代价是依赖栈回退。
+- JDK21 侧已落地的两项改动保留但标注为"实验性/不可运行"：
+  `CollectUtils` 扫描范围补丁（解决 159 处埋雷，通用有效）与 class-init 参数组
+  （解决 Mandrel 21 的初始化策略冲突，通用有效）。这两项对将来 Spring Boot
+  放宽版本门槛后直接可用。
+
+Spring Boot 4.1.2 / Spring 7 AOT 产物在 GraalVM 23.1 上的兼容性问题（`condition` 元数据
+被忽略、class-init 检查更严格）已按上述实测记录；禁用 metadata repository 后第三方库
+（lucene / mysql-connector / jna 等）的反射元数据只能依赖项目自带 agent 文件。
+
+---
+
+## 9A. 附：本轮新增工具与用法
+
+| 工具 | 用途 |
+| --- | --- |
+| `scripts/v3/ops/v3-native-scan-audit.py` | 用真实 `-cp` 复现 MyBatis-Plus AOT 扫描，一次性列出所有"方法签名引用缺失类型"的埋雷类 |
+| `scripts/v3/ops/v3-patch-mybatis-aot-scan.py` | 字节码改写 `CollectUtils.findMainClasses()` 为只取 `-H:Class` 声明，收敛扫描范围 |
+| `scripts/v3/ops/v3-build-pulsar-xz-patch.py` | 生成 pulsar shaded tukaani 补丁（含原始包与重定位包双份） |
+| `scripts/v3/ops/v3-add-nonfiltered-class.py` | 给 api 子模块加 `nonFilteredFileExtensions=class`，避免 resources 过滤损坏二进制补丁 |
+| `scripts/v3/ops/v3-run-native-linux.sh` | 在 WSL 内启动 ELF、等端口、采样 RSS/线程/CPU、抓 HTTP 状态并落 summary |
+| `evidence/replay-rN.sh` | 从真实构建日志提取 `native-image` 命令后原样重放，用于 2 分钟级参数迭代 |
 
 ---
 

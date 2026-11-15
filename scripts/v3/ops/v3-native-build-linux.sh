@@ -87,9 +87,12 @@ command -v gcc >/dev/null || { echo "FATAL: gcc missing (dnf install -y gcc glib
 "$MVN" -v 2>&1 | head -4
 
 # ---------- stage 1: JVM reactor install ----------
+# clean is required: a plain `install` keeps stale classes from a previous build in
+# target/classes, so a deleted/renamed source file would silently survive in the jar
+# that native-image consumes (observed with a deleted Orika @Configuration bean).
 echo "==== [1/2] install reactor modules (JVM jar) ===="
 cd "$PROJ"
-"$MVN" -B -ntp -DskipTests -Dmaven.repo.local="$MAVEN_REPO" install -pl "$MOD" -am
+"$MVN" -B -ntp -DskipTests -Dmaven.repo.local="$MAVEN_REPO" clean install -pl "$MOD" -am
 
 # ---------- stage 2: AOT + native-image ----------
 # clean is mandatory: the default JVM build leaves VehicleTrackFlinkJob.class in
