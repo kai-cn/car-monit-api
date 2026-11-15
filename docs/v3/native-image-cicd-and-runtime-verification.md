@@ -482,8 +482,20 @@ fastjson2 整包 build-time 仍是**错误配置**（v2 已纠正），但不是
 **v3 实验（进行中）**：当前全部手动 build-time 规则只剩
 `--initialize-at-build-time=ch.qos.logback` 与 `...Logger` 两条，且「整包 build-time」与当初
 fastjson2 的错误模式同类。生成 `evidence/argfiles/native-image-runtime-only-v3.args`
-（v2 基础上移除这两条），启动构建 `native-runtime-only-v3.log`。v3 若仍段错误，
-则按同样思路收敛 grpc 的五条 runtime 规则或改用 JVM 侧 tracing agent 重新采集元数据。
+（v2 基础上移除这两条），启动构建 `native-runtime-only-v3.log`。
+
+**v3 结果（21:47）：1m03s 构建失败（`NATIVE_FAIL`，非段错误）**。日志明确指出
+`ch.qos.logback.classic.Logger` 对象由
+`io.grpc.netty.shaded.io.netty.channel.ChannelHandlerMask$2.run()` 在 build-time 创建并进入
+image heap，类型未标记 build-time 初始化，GraalVM 以 `UnsupportedFeatureException` 拒绝。
+**结论：logback build-time 规则是必需的，不能删除**；`--initialize-at-run-time=grpc`
+与 `ChannelHandlerMask` 的 build-time 初始化存在边界冲突，如需收敛应只 runtime 化
+`ChannelHandlerMask` 而非删除 logback 规则。
+
+**策略调整**：JDK25 线已排除「fastjson2 整包 build-time」与「删除全部 build-time」两个方向，
+段错误涉及更深的 image-heap 引用链。按用户要求并行推进 JDK21/17：若 Mandrel 23.x 上业务可
+完整启动，则可判定为 Mandrel 25 / Spring Boot 4 版本组合问题，JDK21 先交付，JDK25 留作上游
+问题跟踪；若同样段错误，则问题在项目 AOT 元数据，回到 JVM tracing agent 重新采集。
 
 ### 8.3 稳定性 / native-JVM 对比
 
