@@ -492,6 +492,18 @@ image heap，类型未标记 build-time 初始化，GraalVM 以 `UnsupportedFeat
 与 `ChannelHandlerMask` 的 build-time 初始化存在边界冲突，如需收敛应只 runtime 化
 `ChannelHandlerMask` 而非删除 logback 规则。
 
+**上游缺陷对照（重要）**：检索到 Oracle Graal 官方 issue
+[#13177 / GR-74266](https://github.com/oracle/graal/issues/13177)：**Windows + GraalVM 25.0.2 +
+Serial GC 首次真实 GC 即崩溃**，栈顶同为
+`AlignedChunkRememberedSet.walkObjects` / `blackenDirtyImageHeapRoots`，
+报错 `Fatal error: Object with invalid hub type`；最小复现含 Netty 4.2.7 + Logback 1.5.32，
+且服务已成功监听、在处理请求时才崩。这与本项目 JDK25 Windows 现象高度吻合
+（Mandrel 25.0.4.1 基于 GraalVM 25，Netty 4.2.19 + Logback，崩溃于 Spring refresh 早期第一次 GC）。
+issue 中 `-R:MinHeapSize=512m` **未能规避**。据此更合理的解释是**平台/版本缺陷**，
+而不是项目 pom 参数；不建议继续在项目侧堆叠 `--initialize-at-*` 去「修」它。
+可行规避：改用 Linux 原生镜像（G1 在 Linux 可用，且该 Windows 崩溃未见于 Linux），
+或等上游修复。jdk21/17 的 Linux 构建因此成为主验证路径。
+
 **策略调整**：JDK25 线已排除「fastjson2 整包 build-time」与「删除全部 build-time」两个方向，
 段错误涉及更深的 image-heap 引用链。按用户要求并行推进 JDK21/17：若 Mandrel 23.x 上业务可
 完整启动，则可判定为 Mandrel 25 / Spring Boot 4 版本组合问题，JDK21 先交付，JDK25 留作上游
@@ -561,7 +573,11 @@ python scripts/v3/ops/v3-github-actions-dispatch.py dispatch \
   10 轮 `MAX_ROUNDS_REACHED` 已证伪；该脚本仅适用于 Logback/grpc 那类「类初始化时机」问题。
 - **`--exclude-config` 的路径正则不能含 Windows 反斜杠**（`@argfile` 会改写），
   CICD 跨 Windows/Linux 必须用 `.*fastjson2.*[.]jar` 这类可移植写法。
-- `ch.qos.logback` 整包 build-time 同样是"整包"策略，若段错误仍复现需按同一思路收敛。
+- `ch.qos.logback` 整包 build-time **不能删除**：v3 移除后 `ChannelHandlerMask$2.run()` 在
+  build-time 创建的 `Logger` 对象被 GraalVM 拒绝进入 image heap（1m03s 构建失败）。
+- **JDK25 Windows 段错误疑似上游缺陷 GR-74266**（Oracle Graal issue #13177）：
+  Windows + GraalVM 25 + Serial GC 首次 GC 在 `AlignedChunkRememberedSet.walkObjects` 崩溃。
+  项目侧参数收敛不能解决，优先用 Linux 镜像 / jdk21/17 规避。
 - `car-monit-api-jdk21` 分支此前推送失败已于 21:34 重试成功（schannel 一次通过，
   证据 `evidence/push-fastjson2-fix.log`）；六分支远端均已含最新 CICD + fastjson2 修复提交。
 - 云 workflow 的 `graalvm/setup-graalvm` 对 mandrel java17/21 的实际解析尚未在云端验证
