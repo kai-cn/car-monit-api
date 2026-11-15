@@ -1,0 +1,23 @@
+# Minimal runtime image for a Spring Boot 4 AOT/native-image Linux ELF.
+# Build context: the module directory (e.g. car-monit-api-jdk25/pro-business-api).
+#
+#   docker build -f /path/to/Dockerfile.native \
+#     --build-arg BASE_IMAGE=<locally available glibc base> \
+#     --build-arg BINARY=target/pro-business-api \
+#     -t car-monit-api:native-jdk25 .
+#
+# BASE_IMAGE notes (measured on this host, see verification doc):
+#   * distroless/base-debian12:nonroot is the production preference (~25 MB)
+#     but requires network access on first pull.
+#   * Any glibc-based slim image works as an offline fallback; a JVM-free base
+#     is sufficient because the ELF embeds its own runtime (SubstrateVM).
+#   * Do NOT use scratch unless the binary was built with --static.
+ARG BASE_IMAGE=debian:12-slim
+FROM ${BASE_IMAGE}
+ARG BINARY=target/pro-business-api
+# distroless has no shell: chmod on the host BEFORE docker build, COPY keeps mode.
+COPY ${BINARY} /app/car-monit
+WORKDIR /app
+EXPOSE 9989
+USER 65532:65532
+ENTRYPOINT ["/app/car-monit"]
