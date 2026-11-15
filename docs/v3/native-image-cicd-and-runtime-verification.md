@@ -427,12 +427,29 @@ RDI ... com.oracle.svm.core.genscavenge.GreyToBlackObjectVisitor
 
 同时删除 pom 里全部 6 条 `--initialize-at-build-time=com.alibaba.fastjson2*` 规则。
 脚本 `scripts/v3/ops/v3-fix-fastjson2-init.py`（默认 dry-run，`--apply` 才写六分支 pom，
-会自动备份 + XML 校验）已编写并静态验证，**尚未 `--apply`**。
+会自动备份 + XML 校验）已编写并静态验证。**2026-11-15 21:32 已 `--apply` 到六分支**：
+每分支删除 6 条 build-time 规则、插入 4 条修复参数，`--verify` 全部通过
+（`bad_rules=False fix_present=True`），备份在
+`D:\work\runtime-logs\v3-ops\backup\pom-fastjson2-20261115-*`；
+证据 `evidence/fix-fastjson2-apply.log`。六分支连同此前未提交的
+workflow 参数化 / logback 适配一并提交并推送成功：
+
+| 分支 | commit |
+| --- | --- |
+| car-monit-api-jdk25 | `44f0a0b` |
+| car-monit-api-jdk21 | `c73efd2` |
+| car-monit-api-jdk17 | `84579f6` |
+| car-monit-backend-jdk25 | `8af62ad2` |
+| car-monit-backend-jdk21 | `031e1463` |
+| car-monit-backend-jdk17 | `c70c1c03` |
+
+推送证据 `evidence/push-fastjson2-fix.log`，六个分支均 `PUSHED backend=schannel attempt=1`，
+此前 `car-monit-api-jdk21` 的 `STILL_PENDING` 已清零。
 
 | 轮次 | args | 结果 |
 | --- | --- | --- |
 | v1 | `native-image-fastjson2-runtime.args` | **失败**（1m20s）。我写的 Windows 路径 `\QD:\work\...\E` 经 `@argfile` 解析后变成 `\QD:/work/.../E`，`--exclude-config` 未匹配；日志仍有 5 条 `RecomputeFieldValue` + 16 个 `An object of type '...fastjson2...' was found in the image heap`。教训：**argfile 里不要写反斜杠**，用不含反斜杠的可移植正则 |
-| v2 | `native-image-fastjson2-runtime-v2.args` | 改用 `.*fastjson2.*[.]jar` + `^/META-INF/native-image/`。日志前 47 行中 `sun.misc.Unsafe::arrayBaseOffset ... JDKUtils` 告警**已消失**（只剩 grpc-netty-shaded 的 `UnsafeAccess`），`RecomputeFieldValue` 计数 0，`An object of type` 计数 0 → 排除生效迹象明确。**但运行 3m44s 后按用户「暂停」要求主动终止，未得到 BUILD SUCCESS / FAIL 结论** |
+| v2 | `native-image-fastjson2-runtime-v2.args` | 改用 `.*fastjson2.*[.]jar` + `^/META-INF/native-image/`。日志前 47 行中 `sun.misc.Unsafe::arrayBaseOffset ... JDKUtils` 告警**已消失**（只剩 grpc-netty-shaded 的 `UnsafeAccess`），`RecomputeFieldValue` 计数 0，`An object of type` 计数 0 → 排除生效迹象明确。**但运行 3m44s 后按用户「暂停」要求主动终止，未得到 BUILD SUCCESS / FAIL 结论**。21:29 恢复任务后重跑（旧日志备份为 `native-fastjson2-runtime-v2-partial.log`），本轮同样保持 WSL Stopped 以避免 vmmem 抢占内存 |
 
 两份 argfile 已从 `target/tmp/` 复制到 `evidence/argfiles/`（`mvn clean` 不会删掉）。
 现有 exe 仍是 20:48 的段错误版本（348,545,024 B，
