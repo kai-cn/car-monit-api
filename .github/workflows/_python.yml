@@ -36,7 +36,7 @@ jobs:
         # checkout 前语言目录尚不存在，必须显式回到 workspace 根。
         working-directory: .
         run: |
-          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip curl ca-certificates
+          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip curl ca-certificates openssl-devel openssl-libs
           # Python 3.12 不在 openEuler 24.03 仓库（OS/everything/EPOL 均未命中），
           # 由 setup-python 下载 standalone 到 tool cache（glibc 2.38 兼容）。
 
@@ -158,7 +158,7 @@ jobs:
         # checkout 前语言目录尚不存在，必须显式回到 workspace 根。
         working-directory: .
         run: |
-          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip curl ca-certificates
+          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip curl ca-certificates openssl-devel openssl-libs
 
       - uses: actions/checkout@v4
 
