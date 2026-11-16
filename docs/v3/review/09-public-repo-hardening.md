@@ -22,6 +22,9 @@
 ### GitHub Secrets（repo 级，已写入）
 `CI_OPENGAUSS_PASSWORD`、`CI_INTERNAL_TOKEN`、`SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD`、`TRAFFIC_INTERNAL_TOKEN`。
 内部令牌为会话级随机值；两侧（api/backend）CI_INTERNAL_TOKEN 已写入同一值，保证 internal-token 一致。
+轮换后更新 Secrets：在 `D:\work\runtime-logs\secret-values.env` 写 `SECRET名=新值`（每行一条，绝不入库），
+再运行 `python D:\work\runtime-logs\update_gh_secrets.py api`；`CI_INTERNAL_TOKEN`（api）与
+`TRAFFIC_API_INTERNAL_TOKEN`（backend）须设为同一新令牌（可用 `both` 一次更新两仓）。
 
 ## 2. 上线前必须轮换（用户操作，值不写入本仓库/文档）
 | 项 | 注入位置 | 说明 |
