@@ -6,9 +6,14 @@ spring:
   main:
     # Spring Framework 6.2 起循环引用永久禁止（allow-circular-references 已移除），只保留 Bean 覆盖开关
     allow-bean-definition-overriding: true
-  # 排除 Druid 自动配置（Boot 4 专用 starter 的包名为 spring.boot4）
+  # 排除 Druid 自动配置（Boot 3 starter 的包名为 spring.boot3）
   autoconfigure:
-    exclude: com.alibaba.druid.spring.boot4.autoconfigure.DruidDataSourceAutoConfigure
+    exclude:
+      - com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure
+      # Boot3 native 下 Hibernate Validator 的 JBoss Logging 动态找 Log_$logger 实现会失败
+      # （Invalid logger interface ... Log）；本项目源码未使用任何 jakarta.validation 注解，
+      # 直接排除 ValidationAutoConfiguration 最干净。
+      - org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration
   datasource:
     dynamic:
       # 容器化部署默认关闭 p6spy（其 StdoutLogger 不受日志级别约束）；调试时用 P6SPY_ENABLED=true 打开
