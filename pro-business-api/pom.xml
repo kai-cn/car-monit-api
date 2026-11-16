@@ -173,6 +173,9 @@
                         <buildArg>-H:IncludeResources=com/mysql/cj/LocalizedErrorMessages.*</buildArg>
                         <!-- 迭代期快速构建（-Ob）；交付构建去掉本行恢复 -O2。 -->
                         <buildArg>-Ob</buildArg>
+                        <!-- MySQL Connector/J 8 的错误码 ResourceBundle 不在默认资源扫描内，
+                             native 下 PlateColorDictionary 初始化会 MissingResourceException。 -->
+                        <buildArg>-H:IncludeResources=com/mysql/cj/LocalizedErrorMessages.*</buildArg>
                         <buildArg>--initialize-at-run-time=io.grpc.netty.shaded</buildArg>
                         <buildArg>--initialize-at-run-time=io.grpc.netty.shaded.io.netty.internal.tcnative</buildArg>
                         <buildArg>--initialize-at-run-time=io.grpc.netty.shaded.io.netty.handler.ssl</buildArg>

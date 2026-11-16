@@ -33,14 +33,17 @@ spring:
         poolPreparedStatements: true
         maxPoolPreparedStatementPerConnectionSize: 20
         # 配置监控统计拦截的filters，去掉后监控界面sql无法统计，'wall'用于防火墙
-        filters: stat,wall,slf4j
+        # native 下 druid filter 的 configFromProperties 会触发 NPE（实测），故关闭；
+        # JVM 生产如需监控统计，可手动恢复。
+        filters:
         # druid 1.2.2x 的 PostgreSQL/OpenGauss wall 对「恒真条件」判定更严，
         # 而存量 Mapper 大量使用 WHERE 1 = 1，这里显式关闭该检查（其余注入拦截保持默认）
         wall:
           multi-statement-allow: true
           select-where-alway-true-check: false
         # 通过connectProperties属性来打开mergeSql功能；慢SQL记录
-        connectionProperties: druid.stat.mergeSql\=true;druid.stat.slowSqlMillis\=5000
+        # 同上，native 下置空以跳过 filter 配置循环。
+        connectionProperties:
       datasource:
         master:
 #          url: jdbc:postgresql://172.30.100.109:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
