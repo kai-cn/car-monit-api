@@ -960,8 +960,12 @@ pom 规则（实测必需，逐条都踩过）：
 | r4 | 注释掉 `forest:` 配置块 | 构建成功；运行失败：Forest **自动配置** `ForestBeanRegister` 里 `Class.newInstance(DefaultLogHandler)` → `NoSuchMethodException` |
 | r5 | **彻底移除 Forest**（starter/依赖/残留接口/配置） | 构建成功（269,945,568 B）；运行推进到数据源创建 |
 | r6 | `dynamic-datasource` 4.3.0 → 4.6.0（boot3 starter） | 构建成功（269,814,496 B）；运行仍在同一处失败 |
+| r7 | 清空 `druid.filters` / `connectionProperties` + 排除 `DruidDataSourceAutoConfigure` + `-H:IncludeResources` 补 MySQL ResourceBundle | 构建成功（288,599,360 B，1095 s，带 debug_info 未 strip）；**Druid NPE 已解决**，运行推进到 validation |
+| r7 运行 | 启动验证（端口 19902） | 失败：`IllegalArgumentException: Invalid logger interface org.hibernate.validator.internal.util.logging.Log (implementation not found)`（JBoss Logging 在 native 下找不到动态生成的 `Log_$logger`） |
+| r8 | 排除 `ValidationAutoConfiguration`（源码未用任何 `jakarta.validation` 注解，排除无副作用） | **构建成功**：269,552,352 B（stripped），1070 s |
+| r8 运行 | 启动验证 | **未执行**：WSL 已关机，r8 二进制就绪但未跑 |
 
-**当前最后的阻断点（r5/r6 一致）**：
+**r5/r6 的阻断点（已解决，留档）**：
 
 ```
 Caused by: java.lang.NullPointerException
@@ -976,16 +980,27 @@ Caused by: Error creating bean with name 'dataSource': null
 → 全部 Mapper 连锁失败。Boot4 线（dynamic-datasource 4.6.0 + 同一 Druid 版本）**没有**这个问题，
 说明是 Boot3 starter 的 Druid 创建器与属性绑定的组合差异。
 
-**下一步（明确可执行）**：
-1. 给 native 运行加独立 profile（如 `application-native.yml`，
-   `SPRING_PROFILES_ACTIVE=native`），把 `spring.datasource.dynamic.type` 切成
-   `com.zaxxer.hikari.HikariDataSource`，绕开 Druid 创建器；JVM 生产仍用 Druid；
-2. 或修 `DruidDataSourceCreator` 传入的 `connectProperties`（补一个空 `Properties` 默认值），
-   用 `-H:ConfigurationFileDirectories` 或打补丁类的方式注入；
-3. 通过后再补 PageHelper 反射配置（同 jdk25 的 `v3-native-hints/reflect-config.json`，
-   Boot3 分支尚未添加）与 Lettuce 的 `-H:+SharedArenaSupport`；
-4. 最后做 native vs jar 的 A/B（`v3-compare-native-jvm.sh`，端口用 19902/19903，
-   因为 WSL 内 9902 被一个 IPv6 双栈监听占用）。
+**Druid 的解法（r7 已验证有效）**：不必改代码、也不必切 Hikari，而是让 Druid 不走
+"从属性里读 filter 配置"的那条路径——`spring.autoconfigure.exclude` 掉
+`DruidDataSourceAutoConfigure`，并把 `spring.datasource.dynamic.druid.filters` 与
+`connectionProperties` 置空（`DruidDataSourceCreator` 拿到 `null` 就不再调
+`setConnectProperties`）。同一份配置在 JVM 下行为不变。
+
+**下一步（明确可执行，按序）**：
+
+0. **r8 实跑验证**（唯一未闭环）：`bash evidence/manual-native-port.sh 19902`
+   起 `pro-business-api/target/pro-business-api`，看能否走到 `Started ...Application`；
+   若报 PageHelper `Cannot instantiate` / `Class.newInstance`，进第 1 步；若报
+   Lettuce `Arena.ofShared`，进第 2 步；
+1. 补 PageHelper 反射配置（照抄 jdk25 的 `META-INF/native-image/com.ruoyi/v3-native-hints/reflect-config.json`，
+   含 `PageInterceptor` / `ClassUtil` / 全部 dialect；Boot3 分支尚未添加）；
+2. 补 `-H:+SharedArenaSupport`（Lettuce 7 的 FFM 路径，jdk25 已加，Boot3 分支待加）；
+3. native vs jar A/B（`v3-compare-native-jvm.sh`，端口 19902/19903）；
+4. jdk17 侧：分支 `feature/springboot3-jdk17` 代码已同步（cherry-pick 5 个提交），
+   但 **Boot3 的 JVM 构建与 native 构建都还没跑过**，需 `v3-native-build-linux.sh api 17 <repo> <label>`；
+5. backend 侧同法复制（api 打通后）。
+
+**进度与交接文档**：`docs/v3/boot3-native-progress-and-handover.md`（状态快照 + 复现命令 + 证据索引）。
 
 **端口坑（重要）**：WSL 内 `9902` 被 `[::]:9902` 的 IPv6 监听占用（uid 0，非本项目进程），
 IPv4 绑定会直接 `BindException`，而 `ss -lntp` 看不到。用
