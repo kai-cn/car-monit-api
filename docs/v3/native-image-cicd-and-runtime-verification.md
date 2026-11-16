@@ -630,6 +630,12 @@ native image 里没有注册构造器元数据。处理：新增
   而 JVM 构建是 23 个——native profile（`-Pnative,native-flink-exclude`）下 AOT 处理器
   没看到 MapperFactoryBean 定义，需与 `sqlSessionFactory` 注入问题一并复核。
 
+> **2026-11-16 更正（重要）**：本节 r5 关于"native 内取不到 JDBC 连接"的判断是**误判**。
+> 报错来自 `PlateColorDictionary` 单独连接 MySQL 3307（需要 `CARMONIT_MYSQL_USERNAME/PASSWORD`），
+> 旧运行脚本只注入了 openGauss 凭据。补齐两库凭据后 native 完整启动并响应真实业务端点
+> （HTTP 200 / 1016 行 / 0 ERROR），详见 `docs/v3/final-jdk-matrix-verification-20261116.md` §2–§3。
+> 此外旧 summary 的 `startup_ms=6` 是探到 9902 上已有 systemd JVM 的假阳性，验证端口已统一改 19902。
+
 **下一步（按优先级，均可直接复现）**：
 1. 先用 JVM 对照确认 DB 正常：`bash scripts/v3/ops/v3-run-jvm-linux.sh <jar> jdk25-jvm 20 9902`；
 2. native 侧补 `java.security` 相关 native-image 元数据/参数，验证 `select 1` 能否通过；

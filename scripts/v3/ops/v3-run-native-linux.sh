@@ -1,55 +1,63 @@
 #!/usr/bin/env bash
-# Start a Linux native-image build against the WSL openGauss instance, measure
-# startup, RSS and HTTP readiness, then stop it.
+# Start a Linux native-image build against the WSL openGauss + MySQL instances,
+# measure startup, RSS and HTTP readiness, then stop it.
 #
 # Usage: v3-run-native-linux.sh <binary> <label> [sample-seconds] [port]
 #
-# The datasource password is read from the openGauss container environment
-# (GS_PASSWORD) and never written to disk.
+# Credentials are read from the container environments at runtime and exported
+# only into the child process. They are never written to disk or printed.
 #
-# The app listens on server.port from application.yml (9902 for car-monit-api),
-# NOT the Spring default 8080 -- pass it explicitly when it differs.
+# NOTE: car-monit-api uses 9902 in application.yml, but 9902 is occupied by an
+# IPv6 dual-stack socket in this environment. Default to 19902 for verification.
 set -u
 
 BIN=${1:?usage: v3-run-native-linux.sh <binary> <label> [sample-seconds] [port]}
 LABEL=${2:?label required}
 SAMPLE=${3:-25}
-PORT=${4:-9902}
+PORT=${4:-19902}
 
 EVID=/mnt/d/work/runtime-logs/v3-ops/evidence
 LOG="$EVID/native-run-linux-$LABEL.log"
 SUM="$EVID/native-run-linux-$LABEL.summary.txt"
-CONTAINER=opengauss
 
 if [ ! -x "$BIN" ]; then
   echo "FATAL: not executable: $BIN" >&2
   exit 3
 fi
 
-# The container env may carry a BOM before the variable name, so strip anything
-# up to and including "GS_PASSWORD=" instead of matching the key exactly.
-PASS=$(docker exec "$CONTAINER" env 2>/dev/null | sed -n 's/^[^=]*GS_PASSWORD=//p' | tr -d '\r' | head -n 1)
-if [ -z "${PASS:-}" ]; then
-  echo "FATAL: cannot read GS_PASSWORD from container $CONTAINER" >&2
+# Container env keys can carry a BOM before the variable name; strip anything up
+# to and including the key name instead of matching the key exactly.
+GS_PASS=$(docker exec opengauss env 2>/dev/null | sed -n 's/^[^=]*GS_PASSWORD=//p' | tr -d '\r' | head -n 1)
+MYSQL_PASS=$(docker exec mysql_wsl env 2>/dev/null | sed -n 's/^[^=]*MYSQL_ROOT_PASSWORD=//p' | tr -d '\r' | head -n 1)
+if [ -z "${GS_PASS:-}" ] || [ -z "${MYSQL_PASS:-}" ]; then
+  echo "FATAL: cannot read GS_PASSWORD / MYSQL_ROOT_PASSWORD from containers" >&2
   exit 4
 fi
 
 export SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_USERNAME=gaussdb
-export SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD="$PASS"
+export SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD="$GS_PASS"
+export CARMONIT_MYSQL_USERNAME=root
+export CARMONIT_MYSQL_PASSWORD="$MYSQL_PASS"
+
+if (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null; then
+  echo "FATAL: port $PORT is already bound; refusing false-positive readiness" >&2
+  exit 5
+fi
 
 echo "=== runner ===" | tee "$SUM"
 echo "binary  : $BIN" | tee -a "$SUM"
 echo "label   : $LABEL" | tee -a "$SUM"
+echo "port    : $PORT" | tee -a "$SUM"
 echo "log     : $LOG" | tee -a "$SUM"
 echo "binary size bytes: $(stat -c %s "$BIN")" | tee -a "$SUM"
 
 START_MS=$(date +%s%3N)
-"$BIN" >"$LOG" 2>&1 &
+"$BIN" --server.port="$PORT" >"$LOG" 2>&1 &
 PID=$!
 
 READY=0
 EXITED=0
-for _ in $(seq 1 180); do
+for _ in $(seq 1 240); do
   if (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null; then
     exec 3>&- 2>/dev/null || true
     READY=1
@@ -86,6 +94,8 @@ else
   echo "process_exited_before_sampling: 1" | tee -a "$SUM"
 fi
 
-echo "=== last 40 log lines ===" | tee -a "$SUM"
-tail -n 40 "$LOG" 2>/dev/null | tee -a "$SUM"
+echo "=== startup markers ===" | tee -a "$SUM"
+grep -E "Started EcBusiness|Tomcat started|APPLICATION FAILED|plate_color 字典|ERROR" "$LOG" | tail -n 20 | tee -a "$SUM"
+echo "=== last 30 log lines ===" | tee -a "$SUM"
+tail -n 30 "$LOG" 2>/dev/null | tee -a "$SUM"
 echo "summary: $SUM"

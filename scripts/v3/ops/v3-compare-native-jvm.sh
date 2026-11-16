@@ -50,6 +50,24 @@ for f in "$NATIVE" "$JAR" "$JAVA"; do
   [[ -n "$f" && -e "$f" ]] || { echo "FATAL missing: $f" >&2; exit 3; }
 done
 command -v curl >/dev/null 2>&1 || { echo "FATAL: curl required" >&2; exit 3; }
+
+# Both datasources must be authenticated. PlateColorDictionary reads MySQL 3307
+# via CARMONIT_MYSQL_* ; the master datasource reads openGauss via SPRING_*.
+# Values are read from container environments at runtime, never persisted.
+GS_PASS=$(docker exec opengauss env 2>/dev/null | sed -n 's/^[^=]*GS_PASSWORD=//p' | tr -d '\r' | head -n 1)
+MYSQL_PASS=$(docker exec mysql_wsl env 2>/dev/null | sed -n 's/^[^=]*MYSQL_ROOT_PASSWORD=//p' | tr -d '\r' | head -n 1)
+[[ -n "$GS_PASS" && -n "$MYSQL_PASS" ]] || { echo "FATAL: cannot read DB credentials from containers" >&2; exit 4; }
+export SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_USERNAME=gaussdb
+export SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD="$GS_PASS"
+export CARMONIT_MYSQL_USERNAME=root
+export CARMONIT_MYSQL_PASSWORD="$MYSQL_PASS"
+
+for P in "$PORT_N" "$PORT_J"; do
+  if (echo > "/dev/tcp/127.0.0.1/$P") >/dev/null 2>&1; then
+    echo "FATAL: port $P already bound; refusing false-positive readiness" >&2; exit 5
+  fi
+done
+
 mkdir -p "$EV"
 STAMP=$(date +%Y%m%d-%H%M%S)
 CSV="$EV/compare-$LABEL-$STAMP.csv"
