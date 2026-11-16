@@ -34,7 +34,7 @@ jobs:
     name: java (JDK 17 / openEuler)
     # openEuler 24.03 自带的 java-17-openjdk-devel 可编译 release 17；不依赖 Temurin。
     # Maven 走 Apache 官方 tarball（欧拉仓库只有 maven-plugin）。
-    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
+    runs-on: ubuntu-latest
     container:
       image: openeuler/openeuler:24.03-lts
     timeout-minutes: 45
