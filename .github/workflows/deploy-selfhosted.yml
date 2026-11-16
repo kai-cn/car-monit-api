@@ -28,7 +28,7 @@ permissions:
 jobs:
   deploy:
     name: deploy standalone on self-hosted WSL
-    if: ${{ inputs.confirm }}
+    if: ${{ inputs.confirm }} && github.repository_owner == 'kai-cn'
     runs-on: [self-hosted, linux, x64, wsl, openeuler]
     timeout-minutes: 15
     env:
