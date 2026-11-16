@@ -69,7 +69,7 @@ jobs:
 
   linux:
     name: cpp (linux-${{ matrix.name }} / openEuler)
-    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
+    runs-on: ubuntu-latest
     container:
       image: openeuler/openeuler:24.03-lts
     timeout-minutes: 60
@@ -112,7 +112,7 @@ jobs:
 
   linux-sanitizer:
     name: cpp (linux ASan+UBSan / openEuler)
-    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
+    runs-on: ubuntu-latest
     container:
       image: openeuler/openeuler:24.03-lts
     timeout-minutes: 60
@@ -145,7 +145,7 @@ jobs:
 
   static-analysis:
     name: cpp static-analysis (cppcheck / openEuler)
-    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
+    runs-on: ubuntu-latest
     container:
       image: openeuler/openeuler:24.03-lts
     timeout-minutes: 30
