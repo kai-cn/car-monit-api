@@ -151,41 +151,33 @@
                     <plugin>
                 <groupId>org.graalvm.buildtools</groupId>
                 <artifactId>native-maven-plugin</artifactId>
+                <version>1.1.14</version>
                 <configuration>
-                    <!-- Mandrel 21 (GraalVM 23.1) predates the reachability-metadata
-                         schema downloaded by native-maven-plugin 1.1.14; the project
-                         ships its own tracing-agent metadata, so disable the repo. -->
-                    <metadataRepository>
-                        <enabled>false</enabled>
-                    </metadataRepository>
                     <!-- grpc-netty-shaded 由 pulsar-client 传递引入（应用在用，不可排除）。
                          其 tcnative JNI 静态引用在 image build 期初始化会 UnsatisfiedLinkError。
                          具体类优先于包级规则，逐个显式延迟到运行时。 -->
                     <buildArgs>
-                        <!-- 迭代期快速构建（-Ob）；交付构建去掉本行恢复 -O2。 -->
+                        <!-- 生产镜像必须纯 native：不开 fallback，避免把整套 JVM
+                             （libjvm/libawt 等）打进产物（实测未加时 342MB，
+                             加后回落到 ~90MB 量级）。 -->
+                        <buildArg>--no-fallback</buildArg>
+                        <!-- 迭代期用 -Ob（只做基本优化）把单次构建从 ~30min 压到 ~10min；
+                             业务启动验证通过后，交付构建应去掉这一行做 -O2。 -->
                         <buildArg>-Ob</buildArg>
+                        <!-- Lettuce 7（Spring Data Redis）用 FFM 的 Arena.ofShared，
+                             不开启会抛 UnsupportedFeatureError 导致 Redis 连接全废。 -->
+                        <buildArg>-H:+SharedArenaSupport</buildArg>
                         <buildArg>--initialize-at-run-time=io.grpc.netty.shaded</buildArg>
                         <buildArg>--initialize-at-run-time=io.grpc.netty.shaded.io.netty.internal.tcnative</buildArg>
                         <buildArg>--initialize-at-run-time=io.grpc.netty.shaded.io.netty.handler.ssl</buildArg>
+                        <buildArg>--initialize-at-run-time=io.grpc.netty.shaded.io.netty.util.internal.SystemPropertyUtil</buildArg>
+                        <buildArg>--initialize-at-run-time=io.grpc.netty.shaded.io.netty.util.ResourceLeakDetectorFactory</buildArg>
                         <buildArg>--initialize-at-build-time=ch.qos.logback</buildArg>
                         <buildArg>--exclude-config</buildArg>
                         <buildArg>.*fastjson2.*[.]jar</buildArg>
                         <buildArg>^/META-INF/native-image/</buildArg>
                         <buildArg>--initialize-at-run-time=com.alibaba.fastjson2</buildArg>
                         <buildArg>--initialize-at-build-time=ch.qos.logback.classic.Logger</buildArg>
-                        <!-- Mandrel 21 的 ClassInitializationFeature 比 Mandrel 25 严格：
-                             凡是"声明为 run-time 但构建期实际被初始化"的类都会中断构建。
-                             下列声明让策略与事实一致（实测 r14 构建通过，见
-                             docs/v3/native-image-cicd-and-runtime-verification.md §9）。 -->
-                        <buildArg>--initialize-at-run-time=io.netty.handler.ssl</buildArg>
-                        <buildArg>--initialize-at-run-time=io.netty.channel.kqueue</buildArg>
-                        <buildArg>--initialize-at-build-time=org.slf4j,org.apache.commons.logging,org.apache.logging.slf4j,org.apache.logging.log4j</buildArg>
-                        <buildArg>--initialize-at-build-time=org.springframework.core.SpringProperties,org.springframework.core.KotlinDetector</buildArg>
-                        <buildArg>--initialize-at-build-time=org.springframework.util.ClassUtils,org.springframework.util.ConcurrentReferenceHashMap</buildArg>
-                        <buildArg>--initialize-at-build-time=org.springframework.data.core.SerializableLambdaReader</buildArg>
-                        <buildArg>--initialize-at-build-time=io.grpc.netty.shaded.io.netty.util.internal.PlatformDependent0</buildArg>
-                        <buildArg>--initialize-at-build-time=io.grpc.netty.shaded.io.netty.util.internal.SystemPropertyUtil</buildArg>
-                        <buildArg>--initialize-at-build-time=io.grpc.netty.shaded.io.netty.util.ResourceLeakDetectorFactory</buildArg>
                     </buildArgs>
                 </configuration>
             </plugin>
