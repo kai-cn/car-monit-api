@@ -34,7 +34,7 @@ jobs:
     name: java (JDK 25 / openEuler)
     # openEuler 24.03 仓库没有 JDK 25，改用 Eclipse Temurin 官方 tarball；字节码基线由 pom 固定。
     # Maven 走 Apache 官方 tarball（欧拉仓库只有 maven-plugin）。
-    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
+    runs-on: ubuntu-latest
     container:
       image: openeuler/openeuler:24.03-lts
     timeout-minutes: 45
