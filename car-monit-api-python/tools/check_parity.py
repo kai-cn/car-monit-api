@@ -125,6 +125,9 @@ _DOCUMENTED_EQUIVALENTS: dict[tuple[str, str], str] = {
 _OUT_OF_SCOPE_PREFIXES: tuple[str, ...] = (
     "pro-business-api/src/main/java/com/ruoyi/base/controller/v3/",
     "pro-business-api/src/main/java/com/ruoyi/base/service/v3/",
+    # V3 运维端点的 Spring MVC 内部令牌拦截器：只保护 Java 侧 /api/v3/** 与
+    # /api/v1/large/export/**；Python 端口不存在这些端点，属 Java-only 运维面。
+    "pro-business-api/src/main/java/com/ruoyi/base/config/InternalEndpointGuardConfig.java",
 )
 
 #: legacy 控制器上仅因 V3 双路径（ES/legacy）而新增的方法；Python 仍为单一 legacy 路径。
