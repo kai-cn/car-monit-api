@@ -15,7 +15,6 @@ name: _image
 #   * latest            仅 refs/heads/master 上生成
 # 认证：GITHUB_TOKEN（需 packages: write），不依赖 PAT。
 on:
-  # ── job: workflow_call ──
   workflow_call:
     inputs:
       language:
