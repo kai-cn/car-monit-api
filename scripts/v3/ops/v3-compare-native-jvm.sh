@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ======================================================================
+# 文件：scripts/v3/ops/v3-compare-native-jvm.sh
+# 用途：性能对比：native 与 JVM 的启动时间/RSS/延迟 A/B 测试
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 # A/B measurement: Spring Boot native ELF vs. ordinary fat jar on the SAME host.
 #
 #   bash v3-compare-native-jvm.sh \

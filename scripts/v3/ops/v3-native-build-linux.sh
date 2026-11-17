@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ======================================================================
+# 文件：scripts/v3/ops/v3-native-build-linux.sh
+# 用途：在 Linux 构建 native image
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 # Spring Boot 4.1.2 AOT + Mandrel native-image build on Linux x86_64 (inside WSL2).
 #
 #   bash v3-native-build-linux.sh <app> <jdk> <project-dir> [label]

@@ -1,3 +1,10 @@
+# ============================================================================
+# 文件：.github/workflows/_java.yml
+# 用途：Java 模块可复用工作流：编译/测试 JVM jar，被 master/pr 通过 workflow_call 调用
+# 触发：被其他 workflow 调用
+# 主要 job：build
+# 说明：本文件仅新增中文注释，不改动任何执行逻辑；runner/权限/守卫以实际配置为准。
+# ============================================================================
 name: _java
 
 # 可复用 workflow：Java 主仓库（Spring Boot 2.4.5 / source-target 1.8）。
@@ -33,6 +40,7 @@ permissions:
   contents: read
 
 jobs:
+  # ── job: build ──
   build:
     name: java (OpenJDK 8 / openEuler)
     # openEuler 24.03 自带的 java-1.8.0-openjdk-devel 可直接编译 source/target=1.8；
@@ -57,6 +65,7 @@ jobs:
           java -version
           mvn -version
 
+      # 拉取仓库源码
       - uses: actions/checkout@v4
 
       - name: 缓存 Maven 本地仓库

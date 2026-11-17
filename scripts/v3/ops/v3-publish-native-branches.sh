@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ======================================================================
+# 文件：scripts/v3/ops/v3-publish-native-branches.sh
+# 用途：Linux shell 运维/构建脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 # Commit and push ONLY the native-image related files to the six JDK branches.
 #
 #   bash v3-publish-native-branches.sh            # dry-run: show what would be staged

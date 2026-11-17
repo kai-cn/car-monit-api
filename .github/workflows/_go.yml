@@ -1,3 +1,10 @@
+# ============================================================================
+# 文件：.github/workflows/_go.yml
+# 用途：Go 模块可复用工作流：go build + govulncheck 依赖漏洞门禁
+# 触发：被其他 workflow 调用
+# 主要 job：checks
+# 说明：本文件仅新增中文注释，不改动任何执行逻辑；runner/权限/守卫以实际配置为准。
+# ============================================================================
 name: _go
 
 # 可复用 workflow：Go 迁移实现（go.mod 锁 1.26.10，入口 ./cmd/api）。
@@ -16,6 +23,7 @@ permissions:
   contents: read
 
 jobs:
+  # ── job: checks ──
   checks:
     name: go (1.26.10 / openEuler)
     runs-on: ubuntu-latest
@@ -39,6 +47,7 @@ jobs:
           # gcc 供 go test -race 的 cgo 使用；Go 1.26.10 由 setup-go 安装到 tool cache
           # （openEuler 仓库只有 golang 1.21.4，低于 go.mod 要求）。
 
+      # 拉取仓库源码
       - uses: actions/checkout@v4
 
       - name: Setup Go（版本取自 go.mod）
@@ -60,6 +69,7 @@ jobs:
       - name: go vet 静态检查
         run: go vet ./...
 
+      # Go 源码编译
       - name: go build
         run: |
           mkdir -p bin
@@ -70,6 +80,7 @@ jobs:
           CGO_ENABLED: "1"   # -race 需要 cgo；GitHub runner 自带 gcc
         run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
 
+      # Go 依赖已知漏洞扫描
       - name: govulncheck（可达漏洞门禁）
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@v1.9.0

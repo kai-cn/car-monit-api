@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# ======================================================================
+# 文件：scripts/v3/ops/v3-github-actions-quota.py
+# 用途：运维/构建辅助脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 """Read-only GitHub Actions quota / billing / workflow probe.
 
 The token is read at runtime from `git credential fill` (Git Credential Manager).

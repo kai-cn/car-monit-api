@@ -1,3 +1,10 @@
+# ============================================================================
+# 文件：.github/workflows/_python.yml
+# 用途：Python 模块可复用工作流：源码编译 Python + 单测（规避 openEuler ssl 问题）
+# 触发：被其他 workflow 调用
+# 主要 job：gates、integration、docker
+# 说明：本文件仅新增中文注释，不改动任何执行逻辑；runner/权限/守卫以实际配置为准。
+# ============================================================================
 name: _python
 
 # 可复用 workflow：Python 3.12 迁移实现。
@@ -21,6 +28,7 @@ permissions:
   contents: read
 
 jobs:
+  # ── job: gates ──
   gates:
     name: python 3.12 (gates / openEuler)
     runs-on: ubuntu-latest
@@ -51,6 +59,7 @@ jobs:
           ln -sf /usr/local/bin/python3.12 /usr/local/bin/python
           python3 -c "import ssl; print('ssl OK', ssl.OPENSSL_VERSION)"
 
+      # 拉取仓库源码
       - uses: actions/checkout@v4
 
       # 不用 setup-python 的 cache: pip —— 它会调用 lsb_release，openEuler 镜像没有该命令。
@@ -67,6 +76,7 @@ jobs:
       - name: Install dependencies
         run: python3 -m pip install -r requirements.txt
 
+      # 运行 Python 单测
       - name: pytest (coverage)
         run: python -m pytest -q --cov --cov-report=
 
@@ -84,6 +94,7 @@ jobs:
           python -m coverage html
           python -m coverage xml
 
+      # 上传产物供后续 job/Release 使用
       - uses: actions/upload-artifact@v4
         with:
           name: python-coverage-${{ github.sha }}
@@ -111,6 +122,7 @@ jobs:
       - name: smoke_all_routes
         run: python tools/smoke_all_routes.py
 
+  # ── job: integration ──
   integration:
     # 真实中间件集成测试（Redis/ES/Kafka service containers；DB 需自备，默认跳过）。
     # 容器 job：service containers 与 job 容器在同一 Docker 网络，按服务名访问
@@ -180,6 +192,7 @@ jobs:
           ln -sf /usr/local/bin/python3.12 /usr/local/bin/python
           python3 -c "import ssl; print('ssl OK', ssl.OPENSSL_VERSION)"
 
+      # 拉取仓库源码
       - uses: actions/checkout@v4
 
       - name: 缓存 pip
@@ -204,6 +217,7 @@ jobs:
           CAR_MONIT_TEST_KAFKA: "1"
           CAR_MONIT_KAFKA_URL: "kafka:9092"
 
+  # ── job: docker ──
   docker:
     # Docker 镜像构建需要宿主 Docker daemon；GitHub 的容器 job 不提供 DinD，
     # 因此该 job 保留在 ubuntu-latest（唯一无法容器化的 CI 环节，见 docs/CI-OPENEULER.md）。
@@ -215,6 +229,7 @@ jobs:
       run:
         working-directory: car-monit-api-python
     steps:
+      # 拉取仓库源码
       - uses: actions/checkout@v4
 
       - name: docker build

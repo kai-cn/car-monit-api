@@ -1,3 +1,8 @@
+# ======================================================================
+# 文件：scripts/v3/ops/v3-run-native-with-db.ps1
+# 用途：PowerShell 运维/构建脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 # Launch the Windows native .exe with the database credentials of the local
 # openGauss container, then measure startup / RSS via v3-native-bench.ps1.
 #

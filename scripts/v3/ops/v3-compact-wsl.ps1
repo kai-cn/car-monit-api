@@ -1,3 +1,8 @@
+# ======================================================================
+# 文件：scripts/v3/ops/v3-compact-wsl.ps1
+# 用途：PowerShell 运维/构建脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 <#
 .SYNOPSIS
     Reclaim WSL2 VHDX disk space: shutdown -> set-sparse false -> compact -> verify.

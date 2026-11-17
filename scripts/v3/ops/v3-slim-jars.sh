@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ======================================================================
+# 文件：scripts/v3/ops/v3-slim-jars.sh
+# 用途：Linux shell 运维/构建脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 # v3-slim-jars.sh -- minimal release packaging for all six JDK worktrees.
 #
 # Run INSIDE WSL:

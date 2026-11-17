@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ======================================================================
+# 文件：scripts/v3/ops/v3-enforce-single-mode.sh
+# 用途：Linux shell 运维/构建脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 # Enforce exactly ONE car-monit serving mode inside WSL (measured 2026-11-15).
 #
 # Reality on this host (verified via systemd + ps + kubectl):

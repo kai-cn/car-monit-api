@@ -1,3 +1,10 @@
+# ============================================================================
+# 文件：.github/workflows/_cpp.yml
+# 用途：C++ 模块可复用工作流：编译/测试 C++ 产物（linux/windows），供总入口调用
+# 触发：被其他 workflow 调用
+# 主要 job：build、linux、linux-sanitizer、static-analysis
+# 说明：本文件仅新增中文注释，不改动任何执行逻辑；runner/权限/守卫以实际配置为准。
+# ============================================================================
 name: _cpp
 
 # 可复用 workflow：C++ 迁移实现（CMake 3.20+ / C++20）。
@@ -28,6 +35,7 @@ permissions:
   contents: read
 
 jobs:
+  # ── job: build ──
   build:
     # MSVC/Windows 是唯一保留 windows-latest 的构建：openEuler 无法运行 MSVC 工具链，
     # 其余 C++ Linux 构建全部在 openeuler 容器内执行。
@@ -38,6 +46,7 @@ jobs:
       run:
         working-directory: car-monit-api-cpp
     steps:
+      # 拉取仓库源码
       - uses: actions/checkout@v4
 
       # librdkafka 首次 configure 从 codeload.github.com 下载并编译，缓存源码/构建目录降低 PR 耗时。
@@ -67,6 +76,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  # ── job: linux ──
   linux:
     name: cpp (linux-${{ matrix.name }} / openEuler)
     runs-on: ubuntu-latest
@@ -93,6 +103,7 @@ jobs:
         run: |
           dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip ca-certificates gcc gcc-c++ clang cmake ninja-build make libpq-devel openssl-devel
 
+      # 拉取仓库源码
       - uses: actions/checkout@v4
 
       - name: 缓存 FetchContent 依赖
@@ -110,6 +121,7 @@ jobs:
           BUILD_DIR: build-linux-${{ matrix.name }}
         run: bash scripts/ci-linux.sh
 
+  # ── job: linux-sanitizer ──
   linux-sanitizer:
     name: cpp (linux ASan+UBSan / openEuler)
     runs-on: ubuntu-latest
@@ -126,6 +138,7 @@ jobs:
         run: |
           dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip ca-certificates gcc gcc-c++ clang cmake ninja-build make libpq-devel openssl-devel
 
+      # 拉取仓库源码
       - uses: actions/checkout@v4
 
       - name: 缓存 FetchContent 依赖
@@ -143,6 +156,7 @@ jobs:
           BUILD_DIR: build-linux-asan
         run: bash scripts/ci-linux.sh -DCMAKE_BUILD_TYPE=Debug -DCM_SANITIZE=address,undefined
 
+  # ── job: static-analysis ──
   static-analysis:
     name: cpp static-analysis (cppcheck / openEuler)
     runs-on: ubuntu-latest
@@ -159,6 +173,7 @@ jobs:
         run: |
           dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip ca-certificates cppcheck
 
+      # 拉取仓库源码
       - uses: actions/checkout@v4
 
       - name: cppcheck（仅定向排除 2 条已知性能提示）

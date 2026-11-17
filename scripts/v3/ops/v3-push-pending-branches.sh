@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ======================================================================
+# 文件：scripts/v3/ops/v3-push-pending-branches.sh
+# 用途：Linux shell 运维/构建脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 # Retry pushing the six native-image branches until every local commit is on origin.
 # Windows Git's schannel backend drops connections through this host's proxy;
 # `-c http.sslBackend=openssl` plus bounded retries is the verified workaround.

@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ======================================================================
+# 文件：scripts/v3/ops/v3-native-docker-build.sh
+# 用途：Linux shell 运维/构建脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 # Package a Linux native ELF into a minimal OCI image and record its size.
 #   BASE_IMAGE=... bash v3-native-docker-build.sh <elf> <tag> [dockerfile]
 set -euo pipefail

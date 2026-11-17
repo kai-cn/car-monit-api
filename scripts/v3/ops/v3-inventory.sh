@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ======================================================================
+# 文件：scripts/v3/ops/v3-inventory.sh
+# 用途：Linux shell 运维/构建脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 # v3-inventory.sh -- read-only inventory for WSL / docker / k3d node images.
 # Run INSIDE WSL:  bash /mnt/d/work/IdeaProjects/car-monit-api-java-V3/scripts/v3/ops/v3-inventory.sh
 # No destructive command. Output is tee'd into D:\work\runtime-logs\v3-ops\evidence\.
