@@ -158,13 +158,20 @@ jobs:
           docker run -d --name my -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=carmonitdb -p 3306:3306 mysql:8.0 --default-authentication-plugin=mysql_native_password
           docker run -d --name rd -p 6379:6379 redis:7-alpine
           for i in $(seq 1 60); do docker exec pg pg_isready -U postgres -d RuoYi >/dev/null 2>&1 && break; sleep 2; done
-          for i in $(seq 1 60); do docker exec my mysqladmin ping -uroot -proot >/dev/null 2>&1 && break; sleep 2; done
+          # MySQL 8.0 first boot may be slow; wait for TCP (not just socket) readiness.
+          for i in $(seq 1 90); do
+            docker exec my mysql -h127.0.0.1 -P3306 --protocol=TCP -uroot -proot -e 'select 1' >/dev/null 2>&1 && break
+            sleep 2
+          done
           for i in $(seq 1 30); do docker exec rd redis-cli ping >/dev/null 2>&1 && break; sleep 1; done
           export PGPASSWORD=postgres
           psql -h 127.0.0.1 -U postgres -d RuoYi -v ON_ERROR_STOP=1 -f scripts/v3/ops/parity/sql/schema_jl_data01.sql >/dev/null
           gunzip -c scripts/v3/ops/parity/sql/seed_jl_data01.sql.gz > /tmp/seed.sql
           psql -h 127.0.0.1 -U postgres -d RuoYi -v ON_ERROR_STOP=1 -f /tmp/seed.sql >/dev/null
-          docker exec -i my mysql -uroot -proot < scripts/v3/ops/parity/sql/mysql_dict.sql
+          for i in $(seq 1 10); do
+            docker exec -i my mysql -h127.0.0.1 -P3306 --protocol=TCP -uroot -proot < scripts/v3/ops/parity/sql/mysql_dict.sql && break
+            echo "mysql dict load retry $i"; sleep 3
+          done
           echo "gantry rows: $(psql -h 127.0.0.1 -U postgres -d RuoYi -Atc 'select count(*) from jl_data01.ods_szdn_gantry')"
 
       - name: Probe JVM baseline
