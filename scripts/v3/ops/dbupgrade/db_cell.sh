@@ -78,6 +78,10 @@ og_exec() {
 }
 og_sql() {
   local db="$1"; shift
+  # gsql -f 偶发把默认 host 解析成 Unknown:5432；显式给 socket 目录 /tmp 优先。
+  if og_exec -h /tmp -d "$db" "$@" 2>/dev/null; then
+    return 0
+  fi
   og_exec -d "$db" "$@"
 }
 
