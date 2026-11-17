@@ -29,7 +29,7 @@
     <properties>
         <skipTests>true</skipTests>
         <api.version>1.0</api.version>
-        <java.version>21</java.version>
+        <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <druid.version>1.2.28</druid.version>
         <mybatis-plus.version>3.5.18</mybatis-plus.version>
