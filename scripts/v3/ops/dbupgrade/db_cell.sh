@@ -90,8 +90,9 @@ detect_og_admin() {
         for i in $(seq 1 8); do
           local rc=1
           if [ "$mode" = socket ]; then
+            # 本地实测可用形式：uid 70 + socket 免密，不显式传 -U/-w（传 -U 会触发口令认证而失败）。
             docker exec -u "$uid" -e LD_LIBRARY_PATH=/usr/local/opengauss/lib \
-              "$CNAME" /usr/local/opengauss/bin/gsql -U "$u" -d postgres -w \
+              "$CNAME" /usr/local/opengauss/bin/gsql -d postgres \
               -Atc 'select 1' >/dev/null 2>&1 && rc=0
           else
             docker exec -u "$uid" -e PGPASSWORD="$PW" -e LD_LIBRARY_PATH=/usr/local/opengauss/lib \
