@@ -189,7 +189,7 @@
                         <buildArg>--initialize-at-run-time=io.netty.channel.kqueue</buildArg>
                         <buildArg>--initialize-at-build-time=org.slf4j,org.apache.commons.logging,org.apache.logging.slf4j,org.apache.logging.log4j</buildArg>
                         <buildArg>--initialize-at-build-time=org.springframework.core.SpringProperties,org.springframework.core.KotlinDetector</buildArg>
-                        <buildArg>--initialize-at-build-time=org.springframework.util.ClassUtils,org.springframework.util.ConcurrentReferenceHashMap</buildArg>
+                        <buildArg>--initialize-at-build-time=org.springframework.util.ClassUtils,org.springframework.util.ConcurrentReferenceHashMap$ReferenceType</buildArg>
                         <buildArg>--initialize-at-build-time=org.springframework.data.core.SerializableLambdaReader</buildArg>
                         <buildArg>--initialize-at-build-time=io.grpc.netty.shaded.io.netty.util.internal.PlatformDependent0</buildArg>
                         <buildArg>--initialize-at-build-time=io.grpc.netty.shaded.io.netty.util.internal.SystemPropertyUtil</buildArg>
