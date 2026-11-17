@@ -1,3 +1,10 @@
+# ============================================================================
+# 文件：.github/workflows/_java.yml
+# 用途：Java 模块可复用工作流：编译/测试 JVM jar，被 master/pr 通过 workflow_call 调用
+# 触发：被其他 workflow 调用
+# 主要 job：build
+# 说明：本文件仅新增中文注释，不改动任何执行逻辑；runner/权限/守卫以实际配置为准。
+# ============================================================================
 name: _java
 
 # 可复用 workflow：Java 主仓库（Spring Boot 4.1.2 / JDK 25 工具链）。
@@ -13,6 +20,7 @@ name: _java
 #   * pro-base-common / pro-business-api 单测覆盖有限，pom 未配置 checkstyle/spotbugs；
 #   * 完整 Spring Boot 启动仍依赖外部 DB/Redis/Kafka，仅在本机实机验收中覆盖，CI 不重复拉起。
 on:
+  # ── job: workflow_call ──
   workflow_call:
     inputs:
       mode:
@@ -30,6 +38,7 @@ permissions:
   contents: read
 
 jobs:
+  # ── job: build ──
   build:
     name: java (JDK 25 / openEuler)
     # openEuler 24.03 仓库没有 JDK 25，改用 Eclipse Temurin 官方 tarball；字节码基线由 pom 固定。
@@ -64,6 +73,7 @@ jobs:
           java -version 2>&1 | grep -q '${{ inputs.jdk-version }}\.' || {
             echo "::error::expected JDK ${{ inputs.jdk-version }}"; exit 1; }
 
+      # 拉取仓库源码
       - uses: actions/checkout@v4
 
       - name: 缓存 Maven 本地仓库

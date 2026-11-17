@@ -1,3 +1,10 @@
+# ============================================================================
+# 文件：.github/workflows/cd-standalone.yml
+# 用途：单机部署：打包 standalone 产物并上传 Release
+# 触发：手动 dispatch / push 事件
+# 主要 job：build、verify
+# 说明：本文件仅新增中文注释，不改动任何执行逻辑；runner/权限/守卫以实际配置为准。
+# ============================================================================
 name: cd-standalone
 
 # 单机部署 CD：构建离线 tar.gz 制品（jar / Go 二进制 / Python 源码+离线 wheels /
@@ -6,6 +13,7 @@ name: cd-standalone
 # 与 K8s 的 deploy.yml 互不影响。
 
 on:
+  # ── job: workflow_dispatch ──
   workflow_dispatch:
     inputs:
       service:
@@ -19,6 +27,7 @@ on:
         required: false
         type: string
         default: ""
+  # ── job: push ──
   push:
     branches: ["master"]
     tags: ["v*.*.*"]
@@ -27,6 +36,7 @@ permissions:
   contents: read
 
 jobs:
+  # ── job: build ──
   build:
     name: build standalone artifact
     runs-on: ubuntu-latest
@@ -34,8 +44,10 @@ jobs:
     permissions:
       contents: write   # tag 推送时 gh release upload 需要
     steps:
+      # 拉取仓库源码
       - uses: actions/checkout@v4
 
+      # 安装 JDK
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -45,6 +57,7 @@ jobs:
         with:
           go-version: "1.26.10"
 
+      # 安装 Python
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -124,16 +137,19 @@ jobs:
           gh release view "$RELEASE_TAG" >/dev/null 2>&1 || gh release create "$RELEASE_TAG" --generate-notes --title "$RELEASE_TAG"
           gh release upload "$RELEASE_TAG" car-monit-api-standalone-*.tar.gz --clobber
 
+  # ── job: verify ──
   verify:
     name: verify standalone lifecycle
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      # 安装 Python
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
+      # 下载上游 workflow 产物
       - uses: actions/download-artifact@v4
         with:
           name: standalone-tar-${{ github.sha }}
