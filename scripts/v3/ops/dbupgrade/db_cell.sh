@@ -152,7 +152,11 @@ load_mysql_fixture() {
 load_pg_fixture() {
   # 把版本无关的 schema/seed 拷进容器，用容器内 gsql 加载（宿主 psql16 无法认证 openGauss sha256）。
   gunzip -c "$SQLDIR/seed_jl_data01.sql.gz" > /tmp/dbupgrade_seed.sql
-  docker cp "$SQLDIR/schema_jl_data01.sql" "$CNAME:/tmp/schema.sql" >/dev/null
+  # openGauss 3.0 不支持 CREATE SCHEMA IF NOT EXISTS（既有 D15 实测约束）；
+  # 用 DO 块幂等建 schema，其余 DROP ... IF EXISTS 保持原样。
+  sed 's/^CREATE SCHEMA IF NOT EXISTS jl_data01;/DO \$\$ BEGIN CREATE SCHEMA jl_data01; EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;/' \
+    "$SQLDIR/schema_jl_data01.sql" > /tmp/dbupgrade_schema.sql
+  docker cp /tmp/dbupgrade_schema.sql "$CNAME:/tmp/schema.sql" >/dev/null
   docker cp /tmp/dbupgrade_seed.sql "$CNAME:/tmp/seed.sql" >/dev/null
   og_sql RuoYi -v ON_ERROR_STOP=1 -f /tmp/schema.sql >/dev/null || { log "schema load failed"; return 1; }
   og_sql RuoYi -v ON_ERROR_STOP=1 -f /tmp/seed.sql >/dev/null || { log "seed load failed"; return 1; }
