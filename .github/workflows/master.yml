@@ -10,6 +10,7 @@ on:
 
 concurrency:
   group: master-${{ github.ref }}
+  # Perf: cancel superseded runs so the queue always serves the newest commit.
   cancel-in-progress: true
 
 permissions:
