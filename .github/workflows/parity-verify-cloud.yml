@@ -97,7 +97,7 @@ jobs:
       - name: Provision Mandrel java${{ needs.prepare.outputs.jdk }}
         uses: graalvm/setup-graalvm@v1
         with:
-          java-version: ${{ needs.prepare.outputs.jdk }}
+          java-version: '25'  # Mandrel25 toolchain; pom release remains branch JDK
           distribution: 'mandrel'
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
