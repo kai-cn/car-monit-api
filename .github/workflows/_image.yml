@@ -1,3 +1,10 @@
+# ============================================================================
+# 文件：.github/workflows/_image.yml
+# 用途：Docker 镜像可复用工作流：构建并推送容器镜像
+# 触发：被其他 workflow 调用
+# 主要 job：build
+# 说明：本文件仅新增中文注释，不改动任何执行逻辑；runner/权限/守卫以实际配置为准。
+# ============================================================================
 name: _image
 
 # 可复用 workflow：按语言构建镜像并推送到 GHCR。
@@ -8,6 +15,7 @@ name: _image
 #   * latest            仅 refs/heads/master 上生成
 # 认证：GITHUB_TOKEN（需 packages: write），不依赖 PAT。
 on:
+  # ── job: workflow_call ──
   workflow_call:
     inputs:
       language:
@@ -25,6 +33,7 @@ permissions:
   packages: write
 
 jobs:
+  # ── job: build ──
   build:
     # 例外：Docker 镜像构建需要宿主 Docker daemon；GitHub 托管 runner 的容器 job 不提供 DinD，
     # 因此本 job 保留 ubuntu-latest 宿主。自托管 openEuler runner 若装了 Docker，可整 job 迁过去。
@@ -32,6 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      # 拉取仓库源码
       - uses: actions/checkout@v4
 
       - name: 解析构建参数并校验上下文

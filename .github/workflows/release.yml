@@ -1,11 +1,20 @@
+# ============================================================================
+# 文件：.github/workflows/release.yml
+# 用途：发布流程：构建各语言产物并上传 GitHub Release（含 SHA256SUMS）
+# 触发：手动 dispatch / push 事件
+# 主要 job：presence、java、cpp、go、python、rust、image-java、image-python、image-go、image-cpp、image-rust、publish
+# 说明：本文件仅新增中文注释，不改动任何执行逻辑；runner/权限/守卫以实际配置为准。
+# ============================================================================
 name: release
 
 # 发布流水线：tag v*.*.* 触发，产出可下载制品（jar / Windows exe / Go 与 Rust 二进制 / Python 镜像 tar.gz），
 # 并把镜像推送到 GHCR，标签为 sha-<短哈希> + <semver>（latest 只在 master 生成）。
 on:
+  # ── job: push ──
   push:
     tags: ["v*.*.*"]
   # 手动触发时请在 UI 里选择 tag 作为 ref，保证各语言 checkout 到同一提交。
+  # ── job: workflow_dispatch ──
   workflow_dispatch:
 
 concurrency:
@@ -16,6 +25,7 @@ permissions:
   contents: write   # 仅发布入口需要写 Release；packages 写权限按 job 单独授予
 
 jobs:
+  # ── job: presence ──
   presence:
     name: presence
     runs-on: ubuntu-latest
@@ -24,6 +34,7 @@ jobs:
       rust: ${{ steps.check.outputs.rust }}
       cpp: ${{ steps.check.outputs.cpp }}
     steps:
+      # 拉取仓库源码
       - uses: actions/checkout@v4
 
       - name: 检查 rust / cpp 源码是否已入库
@@ -43,6 +54,7 @@ jobs:
             echo "::notice::缺少 car-monit-api-cpp/src/main.cpp，跳过 C++ 发布产物"
           fi
 
+  # ── job: java ──
   java:
     name: java
     uses: ./.github/workflows/_java.yml
@@ -50,6 +62,7 @@ jobs:
       mode: release
       jdk-version: "21"
 
+  # ── job: cpp ──
   cpp:
     name: cpp
     needs: presence
@@ -58,12 +71,14 @@ jobs:
     with:
       mode: release
 
+  # ── job: go ──
   go:
     name: go
     uses: ./.github/workflows/_go.yml
     with:
       mode: release
 
+  # ── job: python ──
   python:
     name: python
     uses: ./.github/workflows/_python.yml
@@ -71,6 +86,7 @@ jobs:
       mode: release
       run-integration: true
 
+  # ── job: rust ──
   rust:
     name: rust
     needs: presence
@@ -80,6 +96,7 @@ jobs:
       mode: release
 
   # ---- GHCR 镜像（semver + sha 标签；latest 不在 tag 上生成）----
+  # ── job: image-java ──
   image-java:
     name: image java
     uses: ./.github/workflows/_image.yml
@@ -90,6 +107,7 @@ jobs:
       language: java
       push: true
 
+  # ── job: image-python ──
   image-python:
     name: image python
     uses: ./.github/workflows/_image.yml
@@ -100,6 +118,7 @@ jobs:
       language: python
       push: true
 
+  # ── job: image-go ──
   image-go:
     name: image go
     uses: ./.github/workflows/_image.yml
@@ -110,6 +129,7 @@ jobs:
       language: go
       push: true
 
+  # ── job: image-cpp ──
   image-cpp:
     name: image cpp
     needs: presence
@@ -122,6 +142,7 @@ jobs:
       language: cpp
       push: true
 
+  # ── job: image-rust ──
   image-rust:
     name: image rust
     needs: presence
@@ -134,6 +155,7 @@ jobs:
       language: rust
       push: true
 
+  # ── job: publish ──
   publish:
     # 例外：发布编排 job 使用 gh CLI，保留 ubuntu-latest 宿主（openEuler 仓库无 gh 包）。
     # 构建/测试 job 已在 openEuler 容器中执行，见 docs/CI-OPENEULER.md。
@@ -143,28 +165,33 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      # 下载上游 workflow 产物
       - uses: actions/download-artifact@v4
         with:
           name: java-jar-${{ github.sha }}
           path: staging/java
 
+      # 下载上游 workflow 产物
       - uses: actions/download-artifact@v4
         if: needs.cpp.result == 'success'
         with:
           name: cpp-windows-x64-${{ github.sha }}
           path: staging/cpp
 
+      # 下载上游 workflow 产物
       - uses: actions/download-artifact@v4
         with:
           name: go-linux-amd64-${{ github.sha }}
           path: staging/go
 
+      # 下载上游 workflow 产物
       - uses: actions/download-artifact@v4
         if: needs.rust.result == 'success'
         with:
           name: rust-linux-amd64-${{ github.sha }}
           path: staging/rust
 
+      # 下载上游 workflow 产物
       - uses: actions/download-artifact@v4
         with:
           name: python-image-${{ github.sha }}
