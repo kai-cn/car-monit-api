@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ======================================================================
+# 文件：scripts/v3/ops/v3-probe-http.sh
+# 用途：Linux shell 运维/构建脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 # Start an api binary/jar with runtime DB credentials, wait for the port, then
 # probe a light read-only business endpoint that hits the openGauss datasource.
 #

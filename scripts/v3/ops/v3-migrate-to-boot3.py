@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# ======================================================================
+# 文件：scripts/v3/ops/v3-migrate-to-boot3.py
+# 用途：运维/构建辅助脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 """Migrate a car-monit-api branch from Spring Boot 4 (Jackson 3) to Spring Boot 3.5.x.
 
 Why

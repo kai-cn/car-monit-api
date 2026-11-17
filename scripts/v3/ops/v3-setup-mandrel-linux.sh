@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ======================================================================
+# 文件：scripts/v3/ops/v3-setup-mandrel-linux.sh
+# 用途：安装配置 Mandrel 工具链
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 # Install a pinned Mandrel (Linux amd64) inside WSL2 and verify the native-image
 # C toolchain. Idempotent; never overwrites an existing install.
 #

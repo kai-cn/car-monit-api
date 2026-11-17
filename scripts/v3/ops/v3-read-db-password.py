@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# ======================================================================
+# 文件：scripts/v3/ops/v3-read-db-password.py
+# 用途：运维/构建辅助脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 """Read the local openGauss container's GS_PASSWORD without printing it anywhere.
 
 The value is emitted on stdout ONLY, with no label, so callers can capture it:

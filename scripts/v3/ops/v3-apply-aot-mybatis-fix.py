@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# ======================================================================
+# 文件：scripts/v3/ops/v3-apply-aot-mybatis-fix.py
+# 用途：运维/构建辅助脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 """Propagate the Spring Boot 4 AOT / MyBatis-Plus mapper fix to all six worktrees.
 
 Source of truth: car-monit-api-jdk25/pro-business-api/.../NativeMapperSqlSessionFactoryRegistrar.java

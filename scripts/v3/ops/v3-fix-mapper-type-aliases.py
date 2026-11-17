@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# ======================================================================
+# 文件：scripts/v3/ops/v3-fix-mapper-type-aliases.py
+# 用途：运维/构建辅助脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 """Replace short MyBatis type aliases in Mapper XML with fully-qualified names.
 
 Why (verified 2026-11-15 on the Spring Boot 4 / Mandrel native image):

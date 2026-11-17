@@ -1,3 +1,8 @@
+# ======================================================================
+# 文件：scripts/v3/ops/v3-measure.ps1
+# 用途：PowerShell 运维/构建脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 <#
 .SYNOPSIS
     Sample host RAM / vmmemWSL / WSL guest RAM to verify a quota or mode change.

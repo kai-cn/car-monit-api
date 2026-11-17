@@ -1,3 +1,10 @@
+# ============================================================================
+# 文件：.github/workflows/deploy.yml
+# 用途：部署 workflow：k3d 集群/单机部署入口
+# 触发：手动 dispatch
+# 主要 job：precheck、image、deploy
+# 说明：本文件仅新增中文注释，不改动任何执行逻辑；runner/权限/守卫以实际配置为准。
+# ============================================================================
 name: deploy
 
 # CD：构建并推送所选语言的镜像到 GHCR，然后对**已存在**的 K8s Deployment 执行
@@ -16,6 +23,7 @@ name: deploy
 # 首次部署需人工 bootstrap（namespace / Deployment / imagePullSecret / 配置挂载），
 # 详见 docs/CI-CD-PIPELINES.md §10。
 on:
+  # ── job: workflow_dispatch ──
   workflow_dispatch:
     inputs:
       environment:
@@ -38,6 +46,7 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  # ── job: precheck ──
   precheck:
     name: precheck
     runs-on: ubuntu-latest
@@ -52,6 +61,7 @@ jobs:
       container: ${{ steps.resolve.outputs.container }}
       pull-secret: ${{ steps.resolve.outputs.pull_secret }}
     steps:
+      # 拉取仓库源码
       - uses: actions/checkout@v4
 
       - name: 前置校验（vars/secrets 缺失即失败）
@@ -105,6 +115,7 @@ jobs:
             echo "pull_secret=${K8S_IMAGE_PULL_SECRET}"
           } >> "$GITHUB_OUTPUT"
 
+  # ── job: image ──
   image:
     name: image ${{ inputs.language }}
     needs: precheck
@@ -116,6 +127,7 @@ jobs:
       language: ${{ inputs.language }}
       push: true
 
+  # ── job: deploy ──
   deploy:
     name: deploy to ${{ inputs.environment }}
     needs: [precheck, image]

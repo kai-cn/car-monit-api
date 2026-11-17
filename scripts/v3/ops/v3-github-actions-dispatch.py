@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# ======================================================================
+# 文件：scripts/v3/ops/v3-github-actions-dispatch.py
+# 用途：运维/构建辅助脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 """Trigger / inspect native-image GitHub Actions runs without the `gh` CLI.
 
 The token is read at runtime from `git credential fill` (Git Credential Manager).

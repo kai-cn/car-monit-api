@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ======================================================================
+# 文件：scripts/v3/ops/v3-verify-jdk-matrix.sh
+# 用途：Linux shell 运维/构建脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 # Reproduce api-side startup + business-endpoint verification across the JDK/framework
 # matrix. Uses the corrected runners (both DB credentials injected, port 19902).
 #

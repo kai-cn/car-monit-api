@@ -1,3 +1,8 @@
+# ======================================================================
+# 文件：scripts/v3/ops/v3-compare-native-jvm.ps1
+# 用途：PowerShell 运维/构建脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 # Windows A/B measurement: Spring Boot native .exe vs ordinary fat jar.
 #
 #   powershell -File v3-compare-native-jvm.ps1 `

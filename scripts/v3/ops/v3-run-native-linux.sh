@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ======================================================================
+# 文件：scripts/v3/ops/v3-run-native-linux.sh
+# 用途：运行 native 二进制并探活
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 # Start a Linux native-image build against the WSL openGauss + MySQL instances,
 # measure startup, RSS and HTTP readiness, then stop it.
 #

@@ -1,3 +1,10 @@
+# ============================================================================
+# 文件：.github/workflows/master.yml
+# 用途：主分支 push 总入口：编排各语言 job 与 parity 门禁
+# 触发：手动 dispatch / push 事件
+# 主要 job：presence、java、cpp、go、python、rust、image-java、image-python、image-go、image-cpp、image-rust、master-gate
+# 说明：本文件仅新增中文注释，不改动任何执行逻辑；runner/权限/守卫以实际配置为准。
+# ============================================================================
 name: master
 
 # 主分支流水线：push 到 master 全量构建（不做路径分诊），产出可归档制品。
@@ -5,8 +12,10 @@ name: master
 # V3 分支适配：push 到 car-monit-api-java-V3 也触发本流水线；PR 基线仍为 master。
 # 同一 ref 不取消进行中的运行：每次提交都要留下完整的构建/测试结论。
 on:
+  # ── job: push ──
   push:
     branches: ["master", "car-monit-api-java-V3"]
+  # ── job: workflow_dispatch ──
   workflow_dispatch:
 
 concurrency:
@@ -19,6 +28,7 @@ permissions:
 jobs:
   # rust 目录被 .gitignore L77 忽略；C++ 完整源码在 car-monit-api-cpp 分支，
   # master 只有 11 个文件。先探测存在性，避免调用必然失败的 job。
+  # ── job: presence ──
   presence:
     name: presence
     runs-on: ubuntu-latest
@@ -27,6 +37,7 @@ jobs:
       rust: ${{ steps.check.outputs.rust }}
       cpp: ${{ steps.check.outputs.cpp }}
     steps:
+      # 拉取仓库源码
       - uses: actions/checkout@v4
       - name: 检查 rust / cpp 源码是否已入库
         id: check
@@ -45,6 +56,7 @@ jobs:
             echo "::notice::master 缺少 C++ 入口 src/main.cpp（完整源码在 car-monit-api-cpp 分支），跳过 C++ 流水线"
           fi
 
+  # ── job: java ──
   java:
     name: java
     uses: ./.github/workflows/_java.yml
@@ -52,6 +64,7 @@ jobs:
       mode: master
       jdk-version: "8"
 
+  # ── job: cpp ──
   cpp:
     name: cpp
     needs: presence
@@ -60,12 +73,14 @@ jobs:
     with:
       mode: master
 
+  # ── job: go ──
   go:
     name: go
     uses: ./.github/workflows/_go.yml
     with:
       mode: master
 
+  # ── job: python ──
   python:
     name: python
     uses: ./.github/workflows/_python.yml
@@ -73,6 +88,7 @@ jobs:
       mode: master
       run-integration: true
 
+  # ── job: rust ──
   rust:
     name: rust
     needs: presence
@@ -82,6 +98,7 @@ jobs:
       mode: master
 
   # ---- 镜像构建 + GHCR 推送（master 上额外产出 latest 标签）----
+  # ── job: image-java ──
   image-java:
     name: image java
     uses: ./.github/workflows/_image.yml
@@ -92,6 +109,7 @@ jobs:
       language: java
       push: true
 
+  # ── job: image-python ──
   image-python:
     name: image python
     uses: ./.github/workflows/_image.yml
@@ -102,6 +120,7 @@ jobs:
       language: python
       push: true
 
+  # ── job: image-go ──
   image-go:
     name: image go
     uses: ./.github/workflows/_image.yml
@@ -112,6 +131,7 @@ jobs:
       language: go
       push: true
 
+  # ── job: image-cpp ──
   image-cpp:
     name: image cpp
     needs: presence
@@ -124,6 +144,7 @@ jobs:
       language: cpp
       push: true
 
+  # ── job: image-rust ──
   image-rust:
     name: image rust
     needs: presence
@@ -136,6 +157,7 @@ jobs:
       language: rust
       push: true
 
+  # ── job: master-gate ──
   master-gate:
     name: Master Gate
     if: always()

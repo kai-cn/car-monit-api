@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# ======================================================================
+# 文件：scripts/v3/ops/v3-port-jdk25-native-config.py
+# 用途：运维/构建辅助脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 """Port the proven JDK25 native-maven-plugin configuration to other Boot4 branches.
 
 Usage: python3 v3-port-jdk25-native-config.py <pom> [<pom> ...]

@@ -1,3 +1,8 @@
+# ======================================================================
+# 文件：scripts/v3/ops/v3-native-cicd-local.ps1
+# 用途：PowerShell 运维/构建脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 <#
 .SYNOPSIS
     Local equivalent of the artifact-collection steps in native-image.yml.

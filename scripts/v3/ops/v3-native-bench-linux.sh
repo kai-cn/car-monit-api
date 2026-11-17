@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ======================================================================
+# 文件：scripts/v3/ops/v3-native-bench-linux.sh
+# 用途：Linux shell 运维/构建脚本
+# 说明：仅新增中文注释，不改执行逻辑。
+# ======================================================================
 # Measure a Spring Boot native ELF inside WSL: startup time, RSS, CPU.
 #   bash v3-native-bench-linux.sh <binary> <port> <label> [sample-sec] [extra-args...]
 set -euo pipefail
