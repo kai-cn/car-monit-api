@@ -168,6 +168,7 @@
                     <release>${java.version}</release>
                     <encoding>${project.build.sourceEncoding}</encoding>
                     <parameters>true</parameters>
+                    <proc>full</proc>
                 </configuration>
             </plugin>
             <plugin>
