@@ -70,5 +70,11 @@
   {
     "name": "com.github.pagehelper.dialect.helper.XuguDialect",
     "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.ruoyi.base.domain.SysUtil",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
   }
 ]
