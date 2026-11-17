@@ -47,6 +47,7 @@ jobs:
 
       # 安装 JDK
       - uses: actions/setup-java@v4
+        # Perf: let setup-java restore Maven dependencies from the action cache.
         cache: maven
         with:
           distribution: temurin
