@@ -17,6 +17,7 @@ on:
 
 concurrency:
   group: release-${{ github.ref_name }}
+  # Perf: cancel superseded runs so the queue always serves the newest commit.
   cancel-in-progress: true
 
 permissions:
