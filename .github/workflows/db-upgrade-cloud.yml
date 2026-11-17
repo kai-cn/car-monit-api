@@ -129,7 +129,12 @@ jobs:
           CI_DB_PASSWORD: ${{ secrets.CI_DB_TEST_PASSWORD }}
         run: |
           set -uo pipefail
-          bash scripts/v3/ops/dbupgrade/db_cell.sh api "${{ matrix.db }}" new out/app.jar "${LABEL}-new"
+          bash scripts/v3/ops/dbupgrade/db_cell.sh api "${{ matrix.db }}" new out/app.jar "${LABEL}-new" || {
+            echo "::group::NEW side app log tail"
+            tail -60 out/new.json.app.log 2>/dev/null | sed -E 's/(PASSWORD|password|secret)=[^ ]*/\1=***/Ig' || true
+            echo "::endgroup::"
+            exit 1
+          }
 
       - name: Compare business consistency (fails on 0 endpoints or real DIFF)
         shell: bash

@@ -82,33 +82,32 @@ og_sql() {
 }
 
 detect_og_admin() {
-  # 逐个候选（uid + 用户 + socket/TCP）探测，直到 select 1 成功。
-  local i u mode uid
-  for mode in socket tcp; do
-    for uid in 70 0; do
-      for u in omm gaussdb; do
-        for i in $(seq 1 8); do
-          local rc=1
-          if [ "$mode" = socket ]; then
-            # 本地实测可用形式：uid 70 + socket 免密，不显式传 -U/-w（传 -U 会触发口令认证而失败）。
-            docker exec -u "$uid" -e LD_LIBRARY_PATH=/usr/local/opengauss/lib \
-              "$CNAME" /usr/local/opengauss/bin/gsql -d postgres \
-              -Atc 'select 1' >/dev/null 2>&1 && rc=0
-          else
-            docker exec -u "$uid" -e PGPASSWORD="$PW" -e LD_LIBRARY_PATH=/usr/local/opengauss/lib \
-              "$CNAME" /usr/local/opengauss/bin/gsql -h 127.0.0.1 -p 5432 \
-              -U "$u" -d postgres -w -Atc 'select 1' >/dev/null 2>&1 && rc=0
-          fi
-          if [ "$rc" = 0 ]; then
-            OG_ADMIN="$u"; OG_UID="$uid"
-            echo "$u" > "$OUT/${DB}_admin.txt"
-            log "openGauss admin user=$u uid=$uid mode=$mode (attempt $i)"
-            return 0
-          fi
-          sleep 2
-        done
-      done
+  # 先找“能用 TCP+口令认证”的用户——这才是 app JDBC 实际使用的方式；
+  # 只用 socket 免密探测会误选没有口令的用户（3.0=gaussdb, 7.x 镜像可能不同）。
+  local i u
+  for u in gaussdb omm; do
+    for i in $(seq 1 12); do
+      if docker exec -e PGPASSWORD="$PW" -e LD_LIBRARY_PATH=/usr/local/opengauss/lib \
+          "$CNAME" /usr/local/opengauss/bin/gsql -h 127.0.0.1 -p 5432 \
+          -U "$u" -d postgres -w -Atc 'select 1' >/dev/null 2>&1; then
+        OG_ADMIN="$u"; OG_UID="70"
+        echo "$u" > "$OUT/${DB}_admin.txt"
+        log "openGauss JDBC-capable user=$u (tcp, attempt $i)"
+        return 0
+      fi
+      sleep 2
     done
+  done
+  # 回退：socket 免密（仅用于加载夹具，app 仍可能连不上——如实记录）。
+  for u in gaussdb omm; do
+    if docker exec -u 70 -e LD_LIBRARY_PATH=/usr/local/opengauss/lib \
+        "$CNAME" /usr/local/opengauss/bin/gsql -U "$u" -d postgres -w \
+        -Atc 'select 1' >/dev/null 2>&1; then
+      OG_ADMIN="$u"; OG_UID="70"
+      echo "$u" > "$OUT/${DB}_admin.txt"
+      log "openGauss socket-only user=$u (JDBC may still fail)"
+      return 0
+    fi
   done
   log "gsql diagnostics (sanitized):"
   docker logs "$CNAME" 2>&1 | tail -8 | sed -E 's/(PASSWORD|password)=[^ ]*/\1=***/g' || true
