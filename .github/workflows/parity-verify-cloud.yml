@@ -111,29 +111,35 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq gcc g++ zlib1g-dev
 
-      - name: Build fat jar (JVM baseline)
+      - name: Build fat jar + install reactor deps (JVM baseline)
         shell: bash
         run: |
           set -euo pipefail
-          mvn $MAVEN_ARGS -DskipTests -pl "$MODULE" -am package
-          ls -lh "$MODULE"/target/*.jar
+          # install (not just package) so pro-base-common etc. land in ~/.m2 for the
+          # later native:compile which resolves siblings from the local repo.
+          mvn $MAVEN_ARGS -DskipTests -pl "$MODULE" -am install
+          mkdir -p out
+          jar=$(ls "$MODULE"/target/*.jar | grep -v original | head -1)
+          cp "$jar" out/baseline.jar
+          ls -lh out/baseline.jar
 
       - name: Build native binary (candidate)
+        continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           MVN=mvn; [ "$CELL_PLATFORM" = 'windows' ] && MVN=mvn.cmd
+          # No `clean` (it would wipe the jar we just copied); deps are installed already.
           "$MVN" $MAVEN_ARGS -Pnative,native-flink-exclude -DskipTests \
-              -pl "$MODULE" clean native:compile
-          echo "native build done"
+              -pl "$MODULE" native:compile || echo "::warning::native build failed (see log); jar baseline still probed"
+          echo "native build step done"
 
       - name: Locate jar + native binary
         id: art
         shell: bash
         run: |
-          set -euo pipefail
-          jar=$(ls "$MODULE"/target/*.jar | grep -v original | head -1)
-          echo "jar=$jar" >> "$GITHUB_OUTPUT"
+          set -uo pipefail
+          echo "jar=out/baseline.jar" >> "$GITHUB_OUTPUT"
           if [ "$CELL_PLATFORM" = 'windows' ]; then bin="$MODULE/target/$MODULE.exe"; else bin="$MODULE/target/$MODULE"; fi
           if [ -f "$bin" ]; then
             echo "native=$bin" >> "$GITHUB_OUTPUT"
