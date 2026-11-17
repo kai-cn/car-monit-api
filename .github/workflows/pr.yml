@@ -16,6 +16,7 @@ on:
 
 concurrency:
   group: pr-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # Perf: cancel superseded runs so the queue always serves the newest commit.
   cancel-in-progress: true
 
 permissions:
