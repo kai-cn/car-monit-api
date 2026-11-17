@@ -1,3 +1,10 @@
+# ============================================================================
+# 文件：.github/workflows/pr.yml
+# 用途：PR 校验入口：对各语言改动做编译/测试与一致性门禁
+# 触发：手动 dispatch / PR 事件
+# 主要 job：changes、java、cpp、go、python、rust、pr-gate
+# 说明：本文件仅新增中文注释，不改动任何执行逻辑；runner/权限/守卫以实际配置为准。
+# ============================================================================
 name: pr
 
 # PR 统一入口：按改动路径分诊，只跑受影响语言；未受影响语言跳过（由 PR Gate 视为通过）。
@@ -9,9 +16,11 @@ name: pr
 #   * 仓库分支保护请把必需检查指向 "PR Gate"（单一汇总检查），不要指向各语言 job，
 #     否则路径未命中时检查会停留在 skipped/expected 状态。
 on:
+  # ── job: pull_request ──
   pull_request:
     branches: ["master"]
     types: [opened, synchronize, reopened, ready_for_review]
+  # ── job: workflow_dispatch ──
   workflow_dispatch:
 
 concurrency:
@@ -22,6 +31,7 @@ permissions:
   contents: read
 
 jobs:
+  # ── job: changes ──
   changes:
     name: changes (paths filter)
     runs-on: ubuntu-latest
@@ -38,6 +48,7 @@ jobs:
       rust-present: ${{ steps.presence.outputs.rust }}
       cpp-present: ${{ steps.presence.outputs.cpp }}
     steps:
+      # 拉取仓库源码
       - uses: actions/checkout@v4
 
       - name: 路径分诊
@@ -74,6 +85,7 @@ jobs:
             echo "cpp=false" >> "$GITHUB_OUTPUT"
           fi
 
+  # ── job: java ──
   java:
     name: java
     needs: changes
@@ -83,6 +95,7 @@ jobs:
       mode: pr
       jdk-version: "8"
 
+  # ── job: cpp ──
   cpp:
     name: cpp
     needs: changes
@@ -91,6 +104,7 @@ jobs:
     with:
       mode: pr
 
+  # ── job: go ──
   go:
     name: go
     needs: changes
@@ -99,6 +113,7 @@ jobs:
     with:
       mode: pr
 
+  # ── job: python ──
   python:
     name: python
     needs: changes
@@ -108,6 +123,7 @@ jobs:
       mode: pr
       run-integration: true
 
+  # ── job: rust ──
   rust:
     name: rust
     needs: changes
@@ -116,6 +132,7 @@ jobs:
     with:
       mode: pr
 
+  # ── job: pr-gate ──
   pr-gate:
     name: PR Gate
     if: always()

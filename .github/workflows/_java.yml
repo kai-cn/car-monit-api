@@ -1,3 +1,10 @@
+# ============================================================================
+# 文件：.github/workflows/_java.yml
+# 用途：Java 模块可复用工作流：编译/测试 JVM jar，被 master/pr 通过 workflow_call 调用
+# 触发：被其他 workflow 调用
+# 主要 job：build
+# 说明：本文件仅新增中文注释，不改动任何执行逻辑；runner/权限/守卫以实际配置为准。
+# ============================================================================
 name: _java
 
 # 可复用 workflow：Java 主仓库（Spring Boot 2.4.5 / source-target 1.8）。
@@ -11,6 +18,7 @@ name: _java
 #     因此门禁只到"可编译可打包"。
 #   * pulsar-client 2.10.4 在 pom 注释中自述需 JDK 11+，与 JDK 8 目标冲突，未验证。
 on:
+  # ── job: workflow_call ──
   workflow_call:
     inputs:
       mode:
@@ -33,6 +41,7 @@ permissions:
   contents: read
 
 jobs:
+  # ── job: build ──
   build:
     name: java (OpenJDK 8 / openEuler)
     # openEuler 24.03 自带的 java-1.8.0-openjdk-devel 可直接编译 source/target=1.8；
@@ -57,6 +66,7 @@ jobs:
           java -version
           mvn -version
 
+      # 拉取仓库源码
       - uses: actions/checkout@v4
 
       - name: 缓存 Maven 本地仓库

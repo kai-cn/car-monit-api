@@ -1,9 +1,17 @@
+# ============================================================================
+# 文件：.github/workflows/deploy-selfhosted.yml
+# 用途：自托管部署（已加 owner 守卫，仅手动触发）
+# 触发：手动 dispatch
+# 主要 job：deploy
+# 说明：本文件仅新增中文注释，不改动任何执行逻辑；runner/权限/守卫以实际配置为准。
+# ============================================================================
 name: deploy-selfhosted
 
 # 单机（WSL openEuler）部署编排：默认关闭。
 # 仅在 workflow_dispatch 且 confirm=true 时执行；内容复用 cd-standalone 产出的
 # install.sh + systemctl restart + /health 检查。与 K8s 的 deploy.yml 互不影响。
 on:
+  # ── job: workflow_dispatch ──
   workflow_dispatch:
     inputs:
       confirm:
@@ -26,6 +34,7 @@ permissions:
   contents: read
 
 jobs:
+  # ── job: deploy ──
   deploy:
     name: deploy standalone on self-hosted WSL
     if: ${{ inputs.confirm }} && github.repository_owner == 'kai-cn'
