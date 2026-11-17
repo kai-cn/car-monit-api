@@ -234,6 +234,13 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
+          for f in out/jar.json.app.log out/native.json.app.log; do
+            if [ -f "$f" ]; then
+              echo "::group::tail $f"
+              tail -n 80 "$f" || true
+              echo "::endgroup::"
+            fi
+          done
           if [ ! -f out/native.json ]; then
             echo "::warning::native probe missing - cell is build-only (Boot4 native runtime requires JDK25)"
             exit 0
