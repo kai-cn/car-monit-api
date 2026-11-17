@@ -12,10 +12,8 @@ name: master
 # V3 分支适配：push 到 car-monit-api-java-V3 也触发本流水线；PR 基线仍为 master。
 # 同一 ref 不取消进行中的运行：每次提交都要留下完整的构建/测试结论。
 on:
-  # ── job: push ──
   push:
     branches: ["master", "car-monit-api-java-V3"]
-  # ── job: workflow_dispatch ──
   workflow_dispatch:
 
 concurrency:

@@ -23,7 +23,6 @@ name: deploy
 # 首次部署需人工 bootstrap（namespace / Deployment / imagePullSecret / 配置挂载），
 # 详见 docs/CI-CD-PIPELINES.md §10。
 on:
-  # ── job: workflow_dispatch ──
   workflow_dispatch:
     inputs:
       environment:

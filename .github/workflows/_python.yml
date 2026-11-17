@@ -11,7 +11,6 @@ name: _python
 # 门禁内容原样承自旧 .github/workflows/ci.yml（覆盖率 65% / check_* / 冒烟 / 集成 / secret 扫描），
 # 只是改为可复用 + 按调用方决定是否跑集成与镜像构建，避免与 PR/主分支两套逻辑漂移。
 on:
-  # ── job: workflow_call ──
   workflow_call:
     inputs:
       mode:

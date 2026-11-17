@@ -16,11 +16,9 @@ name: pr
 #   * 仓库分支保护请把必需检查指向 "PR Gate"（单一汇总检查），不要指向各语言 job，
 #     否则路径未命中时检查会停留在 skipped/expected 状态。
 on:
-  # ── job: pull_request ──
   pull_request:
     branches: ["master"]
     types: [opened, synchronize, reopened, ready_for_review]
-  # ── job: workflow_dispatch ──
   workflow_dispatch:
 
 concurrency:

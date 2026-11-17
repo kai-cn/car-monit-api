@@ -18,7 +18,6 @@ name: _java
 #     因此门禁只到"可编译可打包"。
 #   * pulsar-client 2.10.4 在 pom 注释中自述需 JDK 11+，与 JDK 8 目标冲突，未验证。
 on:
-  # ── job: workflow_call ──
   workflow_call:
     inputs:
       mode:
