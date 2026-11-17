@@ -85,8 +85,11 @@ api native `43905084757` / backend native `43905459051` success。
 
 - 能力：`native-image-cloud.yml` 的 `platform=windows` → `windows-latest` + `ilammy/msvc-dev-cmd@v1`
   （注入 cl.exe/link.exe）+ `mvn.cmd`；产物定位按 `$mod.exe`；复用同一 `publish` job 上传 Release。
-- 实测：run `43914875664`（`platform=windows`、`release_tag=v3.0.0-native-test`）已触发，
-  prepare success、build in_progress（Windows native-image 约 10–15 min）。结果见任务清单 G6。
+- 实测：run `43914875664`（`platform=windows`、`release_tag=v3.0.0-native-test`）
+  → build success + publish success。Windows artifact zip `120,166,496 B`，
+  Release 新增 `api-jdk25-windows-amd64.exe`（361,127,936 B）+ `.sha256`。
+  Release 共 7 资产：linux bin/sha256、windows exe/sha256、standalone tar.gz、manifest.json、SHA256SUMS。
+  **Windows 端原生镜像完整 CICD（构建→artifact→Release）全链路打通。**
 
 ## 8. 凭据轮换（用户后续必做）
 
