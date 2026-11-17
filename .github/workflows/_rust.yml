@@ -12,7 +12,6 @@ name: _rust
 # !! 重要：car-monit-api-rust/ 仍被根 .gitignore L77 整体忽略且未入库（无独立 .git），
 # 因此本 workflow 目前不会被 GitHub 触发；取消忽略并提交后才生效。
 on:
-  # ── job: workflow_call ──
   workflow_call:
     inputs:
       mode:

@@ -18,7 +18,6 @@ name: _cpp
 # 说明：master 上 C++ 源码不完整（完整源码在 car-monit-api-cpp 分支），
 # 调用方会用 presence 检查跳过本 workflow；PR 携带完整源码时才会真正执行。
 on:
-  # ── job: workflow_call ──
   workflow_call:
     inputs:
       mode:

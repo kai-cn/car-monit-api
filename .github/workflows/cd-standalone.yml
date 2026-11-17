@@ -13,7 +13,6 @@ name: cd-standalone
 # 与 K8s 的 deploy.yml 互不影响。
 
 on:
-  # ── job: workflow_dispatch ──
   workflow_dispatch:
     inputs:
       service:
@@ -27,7 +26,6 @@ on:
         required: false
         type: string
         default: ""
-  # ── job: push ──
   push:
     branches: ["master"]
     tags: ["v*.*.*"]
