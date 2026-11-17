@@ -11,10 +11,8 @@ name: master
 # 默认分支口径统一为 master；不要加入 main 兼容分支。
 # 同一 ref 不取消进行中的运行：每次提交都要留下完整的构建/测试结论。
 on:
-  # ── job: push ──
   push:
     branches: ["master"]
-  # ── job: workflow_dispatch ──
   workflow_dispatch:
 
 concurrency:

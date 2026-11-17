@@ -11,7 +11,6 @@ name: _go
 # 运行环境：openEuler 24.03 容器（GitHub 托管 runner）；Go 由 setup-go 安装
 # （openEuler 仓库仅 1.21.4，不满足 go.mod 1.26.10）。
 on:
-  # ── job: workflow_call ──
   workflow_call:
     inputs:
       mode:

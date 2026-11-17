@@ -11,7 +11,6 @@ name: deploy-selfhosted
 # 仅在 workflow_dispatch 且 confirm=true 时执行；内容复用 cd-standalone 产出的
 # install.sh + systemctl restart + /health 检查。与 K8s 的 deploy.yml 互不影响。
 on:
-  # ── job: workflow_dispatch ──
   workflow_dispatch:
     inputs:
       confirm:
