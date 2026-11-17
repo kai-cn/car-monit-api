@@ -1,0 +1,157 @@
+# Database major-version upgrade verification on GitHub cloud runner (api repo).
+#
+# Goal: same jar + same endpoint suite against OLD and NEW database containers:
+#   MySQL 8.0 -> 9.7 (backend + api dictionary), openGauss 3.0.0 -> 7.x (api main store).
+# Flow per cell: build jar -> old side (start/load/probe/stats) -> logical dump ->
+#   new side (start/restore/probe/stats) -> parity_compare -> report -> evidence artifact.
+#
+# Credentials are injected at dispatch time via `ci_db_password`; the workflow
+# file, docs and logs never contain a credential value.
+# workflow_dispatch only. This file is mirrored onto master so GitHub exposes it.
+
+name: db-upgrade-cloud
+
+on:
+  workflow_dispatch:
+    inputs:
+      db_scope:
+        description: database to verify
+        type: choice
+        options: [mysql, opengauss, both]
+        default: both
+      linux_runner:
+        type: string
+        default: ubuntu-latest
+      ci_db_password:
+        description: CI-only throwaway DB password (injected at dispatch)
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dbupgrade-api-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  MAVEN_ARGS: -B -ntp
+  MODULE: pro-business-api
+  CI_DB_PASSWORD: ${{ inputs.ci_db_password }}
+
+jobs:
+  prepare:
+    runs-on: ${{ inputs.linux_runner }}
+    timeout-minutes: 5
+    outputs:
+      jdk: ${{ steps.jdk.outputs.version }}
+      matrix: ${{ steps.gen.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: jdk
+        shell: bash
+        run: |
+          v=$(grep -oP '<java\.version>\K[0-9]+' pom.xml | head -1)
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "detected java.version=$v"
+      - id: gen
+        shell: bash
+        env:
+          SCOPE: ${{ inputs.db_scope }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          s = os.environ['SCOPE']
+          dbs = ['mysql','opengauss'] if s == 'both' else [s]
+          print('matrix=' + json.dumps({'include': [{'db': d} for d in dbs]}, separators=(',',':')))
+          PY
+          grep '^matrix=' "$GITHUB_OUTPUT"
+
+  verify:
+    needs: prepare
+    runs-on: ${{ inputs.linux_runner }}
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      LABEL: api-jdk${{ needs.prepare.outputs.jdk }}-${{ matrix.db }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Provision JDK ${{ needs.prepare.outputs.jdk }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ needs.prepare.outputs.jdk }}
+          cache: maven
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+
+      - name: Build application jar
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          mvn $MAVEN_ARGS -DskipTests -pl "$MODULE" -am install
+          jar=$(ls "$MODULE"/target/*.jar | grep -v original | head -1)
+          cp "$jar" out/app.jar
+          ls -lh out/app.jar
+
+      - name: OLD DB side - load fixtures and probe
+        shell: bash
+        run: |
+          set -uo pipefail
+          bash scripts/v3/ops/dbupgrade/db_cell.sh api "${{ matrix.db }}" old out/app.jar "${LABEL}-old"
+
+      - name: Logical dump from OLD DB
+        shell: bash
+        run: bash scripts/v3/ops/dbupgrade/db_dump.sh api "${{ matrix.db }}"
+
+      - name: Stop OLD DB container
+        shell: bash
+        run: |
+          docker rm -f "${{ matrix.db }}-old" >/dev/null 2>&1 || true
+          docker rm -f my-dict pg-standin >/dev/null 2>&1 || true
+
+      - name: NEW DB side - migrate and probe
+        shell: bash
+        run: |
+          set -uo pipefail
+          bash scripts/v3/ops/dbupgrade/db_cell.sh api "${{ matrix.db }}" new out/app.jar "${LABEL}-new"
+
+      - name: Compare business consistency
+        shell: bash
+        run: |
+          set -uo pipefail
+          python scripts/v3/ops/parity/parity_compare.py \
+            --baseline out/old.json --candidate out/new.json \
+            --out out/compare.json --md out/compare.md --label "$LABEL"
+          cat out/compare.md 2>/dev/null || true
+
+      - name: Generate resource and performance report
+        shell: bash
+        run: |
+          python scripts/v3/ops/dbupgrade/report.py \
+            --app api --db "${{ matrix.db }}" --label "$LABEL" --out-dir out
+          cat out/report.md
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbupgrade-api-jdk${{ needs.prepare.outputs.jdk }}-${{ matrix.db }}
+          path: out/**
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Stop all test containers
+        if: always()
+        shell: bash
+        run: |
+          docker rm -f mysql-old opengauss-old mysql-new opengauss-new my-dict pg-standin rd >/dev/null 2>&1 || true
