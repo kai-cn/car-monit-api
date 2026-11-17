@@ -176,6 +176,7 @@
                         <buildArg>--initialize-at-run-time=io.grpc.netty.shaded.io.netty.internal.tcnative</buildArg>
                         <buildArg>--initialize-at-run-time=io.grpc.netty.shaded.io.netty.handler.ssl</buildArg>
                         <buildArg>--initialize-at-build-time=ch.qos.logback</buildArg>
+                        <buildArg>--initialize-at-build-time=org.springframework.boot.logging.log4j2.SpringBootPropertySource</buildArg>
                         <buildArg>--exclude-config</buildArg>
                         <buildArg>.*fastjson2.*[.]jar</buildArg>
                         <buildArg>^/META-INF/native-image/</buildArg>
