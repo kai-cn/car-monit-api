@@ -217,7 +217,24 @@ backend 原生镜像可构建，但运行仍失败：
 6. 旁证：Boot3 jdk21 的 r9 原生构建此前已成功（272,763,616 B，`native-aot` 8分26秒），
    只是产物后来被 Boot4 构建覆盖；日志见 `evidence/native-api-boot3-jdk21-linux-r9.log`。
 
-## 9. 边界与风险
+## 9. 云 runner 续推结果（2026-11-17 晚）
+
+> 本节全部结论来自 GitHub Actions 云 runner 的 job 日志，不再下载 artifact。
+
+- **H8b api saveRedis 修复完成**：`car-monit-api-jdk25` 反射配置注册 `com.ruoyi.base.domain.SysUtil`；
+  run `44015161206`：79 端点、status_match=79、exact=68、nondet=11、**fails=0**，
+  `/base/sysutil/saveRedis` 200/200 exact。
+- **Boot3 + Mandrel25 完成**：
+  - `feature/springboot3`（JDK21）run `44033248438`：native 启动 1207 ms / 318.8 MB，JVM 8123 ms / 516.1 MB；
+    延迟 2.71 ms vs 17.82 ms；79 端点 fails=0。
+  - `feature/springboot3-jdk17`（新建分支）run `44033253040`：native 1207 ms / 319.3 MB，JVM 8415 ms / 506.4 MB；
+    延迟 3.29 ms vs 16.43 ms；79 端点 fails=0。
+  - 两者 exact=68、nondet=11、fails=0；NONDET 不豁免 status，status_match=79。
+- **backend native 仍阻塞**：逐层修复后 JVM 基线恢复（2 端点 success），native 仍 rc=1；
+  当前错误为 MyBatis `Could not resolve type alias 'genTableColumn'`，即 native 下 typeAliases 包扫描失效。
+  后续需显式注册类型别名或改 mapper 全限定名。已注册 domain 类反射但不足以解决别名注册问题。
+
+## 10. 边界与风险
 
 - 本轮业务验证只覆盖「启动 + 一个读端点」；Redis/Kafka/ES 链路未逐一回归。
 - Boot3 的 `-Ob`（迭代期快速优化）仍留在 pom，交付级构建应去掉并重跑一次 -O2。
