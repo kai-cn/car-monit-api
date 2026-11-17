@@ -45,7 +45,7 @@ jobs:
     name: java (OpenJDK 8 / openEuler)
     # openEuler 24.03 自带的 java-1.8.0-openjdk-devel 可直接编译 source/target=1.8；
     # 不依赖 Temurin（欧拉仓库无 Temurin）。Maven 走 Apache 官方 tarball（仓库只有 maven-plugin）。
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
     container:
       image: openeuler/openeuler:24.03-lts
     timeout-minutes: 45

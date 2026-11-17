@@ -26,7 +26,7 @@ jobs:
   # ── job: checks ──
   checks:
     name: go (1.26.10 / openEuler)
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
     container:
       image: openeuler/openeuler:24.03-lts
     timeout-minutes: 30
