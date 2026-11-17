@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# JVM counterpart of v3-run-native-linux.sh; same credentials/port contract for A/B comparability.
 # ======================================================================
 # 文件：scripts/v3/ops/v3-run-jvm-linux.sh
 # 用途：运行 JVM jar 并探活

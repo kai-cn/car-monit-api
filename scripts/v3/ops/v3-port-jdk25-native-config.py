@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Port proven JDK25 native-image settings (plugin version, class-init args, resource includes)
+# to Boot4 JDK17/21 module poms without touching unrelated configuration.
 # ======================================================================
 # 文件：scripts/v3/ops/v3-port-jdk25-native-config.py
 # 用途：运维/构建辅助脚本

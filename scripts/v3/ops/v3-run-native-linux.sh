@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Start a native ELF, sample readiness/RSS/threads/errors for a fixed window, then stop it.
+# Injects BOTH openGauss (GS_PASSWORD) and MySQL (CARMONIT_MYSQL_*) credentials from containers;
+# defaults to port 19902 and preflights the port to avoid false-positive readiness.
 # ======================================================================
 # 文件：scripts/v3/ops/v3-run-native-linux.sh
 # 用途：运行 native 二进制并探活

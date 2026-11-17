@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Long-running native vs JVM A/B: startup, steady RSS/latency, and stability drift.
+# Both variants receive identical Spring args and DB credentials; see final doc for measured results.
 # ======================================================================
 # 文件：scripts/v3/ops/v3-compare-native-jvm.sh
 # 用途：性能对比：native 与 JVM 的启动时间/RSS/延迟 A/B 测试

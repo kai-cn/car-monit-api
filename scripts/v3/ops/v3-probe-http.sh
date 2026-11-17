@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Fast post-build smoke test: start a native ELF or fat jar and probe one business endpoint.
+# Usage: v3-probe-http.sh <elf-or-jar> <label> [port]
+# For jars set JAVA=/path/to/java; credentials are injected from container env at runtime.
 # ======================================================================
 # 文件：scripts/v3/ops/v3-probe-http.sh
 # 用途：Linux shell 运维/构建脚本

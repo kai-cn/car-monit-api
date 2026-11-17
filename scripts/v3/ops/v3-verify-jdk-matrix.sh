@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Reproduce startup + business-endpoint checks for every existing JDK artifact in the worktrees.
+# Does NOT build artifacts; run build-jvm-jar.sh / v3-native-build-linux.sh first.
 # ======================================================================
 # 文件：scripts/v3/ops/v3-verify-jdk-matrix.sh
 # 用途：Linux shell 运维/构建脚本
