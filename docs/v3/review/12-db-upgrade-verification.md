@@ -41,9 +41,8 @@ python scripts/v3/ops/v3-github-actions-dispatch.py ensure-default `
   --template <jdk25 worktree>/.github/workflows/db-upgrade-cloud.yml `
   --path .github/workflows/db-upgrade-cloud.yml --repos <repo>
 
-# 触发（口令由运行环境生成并注入，不落盘）
-python D:/work/runtime-logs/dispatch-redacted.py <repo> db-upgrade-cloud.yml feature-dbupgrade `
-  "ci_db_password=<runtime-generated>"
+# 触发（口令由仓库 Secret CI_DB_TEST_PASSWORD 注入并自动脱敏，不作为 dispatch input）
+python D:/work/runtime-logs/dispatch-redacted.py <repo> db-upgrade-cloud.yml feature-dbupgrade
 ```
 
 ## 5. 踩坑记录

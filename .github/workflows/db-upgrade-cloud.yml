@@ -5,8 +5,8 @@
 # Flow per cell: build jar -> old side (start/load/probe/stats) -> logical dump ->
 #   new side (start/restore/probe/stats) -> parity_compare -> report -> evidence artifact.
 #
-# Credentials are injected at dispatch time via `ci_db_password`; the workflow
-# file, docs and logs never contain a credential value.
+# Credentials come from the masked repo secret CI_DB_TEST_PASSWORD in step-level env.
+# Never put secrets in workflow/job env (GitHub echoes those blocks into public logs).
 # workflow_dispatch only. This file is mirrored onto master so GitHub exposes it.
 
 name: db-upgrade-cloud
@@ -22,10 +22,6 @@ on:
       linux_runner:
         type: string
         default: ubuntu-latest
-      ci_db_password:
-        description: CI-only throwaway DB password (injected at dispatch)
-        type: string
-        default: ''
 
 permissions:
   contents: read
@@ -37,7 +33,8 @@ concurrency:
 env:
   MAVEN_ARGS: -B -ntp
   MODULE: pro-business-api
-  CI_DB_PASSWORD: ${{ inputs.ci_db_password }}
+  # 凭据绝不放在 workflow/job 级 env：GitHub 会把该块回显进公开日志。
+  # 只在调用 db_cell.sh 的 step 级 env 用 secrets.CI_DB_TEST_PASSWORD（自动脱敏）。
 
 jobs:
   prepare:
@@ -108,12 +105,16 @@ jobs:
 
       - name: OLD DB side - load fixtures and probe
         shell: bash
+        env:
+          CI_DB_PASSWORD: ${{ secrets.CI_DB_TEST_PASSWORD }}
         run: |
           set -uo pipefail
           bash scripts/v3/ops/dbupgrade/db_cell.sh api "${{ matrix.db }}" old out/app.jar "${LABEL}-old"
 
       - name: Logical dump from OLD DB
         shell: bash
+        env:
+          CI_DB_PASSWORD: ${{ secrets.CI_DB_TEST_PASSWORD }}
         run: bash scripts/v3/ops/dbupgrade/db_dump.sh api "${{ matrix.db }}"
 
       - name: Stop OLD DB container
@@ -124,14 +125,17 @@ jobs:
 
       - name: NEW DB side - migrate and probe
         shell: bash
+        env:
+          CI_DB_PASSWORD: ${{ secrets.CI_DB_TEST_PASSWORD }}
         run: |
           set -uo pipefail
           bash scripts/v3/ops/dbupgrade/db_cell.sh api "${{ matrix.db }}" new out/app.jar "${LABEL}-new"
 
-      - name: Compare business consistency
+      - name: Compare business consistency (fails on 0 endpoints or real DIFF)
         shell: bash
         run: |
-          set -uo pipefail
+          set -euo pipefail
+          python scripts/v3/ops/dbupgrade/gate.py --old out/old.json --new out/new.json
           python scripts/v3/ops/parity/parity_compare.py \
             --baseline out/old.json --candidate out/new.json \
             --out out/compare.json --md out/compare.md --label "$LABEL"
