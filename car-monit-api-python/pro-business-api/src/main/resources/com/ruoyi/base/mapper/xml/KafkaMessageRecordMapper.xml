@@ -7,7 +7,7 @@
        思路：将数据库的下划线命名转换为Java的驼峰命名
        目的：让MyBatis能够正确地将查询结果映射到实体对象
     -->
-    <resultMap type="KafkaMessageRecord" id="KafkaMessageRecordResult">
+    <resultMap type="com.ruoyi.base.domain.KafkaMessageRecord" id="KafkaMessageRecordResult">
         <result property="id" column="id"/>
         <result property="dataId" column="data_id"/>
         <result property="topic" column="topic"/>
