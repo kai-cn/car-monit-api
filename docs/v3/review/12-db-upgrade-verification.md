@@ -58,14 +58,37 @@
 10. **gs_dump 未通**：`gs_dump` 导出仍失败，openGauss 跨版本真实迁移未验证（以同一夹具对比代替），属未完成项。
 11. **dispatch 匹配旧 run**：自建 dispatch 脚本曾返回同 workflow 的旧 run，已改为按 `created_at` 取最新。
 12. **nondet 端点**：api-mysql 59 个非确定性端点为数据/排序抖动，按既有口径只豁免 body、status 不一致仍判 DIFF。
+13. **CREATE DATABASE 可见性延迟**：openGauss `CREATE DATABASE` 后首次 `select 1` 可能报 `database "RuoYi" does not exist`；改为循环“建库→验证可连”最多 10 轮。
+14. **库名大小写折叠**：7.x 镜像与 3.0 不同，同时建 `RuoYi`/`ruoyi`，以实际可连者为准。
+15. **V3 分支缺夹具**：java-V3 分支原本无 `scripts/v3/ops/parity/*`，需随 harness 一起部署。
+16. **重复 run 匹配**：自建 dispatch 曾匹配到已完成的旧 run（返回 stale id），已改为按 `created_at` 取最新并配合 cancel 清理。
 
-## 6. 未完成 / 后续
+## 6. 分支同步升级结果（jdk21 / jdk17 / java-V3）
+
+harness 与 parity 夹具已通过 git plumbing 部署到 6 个分支并全部云端验证通过（同一 workflow dispatch 到各 ref）：
+
+| 仓库 | 分支 | MySQL 9.7 | openGauss 7 | 结论 |
+|---|---|---|---|---|
+| api | jdk21 | ✅ `44213841737` | ✅ `44214790674`（重跑） | PASS |
+| api | jdk17 | ✅ `44213853656` | ✅ `44214802984`（重跑） | PASS |
+| api | java-V3 | ✅ `44213866103` | ✅ `44213866103` | PASS |
+| backend | jdk21 | ✅ `44213878862` | n/a | PASS |
+| backend | jdk17 | ✅ `44213891663` | n/a | PASS |
+| backend | java-V3 | ✅ `44213904528` | n/a | PASS |
+
+同步过程中新增的坑与修复：
+- V3 分支原本没有 `scripts/v3/ops/parity/*` 夹具/探针，需随 harness 一起部署，否则报 `No such file or directory`。
+- openGauss 容器内 `CREATE DATABASE` 后存在可见性延迟（DDL 异步），首次 `select 1` 可能报 `database "RuoYi" does not exist`；改为循环“建库→验证可连”最多 10 轮。
+- 7.x 镜像对库名大小写折叠与 3.0 不同：同时创建 `RuoYi` 与 `ruoyi`，以实际可连者为准（`PG_DB` 变量）。
+- gsql `-f` 偶发把默认 host 解析为 `Unknown:5432`：显式尝试多个 socket 目录（`/tmp`、`/var/run/postgresql`、`/usr/local/opengauss/data`）。
+- 版本串读取改为非阻断（失败不影响验证结论）。
+
+## 7. 未完成 / 后续
 
 - openGauss `gs_dump` 真实跨版本迁移（当前回退夹具）；尽量获取 7.0.0 GA 正式镜像替换 RC3。
 - WSL 本地在拉取大镜像后一度 `E_FAIL`（不影响云端结论），需宿主侧恢复后复测本地。
-- db-upgrade harness 同步到 jdk21/jdk17/javaV3 分支（见分支提交）。
 
-## 7. 复现命令
+## 8. 复现命令
 
 ```powershell
 # 工作流镜像到 master（一次性）
