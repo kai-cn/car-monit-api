@@ -125,6 +125,13 @@ _DOCUMENTED_EQUIVALENTS: dict[tuple[str, str], str] = {
 _OUT_OF_SCOPE_PREFIXES: tuple[str, ...] = (
     "pro-business-api/src/main/java/com/ruoyi/base/controller/v3/",
     "pro-business-api/src/main/java/com/ruoyi/base/service/v3/",
+    # 以下为 Java-only 运维/基础设施代码，Python legacy 端口不实现：
+    # Spring MVC 内部端点令牌拦截器（只保护 Java 侧 /api/v3/** 与导出端点）。
+    "pro-business-api/src/main/java/com/ruoyi/base/config/InternalEndpointGuardConfig.java",
+    # Native 镜像的 SqlSessionFactory 注册器（Java native-image 特有）。
+    "pro-business-api/src/main/java/com/ruoyi/base/config/NativeMapperSqlSessionFactoryRegistrar.java",
+    # 系统基础服务客户端（Java 侧内部集成，Python 端口无对应端点）。
+    "pro-business-api/src/main/java/com/ruoyi/base/forest/SysBaseClient.java",
 )
 
 #: legacy 控制器上仅因 V3 双路径（ES/legacy）而新增的方法；Python 仍为单一 legacy 路径。
@@ -144,6 +151,15 @@ V3_JAVA_ONLY_METHODS: dict[str, set[str]] = {
     "pro-business-api/src/main/java/com/ruoyi/base/controller/SysUtilController.java": {
         "asString", "buildTrailInfos", "carTrackQueryByCarNoFromEs",
         "carTrackQueryByCarNoLegacy", "toTrailTracks",
+    },
+    # Redis 缓存写入器的 Java 侧 CompletableFuture 异步方法；Python 用同步实现，
+    # 不镜像这两个方法签名（java-V3 分支对应 Java 源码亦无此方法）。
+    "pro-base-common/src/main/java/com/ruoyi/common/config/writer/RetRedisCacheWriter.java": {
+        "retrieve", "store",
+    },
+    # Flink 作业构建 KafkaSource 的 Java 侧私有方法；Python 端口不实现 Flink 作业。
+    "pro-business-api/src/main/java/com/ruoyi/base/flink/VehicleTrackFlinkJob.java": {
+        "buildKafkaSource",
     },
 }
 
