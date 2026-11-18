@@ -43,6 +43,12 @@ jobs:
     # openEuler 24.03 仓库没有 JDK 25，改用 Eclipse Temurin 官方 tarball；字节码基线由 pom 固定。
     # Maven 走 Apache 官方 tarball（欧拉仓库只有 maven-plugin）。
     runs-on: ubuntu-latest
+    env:
+      # openEuler 容器默认 locale 非 UTF-8，JDK17 扫描含中文文件名的资源目录
+      # 会抛 InvalidPathException: Malformed input。固定 UTF-8 让 JVM 正确解码文件名。
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+      MAVEN_OPTS: -Dfile.encoding=UTF-8
     container:
       image: openeuler/openeuler:24.03-lts
     timeout-minutes: 45

@@ -1,10 +1,10 @@
 module github.com/ruoyi/car-monit-api-go
 
-// Go 版本锁定：工具链与 go 指令统一到 1.26.10。
-// 原因：govulncheck 对 go1.24.1 标准库报告的可达漏洞中，最高修复版本要求
-// go1.26.10（如 GO-2026-6809 的 crypto/x509）；升级后不再依赖本地旧工具链。
+// Go 版本锁定：工具链与 go 指令统一到 1.26.11。
+// 原因：govulncheck 对 go1.26.10 标准库报告的可达漏洞 GO-2026-6859（net/http）
+// 要求 go1.26.11 修复；升级后标准库可达漏洞归零。
 // 详见 README「Go 版本锁定策略」。
-go 1.26.10
+go 1.26.11
 
 require (
 	github.com/gin-gonic/gin v1.10.0
