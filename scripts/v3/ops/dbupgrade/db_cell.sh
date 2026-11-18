@@ -142,7 +142,6 @@ start_opengauss() {
     log "DB create/visible retry $attempt"; sleep 3
   done
   [ "$ok" = 1 ] || { log "ERROR: RuoYi DB never became connectable"; return 1; }
-  echo "$PG_DB" > "$OUT/${DB}_dbname.txt"
   log "using openGauss database name: $PG_DB (attempt $attempt)"
 }
 
@@ -259,7 +258,14 @@ else
     start_opengauss "$CNAME" "enmotech/opengauss:3.0.0"
     load_pg_fixture
   else
-    start_opengauss "$CNAME" "opengauss/opengauss-server:latest" "opengauss/opengauss:latest" "opengauss/opengauss:7.0.0-RC3.B025"
+    # OG_NEW_IMAGES 可由 workflow 覆盖为 GA 镜像（docker load 后的 opengauss:7.0.0）；
+    # 默认仍走 Docker Hub（实测为 RC3），保证向后兼容。
+    if [ -n "${OG_NEW_IMAGES:-}" ]; then
+      read -r -a _og_imgs <<< "$OG_NEW_IMAGES"
+      start_opengauss "$CNAME" "${_og_imgs[@]}"
+    else
+      start_opengauss "$CNAME" "opengauss/opengauss-server:latest" "opengauss/opengauss:latest" "opengauss/opengauss:7.0.0-RC3.B025"
+    fi
     restore_dump "$CNAME" || load_pg_fixture
   fi
   # api 主库之外还需要字典 MySQL：未做版本变量，固定 8.0 隔离变量。
