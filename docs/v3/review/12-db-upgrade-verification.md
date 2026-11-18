@@ -38,11 +38,14 @@
 - 迁移：`mysqldump` 真实导出 341,688 B 并在 9.7.4 还原成功。
 - 资源/性能：启动 10820→9918 ms；稳态 RSS 768.1→736.8 MB；平均延迟 767.86→177.97 ms；DB 内存 386.2→465.5 MiB。
 
-### api × openGauss 3.0.0 → 7.0.0-RC3（run `44083066192`，79 端点）
-- 一致性：status_match=79，exact=69，semantic=69，nondet=10，fails=0。
-- 迁移：`gs_dump` 失败（dump bytes=0），new 侧**回退为同一夹具**，未验证真实跨版本数据迁移。
-- 资源/性能：启动 14145→13535 ms；稳态 RSS 638.2→638.5 MB；平均延迟 25.83→21.48 ms；old DB 内存 455.1 MiB。
-- 镜像：`enmotech/opengauss:3.0.0` → `opengauss/opengauss-server:latest`（实测 7.0.0-RC3 build 2026-03-25）。
+### api × openGauss 3.0.0 → 7.0.0-RC3
+- **首轮（run `44083066192`）**：一致性 79/79、fails=0，但 `gs_dump` 失败（dump bytes=0），new 侧回退夹具。
+- **修复后真实迁移（run `44268498258`，api jdk25；另 `44268999597`/`44269014488`/`44269030678` 对应 jdk21/jdk17/java-V3）**：
+  - `gs_dump` 真实导出 **2,985,812 B**（909 objects），在 7.0.0-RC3 还原成功，**跨版本真实数据迁移已验证**，不再是夹具回退。
+  - 一致性：79 端点 status_match=79、exact=69、semantic=69、nondet=10、fails=0。
+  - 资源/性能：启动 9629→9323 ms；平均延迟 15.45→15.26 ms；DB CPU 1.61%→2.63%；DB 内存 424.6→542.4 MiB。
+  - 镜像：`enmotech/opengauss:3.0.0` → `opengauss/opengauss-server:latest`（实测 7.0.0-RC3 build 2026-03-25）。
+- 四个 api 分支的真实 dump 均约 2.99MB、79/79 fails=0（见 `verify_realmig.py` 输出）。
 
 ## 5. 踩坑点（如实记录）
 
@@ -55,7 +58,7 @@
 7. **MySQL 9.7 认证**：容器删除 `mysql_native_password`；new 侧去掉该参数并加 `allowPublicKeyRetrieval=true`。
 8. **openGauss 镜像坑**：`opengauss/opengauss:latest` 缺 `libopenblas.so.0` 无法启动；容器启动需带 `LD_LIBRARY_PATH=/usr/local/opengauss/lib`；最终用 `opengauss/opengauss-server:latest`，实测为 7.0.0-RC3。
 9. **openGauss 管理员/夹具**：JDBC 用户是 `gaussdb`（非 omm）；容器内 gsql 需 uid 70 + socket；3.0 不支持 `CREATE SCHEMA IF NOT EXISTS`，已用 DO 块改写。
-10. **gs_dump 未通**：`gs_dump` 导出仍失败，openGauss 跨版本真实迁移未验证（以同一夹具对比代替），属未完成项。
+10. **gs_dump 根因与修复（已解决）**：openGauss 的 `gs_dump` **不支持 PostgreSQL 的 `-d <db>` 选项**（报 `invalid option -- 'd'`），库名必须用**位置参数** `gs_dump RuoYi -Fp --no-owner`；配合 uid70 + socket 免密，本地实测导出 67MB/909 objects，云端真实导出 2.99MB 并在 7.x 还原成功。之前误用 `-d` 导致 dump bytes=0、回退夹具。
 11. **dispatch 匹配旧 run**：自建 dispatch 脚本曾返回同 workflow 的旧 run，已改为按 `created_at` 取最新。
 12. **nondet 端点**：api-mysql 59 个非确定性端点为数据/排序抖动，按既有口径只豁免 body、status 不一致仍判 DIFF。
 13. **CREATE DATABASE 可见性延迟**：openGauss `CREATE DATABASE` 后首次 `select 1` 可能报 `database "RuoYi" does not exist`；改为循环“建库→验证可连”最多 10 轮。
@@ -69,9 +72,9 @@ harness 与 parity 夹具已通过 git plumbing 部署到 6 个分支并全部�
 
 | 仓库 | 分支 | MySQL 9.7 | openGauss 7 | 结论 |
 |---|---|---|---|---|
-| api | jdk21 | ✅ `44213841737` | ✅ `44214790674`（重跑） | PASS |
-| api | jdk17 | ✅ `44213853656` | ✅ `44214802984`（重跑） | PASS |
-| api | java-V3 | ✅ `44213866103` | ✅ `44213866103` | PASS |
+| api | jdk21 | ✅ `44213841737` | ✅ `44268999597`（真实迁移 2.99MB） | PASS |
+| api | jdk17 | ✅ `44213853656` | ✅ `44269014488`（真实迁移 2.99MB） | PASS |
+| api | java-V3 | ✅ `44213866103` | ✅ `44269030678`（真实迁移 2.99MB） | PASS |
 | backend | jdk21 | ✅ `44213878862` | n/a | PASS |
 | backend | jdk17 | ✅ `44213891663` | n/a | PASS |
 | backend | java-V3 | ✅ `44213904528` | n/a | PASS |
@@ -85,8 +88,10 @@ harness 与 parity 夹具已通过 git plumbing 部署到 6 个分支并全部�
 
 ## 7. 未完成 / 后续
 
-- openGauss `gs_dump` 真实跨版本迁移（当前回退夹具）；尽量获取 7.0.0 GA 正式镜像替换 RC3。
-- WSL 本地在拉取大镜像后一度 `E_FAIL`（不影响云端结论），需宿主侧恢复后复测本地。
+- 尽量获取 openGauss 7.0.0 **GA 正式镜像**替换当前 7.0.0-RC3（Docker Hub `opengauss/opengauss-server:latest` 实测仍为 RC3；社区 7.0.0 GA 已发布，但官方容器 tag 尚未更新到 GA，可从官网下载镜像包 load）。
+- WSL 本地在拉取大镜像后一度 `E_FAIL`（不影响云端结论）；本次已在恢复后的本地容器上验证 gs_dump 语法，本地无需再复测。
+
+> 已完成项（原属未完成）：openGauss `gs_dump` 真实跨版本迁移已验证（见 §4）；6 个分支同步升级全部 PASS（见 §6）。
 
 ## 8. 复现命令
 
