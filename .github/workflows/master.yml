@@ -9,11 +9,11 @@ name: master
 
 # 主分支流水线：push 到 master 全量构建（不做路径分诊），产出可归档制品。
 # 默认分支口径统一为 master；不要加入 main 兼容分支。
-# V3 分支适配：push 到 car-monit-api-java-V3 也触发本流水线；PR 基线仍为 master。
+# JDK 版本分支适配：push 到 car-monit-api-jdk17 也触发本流水线；PR 基线仍为 master。
 # 同一 ref 不取消进行中的运行：每次提交都要留下完整的构建/测试结论。
 on:
   push:
-    branches: ["master", "car-monit-api-java-V3"]
+    branches: ["master", "car-monit-api-jdk17"]
   workflow_dispatch:
 
 concurrency:
