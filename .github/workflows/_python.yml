@@ -39,14 +39,25 @@ jobs:
       run:
         working-directory: car-monit-api-python
     steps:
-      - name: 安装基础工具（openEuler dnf）
+      - name: 安装基础工具 + 从源码编译 Python 3.12（openEuler dnf）
         shell: bash
         # checkout 前语言目录尚不存在，必须显式回到 workspace 根。
         working-directory: .
         run: |
-          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip curl ca-certificates
-          # Python 3.12 不在 openEuler 24.03 仓库（OS/everything/EPOL 均未命中），
-          # 由 setup-python 下载 standalone 到 tool cache（glibc 2.38 兼容）。
+          set -euo pipefail
+          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip curl ca-certificates \
+            gcc gcc-c++ make openssl-devel libffi-devel bzip2-devel zlib-devel xz-devel sqlite-devel
+          # setup-python 的 standalone Python 在 openEuler 上 ssl 模块不可用（pip 无法走 HTTPS），
+          # 改为源码编译并显式链接 openssl，确保 ssl 模块可用。
+          curl -fsSL https://www.python.org/ftp/python/3.12.10/Python-3.12.10.tgz -o /tmp/py.tgz
+          tar -xzf /tmp/py.tgz -C /tmp
+          cd /tmp/Python-3.12.10
+          ./configure --prefix=/usr/local --with-ensurepip=install --quiet
+          make -j"$(nproc)" --quiet
+          make install --quiet
+          ln -sf /usr/local/bin/python3.12 /usr/local/bin/python3
+          ln -sf /usr/local/bin/python3.12 /usr/local/bin/python
+          python3 -c "import ssl; print('ssl OK', ssl.OPENSSL_VERSION)"
 
       # 拉取仓库源码
       - uses: actions/checkout@v4
@@ -60,13 +71,10 @@ jobs:
           restore-keys: |
             pip-${{ runner.os }}-
 
-      # 安装 Python
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      # Python 3.12 已在上面源码编译安装到 /usr/local，不再用 setup-python（其 standalone 构建缺 ssl）。
 
       - name: Install dependencies
-        run: python -m pip install -r requirements.txt
+        run: python3 -m pip install -r requirements.txt
 
       # 运行 Python 单测
       - name: pytest (coverage)
@@ -166,12 +174,23 @@ jobs:
       run:
         working-directory: car-monit-api-python
     steps:
-      - name: 安装基础工具（openEuler dnf）
+      - name: 安装基础工具 + 从源码编译 Python 3.12（openEuler dnf）
         shell: bash
         # checkout 前语言目录尚不存在，必须显式回到 workspace 根。
         working-directory: .
         run: |
-          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip curl ca-certificates
+          set -euo pipefail
+          dnf install -y --setopt=install_weak_deps=False --setopt=max_parallel_downloads=10 git tar gzip curl ca-certificates \
+            gcc gcc-c++ make openssl-devel libffi-devel bzip2-devel zlib-devel xz-devel sqlite-devel
+          curl -fsSL https://www.python.org/ftp/python/3.12.10/Python-3.12.10.tgz -o /tmp/py.tgz
+          tar -xzf /tmp/py.tgz -C /tmp
+          cd /tmp/Python-3.12.10
+          ./configure --prefix=/usr/local --with-ensurepip=install --quiet
+          make -j"$(nproc)" --quiet
+          make install --quiet
+          ln -sf /usr/local/bin/python3.12 /usr/local/bin/python3
+          ln -sf /usr/local/bin/python3.12 /usr/local/bin/python
+          python3 -c "import ssl; print('ssl OK', ssl.OPENSSL_VERSION)"
 
       # 拉取仓库源码
       - uses: actions/checkout@v4
@@ -184,10 +203,7 @@ jobs:
           restore-keys: |
             pip-${{ runner.os }}-
 
-      # 安装 Python
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      # Python 3.12 已在上面源码编译安装到 /usr/local，不再用 setup-python。
 
       - run: python -m pip install -r requirements.txt
 
