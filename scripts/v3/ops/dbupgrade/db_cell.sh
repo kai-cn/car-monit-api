@@ -38,8 +38,15 @@ wait_tcp() {
 }
 
 pick_image() {
-  # 依次尝试候选 tag，返回第一个可拉取的镜像（抵御 Docker Hub tag 漂移）。
+  # 优先本地已存在镜像（如 docker load 的 GA 包 opengauss:7.0.0，无法从 registry pull），
+  # 再尝试拉取候选 tag（抵御 Docker Hub tag 漂移）。
   local candidate
+  for candidate in "$@"; do
+    if docker image inspect "$candidate" >/dev/null 2>&1; then
+      echo "$candidate"
+      return 0
+    fi
+  done
   for candidate in "$@"; do
     if docker pull "$candidate" >/dev/null 2>&1; then
       echo "$candidate"
