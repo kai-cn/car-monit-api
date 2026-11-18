@@ -1,6 +1,6 @@
 # 12. 数据库大版本升级云验证（MySQL 8.0→9.7 / openGauss 3.0→7.0）
 
-> 结论先行：在 GitHub 云 runner 上完成三格验证，**业务一致性 fails=0**；MySQL 走真实逻辑导出/导入，openGauss 因 `gs_dump` 失败回退到同一夹具（未验证真实数据迁移）。以下数字全部来自云端 job 日志，未下载 artifact 到本地。凭据值仅在运行时由 masked Secret 注入，文档不记录。
+> 结论先行：在 GitHub 云 runner 上完成三格验证，**业务一致性 fails=0**；MySQL 与 openGauss 均走真实逻辑导出/导入（openGauss 先 RC3、后 GA 正式镜像均验证）。以下数字全部来自云端 job 日志，未下载 artifact 到本地。凭据值仅在运行时由 masked Secret 注入，文档不记录。
 
 ## 1. 目标版本结论（联网核实）
 
@@ -47,6 +47,14 @@
   - 镜像：`enmotech/opengauss:3.0.0` → `opengauss/opengauss-server:latest`（实测 7.0.0-RC3 build 2026-03-25）。
 - 四个 api 分支的真实 dump 均约 2.99MB、79/79 fails=0（见 `verify_realmig.py` 输出）。
 
+### api × openGauss 3.0.0 → **7.0.0 GA 正式版**（run `44283915442`，jdk25）
+- **镜像来源**：openGauss 官网官方 Docker 镜像包 `openGauss-Docker-7.0.0-x86_64.tar`（OBS，2.43GB），云 runner 上 `docker load` 得到 `opengauss:7.0.0`，版本串 `(openGauss 7.0.0 build 2397a86f) compiled at 2026-09-23`（**GA 正式版，非 RC3**）。
+- 通过 workflow 新增 `og_image_source=ga` 输入 + `OG_NEW_IMAGES` 环境变量覆盖 new 侧镜像；`pick_image()` 优先用本地已 load 镜像。
+- 迁移：`gs_dump` 真实导出 **2,985,813 B**，在 7.0.0 GA 还原成功。
+- 一致性：79 端点 status_match=79、exact=69、semantic=69、nondet=10、fails=0。
+- 资源/性能：启动 15336→14742 ms；稳态 RSS 551.0→527.1 MB；平均延迟 25.16→23.7 ms；DB CPU 1.02%→1.89%；DB 内存 446.1→660.5 MiB。
+- 另三个 api 分支（jdk21/jdk17/java-V3）GA 验证 run：`44285673201`/`44285699892`/`44285716860`。
+
 ## 5. 踩坑点（如实记录）
 
 1. **凭据泄露（已修）**：初版把测试口令放在 workflow 级 `env:`，GitHub 会把该块回显进公开日志。改为仓库 Secret + 仅 step 级 env 引用，后续日志显示 `CI_DB_PASSWORD: ***`。早期泄露的是一次性 CI 测试值（非真实生产凭据），机制已根治。
@@ -65,6 +73,9 @@
 14. **库名大小写折叠**：7.x 镜像与 3.0 不同，同时建 `RuoYi`/`ruoyi`，以实际可连者为准。
 15. **V3 分支缺夹具**：java-V3 分支原本无 `scripts/v3/ops/parity/*`，需随 harness 一起部署。
 16. **重复 run 匹配**：自建 dispatch 曾匹配到已完成的旧 run（返回 stale id），已改为按 `created_at` 取最新并配合 cancel 清理。
+17. **CRLF 行尾**：Windows git autocrlf 让本地 `.sh` 变成 CRLF，经 Contents API 推送后 Linux runner 报 `set: pipefail`（`pipefail\r`）；`push_files_api.py`/`deploy_dbupgrade_to_branch.py` 已在推送时对 `.sh` 做 CRLF→LF 归一化。
+18. **本地 load 的 GA 镜像无法 pull**：`opengauss:7.0.0` 是云 runner 上 `docker load` 的本地镜像，`docker pull` 会失败；`pick_image()` 改为先 `docker image inspect` 命中本地镜像，再尝试 pull。
+19. **GA 镜像来源**：Docker Hub 的 `opengauss/opengauss-server:latest` 仍是 RC3；GA 正式镜像包需从 OBS `https://opengauss.obs.cn-south-1.myhuaweicloud.com/7.0.0/openEuler24.03/x86/openGauss-Docker-7.0.0-x86_64.tar` 下载（2.43GB）并 `docker load`，约耗时数分钟。
 
 ## 6. 分支同步升级结果（jdk21 / jdk17 / java-V3）
 
@@ -88,10 +99,9 @@ harness 与 parity 夹具已通过 git plumbing 部署到 6 个分支并全部�
 
 ## 7. 未完成 / 后续
 
-- 尽量获取 openGauss 7.0.0 **GA 正式镜像**替换当前 7.0.0-RC3（Docker Hub `opengauss/opengauss-server:latest` 实测仍为 RC3；社区 7.0.0 GA 已发布，但官方容器 tag 尚未更新到 GA，可从官网下载镜像包 load）。
-- WSL 本地在拉取大镜像后一度 `E_FAIL`（不影响云端结论）；本次已在恢复后的本地容器上验证 gs_dump 语法，本地无需再复测。
+- 无阻塞项。openGauss 7.0.0 **GA 正式镜像**已在云 runner 用官方镜像包 `docker load` 并验证通过（见 §4 GA 小节），不再依赖 RC3。
 
-> 已完成项（原属未完成）：openGauss `gs_dump` 真实跨版本迁移已验证（见 §4）；6 个分支同步升级全部 PASS（见 §6）。
+> 已完成项：openGauss `gs_dump` 真实跨版本迁移已验证（见 §4）；6 个分支同步升级全部 PASS（见 §6）；7.0.0 GA 正式镜像云验证通过（见 §4 GA 小节）。
 
 ## 8. 复现命令
 
