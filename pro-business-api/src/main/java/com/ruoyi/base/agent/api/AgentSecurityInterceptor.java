@@ -62,6 +62,9 @@ public class AgentSecurityInterceptor implements HandlerInterceptor {
             Arrays.stream(rolesHeader.split(","))
                     .map(String::trim)
                     .filter(s -> !s.isEmpty())
+                    // 归一化：大小写不敏感 + 去掉 Spring Security 风格前缀（ROLE_），
+                    // 否则网关下发 "OPS"/"ROLE_OPS" 时会被判成无角色，全员 403。
+                    .map(AgentSecurityInterceptor::normalizeRole)
                     .forEach(roles::add);
         }
         AgentPrincipal principal = new AgentPrincipal(tenant, user, roles, true);
@@ -78,6 +81,12 @@ public class AgentSecurityInterceptor implements HandlerInterceptor {
         }
         String provided = request.getHeader(TOKEN_HEADER);
         return provided != null && constantTimeEquals(internalToken, provided.trim());
+    }
+
+    /** 角色归一化：小写 + 去 {@code ROLE_} 前缀，保证与 {@code AgentToolCatalog} 的写法可比。 */
+    private static String normalizeRole(String raw) {
+        String role = raw.toLowerCase(java.util.Locale.ROOT);
+        return role.startsWith("role_") ? role.substring("role_".length()) : role;
     }
 
     private static boolean isLoopback(HttpServletRequest request) {

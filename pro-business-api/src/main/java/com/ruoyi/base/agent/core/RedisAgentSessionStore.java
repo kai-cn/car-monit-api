@@ -160,7 +160,12 @@ public class RedisAgentSessionStore implements AgentSessionStore {
         if (sessionId == null || sessionId.isBlank()) {
             return "default";
         }
-        String v = sessionId.trim();
-        return v.length() > 64 ? v.substring(0, 64) : v.replaceAll("[^A-Za-z0-9_.:-]", "_");
+        String cleaned = sessionId.trim().replaceAll("[^A-Za-z0-9_.:-]", "_");
+        if (cleaned.length() <= 64) {
+            return cleaned;
+        }
+        // 超长 sessionId 不能直接截断：截断会让两个不同会话落到同一个 Redis List
+        // （同用户下可读到另一个会话的历史）。保留前 48 字符 + 不可逆短哈希保证唯一。
+        return cleaned.substring(0, 48) + "~" + AgentPrincipal.shortHash(cleaned);
     }
 }
