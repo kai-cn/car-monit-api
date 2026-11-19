@@ -42,7 +42,7 @@ chat_async() {
   local out="$1" msg="$2" tenant="${3:-t1}" user="${4:-u1}" roles="${5-ops}"
   local body
   body=$(python3 -c 'import json,sys; print(json.dumps({"message": sys.argv[1]}, ensure_ascii=False))' "$msg")
-  timeout 90 curl -sN -X POST "$APP_BASE_URL/api/v1/agent/chat" \
+  timeout 150 curl -sN -X POST "$APP_BASE_URL/api/v1/agent/chat" \
     -H 'Content-Type: application/json' \
     -H "X-Internal-Token: $INTERNAL_TOKEN" \
     -H "X-Tenant-Id: $tenant" -H "X-User-Id: $user" -H "X-User-Roles: $roles" \
@@ -166,6 +166,12 @@ if "tool_call" in names:
         problems.append("tool_result 早于 tool_call")
 if "delta" not in names and "tool_call" not in names:
     problems.append("既无 delta 也无 tool_call（模型未被调用？）")
+# 本用例的提问明确要求查数据：若连 tool_call 都没有，说明工具注册/分发链路断了，
+# 仅"有 delta"不足以证明工具循环跑通（模型可以只回一句话）。
+if "tool_call" not in names:
+    problems.append("未出现 tool_call（工具链路未触发）")
+if "delta" not in names:
+    problems.append("未出现 delta（模型文本未下发）")
 
 seqs = [e[1] for e in events]
 if seqs != sorted(seqs) or len(set(seqs)) != len(seqs):
@@ -269,10 +275,11 @@ fi
 say "[T7] 无角色调用明细工具应 FORBIDDEN"
 no_role=$(chat_sync "查一下赣B21E85 昨天的通行记录" t1 nobody "")
 printf '%s' "$no_role" > "$ARTIFACT_DIR/norole.json"
-if printf '%s' "$no_role" | grep -q 'FORBIDDEN'; then
-  ok "工具返回 FORBIDDEN"
+if printf '%s' "$no_role" | grep -q 'FORBIDDEN' && ! printf '%s' "$no_role" | grep -qE 'TRAFFIC_QUERY|ES 查询异常';
+then
+  ok "工具返回 FORBIDDEN（且未执行查询）"
 else
-  bad "越权未被拒绝" "$(head -c 220 <<<"$no_role")"
+  bad "越权未被拒绝或仍执行了查询" "$(head -c 220 <<<"$no_role")"
 fi
 
 # ---------------------------------------------------------------------------
@@ -300,11 +307,17 @@ say "[T9] 工具清单"
 tools_json=$(curl -s -H "X-Internal-Token: $INTERNAL_TOKEN" -H 'X-Tenant-Id: t1' -H 'X-User-Id: u1' \
   "$APP_BASE_URL/api/v1/agent/tools")
 printf '%s' "$tools_json" > "$ARTIFACT_DIR/tools.json"
-tn=$(printf '%s' "$tools_json" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(len((d.get("data") or {}).get("tools") or []))' 2>/dev/null || echo 0)
-if [ "$tn" = "7" ]; then
-  ok "工具清单 7 个"
+names=$(printf '%s' "$tools_json" | python3 -c '
+import json,sys
+d=json.load(sys.stdin)
+tools=(d.get("data") or {}).get("tools") or []
+print(",".join(sorted(t["name"] for t in tools)))
+' 2>/dev/null || echo "")
+expected="get_bigscreen_metric,get_data_quality,get_export_status,get_vehicle_track,query_traffic_records,search_knowledge,submit_export"
+if [ "$names" = "$expected" ]; then
+  ok "工具清单 7 个且名称与目录一致"
 else
-  bad "工具数量异常" "count=$tn"
+  bad "工具清单不一致" "actual=$names"
 fi
 
 # ---------------------------------------------------------------------------

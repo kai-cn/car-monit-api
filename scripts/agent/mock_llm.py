@@ -206,8 +206,11 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
         self.send_header("Cache-Control", "no-cache")
-        self.send_header("Connection", "keep-alive")
+        # SSE 没有 Content-Length，响应体以"连接关闭"界定。必须显式 close：
+        # 声明 keep-alive 又不断连，严格客户端会一直等到读超时。
+        self.send_header("Connection", "close")
         self.end_headers()
+        self.close_connection = True
 
         base = {"id": "chatcmpl-mock", "object": "chat.completion.chunk",
                 "created": int(time.time()), "model": model}
