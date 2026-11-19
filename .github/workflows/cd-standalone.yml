@@ -3,24 +3,32 @@
 # 用途：单机部署：打包 standalone 产物并上传 Release
 # 触发：手动 dispatch / push 事件
 # 主要 job：build、verify
-# 说明：本文件仅新增中文注释，不改动任何执行逻辑；runner/权限/守卫以实际配置为准。
+# 说明：跨分支构建 rust/cpp（完整源码分别在 car-monit-api-rust / car-monit-api-cpp 分支）；
+#       csharp/kotlin 仅有迁移提示文档、无源码，不纳入制品（见 verify notice）。
 # ============================================================================
 name: cd-standalone
 
 # 单机部署 CD：构建离线 tar.gz 制品（jar / Go 二进制 / Python 源码+离线 wheels /
-# systemd unit / 参数化 install.sh、uninstall.sh / SHA256SUMS），并在全新 runner 上做
-# 完整生命周期验证：解包→校验和→install→启动→/health→stop→uninstall→断言清理。
+# Rust 二进制 / C++ 二进制 / systemd unit / 参数化 install.sh、uninstall.sh / SHA256SUMS），
+# 并在全新 runner 上做完整生命周期验证：解包→校验和→install→启动→/health→stop→uninstall→断言清理。
 # 与 K8s 的 deploy.yml 互不影响。
+#
+# 语言源码分布（2026-11-19 实测）：
+#   java / go / python —— 本分支（master）内完整源码
+#   rust                —— car-monit-api-rust 分支（191 文件，Cargo.toml + Cargo.lock）
+#   cpp                 —— car-monit-api-cpp 分支（103 文件，CMakeLists.txt + src + tests）
+#   csharp / kotlin     —— 仅 java-to-*-migration-prompt.md，无源码，跳过
+# rust/cpp 用 actions/checkout(ref=...) 拉到独立子目录构建，不合并源码、不污染本分支。
 
 on:
   workflow_dispatch:
     inputs:
       service:
-        description: "打包哪个实现"
+        description: "打包哪个实现（csharp/kotlin 无源码，不可选）"
         required: true
         type: choice
         default: all
-        options: [all, java, go, python, rust]
+        options: [all, java, go, python, rust, cpp]
       tag:
         description: "可选：把制品附加到已存在的 Release tag（留空则仅构建）"
         required: false
@@ -38,12 +46,27 @@ jobs:
   build:
     name: build standalone artifact
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     permissions:
       contents: write   # tag 推送时 gh release upload 需要
     steps:
-      # 拉取仓库源码
+      # 拉取本分支源码（java/go/python/deploy 模板）
       - uses: actions/checkout@v4
+
+      # 跨分支拉取 rust/cpp 完整源码到独立子目录（不影响本分支工作区）
+      # push 事件下 inputs.service 为空 → 表达式为真 → 仍拉取（all 语义）
+      - name: Checkout rust source (car-monit-api-rust)
+        if: inputs.service == '' || inputs.service == 'all' || inputs.service == 'rust'
+        uses: actions/checkout@v4
+        with:
+          ref: car-monit-api-rust
+          path: src-rust
+      - name: Checkout cpp source (car-monit-api-cpp)
+        if: inputs.service == '' || inputs.service == 'all' || inputs.service == 'cpp'
+        uses: actions/checkout@v4
+        with:
+          ref: car-monit-api-cpp
+          path: src-cpp
 
       # 安装 JDK
       - uses: actions/setup-java@v4
@@ -62,6 +85,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      # Rust 1.90.0（与 rust-toolchain.toml 一致）
+      - name: 安装 Rust 1.90.0
+        if: inputs.service == '' || inputs.service == 'all' || inputs.service == 'rust'
+        run: |
+          rustup toolchain install 1.90.0 --profile minimal
+          rustup default 1.90.0
+
+      # C++ 系统依赖（libpq / OpenSSL；FetchContent 会下载 librdkafka/libpqxx/hiredis）
+      - name: 安装 C++ 构建依赖
+        if: inputs.service == '' || inputs.service == 'all' || inputs.service == 'cpp'
+        run: sudo apt-get update && sudo apt-get install -y libpq-dev libssl-dev zlib1g-dev
 
       - name: 构建各语言产物并组装
         shell: bash
@@ -100,14 +135,28 @@ jobs:
           fi
 
           if want rust; then
-            if [ -d car-monit-api-rust ]; then
-              ( cd car-monit-api-rust && cargo build --release && \
-                mkdir -p "$DIST/payloads/rust" && \
-                cp target/release/car-monit-api-rust "$DIST/payloads/rust/" )
-            else
-              echo "::notice::car-monit-api-rust 未入库，跳过 Rust 产物"
-            fi
+            # 完整源码在 car-monit-api-rust 分支，已由上面 checkout 到 src-rust
+            [ -d src-rust/car-monit-api-rust ] || { echo "::error::rust 源码目录 src-rust/car-monit-api-rust 缺失"; exit 1; }
+            ( cd src-rust/car-monit-api-rust && \
+              cargo build --release --locked && \
+              mkdir -p "$DIST/payloads/rust/config" && \
+              cp target/release/car-monit-api-rust "$DIST/payloads/rust/" && \
+              sed -E 's#192\.168\.56\.10#<DB_HOST>#g' config/application.yaml > "$DIST/payloads/rust/config/application.yaml" )
           fi
+
+          if want cpp; then
+            # 完整源码在 car-monit-api-cpp 分支，已由上面 checkout 到 src-cpp；
+            # 必须用 CM_WITH_KAFKA=ON（CI 默认路径）；OFF 路径源码有条件编译 bug。
+            [ -d src-cpp/car-monit-api-cpp ] || { echo "::error::cpp 源码目录 src-cpp/car-monit-api-cpp 缺失"; exit 1; }
+            ( cd src-cpp/car-monit-api-cpp && \
+              cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCM_WITH_KAFKA=ON && \
+              cmake --build build-release --parallel && \
+              mkdir -p "$DIST/payloads/cpp/configs" && \
+              cp build-release/car-monit-api "$DIST/payloads/cpp/" && \
+              sed -E 's#192\.168\.56\.10#<DB_HOST>#g' configs/config.yaml > "$DIST/payloads/cpp/configs/config.yaml" )
+          fi
+
+          echo "::notice::csharp / kotlin 仅有迁移提示文档，无源码，未纳入制品"
 
           cp -r deploy/standalone/systemd deploy/standalone/config \
                 deploy/standalone/install.sh deploy/standalone/uninstall.sh \
@@ -144,6 +193,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # push 或 dispatch=all 时要求 rust/cpp payload 必须存在（注意 && 优先于 ||，必须加括号）
+      SERVICE_ALL: ${{ (inputs.service == '' || inputs.service == 'all') && '1' || '0' }}
     steps:
       # 安装 Python
       - uses: actions/setup-python@v5
@@ -175,10 +227,29 @@ jobs:
             grep -qxF './payloads/python/run.py' /tmp/tar-list.txt || { echo "::error::tar 缺少 python/run.py"; exit 1; }
             grep -qE '^\./payloads/python/wheels/' /tmp/tar-list.txt || { echo "::error::tar 缺少 python/wheels"; exit 1; }
           fi
-          if [ -f ./payloads/java/app.jar ]; then grep -qxF './payloads/java/app.jar' /tmp/tar-list.txt; fi
-          if [ -f ./payloads/go/api ]; then grep -qxF './payloads/go/api' /tmp/tar-list.txt; fi
+          # 各语言制品存在性与清单核对
+          check_payload() {
+            local svc="$1" bin="$2"
+            if [ -f "./payloads/$svc/$bin" ]; then
+              grep -qxF "./payloads/$svc/$bin" /tmp/tar-list.txt || { echo "::error::tar 缺少 $svc/$bin"; exit 1; }
+              echo "payload $svc/$bin OK ($(stat -c%s "./payloads/$svc/$bin") bytes)"
+            else
+              echo "::notice::payload $svc/$bin 未构建（service 未选择该语言）"
+            fi
+          }
+          check_payload java app.jar
+          check_payload go api
+          check_payload rust car-monit-api-rust
+          check_payload cpp car-monit-api
+          # service=all（含 push）时强制要求 5 种 payload 齐全（缺=构建被跳过，判失败）
+          if [ "${SERVICE_ALL:-0}" = "1" ]; then
+            for must in java/app.jar go/api python/run.py rust/car-monit-api-rust cpp/car-monit-api; do
+              [ -f "./payloads/$must" ] || { echo "::error::service=all 要求 payload $must 存在但缺失"; exit 1; }
+            done
+          fi
+          echo "::notice::csharp / kotlin 无源码，不在制品清单中"
 
-      - name: 完整生命周期演练（Python shim）
+      - name: 完整生命周期演练（Python shim / Rust check-config）
         shell: bash
         run: |
           set -euo pipefail
@@ -186,6 +257,8 @@ jobs:
           if [ -d "$ROOT/payloads/python" ]; then SVC=python
           elif [ -d "$ROOT/payloads/java" ]; then SVC=java
           elif [ -d "$ROOT/payloads/go" ]; then SVC=go
+          elif [ -d "$ROOT/payloads/rust" ]; then SVC=rust
+          elif [ -d "$ROOT/payloads/cpp" ]; then SVC=cpp
           else echo "::error::artifact 中无可用服务"; exit 1; fi
           echo "verify service=$SVC"
           PREFIX="$PWD/lifecycle/opt"; LOGDIR="$PWD/lifecycle/log"; UNITDIR="$PWD/lifecycle/units"
@@ -214,8 +287,18 @@ jobs:
             BODY="$(cat /tmp/health-body 2>/dev/null || true)"
             kill "$PID" 2>/dev/null || true
             wait "$PID" 2>/dev/null || true
+          elif [ "$SVC" = rust ]; then
+            # rust 二进制自带 --check-config，可离线验证可执行性与配置加载
+            set +e
+            "$PREFIX/rust/car-monit-api-rust" --check-config --config "$PREFIX/rust/config/application.yaml" \
+              > "$LOGDIR/rust/check-config.log" 2>&1
+            rc=$?
+            set -e
+            echo "rust --check-config exit=$rc" >> "$OUT"
+            cat "$LOGDIR/rust/check-config.log" >> "$OUT" 2>/dev/null || true
+            case "$rc" in 0) START_STATUS="CHECK_OK"; BODY="rust config validated";; *) echo "::error::rust --check-config 失败 exit=$rc"; exit 1;; esac
           else
-            echo "非 Python 服务在本 runner 无外部 DB/Redis，按约定记录启动失败" >> "$OUT"
+            echo "非 Python/Rust 服务在本 runner 无外部 DB/Redis，按约定记录启动失败" >> "$OUT"
             START_STATUS="000"; BODY="external middleware unavailable"
           fi
 

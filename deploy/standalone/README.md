@@ -5,12 +5,20 @@
 - `payloads/java/app.jar`：Spring Boot 可执行 jar
 - `payloads/go/api`：Linux amd64 静态二进制（CGO 关闭）
 - `payloads/python/`：Python 源码 + 离线 wheels（runtime 依赖）
+- `payloads/rust/car-monit-api-rust` + `config/application.yaml`：Rust 二进制（car-monit-api-rust 分支构建）
+- `payloads/cpp/car-monit-api` + `configs/config.yaml`：C++ 二进制（car-monit-api-cpp 分支构建，CM_WITH_KAFKA=ON）
 - `systemd/car-monit-api-*.service`：systemd unit（Restart=always / RestartSec / WorkingDirectory / User / EnvironmentFile）
 - `config/*.example`：**只有占位符**的配置模板
 - `install.sh` / `uninstall.sh`
 - `SHA256SUMS`
 
-> Rust 产物：当前 master 的 `car-monit-api-rust/` 被 `.gitignore` 忽略、未入库，因此本包不包含 Rust 二进制；需要时先把 rust 目录入库。
+> Rust / C++ 完整源码不在 master：Rust 在 `car-monit-api-rust` 分支（Cargo.toml + Cargo.lock），
+> C++ 在 `car-monit-api-cpp` 分支（CMakeLists.txt + 完整 src/tests）。`cd-standalone` 构建时用
+> `actions/checkout(ref=...)` 分别拉到 `src-rust/` / `src-cpp/` 子目录构建后纳入本包，**不合并源码到 master**。
+> 配置文件中开发态内网地址在打包时已替换为 `<DB_HOST>` 占位符。
+> C# / Kotlin 目前仅有 `java-to-*-migration-prompt.md`（迁移提示文档），无源码，不纳入制品。
+
+> 手动 dispatch 时 `service` 选项决定产出哪些语言；`service=all`（含 push 触发）会产出 java/go/python/rust/cpp 全部 5 种。
 
 ## 依赖（外部提供，本包不内置）
 

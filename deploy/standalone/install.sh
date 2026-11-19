@@ -12,7 +12,7 @@ SERVICES=""
 DO_START=1
 
 usage() {
-  echo "用法: $0 [--prefix DIR] [--log-dir DIR] [--unit-dir DIR] [--service java,go,python] [--user NAME] [--no-start]"
+  echo "用法: $0 [--prefix DIR] [--log-dir DIR] [--unit-dir DIR] [--service java,go,python,rust,cpp] [--user NAME] [--no-start]"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -62,6 +62,14 @@ for svc in "${ARR[@]}"; do
       fi
       "$PREFIX/python/venv/bin/pip" install --no-index --find-links "$PREFIX/python/wheels" \
         -r "$PREFIX/python/requirements.lock.txt"
+      ;;
+    rust)
+      [[ -x "$PREFIX/rust/car-monit-api-rust" ]] || { echo "ERROR: rust/car-monit-api-rust 缺失或不可执行" >&2; exit 1; }
+      [[ -f "$PREFIX/rust/config/application.yaml" ]] || { echo "ERROR: rust/config/application.yaml 缺失" >&2; exit 1; }
+      ;;
+    cpp)
+      [[ -x "$PREFIX/cpp/car-monit-api" ]] || { echo "ERROR: cpp/car-monit-api 缺失或不可执行" >&2; exit 1; }
+      [[ -f "$PREFIX/cpp/configs/config.yaml" ]] || { echo "ERROR: cpp/configs/config.yaml 缺失" >&2; exit 1; }
       ;;
   esac
 

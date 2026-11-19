@@ -1,0 +1,18 @@
+[Unit]
+Description=car-monit-api (C++)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@PREFIX@/cpp
+ExecStart=@PREFIX@/cpp/car-monit-api --config @PREFIX@/cpp/configs/config.yaml
+Restart=always
+RestartSec=10
+LimitNOFILE=65535
+StandardOutput=append:@LOG_DIR@/cpp/stdout.log
+StandardError=append:@LOG_DIR@/cpp/stderr.log
+
+[Install]
+WantedBy=multi-user.target

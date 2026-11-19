@@ -15,12 +15,12 @@ while [[ $# -gt 0 ]]; do
     --unit-dir) UNIT_DIR="$2"; shift 2 ;;
     --service) SERVICES="$2"; shift 2 ;;
     --no-systemctl) DO_SYSTEMCTL=0; shift ;;
-    -h|--help) echo "用法: $0 [--prefix DIR] [--log-dir DIR] [--unit-dir DIR] [--service java,go,python] [--no-systemctl]"; exit 0 ;;
+    -h|--help) echo "用法: $0 [--prefix DIR] [--log-dir DIR] [--unit-dir DIR] [--service java,go,python,rust,cpp] [--no-systemctl]"; exit 0 ;;
     *) echo "未知参数: $1"; exit 2 ;;
   esac
 done
 
-IFS=',' read -ra ARR <<< "${SERVICES//all/java,go,python}"
+IFS=',' read -ra ARR <<< "${SERVICES//all/java,go,python,rust,cpp}"
 for svc in "${ARR[@]}"; do
   [[ -n "$svc" ]] || continue
   if [[ "$DO_SYSTEMCTL" -eq 1 ]] && command -v systemctl >/dev/null 2>&1; then
