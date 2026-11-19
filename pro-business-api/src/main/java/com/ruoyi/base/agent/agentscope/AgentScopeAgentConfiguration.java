@@ -51,19 +51,38 @@ public class AgentScopeAgentConfiguration {
      * 用同一大版本能彻底避免二进制不兼容（{@code NoSuchMethodError}）；而 Spring Data Redis
      * 的 native client 属于连接工厂内部资源，交给第三方组件管理生命周期容易互相关闭。</p>
      *
-     * <p>连接是<b>懒建立</b>的：{@code new JedisPooled} 不会在启动时握手，因此 Redis 短暂不可用
-     * 不会阻断应用启动；真正失败会发生在第一次对话，并按 {@code error} 事件返回。</p>
+     * <p><b>连接是否懒建立</b>：{@code JedisPooled} 构造时不握手（Redis 短暂不可用不会阻断启动，
+     * 失败发生在第一次对话）；{@code JedisCluster} 构造时就要拉取 slot 缓存，因此集群模式下
+     * Redis 不可用会**启动失败**——这是刻意的：集群配置错误应当尽早暴露，而不是跑到线上才发现。</p>
      *
-     * <p>集群：只认 Spring Boot 标准配置 {@code spring.data.redis.cluster.nodes}，
-     * 不读业务侧的 {@code rediscluster.clusterNodes}（那是字典同步用的集群地址，
-     * 默认值指向公网实例，会让所有环境都误走集群分支）。
-     * 集群模式该构造器不支持密码；集群+密码请改用
-     * {@code JedisCluster(HostAndPort, JedisClientConfig, int, GenericObjectPoolConfig)}。</p>
+     * <p><b>只支持两种拓扑</b>：{@code host/port}（单机）与 {@code cluster.nodes}（集群）。
+     * {@code spring.data.redis.url} / {@code sentinel} / {@code masterreplica} 一律 fail-fast：
+     * Spring 自己的连接工厂认得这些写法，若这里静默忽略，会出现"订单走哨兵、Agent 状态走 127.0.0.1"
+     * 的双地址分裂，排查成本极高。</p>
+     *
+     * <p>集群模式该构造器不支持密码；集群+密码请改用
+     * {@code JedisCluster(HostAndPort, JedisClientConfig, int, GenericObjectPoolConfig)}，
+     * 本方法会显式报错而不是带着空密码去连。</p>
      */
     @Bean(destroyMethod = "close")
     public UnifiedJedis agentScopeJedis(DataRedisProperties redis) {
         Duration timeout = redis.getTimeout() == null ? Duration.ofSeconds(3) : redis.getTimeout();
         int timeoutMs = (int) Math.max(500, timeout.toMillis());
+
+        // ---- 拓扑兼容性检查：不支持就立刻失败，绝不"部分生效" ----
+        if (redis.getUrl() != null && !redis.getUrl().isBlank()) {
+            throw new IllegalStateException("traffic.agent 暂不支持 spring.data.redis.url（"
+                    + maskUrl(redis.getUrl()) + "），请改用 spring.data.redis.host/port 或 cluster.nodes");
+        }
+        if (redis.getSentinel() != null && redis.getSentinel().getNodes() != null
+                && !redis.getSentinel().getNodes().isEmpty()) {
+            throw new IllegalStateException("traffic.agent 暂不支持 Redis Sentinel，请改用 cluster.nodes 或单机");
+        }
+        if (redis.getMasterreplica() != null && redis.getMasterreplica().getNodes() != null
+                && !redis.getMasterreplica().getNodes().isEmpty()) {
+            throw new IllegalStateException("traffic.agent 暂不支持 Redis 主从（masterreplica），请改用 cluster.nodes 或单机");
+        }
+
         DefaultJedisClientConfig config = DefaultJedisClientConfig.builder()
                 .database(Math.max(0, redis.getDatabase()))
                 .connectionTimeoutMillis(timeoutMs)
@@ -73,17 +92,21 @@ public class AgentScopeAgentConfiguration {
                 .clientName("agent-scope-state")
                 .build();
 
-        List<String> clusterNodes = redis.getCluster() == null ? List.of() : redis.getCluster().getNodes();
+        List<String> clusterNodes = redis.getCluster() == null ? null : redis.getCluster().getNodes();
         if (clusterNodes != null && !clusterNodes.isEmpty()) {
+            if (redis.getPassword() != null && !redis.getPassword().isBlank()) {
+                throw new IllegalStateException("traffic.agent 的集群模式暂不支持密码认证；"
+                        + "请使用单机 + 密码，或改造为 JedisCluster(HostAndPort, JedisClientConfig, ...)");
+            }
             Set<HostAndPort> nodes = clusterNodes.stream()
                     .map(String::trim)
-                    .filter(node -> node.contains(":"))
-                    .map(node -> new HostAndPort(node.substring(0, node.lastIndexOf(':')),
-                            Integer.parseInt(node.substring(node.lastIndexOf(':') + 1))))
+                    .filter(node -> !node.isEmpty())
+                    .map(AgentScopeAgentConfiguration::parseNode)
                     .collect(Collectors.toCollection(LinkedHashSet::new));
             log.info("[AgentScope] 状态存储使用 Redis 集群 nodes={}", nodes);
             return new JedisCluster(nodes, timeoutMs);
         }
+
         String host = redis.getHost() == null || redis.getHost().isBlank() ? "127.0.0.1" : redis.getHost();
         int port = redis.getPort() <= 0 ? 6379 : redis.getPort();
         log.info("[AgentScope] 状态存储使用 Redis 单机 {}:{} db={}", host, port, config.getDatabase());
@@ -91,10 +114,46 @@ public class AgentScopeAgentConfiguration {
     }
 
     /**
+     * 解析 {@code host:port}，兼容 IPv6 的 {@code [::1]:6379}。
+     *
+     * <p>用 {@code lastIndexOf(':')} 而不是 {@code split(":")}：IPv6 地址本身含冒号，
+     * 直接 split 会把地址切碎。解析失败时抛出<b>带原始值</b>的异常，避免运维面对一个
+     * 光秃秃的 {@code NumberFormatException}。</p>
+     */
+    private static HostAndPort parseNode(String node) {
+        int sep = node.startsWith("[") ? node.lastIndexOf("]:") + 1 : node.lastIndexOf(':');
+        if (sep <= 0 || sep == node.length() - 1) {
+            throw new IllegalStateException("非法的 Redis 节点地址（应为 host:port）：" + node);
+        }
+        String host = node.substring(0, sep);
+        if (host.startsWith("[") && host.endsWith("]")) {
+            host = host.substring(1, host.length() - 1);
+        }
+        try {
+            return new HostAndPort(host, Integer.parseInt(node.substring(sep + 1)));
+        } catch (NumberFormatException e) {
+            throw new IllegalStateException("非法的 Redis 节点端口：" + node, e);
+        }
+    }
+
+    /** 打码 URL 中的密码，避免异常信息把凭据写进日志。 */
+    private static String maskUrl(String url) {
+        return url.replaceAll("://([^:@/]+):[^@/]+@", "://$1:***@");
+    }
+
+    /**
      * 官方 Redis 状态存储：{@code (userId, sessionId, key)} → Redis。
      *
-     * <p>{@code keyPrefix} 与工程的 {@code agent.key-prefix} 对齐（默认 {@code agent:as}），
-     * TTL 由 {@code RedisAgentStateStore} 内部按写入刷新；本 Bean 不负责过期策略。</p>
+     * <p>{@code keyPrefix} 与工程的 {@code agent.key-prefix} 对齐（默认 {@code agent:as}）。
+     * 官方 V0 布局为 {@code {prefix}:{tenant:user}:{sessionId}:{key}}、{@code ...:{key}:list}、
+     * {@code ...:_keys}（会话索引）。</p>
+     *
+     * <p><b>注意：官方实现不设置 TTL</b>（反编译确认全程无 EXPIRE/PEXPIRE），
+     * 状态会一直保留到被显式删除。生产必须配套清理策略：
+     * 用户主动 {@code DELETE /sessions/{id}}、以及运维侧的
+     * {@code scripts/agent/cleanup-agent-state.sh}（按 key 空闲时间清理）+
+     * Redis {@code maxmemory-policy}。不要误以为 {@code traffic.agent.session-ttl}
+     * 会作用到这里——它只约束 UI 历史与限流窗口。</p>
      *
      * <p>{@code destroyMethod = ""}：{@link RedisAgentStateStore#close()} 会关闭传入的 jedis，
      * 而该 jedis 是共享 Bean（由 {@link #agentScopeJedis} 管理）。让 Spring 各关各的，

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import jakarta.annotation.PreDestroy;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -64,6 +65,14 @@ public class SnapshotFlowSyncService {
         }
 
         syncExecutor.submit(this::incrementalSync);
+    }
+
+    /** 应用关闭时中断同步任务，避免停机时仍在写 Kafka/Redis。 */
+    @PreDestroy
+    public void shutdown() {
+        if (syncExecutor != null) {
+            syncExecutor.shutdownNow();
+        }
     }
 
     /**

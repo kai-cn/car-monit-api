@@ -89,7 +89,10 @@ public class AgentMetaController {
             return m;
         }).collect(Collectors.toList());
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("framework", properties.getFramework());
+        // framework 必须取"实际装配的实现"，而不是配置项：配置写错时（例如分支切错、
+        // 或两个分支镜像混用）只有真实值才能让前端与 E2E 发现不一致。
+        data.put("framework", orchestrator == null ? null : orchestrator.framework());
+        data.put("configuredFramework", properties.getFramework());
         data.put("enabled", orchestrator != null);
         data.put("tools", specs);
         return ok(data);
@@ -102,7 +105,8 @@ public class AgentMetaController {
         boolean degraded = !redisUp || rateLimiter.isDegraded();
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("enabled", orchestrator != null);
-        data.put("framework", properties.getFramework());
+        data.put("framework", orchestrator == null ? null : orchestrator.framework());
+        data.put("configuredFramework", properties.getFramework());
         data.put("model", maskModel(properties.getModel()));
         data.put("tools", AgentToolCatalog.specs().size());
         data.put("knowledgeChunks", knowledgeBase.size());
