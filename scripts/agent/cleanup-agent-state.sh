@@ -34,6 +34,9 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+command -v redis-cli >/dev/null 2>&1 \
+  || { echo "未找到 redis-cli，请先安装 redis-tools（或在对端机器上执行本脚本）" >&2; exit 1; }
+
 REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
 REDIS_PORT="${REDIS_PORT:-6379}"
 
@@ -53,24 +56,28 @@ scanned=0
 deleted=0
 kept=0
 
-# SCAN 游标遍历：每次 BATCH 个 key，避免 KEYS 阻塞主线程
-while IFS= read -r key; do
+# SCAN 游标遍历：每次 BATCH 个 key，避免 KEYS 阻塞主线程。
+# 注意循环体内每个 cli 调用都要 </dev/null 并把游标流放到 fd 3：
+# 否则子进程会继承并消费循环的 stdin，导致"只处理了第一个 key 就结束"（真踩过）。
+exec 3< <(cli --scan --pattern "${PREFIX}:*" --count "$BATCH")
+while IFS= read -r key <&3; do
   [ -z "$key" ] && continue
   scanned=$((scanned + 1))
-  idle=$(cli object idletime "$key" 2>/dev/null || echo "")
+  idle=$(cli object idletime "$key" </dev/null 2>/dev/null || echo "")
   # key 可能在扫描与判断之间过期/被删
   if [ -z "$idle" ] || [ "$idle" = "nil" ]; then continue; fi
   if [ "$idle" -gt "$IDLE_SECONDS" ]; then
     if [ "$DRY_RUN" -eq 1 ]; then
       echo "  would delete: $key (idle=${idle}s)"
     else
-      cli del "$key" >/dev/null
+      cli del "$key" </dev/null >/dev/null
     fi
     deleted=$((deleted + 1))
   else
     kept=$((kept + 1))
   fi
-done < <(cli --scan --pattern "${PREFIX}:*" --count "$BATCH")
+done
+exec 3<&-
 
 if [ "$DRY_RUN" -eq 1 ]; then
   echo "[cleanup] scanned=${scanned} would-delete=${deleted} kept=${kept}（dry-run，未实际删除）"
