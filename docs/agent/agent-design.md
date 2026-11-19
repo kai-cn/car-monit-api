@@ -671,7 +671,7 @@ EXPECT_FRAMEWORK=spring-ai bash scripts/agent/e2e.sh
 | 层次 | 内容 | 现状 |
 | --- | --- | --- |
 | 域层单测 | `ToolSupport`（时间窗/脱敏/截断）、`AgentGuard`（注入用例）、`KnowledgeBase`（检索命中） | 9 个用例，全绿 |
-| 适配层单测 | Spring AI：`SpringAiToolCallbacksTest`（3）、`SpringAiAgentOrchestratorTest`（1，假模型跑完整 ReAct 循环）；AgentScope：`AgentScopeToolsTest`（4）、`AgentScopeAgentOrchestratorTest`（4）、`HistoryWindowMiddlewareTest`（3） | `springAi` 分支 19 个、`agentScope2java` 分支 26 个，全绿 |
+| 适配层单测 | Spring AI：`SpringAiToolCallbacksTest`（3）、`SpringAiAgentOrchestratorTest`（1，假模型跑完整 ReAct 循环）；AgentScope：`AgentScopeToolsTest`（4）、`AgentScopeAgentOrchestratorTest`（4）、`HistoryWindowMiddlewareTest`（3） | 模块全量单测 `springAi` 26 个、`agentScope2java` 33 个（其中 Agent 域分别为 19 / 26 个，其余是 v3 查询层），全绿 |
 | 契约测试 | `/tools` 返回的 Schema 与 `AgentToolCatalog` 一致；启动期工具名一致性校验 | 启动即校验（失败即拒绝启动） |
 | 端到端 | 真模型 + 真 ES/GaussDB（需环境），覆盖：明细问答、轨迹回放、指标、知识问答、导出确认 | 待环境（本机缺 GaussDB/Redis） |
 | 混沌 | Redis 断连、模型 429/超时、客户端中途断开 | 单测覆盖降级分支；混沌待补 |
