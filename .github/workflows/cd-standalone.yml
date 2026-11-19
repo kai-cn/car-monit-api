@@ -47,8 +47,10 @@ jobs:
 
       # 安装 JDK
       - uses: actions/setup-java@v4
-        cache: maven
+        # Perf: let setup-java restore Maven dependencies from the action cache.
+        # Perf: Maven dependency cache; key follows pom.xml changes.
         with:
+          cache: maven
           distribution: temurin
           java-version: "8"
 

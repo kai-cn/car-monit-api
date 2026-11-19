@@ -1,0 +1,188 @@
+# Database major-version upgrade verification on GitHub cloud runner (api repo).
+#
+# Goal: same jar + same endpoint suite against OLD and NEW database containers:
+#   MySQL 8.0 -> 9.7 (backend + api dictionary), openGauss 3.0.0 -> 7.x (api main store).
+# Flow per cell: build jar -> old side (start/load/probe/stats) -> logical dump ->
+#   new side (start/restore/probe/stats) -> parity_compare -> report -> evidence artifact.
+#
+# Credentials come from the masked repo secret CI_DB_TEST_PASSWORD in step-level env.
+# Never put secrets in workflow/job env (GitHub echoes those blocks into public logs).
+# workflow_dispatch only. This file is mirrored onto master so GitHub exposes it.
+
+name: db-upgrade-cloud
+
+on:
+  workflow_dispatch:
+    inputs:
+      db_scope:
+        description: database to verify
+        type: choice
+        options: [mysql, opengauss, both]
+        default: both
+      linux_runner:
+        type: string
+        default: ubuntu-latest
+      og_image_source:
+        description: openGauss 7 image for NEW side
+        type: choice
+        options: [dockerhub, ga]
+        default: dockerhub
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dbupgrade-api-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  MAVEN_ARGS: -B -ntp
+  MODULE: pro-business-api
+  # 凭据绝不放在 workflow/job 级 env：GitHub 会把该块回显进公开日志。
+  # 只在调用 db_cell.sh 的 step 级 env 用 secrets.CI_DB_TEST_PASSWORD（自动脱敏）。
+
+jobs:
+  prepare:
+    runs-on: ${{ inputs.linux_runner }}
+    timeout-minutes: 5
+    outputs:
+      jdk: ${{ steps.jdk.outputs.version }}
+      matrix: ${{ steps.gen.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: jdk
+        shell: bash
+        run: |
+          v=$(grep -oP '<java\.version>\K[0-9]+' pom.xml | head -1)
+          # V3 pom uses java.version=1.8; setup-java needs the major (8).
+          [ -z "$v" ] && v=8
+          [ "$v" = "1" ] && v=8
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "detected java.version=$v"
+      - id: gen
+        shell: bash
+        env:
+          SCOPE: ${{ inputs.db_scope }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          s = os.environ['SCOPE']
+          dbs = ['mysql','opengauss'] if s == 'both' else [s]
+          print('matrix=' + json.dumps({'include': [{'db': d} for d in dbs]}, separators=(',',':')))
+          PY
+          grep '^matrix=' "$GITHUB_OUTPUT"
+
+  verify:
+    needs: prepare
+    runs-on: ${{ inputs.linux_runner }}
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      LABEL: api-jdk${{ needs.prepare.outputs.jdk }}-${{ matrix.db }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Provision JDK ${{ needs.prepare.outputs.jdk }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ needs.prepare.outputs.jdk }}
+          cache: maven
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+
+      - name: Load openGauss 7.0.0 GA image (official tarball)
+        if: matrix.db == 'opengauss' && inputs.og_image_source == 'ga'
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://opengauss.obs.cn-south-1.myhuaweicloud.com/7.0.0/openEuler24.03/x86/openGauss-Docker-7.0.0-x86_64.tar"
+          echo "Downloading openGauss 7.0.0 GA image (~2.4GB)..."
+          curl -fsSL --retry 3 -o /tmp/og-ga.tar "$url"
+          docker load -i /tmp/og-ga.tar
+          rm -f /tmp/og-ga.tar
+          echo "Loaded GA image:"
+          docker images --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep -i opengauss | head -10
+
+      - name: Build application jar
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          mvn $MAVEN_ARGS -DskipTests -pl "$MODULE" -am install
+          jar=$(ls "$MODULE"/target/*.jar | grep -v original | head -1)
+          cp "$jar" out/app.jar
+          ls -lh out/app.jar
+
+      - name: OLD DB side - load fixtures and probe
+        shell: bash
+        env:
+          CI_DB_PASSWORD: ${{ secrets.CI_DB_TEST_PASSWORD }}
+        run: |
+          set -uo pipefail
+          bash scripts/v3/ops/dbupgrade/db_cell.sh api "${{ matrix.db }}" old out/app.jar "${LABEL}-old"
+
+      - name: Logical dump from OLD DB
+        shell: bash
+        env:
+          CI_DB_PASSWORD: ${{ secrets.CI_DB_TEST_PASSWORD }}
+        run: bash scripts/v3/ops/dbupgrade/db_dump.sh api "${{ matrix.db }}"
+
+      - name: Stop OLD DB container
+        shell: bash
+        run: |
+          docker rm -f "${{ matrix.db }}-old" >/dev/null 2>&1 || true
+          docker rm -f my-dict pg-standin >/dev/null 2>&1 || true
+
+      - name: NEW DB side - migrate and probe
+        shell: bash
+        env:
+          CI_DB_PASSWORD: ${{ secrets.CI_DB_TEST_PASSWORD }}
+          OG_NEW_IMAGES: ${{ inputs.og_image_source == 'ga' && 'opengauss:7.0.0' || '' }}
+        run: |
+          set -uo pipefail
+          bash scripts/v3/ops/dbupgrade/db_cell.sh api "${{ matrix.db }}" new out/app.jar "${LABEL}-new" || {
+            echo "::group::NEW side app log tail"
+            tail -60 out/new.json.app.log 2>/dev/null | sed -E 's/(PASSWORD|password|secret)=[^ ]*/\1=***/Ig' || true
+            echo "::endgroup::"
+            exit 1
+          }
+
+      - name: Compare business consistency (fails on 0 endpoints or real DIFF)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/v3/ops/dbupgrade/gate.py --old out/old.json --new out/new.json
+          python scripts/v3/ops/parity/parity_compare.py \
+            --baseline out/old.json --candidate out/new.json \
+            --out out/compare.json --md out/compare.md --label "$LABEL"
+          cat out/compare.md 2>/dev/null || true
+
+      - name: Generate resource and performance report
+        shell: bash
+        run: |
+          python scripts/v3/ops/dbupgrade/report.py \
+            --app api --db "${{ matrix.db }}" --label "$LABEL" --out-dir out
+          cat out/report.md
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbupgrade-api-jdk${{ needs.prepare.outputs.jdk }}-${{ matrix.db }}
+          path: out/**
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Stop all test containers
+        if: always()
+        shell: bash
+        run: |
+          docker rm -f mysql-old opengauss-old mysql-new opengauss-new my-dict pg-standin rd >/dev/null 2>&1 || true
