@@ -302,6 +302,9 @@ fi
 
 # ---------------------------------------------------------------------------
 # T9 已注册工具与目录一致
+#   只比名字不够：/tools 的名字来自静态目录（AgentToolCatalog），即使一个工具都没
+#   注册到框架，名字也照样齐全。必须同时校验（a）agent 已装配、（b）每个工具
+#   registered=true——后者来自 orchestrator.registeredTools()，反映真实注册结果。
 # ---------------------------------------------------------------------------
 say "[T9] 工具清单"
 tools_json=$(curl -s -H "X-Internal-Token: $INTERNAL_TOKEN" -H 'X-Tenant-Id: t1' -H 'X-User-Id: u1' \
@@ -310,14 +313,25 @@ printf '%s' "$tools_json" > "$ARTIFACT_DIR/tools.json"
 names=$(printf '%s' "$tools_json" | python3 -c '
 import json,sys
 d=json.load(sys.stdin)
-tools=(d.get("data") or {}).get("tools") or []
-print(",".join(sorted(t["name"] for t in tools)))
-' 2>/dev/null || echo "")
+data=d.get("data") or {}
+tools=data.get("tools") or []
+unregistered=[t["name"] for t in tools if not t.get("registered")]
+enabled = "true" if data.get("enabled") else "false"
+print("%s|%s|%s" % (enabled, ",".join(sorted(t["name"] for t in tools)), ",".join(unregistered)))
+' 2>/dev/null || echo "||")
+enabled="${names%%|*}"
+rest="${names#*|}"
+actual_names="${rest%%|*}"
+unregistered="${rest#*|}"
 expected="get_bigscreen_metric,get_data_quality,get_export_status,get_vehicle_track,query_traffic_records,search_knowledge,submit_export"
-if [ "$names" = "$expected" ]; then
-  ok "工具清单 7 个且名称与目录一致"
+if [ "$enabled" != "true" ]; then
+  bad "agent 未装配（enabled=$enabled）" "检查 traffic.agent.enabled 与模型配置"
+elif [ "$actual_names" != "$expected" ]; then
+  bad "工具清单不一致" "actual=$actual_names"
+elif [ -n "$unregistered" ]; then
+  bad "存在未注册到框架的工具" "unregistered=$unregistered"
 else
-  bad "工具清单不一致" "actual=$names"
+  ok "工具清单 7 个、名称与目录一致、且全部 registered=true"
 fi
 
 # ---------------------------------------------------------------------------

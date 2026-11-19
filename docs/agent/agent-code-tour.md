@@ -39,7 +39,7 @@ AgentOrchestrator          循环：调模型 → 模型说"要查库" → 执�
 | 顺序 | 文件 | 看什么 |
 | --- | --- | --- |
 | 1 | `core/AgentOrchestrator.java` | 总纲：一次对话的接口定义与事件顺序 |
-| 2 | `core/AgentEvent.java` | SSE 契约：8 种事件、`seq` 的作用 |
+| 2 | `core/AgentEvent.java` | SSE 契约：8 类业务事件 + `heartbeat`、`seq` 的作用 |
 | 3 | `api/AgentChatController.java` | HTTP 入口：SseEmitter、心跳、三道闸、许可释放 |
 | 4 | `springai/SpringAiAgentOrchestrator.java` | ReAct 循环在 Spring AI 里长什么样 |
 | 5 | `springai/ObservableToolCallback.java` | 工具调用的观测、预算、超时、虚拟线程 |
@@ -69,7 +69,7 @@ AgentOrchestrator          循环：调模型 → 模型说"要查库" → 执�
    └─ new SseEmitter(timeout) + ChatStream.start()
 
 3. ChatStream.start()
-   ├─ 起心跳（每 10s 一条 comment 帧，防网关掐空闲连接）
+   ├─ 起心跳（每 heartbeat-interval=15s 一条 comment 帧，防网关掐空闲连接）
    └─ orchestrator.stream(invocation).subscribe(this::emit, onError, onComplete)
 
 4. Orchestrator.stream()
@@ -113,7 +113,7 @@ AgentOrchestrator          循环：调模型 → 模型说"要查库" → 执�
 | `CompletableFuture` | 8 | `ObservableToolCallback.invokeWithTimeout()` | 组合异步 + `get(timeout)` 做超时；注意 `cancel` 不会中断 JDBC |
 | `Stream` | 8 | `AgentToolCatalog.specs().stream()...` | 声明式集合处理；**不要在 Stream 里做阻塞 I/O**（会占住调用线程） |
 | `java.time` | 8 | `ToolSupport.parseTime()`、`AgentProperties` 的 `Duration` | 替代 `Date`/`SimpleDateFormat`（后者非线程安全） |
-| `sealed`（预留） | 17 | 未使用 | 若将来把 `AgentEvent` 改成密封接口约束 8 种事件，可用 `sealed interface ... permits` |
+| `sealed`（预留） | 17 | 未使用 | 若将来把 `AgentEvent` 改成密封接口约束这 8 类业务事件，可用 `sealed interface ... permits` |
 
 > **给 CRUD 开发者的提醒**：`record` 的 `equals` 是逐字段比较，`AgentPrincipal` 作为 Map key 时行为与普通对象不同；
 > `List.of()` 返回的集合不能 `add`，需要可变集合请显式 `new ArrayList<>(...)`。
