@@ -88,6 +88,7 @@ public class SpringAiAgentOrchestrator implements AgentOrchestrator {
             meta.put("sessionId", invocation.getSessionId());
             meta.put("framework", framework());
             meta.put("model", properties.getModel());
+            meta.put("time", java.time.Instant.now().toString());
             eventSink.emit(AgentEvent.meta(0, meta));
             sessionStore.append(invocation.getPrincipal(), invocation.getSessionId(),
                     List.of(AgentMessage.user(invocation.getMessage())));
