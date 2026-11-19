@@ -20,6 +20,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -35,6 +36,12 @@ public class ObservableToolCallback implements ToolCallback {
      */
     private static final ExecutorService TOOL_EXECUTOR =
             Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("agent-tool-", 0).factory());
+
+    /**
+     * 同时在跑的工具调用上限。虚拟线程本身不限制并发，不设闸的话"超时放弃等待"会让慢查询
+     * 越积越多，最终打满 ES/GaussDB 连接池。这里按工具并发（而非请求并发）兜一层。
+     */
+    private static final Semaphore TOOL_PERMITS = new Semaphore(32, true);
 
     private final ToolCallback delegate;
     private final AgentMetrics metrics;
@@ -126,13 +133,30 @@ public class ObservableToolCallback implements ToolCallback {
         long timeoutMs = properties.getToolTimeout() == null || properties.getToolTimeout().isNegative()
                 ? 20_000L
                 : Math.max(1, properties.getToolTimeout().toMillis());
-        CompletableFuture<String> future = CompletableFuture.supplyAsync(
-                () -> delegate.call(toolInput, toolContext), TOOL_EXECUTOR);
+        boolean acquired;
         try {
-            return future.get(timeoutMs, TimeUnit.MILLISECONDS);
-        } catch (TimeoutException e) {
-            future.cancel(true);
-            throw new IllegalStateException("工具执行超时（>" + timeoutMs + "ms），请缩小查询范围后重试");
+            acquired = TOOL_PERMITS.tryAcquire(timeoutMs, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("工具执行被中断，请稍后重试");
+        }
+        if (!acquired) {
+            throw new IllegalStateException("工具并发已满（>" + timeoutMs + "ms 未获得执行许可），请稍后重试");
+        }
+        try {
+            CompletableFuture<String> future = CompletableFuture.supplyAsync(
+                    () -> delegate.call(toolInput, toolContext), TOOL_EXECUTOR);
+            try {
+                return future.get(timeoutMs, TimeUnit.MILLISECONDS);
+            } catch (TimeoutException e) {
+                // CompletableFuture.cancel 不会中断底层 JDBC/HTTP 调用，真正的取消依赖
+                // 查询侧超时（ES socket-timeout、GaussDB statement_timeout）；
+                // 这里只负责"不再占用请求线程 + 尽快把 TOOL_ERROR 交回模型"。
+                future.cancel(false);
+                throw new IllegalStateException("工具执行超时（>" + timeoutMs + "ms），请缩小查询范围后重试");
+            }
+        } finally {
+            TOOL_PERMITS.release();
         }
     }
 
