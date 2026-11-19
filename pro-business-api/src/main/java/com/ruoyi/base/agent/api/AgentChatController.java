@@ -260,13 +260,8 @@ public class AgentChatController {
 
         void start() {
             metrics.requestStarted(orchestrator.framework());
-            Map<String, Object> meta = new LinkedHashMap<>();
-            meta.put("requestId", invocation.getRequestId());
-            meta.put("sessionId", invocation.getSessionId());
-            meta.put("framework", orchestrator.framework());
-            meta.put("time", Instant.now().toString());
-            emit(AgentEvent.meta(0, meta));
-
+            // meta 事件由编排器统一发出（携带 framework/model/time，属框架语义），
+            // 这里不再重复下发，避免同一个 SSE 流出现两条 meta 事件。
             long interval = Math.max(1000, properties.getHeartbeatInterval().toMillis());
             heartbeat = taskScheduler.scheduleAtFixedRate(() -> {
                 if (finished.get()) {
