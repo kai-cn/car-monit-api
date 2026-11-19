@@ -175,7 +175,8 @@ public class RedisAgentSessionStore implements AgentSessionStore {
         }
         // 超长 sessionId 不能直接截断：截断会让两个不同会话落到同一个 Redis List
         // （同用户下可读到另一个会话的历史）。保留前 48 字符 + 不可逆短哈希保证唯一；
-        // 总长 48 + 1 + 8 = 57 ≤ 64，二次清洗后原样返回（幂等）。
+        // 总长 48 + 1 + 12 = 61 ≤ 64（shortHash 输出 12 位十六进制），
+        // 二次清洗后原样返回，即幂等。
         return cleaned.substring(0, 48) + "-" + AgentPrincipal.shortHash(cleaned);
     }
 }

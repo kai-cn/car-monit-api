@@ -230,7 +230,8 @@ public class AgentChatController {
         return false;
     }
 
-    private AgentChatResponse aggregate(String requestId, String sessionId, List<AgentEvent> events, long started) {        StringBuilder answer = new StringBuilder();
+    private AgentChatResponse aggregate(String requestId, String sessionId, List<AgentEvent> events, long started) {
+        StringBuilder answer = new StringBuilder();
         List<Map<String, Object>> tools = new ArrayList<>();
         Map<String, Object> usage = new LinkedHashMap<>();
         String finishReason = "stop";
