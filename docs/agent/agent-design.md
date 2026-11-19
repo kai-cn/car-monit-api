@@ -53,8 +53,8 @@
 类路径上互斥且都较重（Spring AI 会引入 `spring-ai-*` 自动配置与 `ChatClient`；AgentScope 引入
 自己的 `Model`/`Toolkit`/`AgentStateStore` 体系），把两者塞进同一个 Maven 构建会带来三类问题：
 
-1. **依赖仲裁不可控**：`agentscope-extensions-redis` 强制 `jedis 7.4.1`，与本工程锁定的 `jedis 4.4.8`
-   冲突（详见 §11 踩坑 2）；
+1. **依赖仲裁不可控**：`spring-ai-*` 与 `agentscope-*` 各自管理模型/工具/记忆，同进程共存时
+   自动配置与线程模型会互相干扰（jedis 版本已按"以框架为基准"统一到 7.4.1，见 §11 踩坑 2）；
 2. **自动配置互相干扰**：两个框架都可能注册"默认模型/默认工具执行器"；
 3. **对比失真**：同进程共存时，线程池、连接池、缓存会相互影响，压测数据不可比。
 
@@ -274,7 +274,7 @@ sequenceDiagram
 | 维度 | Spring AI 分支 | AgentScope 分支 |
 | --- | --- | --- |
 | 模型上下文载体 | `ChatMemory`（`MessageChatMemoryAdvisor`） | `ReActAgent` 的 `AgentState`（`(userId, sessionId)` 槽位） |
-| 持久化实现 | 自研 `RedisChatMemory`（只存文本，滑动窗口 + TTL） | 自研 `AgentScopeStateStore`（`AgentState` JSON + 列表） |
+| 持久化实现 | 自研 `RedisChatMemory`（Spring AI 无官方 Redis 记忆实现，只存文本 + 滑动窗口 + TTL） | **官方** `RedisAgentStateStore`（`agentscope-extensions-redis`，Jedis 适配器） |
 | 窗口控制 | 写入时裁剪（保留最近 N 轮） | 回灌时裁剪（`HistoryWindowMiddleware`，不动持久化状态） |
 | 工具循环 | `ToolCallingAdvisor` 隐式循环 + 回调侧预算兜底 | `ReActAgent.maxIters` 显式循环 + 工具预算 |
 | UI 历史 | `AgentSessionStore`（两侧一致） | `AgentSessionStore`（两侧一致） |
@@ -532,6 +532,78 @@ Prometheus 命名自动转下划线：`agent_requests_total`、`agent_request_du
 3. 回滚：关闭开关即回到"端点返回 `AGENT_DISABLED`"，不影响既有业务接口；
 4. 数据回滚：会话/审计数据独立前缀，可直接 `DEL agent:*` 清理。
 
+### 8.5 E2E 与 CI（云 runner 真实链路）
+
+单测只能证明"逻辑对"，证明不了"真的能推流、真的能查库、鉴权在真实 HTTP 栈上真的生效"。
+因此提供一条**完全容器化的 E2E**（`.github/workflows/agent-e2e.yml`），在两个分支上跑同一套断言。
+
+**编排**（不依赖任何外部服务）：
+
+| 组件 | 来源 | 作用 |
+| --- | --- | --- |
+| Redis 7 | GitHub `services` 容器 | 会话、限流、确认令牌 |
+| openGauss 3.0 | `docker run --privileged` | 真实主库；加载 `scripts/v3/ops/parity/sql` 的 schema + seed（150 行门架数据） |
+| 假模型 | `scripts/agent/mock_llm.py` | OpenAI 兼容、确定性返回 `tool_call`（两轮：先调工具，再总结结果） |
+| 应用 | `java -jar`（fat jar） | 与生产启动方式一致 |
+| 断言 | `scripts/agent/e2e.sh` | 12 项，失败非零退出 |
+
+**断言清单**（两分支同脚本，仅 `EXPECT_FRAMEWORK` 不同）：
+
+| # | 用例 | 期望 |
+| --- | --- | --- |
+| T0 | 健康检查 | `framework` 与分支一致、`redis=UP`、`tools=7` |
+| T1 | 缺身份头 | 401 `AGENT_UNAUTHORIZED` |
+| T2 | 错误内部令牌 | 401 |
+| T3 | 提示词注入 | 400 `AGENT_PROMPT_REJECTED` |
+| T4 | SSE 契约 | 首帧 `meta` 且仅一次；`tool_call` 在 `tool_result` 前；`seq` 严格递增；末帧 `done/error`；`meta`/`done`/`tool_result` 字段完整 |
+| T5 | 同步接口 | `answer`/`usage`/`sessionId` 齐全，工具 `status=ok` |
+| T6 | 会话 | 历史 2 条；清空返回 `cleared=true`；清空后为空 |
+| T7 | 工具授权 | 无角色调用明细工具 → `FORBIDDEN`（且**未执行查询**） |
+| T8 | 限流 | 单用户连打 12 次出现 429 |
+| T9 | 工具清单 | `/tools` 返回 7 个且 `registered=true` |
+
+**本地复现**（与 CI 同脚本，便于改完先本地过一遍）：
+
+```bash
+# 1) 起依赖
+docker run -d --name redis-e2e -p 6379:6379 redis:7-alpine
+docker run -d --name og-e2e --privileged --shm-size=512m \
+  -e GS_PASSWORD='Passw0rd@123' -e LD_LIBRARY_PATH=/usr/local/opengauss/lib \
+  -p 5432:5432 enmotech/opengauss:3.0.0
+
+# 2) 建库 + 加载夹具（openGauss 3.0 不支持 CREATE SCHEMA IF NOT EXISTS，见下方 sed）
+docker exec -u 70 -e LD_LIBRARY_PATH=/usr/local/opengauss/lib og-e2e \
+  /usr/local/opengauss/bin/gsql -d postgres -c "create database ruoyi"
+sed 's/^CREATE SCHEMA IF NOT EXISTS jl_data01;/DO $$ BEGIN CREATE SCHEMA jl_data01; EXCEPTION WHEN duplicate_object THEN NULL; END $$;/' \
+  scripts/v3/ops/parity/sql/schema_jl_data01.sql > /tmp/schema.sql
+gunzip -c scripts/v3/ops/parity/sql/seed_jl_data01.sql.gz > /tmp/seed.sql
+docker cp /tmp/schema.sql og-e2e:/tmp/schema.sql && docker cp /tmp/seed.sql og-e2e:/tmp/seed.sql
+docker exec -u 70 -e LD_LIBRARY_PATH=/usr/local/opengauss/lib og-e2e \
+  /usr/local/opengauss/bin/gsql -d ruoyi -f /tmp/schema.sql
+docker exec -u 70 -e LD_LIBRARY_PATH=/usr/local/opengauss/lib og-e2e \
+  /usr/local/opengauss/bin/gsql -d ruoyi -f /tmp/seed.sql
+
+# 3) 假模型 + 应用
+python3 scripts/agent/mock_llm.py --port 18080 &
+TRAFFIC_INTERNAL_TOKEN=e2e-token TRAFFIC_AGENT_ENABLED=true \
+TRAFFIC_AGENT_BASE_URL=http://127.0.0.1:18080/v1 TRAFFIC_AGENT_API_KEY=mock-key \
+TRAFFIC_AGENT_MODEL=mock-model \
+SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_URL='jdbc:postgresql://127.0.0.1:5432/ruoyi?useSSL=false' \
+SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_USERNAME=gaussdb \
+SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD='Passw0rd@123' \
+  java -jar pro-business-api/target/pro-business-api-1.0.jar \
+  --server.port=9902 --sync.full-sync-enabled=false
+
+# 4) 断言
+APP_BASE_URL=http://127.0.0.1:9902 INTERNAL_TOKEN=e2e-token \
+EXPECT_FRAMEWORK=spring-ai bash scripts/agent/e2e.sh
+```
+
+**已知限制**：CI 不起 Elasticsearch。带车牌/路段的**模糊查询**必须走 ES（设计上禁止回退 GaussDB），
+因此明细查询在 E2E 中走的是"工具返回结构化错误"分支——断言只校验**错误被正确结构化并回给模型**，
+不校验命中行数。精确查询（数据质量、门架维度）与指标查询走真实 GaussDB，覆盖了"真的查到库"。
+需要验证完整检索链路时，按 `docs/agent/agent-spec.md` §7 的 ES 初始化步骤另行执行。
+
 ---
 
 ## 9. 两分支横向对比与选型
@@ -543,7 +615,7 @@ Prometheus 命名自动转下划线：`agent_requests_total`、`agent_request_du
 | 编排抽象 | `ChatClient` + `ToolCallingAdvisor`（工具循环隐式） | `ReActAgent`（显式 ReAct 循环，`maxIters` 可控） |
 | 工具注册 | `ToolCallback`（自定义 `JsonToolCallback` 手写 Schema） | `AgentTool`（`Toolkit.registerAgentTool`） |
 | 工具上下文 | `ToolContext`（Map 透传） | `RuntimeContext`（userId/sessionId + 属性袋） |
-| 会话记忆 | `ChatMemory` + `MessageChatMemoryAdvisor`（需自研 Redis 实现） | `AgentStateStore`（自带状态模型，需自研 Redis 实现以避依赖冲突） |
+| 会话记忆 | `ChatMemory` + `MessageChatMemoryAdvisor`（官方仅有内存实现，Redis 需自研） | `AgentStateStore` + 官方 `RedisAgentStateStore`（自带状态模型与版本化） |
 | 流式事件 | `ChatClientResponse` 增量（文本 + usage） | 32 类细粒度事件（文本/思考/工具/模型调用/超限） |
 | 中断/取消 | 依赖 `Disposable` | 原生 `interrupt(ctx)` + 取消传播 |
 | 依赖重量 | 中（`spring-ai-openai` + `client-chat`，自带 micrometer/observation） | 较重（core 带 okhttp5、mcp sdk、tree-sitter、opentelemetry） |
@@ -580,7 +652,7 @@ Prometheus 命名自动转下划线：`agent_requests_total`、`agent_request_du
 | 层次 | 内容 | 现状 |
 | --- | --- | --- |
 | 域层单测 | `ToolSupport`（时间窗/脱敏/截断）、`AgentGuard`（注入用例）、`KnowledgeBase`（检索命中） | 9 个用例，全绿 |
-| 适配层单测 | Spring AI：`SpringAiToolCallbacksTest`（3）、`SpringAiAgentOrchestratorTest`（1，假模型跑完整 ReAct 循环）；AgentScope：`AgentScopeToolsTest`（4）、`AgentScopeAgentOrchestratorTest`（4）、`AgentScopeStateStoreTest`（5）、`HistoryWindowMiddlewareTest`（3） | `springAi` 分支 13 个、`agentScope2java` 分支 19 个，全绿 |
+| 适配层单测 | Spring AI：`SpringAiToolCallbacksTest`（3）、`SpringAiAgentOrchestratorTest`（1，假模型跑完整 ReAct 循环）；AgentScope：`AgentScopeToolsTest`（4）、`AgentScopeAgentOrchestratorTest`（4）、`HistoryWindowMiddlewareTest`（3） | `springAi` 分支 19 个、`agentScope2java` 分支 26 个，全绿 |
 | 契约测试 | `/tools` 返回的 Schema 与 `AgentToolCatalog` 一致；启动期工具名一致性校验 | 启动即校验（失败即拒绝启动） |
 | 端到端 | 真模型 + 真 ES/GaussDB（需环境），覆盖：明细问答、轨迹回放、指标、知识问答、导出确认 | 待环境（本机缺 GaussDB/Redis） |
 | 混沌 | Redis 断连、模型 429/超时、客户端中途断开 | 单测覆盖降级分支；混沌待补 |
@@ -600,13 +672,18 @@ mvn -pl pro-business-api -am test -DskipTests=false \
 | # | 现象 | 根因 | 修复 | 预防 |
 | --- | --- | --- | --- | --- |
 | 1 | Spring AI 分支模型被调用 2 次但无 `tool_call` 事件、无 delta | `ToolCallingAdvisor.adviseStream` 首行判断 `options instanceof ToolCallingChatOptions`，不满足直接透传；假模型未覆盖 `getOptions()`，默认 `ChatOptions` | 假模型 `getOptions()` 返回 `OpenAiChatOptions` | 单测用"最小可用真配置"，不要用默认空 options |
-| 2 | 引入 `agentscope-extensions-redis` 后 `UnifiedJedis` 运行时 `NoSuchMethodError` | 扩展强制 jedis 7.4.1/redisson 4.2.0，根 pom 锁定 jedis 4.4.8（`JedisCluster` 构造签名在 5.x 变化） | 不引该扩展，自研 `AgentScopeStateStore`（`StringRedisTemplate`） | 引三方扩展前先 `dependency:tree` 比对锁定版本 |
+| 2 | 曾因 `UnifiedJedis` 运行时 `NoSuchMethodError` 而放弃官方 Redis 扩展、自研状态存储 | 扩展按 jedis 7.4.1 编译，根 pom 当时锁 4.4.8 | **以框架为基准**：jedis 升到 7.4.1（`JedisCluster(Set<HostAndPort>)` 仍保留，业务代码零改动），改用官方 `RedisAgentStateStore`，自研实现删除 | 三方扩展的编译期版本就是事实标准；先升依赖再考虑绕行 |
 | 3 | AgentScope 分支编译报 `io.micrometer...不存在` | 域层 `AgentMetrics` 直接用 Micrometer，之前靠 `spring-ai-client-chat` 传递 | 显式声明 `micrometer-core` | 域层直接使用的库必须显式声明，不依赖传递 |
 | 4 | 同一个 SSE 流出现两条 `meta` | 控制器与编排器各自 emit | 统一由编排器首发，控制器只负责心跳/seq/终态 | 契约类事件只允许一个产出点 |
 | 5 | `mvn test -Dtest=X` 报 "No tests matching pattern" | surefire 3.x 严格模式 | 加 `-Dsurefire.failIfNoSpecifiedTests=false` | 写进 CI 脚本与本文档 §10 |
 | 6 | 应用启动 `Connection to 127.0.0.1:5432 refused` | 本机无 GaussDB/Redis，Druid 初始化失败 | 属环境限制，非代码缺陷；用 `spring.datasource` 指向容器或跳过启动验证 | E2E 需 docker-compose（见 §10） |
 | 7 | AgentScope 历史无限增长导致 token 暴涨 | 框架无窗口配置 | `HistoryWindowMiddleware` 在 `onReasoning` 裁剪，且对齐 `user` 边界 | 引入任何"自动带历史"的框架都要显式设窗口 |
 | 8 | 长 `tenant:user` 拼接截断后不同租户命中同一 Redis Key | `substring(0,96)` 直接截断 | 截断 + SHA-256 短哈希后缀 | 所有外部输入进 Key 必须"清洗 + 限长 + 防碰撞" |
+| 9 | 应用启动刷屏 `BeanFactory has not been refreshed yet`，E2E 里直接启动失败 | `KafkaProducerService` / `SnapshotFlowSyncService` 在 `@PostConstruct` 里就提交后台线程查库/读 Redis，此时容器尚未 refresh 完成，还会与 `ConfigurationProperties` 绑定并发冲突 | 改为 `@EventListener(ApplicationReadyEvent.class)`，线程池换虚拟线程 | 任何"启动即干活"的后台任务都必须等容器就绪，不要写在 `@PostConstruct` |
+| 10 | AgentScope 状态存储误连集群，报 `Could not initialize cluster slots cache` | 误用了业务侧 `rediscluster.clusterNodes`（默认值指向一个公网集群地址），导致所有环境都走 `JedisCluster` | 只认 Spring Boot 标准 `spring.data.redis.cluster.nodes`；未配置即单机 `JedisPooled` | 不要把"某个业务模块的默认地址"当作全局基础设施配置 |
+| 11 | E2E 第二轮对话不调工具，直接"总结上一轮结果" | 假模型扫全表找 `role=tool` 消息，命中了历史残留 | 只看**最后一条**消息是否 `role=tool` | 桩件的行为要按"当前轮次"判断，不要按"历史上出现过"判断 |
+| 12 | openGauss 3.0 加载 schema 报 `CREATE SCHEMA IF NOT EXISTS` 语法错误 | 3.0 不支持该语法（7.x 才支持） | 用 `DO $$ ... EXCEPTION WHEN duplicate_object THEN NULL $$` 幂等建 schema | 夹具脚本要按"最低支持版本"写 |
+| 13 | 用 classpath 方式启动时 `NoClassDefFoundError: ChatMemory` | classpath 是在另一个分支生成的（AgentScope 分支无 spring-ai） | E2E 统一用 `java -jar`（fat jar），避免分支间 classpath 串用 | 跨分支验证时不要复用构建产物 |
 
 ---
 
@@ -634,6 +711,6 @@ mvn -pl pro-business-api -am test -DskipTests=false \
 | 限流/并发 | `agent/core/AgentRateLimiter.java`、`agent/core/AgentConcurrencyLimiter.java` |
 | 确认令牌 | `agent/core/AgentConfirmationService.java` |
 | Spring AI 适配 | `agent/springai/SpringAiAgentOrchestrator.java`、`SpringAiToolCallbacks.java` |
-| AgentScope 适配 | `agent/agentscope/AgentScopeAgentOrchestrator.java`、`AgentScopeTools.java`、`AgentScopeStateStore.java` |
+| AgentScope 适配 | `agent/agentscope/AgentScopeAgentOrchestrator.java`、`AgentScopeTools.java`、`AgentScopeAgentConfiguration.java`（官方 `RedisAgentStateStore` 装配） |
 | 提示词/知识库 | `resources/agent/prompts/system.md`、`resources/agent/knowledge/*.md` |
 | 配置 | `resources/application.yml`（`traffic.agent.*`） |

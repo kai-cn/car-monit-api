@@ -10,7 +10,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.PostConstruct;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -44,9 +45,19 @@ public class SnapshotFlowSyncService {
 
     private ExecutorService syncExecutor;
 
-    @PostConstruct
+    /**
+     * 启动同步线程。
+     *
+     * <p>与 {@code KafkaProducerService} 同样改为 {@link ApplicationReadyEvent}：
+     * 全量/增量同步会立刻查库、读 Redis、发 Kafka，在 {@code @PostConstruct} 阶段执行会
+     * 撞上"容器未 refresh 完成"，导致启动期大量 ERROR 甚至启动失败。</p>
+     */
+    @EventListener(ApplicationReadyEvent.class)
     public void init() {
-        syncExecutor = Executors.newFixedThreadPool(2);
+        // 【Java 21 虚拟线程】同步任务是"读一批 → 写一批 → 睡一会"的 I/O 循环，
+        // 用虚拟线程代替固定平台线程池，避免长期占用两个平台线程。
+        syncExecutor = Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual().name("snapshot-sync-", 0).factory());
 
         if (fullSyncEnabled) {
             syncExecutor.submit(this::fullSync);

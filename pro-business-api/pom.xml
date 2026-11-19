@@ -40,6 +40,15 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-client-chat</artifactId>
         </dependency>
+
+        <!-- Micrometer：域层 AgentMetrics 直接使用 MeterRegistry。
+             显式声明而不是靠 spring-ai 传递：本模块不引 actuator 时也要能编译，
+             运行期若有 MeterRegistry Bean 自动生效，没有则 AgentMetrics 退化为 no-op。 -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+        </dependency>
+
         <!-- Spring Kafka：Boot 4 把 KafkaAutoConfiguration 拆成独立模块，
              必须用 starter 才能拿到 kafkaListenerContainerFactory（原来只引 spring-kafka） -->
         <dependency>
