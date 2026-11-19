@@ -564,6 +564,20 @@ Prometheus 命名自动转下划线：`agent_requests_total`、`agent_request_du
 
 **本地复现**（与 CI 同脚本，便于改完先本地过一遍）：
 
+一条命令（推荐）：
+
+```bash
+bash scripts/agent/run-e2e-local.sh              # 按当前分支自动判断框架
+bash scripts/agent/run-e2e-local.sh --reset-db   # 夹具改动后重建库
+```
+
+脚本做的事与 CI 一一对应：复用/启动 Redis 与 openGauss 容器 → 建库加载夹具 →
+单测 → 打 fat jar → 起假模型与应用 → 跑 `e2e.sh` → 归集证据到 `out/agent-e2e`。
+端口被旧进程占用时会**直接报错退出**（曾因打到上一轮的旧实例而误判"修复无效"）。
+JDK 用 `E2E_JAVA_HOME`（默认 `/opt/jdk25`）指定，不复用机器上的 `JAVA_HOME`。
+
+手工分步（需要看每一步细节时）：
+
 ```bash
 # 1) 起依赖
 docker run -d --name redis-e2e -p 6379:6379 redis:7-alpine
@@ -684,6 +698,8 @@ mvn -pl pro-business-api -am test -DskipTests=false \
 | 11 | E2E 第二轮对话不调工具，直接"总结上一轮结果" | 假模型扫全表找 `role=tool` 消息，命中了历史残留 | 只看**最后一条**消息是否 `role=tool` | 桩件的行为要按"当前轮次"判断，不要按"历史上出现过"判断 |
 | 12 | openGauss 3.0 加载 schema 报 `CREATE SCHEMA IF NOT EXISTS` 语法错误 | 3.0 不支持该语法（7.x 才支持） | 用 `DO $$ ... EXCEPTION WHEN duplicate_object THEN NULL $$` 幂等建 schema | 夹具脚本要按"最低支持版本"写 |
 | 13 | 用 classpath 方式启动时 `NoClassDefFoundError: ChatMemory` | classpath 是在另一个分支生成的（AgentScope 分支无 spring-ai） | E2E 统一用 `java -jar`（fat jar），避免分支间 classpath 串用 | 跨分支验证时不要复用构建产物 |
+| 14 | 本地跑 E2E 构建阶段报 `invalid flag: -proc:full` | 复用了机器上已设的 `JAVA_HOME`（JDK 20），而工程按 JDK 25 编译，该参数 JDK 21+ 才认识 | 脚本用独立变量 `E2E_JAVA_HOME`（默认 `/opt/jdk25`），不继承 `JAVA_HOME` | 构建脚本要显式钉住工具链，不要"看环境变量脸色" |
+| 15 | E2E 断言突然全绿/全红但代码没动 | 上一轮的 jar 仍占着 9902，请求打到旧实例 | `run-e2e-local.sh` 启动前探测端口，占用即报错退出 | 长驻进程的测试必须自己保证"测的是本次构建" |
 
 ---
 
