@@ -32,7 +32,7 @@
 | `X-Internal-Token` | 多机必填 | 与 `traffic.security.internal-token` 一致；为空时仅允许回环地址 |
 | `X-Tenant-Id` | 是（回环可缺省） | 租户标识，长度 ≤64，字符集 `[A-Za-z0-9_.:@-]`，其余替换为 `_` |
 | `X-User-Id` | 是（回环可缺省） | 用户标识，规则同上 |
-| `X-User-Roles` | 否 | 逗号分隔，如 `ops,audit,admin`；空表示无角色 |
+| `X-User-Roles` | 否 | 逗号分隔，如 `ops,audit,admin`；**大小写不敏感，自动去 `ROLE_` 前缀**；空表示无角色（无任何工具） |
 | `X-Request-Id` | 否 | 追踪号；缺省服务端生成 32 位十六进制 |
 | `Content-Type` | 是 | `application/json` |
 
@@ -648,7 +648,7 @@ es.addEventListener('error',  e => fail(JSON.parse(e.data)));  // 注意：与 E
 
 约束：
 
-- `tenant/user/sessionId` 进 Key 前做字符白名单清洗，超长时"前 64 字符 + SHA-256 短哈希"防碰撞；
+- `tenant/user/sessionId` 进 Key 前做字符白名单清洗，超长时"保留前缀（48/64 字符）+ SHA-256 短哈希"防碰撞（**禁止直接截断**：会让不同主体/会话落到同一 Key）；
 - 会话消息列表上限 200 条（LRU 截断）；
 - Redis 故障：会话/状态退化进程内缓存，限流退化单机计数，确认令牌 **fail-closed**。
 
