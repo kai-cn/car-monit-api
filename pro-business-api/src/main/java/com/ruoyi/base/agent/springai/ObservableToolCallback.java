@@ -2,6 +2,7 @@ package com.ruoyi.base.agent.springai;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import com.ruoyi.base.agent.config.AgentProperties;
 import com.ruoyi.base.agent.core.AgentEvent;
 import com.ruoyi.base.agent.core.AgentEventSink;
 import com.ruoyi.base.agent.core.AgentInvocation;
@@ -16,6 +17,11 @@ import org.springframework.ai.tool.metadata.ToolMetadata;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * 工具回调装饰器：在不侵入业务工具的前提下，把 tool_call/tool_result 事件推给 SSE，
@@ -23,14 +29,24 @@ import java.util.UUID;
  */
 public class ObservableToolCallback implements ToolCallback {
 
+    /**
+     * 工具执行线程：JDK 21+ 虚拟线程，每个工具调用一条，超时后可被中断回收，
+     * 不会因为某个慢查询把 Tomcat 线程或模型流线程钉住。
+     */
+    private static final ExecutorService TOOL_EXECUTOR =
+            Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("agent-tool-", 0).factory());
+
     private final ToolCallback delegate;
     private final AgentMetrics metrics;
     private final AgentAuditLogger auditLogger;
+    private final AgentProperties properties;
 
-    public ObservableToolCallback(ToolCallback delegate, AgentMetrics metrics, AgentAuditLogger auditLogger) {
+    public ObservableToolCallback(ToolCallback delegate, AgentMetrics metrics,
+                                  AgentAuditLogger auditLogger, AgentProperties properties) {
         this.delegate = delegate;
         this.metrics = metrics;
         this.auditLogger = auditLogger;
+        this.properties = properties;
     }
 
     @Override
@@ -71,7 +87,7 @@ public class ObservableToolCallback implements ToolCallback {
 
         long started = System.currentTimeMillis();
         try {
-            String result = delegate.call(toolInput, toolContext);
+            String result = invokeWithTimeout(toolInput, toolContext);
             long elapsed = System.currentTimeMillis() - started;
             String status = isError(result) ? "error" : "ok";
             if (sink != null) {
@@ -97,6 +113,26 @@ public class ObservableToolCallback implements ToolCallback {
             error.put("errorCode", "TOOL_ERROR");
             error.put("message", message);
             return JSON.toJSONString(error);
+        }
+    }
+
+    /**
+     * 带超时的工具调用。
+     *
+     * <p>Spring AI 的 {@code ToolCallingManager} 不提供单工具超时，若不包一层，一个慢查询会一直
+     * 占用并发许可直到 SSE 总超时（默认 120s），期间其它请求只能排队或直接 {@code AGENT_BUSY}。</p>
+     */
+    private String invokeWithTimeout(String toolInput, ToolContext toolContext) throws Exception {
+        long timeoutMs = properties.getToolTimeout() == null || properties.getToolTimeout().isNegative()
+                ? 20_000L
+                : Math.max(1, properties.getToolTimeout().toMillis());
+        CompletableFuture<String> future = CompletableFuture.supplyAsync(
+                () -> delegate.call(toolInput, toolContext), TOOL_EXECUTOR);
+        try {
+            return future.get(timeoutMs, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            future.cancel(true);
+            throw new IllegalStateException("工具执行超时（>" + timeoutMs + "ms），请缩小查询范围后重试");
         }
     }
 
@@ -156,11 +192,21 @@ public class ObservableToolCallback implements ToolCallback {
         sb.append(key).append('=').append(value);
     }
 
-    private static String truncate(String result) {
-        int max = 8000;
+    /**
+     * 截断必须是合法 JSON：直接切字符串会让模型侧解析失败，因此包一层结构化标记，
+     * 并把原始内容作为 {@code preview} 保留（便于模型判断"要不要缩小范围再查"）。
+     */
+    private String truncate(String result) {
+        int max = properties.getMaxToolResultChars();
+        max = Math.max(1000, max);
         if (result == null || result.length() <= max) {
             return result;
         }
-        return result.substring(0, max) + "...(truncated)";
+        Map<String, Object> truncated = new LinkedHashMap<>();
+        truncated.put("ok", true);
+        truncated.put("truncated", true);
+        truncated.put("message", "结果过大已截断，请缩小时间范围/增加筛选条件后重试");
+        truncated.put("preview", result.substring(0, max));
+        return JSON.toJSONString(truncated);
     }
 }

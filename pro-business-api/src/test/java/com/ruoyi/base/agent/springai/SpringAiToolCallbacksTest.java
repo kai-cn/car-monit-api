@@ -86,7 +86,7 @@ class SpringAiToolCallbacksTest {
     @Test
     void budgetBlocksExtraCalls() {
         AgentToolService service = mock(AgentToolService.class);
-        when(service.searchKnowledge(any())).thenReturn(Map.of("ok", true, "count", 1));
+        when(service.searchKnowledge(any(), any())).thenReturn(Map.of("ok", true, "count", 1));
         SpringAiToolCallbacks callbacks = newCallbacks(service);
         ToolCallback callback = callbacks.callbacks().stream()
                 .filter(c -> c.getToolDefinition().name().equals(AgentToolCatalog.SEARCH_KNOWLEDGE))
@@ -119,6 +119,6 @@ class SpringAiToolCallbacksTest {
         when(provider.getIfAvailable()).thenReturn(null);
         AgentMetrics metrics = new AgentMetrics(provider);
         AgentAuditLogger audit = new AgentAuditLogger(new AgentProperties());
-        return new SpringAiToolCallbacks(service, metrics, audit);
+        return new SpringAiToolCallbacks(service, metrics, audit, new AgentProperties());
     }
 }

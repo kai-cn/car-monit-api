@@ -60,11 +60,12 @@ public class SpringAiAgentConfiguration {
 
     @Bean
     public AgentOrchestrator agentOrchestrator(ChatClient agentChatClient,
+                                               ChatMemory agentChatMemory,
                                                SpringAiToolCallbacks toolCallbacks,
                                                PromptLibrary promptLibrary,
                                                AgentSessionStore sessionStore,
                                                AgentProperties properties) {
-        return new SpringAiAgentOrchestrator(agentChatClient, toolCallbacks, promptLibrary,
-                sessionStore, properties);
+        return new SpringAiAgentOrchestrator(agentChatClient, agentChatMemory, toolCallbacks,
+                promptLibrary, sessionStore, properties);
     }
 }

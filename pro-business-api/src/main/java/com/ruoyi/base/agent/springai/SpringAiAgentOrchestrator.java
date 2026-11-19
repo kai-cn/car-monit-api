@@ -43,21 +43,40 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class SpringAiAgentOrchestrator implements AgentOrchestrator {
 
     private final ChatClient chatClient;
+    private final ChatMemory chatMemory;
     private final SpringAiToolCallbacks toolCallbacks;
     private final PromptLibrary promptLibrary;
     private final AgentSessionStore sessionStore;
     private final AgentProperties properties;
 
     public SpringAiAgentOrchestrator(ChatClient chatClient,
+                                     ChatMemory chatMemory,
                                      SpringAiToolCallbacks toolCallbacks,
                                      PromptLibrary promptLibrary,
                                      AgentSessionStore sessionStore,
                                      AgentProperties properties) {
         this.chatClient = chatClient;
+        this.chatMemory = chatMemory;
         this.toolCallbacks = toolCallbacks;
         this.promptLibrary = promptLibrary;
         this.sessionStore = sessionStore;
         this.properties = properties;
+    }
+
+    /**
+     * 清空会话：ChatMemory 里的模型上下文与 UI 历史一起清，避免"历史清空了模型还记得"。
+     */
+    @Override
+    public void clearSession(com.ruoyi.base.agent.core.AgentPrincipal principal, String sessionId) {
+        if (principal == null || sessionId == null || sessionId.isBlank() || chatMemory == null) {
+            return;
+        }
+        String conversationKey = principal.tenantId() + ":" + principal.userId() + ":" + sessionId;
+        try {
+            chatMemory.clear(conversationKey);
+        } catch (RuntimeException e) {
+            log.warn("[Agent][SpringAI] 清空会话记忆失败 session={}: {}", sessionId, e.getMessage());
+        }
     }
 
     @Override

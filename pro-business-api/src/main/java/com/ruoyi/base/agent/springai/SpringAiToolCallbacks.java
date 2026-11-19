@@ -1,6 +1,7 @@
 package com.ruoyi.base.agent.springai;
 
 import com.alibaba.fastjson2.JSON;
+import com.ruoyi.base.agent.config.AgentProperties;
 import com.ruoyi.base.agent.core.AgentAuditLogger;
 import com.ruoyi.base.agent.core.AgentInvocation;
 import com.ruoyi.base.agent.core.AgentMetrics;
@@ -28,12 +29,15 @@ public class SpringAiToolCallbacks {
     private final AgentToolService toolService;
     private final AgentMetrics metrics;
     private final AgentAuditLogger auditLogger;
+    private final AgentProperties properties;
     private final List<ToolCallback> callbacks;
 
-    public SpringAiToolCallbacks(AgentToolService toolService, AgentMetrics metrics, AgentAuditLogger auditLogger) {
+    public SpringAiToolCallbacks(AgentToolService toolService, AgentMetrics metrics,
+                                 AgentAuditLogger auditLogger, AgentProperties properties) {
         this.toolService = toolService;
         this.metrics = metrics;
         this.auditLogger = auditLogger;
+        this.properties = properties;
         this.callbacks = build();
         validateCatalog();
     }
@@ -54,7 +58,7 @@ public class SpringAiToolCallbacks {
         List<ToolCallback> list = new ArrayList<>();
         for (AgentToolCatalog.ToolSpec spec : AgentToolCatalog.specs()) {
             JsonToolCallback callback = new JsonToolCallback(spec, (args, ctx) -> dispatch(spec.name(), args, ctx));
-            list.add(new ObservableToolCallback(callback, metrics, auditLogger));
+            list.add(new ObservableToolCallback(callback, metrics, auditLogger, properties));
         }
         return List.copyOf(list);
     }
@@ -68,7 +72,7 @@ public class SpringAiToolCallbacks {
             case AgentToolCatalog.QUERY_TRAFFIC -> toolService.queryTraffic(principal, args);
             case AgentToolCatalog.VEHICLE_TRACK -> toolService.vehicleTrack(principal, args);
             case AgentToolCatalog.BIGSCREEN_METRIC -> toolService.bigScreen(principal, args);
-            case AgentToolCatalog.SEARCH_KNOWLEDGE -> toolService.searchKnowledge(args);
+            case AgentToolCatalog.SEARCH_KNOWLEDGE -> toolService.searchKnowledge(principal, args);
             case AgentToolCatalog.SUBMIT_EXPORT -> toolService.submitExport(
                     principal, invocation.getSessionId(), confirmToken, args);
             case AgentToolCatalog.EXPORT_STATUS -> toolService.exportStatus(principal, args);

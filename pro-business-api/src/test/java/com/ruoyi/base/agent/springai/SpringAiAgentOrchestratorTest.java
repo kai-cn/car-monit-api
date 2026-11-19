@@ -40,7 +40,7 @@ class SpringAiAgentOrchestratorTest {
     @Test
     void streamsTextAndExecutesToolLoop() {
         AgentToolService toolService = mock(AgentToolService.class);
-        when(toolService.searchKnowledge(any())).thenReturn(Map.of("ok", true, "count", 1,
+        when(toolService.searchKnowledge(any(), any())).thenReturn(Map.of("ok", true, "count", 1,
                 "items", List.of(Map.of("title", "车牌", "content", "plate_norm 是归一化车牌"))));
 
         @SuppressWarnings("unchecked")
@@ -48,7 +48,8 @@ class SpringAiAgentOrchestratorTest {
         when(provider.getIfAvailable()).thenReturn(null);
         AgentMetrics metrics = new AgentMetrics(provider);
         AgentAuditLogger audit = new AgentAuditLogger(new AgentProperties());
-        SpringAiToolCallbacks callbacks = new SpringAiToolCallbacks(toolService, metrics, audit);
+        AgentProperties props = new AgentProperties();
+        SpringAiToolCallbacks callbacks = new SpringAiToolCallbacks(toolService, metrics, audit, props);
 
         AgentProperties properties = new AgentProperties();
         properties.setMaxIters(4);
@@ -58,7 +59,7 @@ class SpringAiAgentOrchestratorTest {
         AgentSessionStore sessionStore = mock(AgentSessionStore.class);
         ChatClient chatClient = ChatClient.builder(new FakeToolCallingModel()).build();
         SpringAiAgentOrchestrator orchestrator = new SpringAiAgentOrchestrator(
-                chatClient, callbacks, prompts, sessionStore, properties);
+                chatClient, null, callbacks, prompts, sessionStore, properties);
 
         AgentInvocation invocation = AgentInvocation.builder()
                 .requestId("req-test")
