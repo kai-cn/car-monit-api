@@ -188,7 +188,7 @@ public class ObservableToolCallback implements ToolCallback {
         }
 
         // 【唯一释放点】放在 whenComplete 而不是任务体里的 finally：
-        // 若任务还在队列里排队就被 cancel(false)，supplier 根本不会执行、finally 也不会跑，
+        // 若任务还在队列里排队就被取消，supplier 根本不会执行、finally 也不会跑，
         // 许可就永久泄漏了（32 个许可漏完，之后所有工具恒返回 AGENT_BUSY）。
         // future 一定会落到某个终态（正常完成 / 任务抛异常 / 被取消），
         // whenComplete 在三种情况下都会执行且只执行一次，因此这里释放既不漏也不重。
@@ -197,11 +197,12 @@ public class ObservableToolCallback implements ToolCallback {
         try {
             return future.get(timeoutMs, TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
-            // CompletableFuture.cancel 不会中断底层 JDBC/HTTP 调用，真正的取消依赖
-            // 查询侧超时（ES socket-timeout、GaussDB statement_timeout）；
-            // 这里只负责"不再占用请求线程 + 尽快把 TOOL_ERROR 交回模型"。
-            // 许可不在这里还：任务还在跑就仍应计入并发，等它真正结束由 whenComplete 归还。
-            future.cancel(false);
+            // 【这里刻意不调用 future.cancel】它看起来更"干净"，但实测（JDK 25）：
+            // 对**已在运行**的任务，cancel(false) 会立刻把 future 置为 CancellationException，
+            // whenComplete 当场触发、许可立刻还回去，而底层 JDBC/HTTP 查询还在跑——
+            // 于是"慢查询最该被限流"的场景恰恰限不住，与 TOOL_PERMITS 的设计目的相反。
+            // cancel 也中断不了查询（真正的取消依赖 ES socket-timeout / GaussDB
+            // statement_timeout），所以这里只放弃结果，许可等任务真正结束再归还。
             throw new IllegalStateException("工具执行超时（>" + timeoutMs + "ms），请缩小查询范围后重试");
         }
     }

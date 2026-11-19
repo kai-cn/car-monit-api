@@ -29,6 +29,9 @@ on:
       - '.github/workflows/agent-e2e.yml'
       - 'pom.xml'
   pull_request:
+    # 必须限定目标分支：PR 打到 master 等分支时，base.ref 不命中任何一条腿，
+    # 两条腿都会去测自己的基线，PR 代码没被验证却全绿（就是本次要消灭的假绿）。
+    branches: [springAi, agentScope2java]
     paths:
       - 'pro-business-api/src/main/java/com/ruoyi/base/agent/**'
       - 'pro-business-api/src/main/resources/agent/**'
@@ -37,7 +40,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: '要验证的分支/Tag（留空则按矩阵默认分支）'
+        description: '要验证的分支（springAi / agentScope2java；留空按矩阵，两条腿全跑）'
         required: false
         type: string
 
@@ -84,6 +87,20 @@ jobs:
           --health-retries 20
 
     steps:
+      - name: 校验手动触发的 ref（必须在 checkout 之前）
+        # 放在 checkout 之前：不存在的 ref 会让 checkout 先失败，
+        # 下面这条"说清楚为什么"的提示就永远看不到。
+        # 也接受 refs/heads/ 前缀的写法，避免只因写法不同就被误杀。
+        if: github.event_name == 'workflow_dispatch' && inputs.ref != ''
+        env:
+          REQUESTED: ${{ inputs.ref }}
+        run: |
+          ref="${REQUESTED#refs/heads/}"
+          case "$ref" in
+            springAi|agentScope2java) echo "ref=$ref 合法" ;;
+            *) echo "::error::workflow_dispatch 的 ref 只能是 springAi 或 agentScope2java（收到：$REQUESTED）"; exit 1 ;;
+          esac
+
       # PR 场景下两条腿只能有一条测 head：如果两条都检出 head.sha，另一条腿编译的是
       # 同一份代码却要断言另一个 framework，必然假红（看着像"改动弄挂了另一分支"）。
       # 判据用 **base.ref（目标分支）** 而不是 head.ref：PR 的来源常是功能分支
@@ -102,14 +119,6 @@ jobs:
         with:
           ref: ${{ inputs.ref || matrix.branch }}
           fetch-depth: 1
-
-      - name: 校验手动触发的 ref
-        # 两条腿都会检出 inputs.ref，若它不是矩阵里的某个分支，必有一条断言失败；
-        # 这里提前给出明确原因，而不是让人去读一条"framework 不一致"的断言失败。
-        if: github.event_name == 'workflow_dispatch' && inputs.ref != '' && inputs.ref != 'springAi' && inputs.ref != 'agentScope2java'
-        run: |
-          echo "::error::workflow_dispatch 的 ref 只能是 springAi 或 agentScope2java（收到：${{ inputs.ref }}）"
-          exit 1
 
       - name: 确认分支与工作流一致
         env:

@@ -30,6 +30,11 @@ class RedisAgentSessionStoreTest {
         // 曾用 '~' 作为截断分隔符：它不在白名单里，第二次归一化会被替换成 '_'，
         // 于是"历史列表里的会话点进去查不到消息"。
         assertEquals(once, twice, "二次归一化必须原样返回");
+        // 边界：64 不动、65 才截断，否则刚好 64 的合法 id 会被无谓地改写
+        String at64 = "z".repeat(64);
+        String at65 = "z".repeat(65);
+        assertEquals(at64, RedisAgentSessionStore.safe(at64), "64 字符应原样保留");
+        assertNotEquals(at65, RedisAgentSessionStore.safe(at65), "65 字符应被截断改写");
     }
 
     @Test
