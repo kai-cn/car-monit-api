@@ -85,7 +85,9 @@ jobs:
       - name: Checkout（${{ inputs.ref || matrix.branch }}）
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || matrix.branch }}
+          # PR 事件取 head.sha：矩阵里的分支名在 PR 场景下指向"目标分支 HEAD"，
+          # 测不到 PR 的实际改动；push / 手动触发才用分支名。
+          ref: ${{ github.event.pull_request.head.sha || inputs.ref || matrix.branch }}
           fetch-depth: 1
 
       - name: 确认分支与工作流一致
@@ -100,6 +102,13 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
+
+      - name: 单测（Agent 域/工具/中间件）
+        run: >
+          mvn $MAVEN_ARGS -pl pro-business-api -am test
+          -DskipTests=false
+          -Dtest='Agent*Test,*MiddlewareTest,KnowledgeBaseTest,ToolSupportTest'
+          -Dsurefire.failIfNoSpecifiedTests=false
 
       - name: 构建可执行 jar
         run: mvn $MAVEN_ARGS -pl pro-business-api -am package -DskipTests
@@ -182,19 +191,21 @@ jobs:
           ARTIFACT_DIR: out/agent-e2e
         run: bash scripts/agent/e2e.sh
 
+      - name: 归集证据到工作区
+        if: always()
+        run: |
+          mkdir -p out/agent-e2e
+          cp -f /tmp/app.log /tmp/mock.log /tmp/mock-llm.jsonl /tmp/schema.log /tmp/seed.log \
+            out/agent-e2e/ 2>/dev/null || true
+          ls -lh out/agent-e2e | head -20
+
       - name: 上传证据（日志 / SSE 样本 / 模型请求）
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: agent-e2e-${{ matrix.framework }}
-          path: |
-            out/agent-e2e/**
-            /tmp/app.log
-            /tmp/mock.log
-            /tmp/mock-llm.jsonl
-            /tmp/schema.log
-            /tmp/seed.log
-          if-no-files-found: warn
+          path: out/agent-e2e/**
+          if-no-files-found: error
           retention-days: 7
 
       - name: 现场诊断（失败时）
