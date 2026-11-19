@@ -285,7 +285,7 @@ sequenceDiagram
 | 用途 | Key | 类型 | TTL |
 | --- | --- | --- | --- |
 | UI 会话消息 | `agent:session:{tenant}:{user}:{sessionId}` | List | `session-ttl` |
-| UI 会话索引 | `agent:sessions:{tenant}:{user}` | ZSet（score=活跃时间） | `session-ttl` |
+| UI 会话索引 | `agent:sessions:{tenant}:{user}` | ZSet（member=清洗后的 sessionId，score=活跃时间） | `session-ttl` |
 | 限流（用户） | `agent:rl:u:{tenant}:{user}:{minute}` | String（INCR） | 90s |
 | 限流（租户） | `agent:rl:t:{tenant}:{minute}` | String（INCR） | 90s |
 | 确认令牌 | `agent:confirm:{token}`（value = `tenant\|user\|sessionId\|action`） | String | `confirm-ttl` |
@@ -706,6 +706,8 @@ mvn -pl pro-business-api -am test -DskipTests=false \
 | 14 | 本地跑 E2E 构建阶段报 `invalid flag: -proc:full` | 复用了机器上已设的 `JAVA_HOME`（JDK 20），而工程按 JDK 25 编译，该参数 JDK 21+ 才认识 | 脚本用独立变量 `E2E_JAVA_HOME`（默认 `/opt/jdk25`），不继承 `JAVA_HOME` | 构建脚本要显式钉住工具链，不要"看环境变量脸色" |
 | 15 | E2E 断言突然全绿/全红但代码没动 | 上一轮的 jar 仍占着 9902，请求打到旧实例 | `run-e2e-local.sh` 启动前探测端口，占用即报错退出 | 长驻进程的测试必须自己保证"测的是本次构建" |
 | 16 | 运维按 `agent:as:*` 清理 AgentScope 状态，扫到 0 个 Key | 官方 `keyPrefix` 是"前缀 + userId 直接拼接"，我们传 `agent:as` 少了结尾冒号，实际 Key 粘成 `agent:ast1:u1/...` | `keyPrefix` 改为 `agent:as:`；同时把布局更正为 `{prefix}:as:{tenant:user}/{sessionId}:{key}`（user 与 session 之间是 `/`） | 三方组件的前缀类配置先反编译看 `DEFAULT_*` 常量的写法，照着它的惯例传 |
+| 17 | 工具并发许可"越用越少"，最终全部请求返回 AGENT_BUSY | 许可在请求线程 `finally` 里释放，超时返回时底层查询仍在跑；改成"任务 finally 释放"后又踩到反例：任务还在队列里就被 `cancel(false)`，supplier 根本不执行，`finally` 永不运行 | 唯一释放点放到 `CompletableFuture.whenComplete`——正常完成/任务异常/被取消三种终态都恰好触发一次（已用 JDK25 实测三条路径） | 任何"配对的资源计数"都要找一个**一定执行**的收口点，`finally` 只在"函数真的进入"时才成立 |
+| 18 | PR 里 `springAi` 腿必红，日志显示"framework 不一致" | matrix 两条腿都检出 `head.sha`，另一条腿编译同一份代码却断言另一个框架 | 判据用 `base.ref`（改动归属哪个分支）而非 `head.ref`：命中的腿测 head，另一条腿测自己的基线 | 矩阵 + 单 ref 的组合要么按目标分支分流，要么别用矩阵 |
 
 ---
 

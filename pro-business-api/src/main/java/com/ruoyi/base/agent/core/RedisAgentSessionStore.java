@@ -158,7 +158,14 @@ public class RedisAgentSessionStore implements AgentSessionStore {
         return properties.getKeyPrefix() + ":sessions:" + p.tenantId() + ":" + p.userId();
     }
 
-    private static String safe(String sessionId) {
+    /**
+     * 会话 id 归一化：只保留白名单字符，超长时"前缀 + 短哈希"。
+     *
+     * <p><b>必须是幂等的</b>：会话列表返回的是清洗后的 id，前端拿它再发起请求时会
+     * 重新走一遍本方法。因此分隔符只能用白名单内的字符——曾用 {@code ~}，
+     * 第二次清洗会把它替换成 {@code _}，导致"列表里能点、点进去查不到历史"。</p>
+     */
+    static String safe(String sessionId) {
         if (sessionId == null || sessionId.isBlank()) {
             return "default";
         }
@@ -167,7 +174,8 @@ public class RedisAgentSessionStore implements AgentSessionStore {
             return cleaned;
         }
         // 超长 sessionId 不能直接截断：截断会让两个不同会话落到同一个 Redis List
-        // （同用户下可读到另一个会话的历史）。保留前 48 字符 + 不可逆短哈希保证唯一。
-        return cleaned.substring(0, 48) + "~" + AgentPrincipal.shortHash(cleaned);
+        // （同用户下可读到另一个会话的历史）。保留前 48 字符 + 不可逆短哈希保证唯一；
+        // 总长 48 + 1 + 8 = 57 ≤ 64，二次清洗后原样返回（幂等）。
+        return cleaned.substring(0, 48) + "-" + AgentPrincipal.shortHash(cleaned);
     }
 }

@@ -86,21 +86,30 @@ jobs:
     steps:
       # PR 场景下两条腿只能有一条测 head：如果两条都检出 head.sha，另一条腿编译的是
       # 同一份代码却要断言另一个 framework，必然假红（看着像"改动弄挂了另一分支"）。
-      # 因此按"PR head 分支名是否等于本腿分支"分流：命中的腿测 head，另一条腿测自己
-      # （等同一次回归），两条腿都保持绿色。
+      # 判据用 **base.ref（目标分支）** 而不是 head.ref：PR 的来源常是功能分支
+      # （feat/xxx），而"这次改动最终属于哪个框架"由目标分支决定；用 head.ref 判断
+      # 会让功能分支的 PR 两条腿都测自己的基线，导致 PR 代码根本没被验证却全绿。
       - name: Checkout（PR head，仅命中本腿时）
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == matrix.branch
+        if: github.event_name == 'pull_request' && github.base.ref == matrix.branch
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 1
 
       - name: Checkout（本腿分支）
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.ref != matrix.branch
+        if: github.event_name != 'pull_request' || github.base.ref != matrix.branch
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || matrix.branch }}
           fetch-depth: 1
+
+      - name: 校验手动触发的 ref
+        # 两条腿都会检出 inputs.ref，若它不是矩阵里的某个分支，必有一条断言失败；
+        # 这里提前给出明确原因，而不是让人去读一条"framework 不一致"的断言失败。
+        if: github.event_name == 'workflow_dispatch' && inputs.ref != '' && inputs.ref != 'springAi' && inputs.ref != 'agentScope2java'
+        run: |
+          echo "::error::workflow_dispatch 的 ref 只能是 springAi 或 agentScope2java（收到：${{ inputs.ref }}）"
+          exit 1
 
       - name: 确认分支与工作流一致
         env:
@@ -108,8 +117,8 @@ jobs:
         run: |
           echo "ref=$(git rev-parse --abbrev-ref HEAD) sha=$(git rev-parse --short HEAD)"
           if [ "${{ github.event_name }}" = "pull_request" ] \
-             && [ "${{ github.event.pull_request.head.ref }}" != "$MATRIX_BRANCH" ]; then
-            echo "::notice::本腿测的是自身分支 $MATRIX_BRANCH（PR head 为 ${{ github.event.pull_request.head.ref }}，由对应腿负责）"
+             && [ "${{ github.base.ref }}" != "$MATRIX_BRANCH" ]; then
+            echo "::notice::本腿测的是自身分支 $MATRIX_BRANCH（PR 目标为 ${{ github.base.ref }}，由对应腿测 head）"
           fi
           test -f pro-business-api/src/main/java/com/ruoyi/base/agent/core/AgentOrchestrator.java \
             || { echo "::error::当前 ref 不含 agent 域层，检查 ref 是否选对"; exit 1; }

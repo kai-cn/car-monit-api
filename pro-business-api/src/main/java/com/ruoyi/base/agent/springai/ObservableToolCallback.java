@@ -180,27 +180,27 @@ public class ObservableToolCallback implements ToolCallback {
 
         CompletableFuture<String> future;
         try {
-            future = CompletableFuture.supplyAsync(() -> {
-                try {
-                    return delegate.call(toolInput, toolContext);
-                } finally {
-                    // 真正的"执行结束"点：无论成功、异常还是被取消，都在这里归还许可
-                    TOOL_PERMITS.release();
-                }
-            }, TOOL_EXECUTOR);
+            future = CompletableFuture.supplyAsync(() -> delegate.call(toolInput, toolContext), TOOL_EXECUTOR);
         } catch (RuntimeException e) {
-            // 提交失败（如线程池已关闭）说明任务不会执行，许可必须在这里归还
+            // 提交失败（如线程池已关闭）说明任务不会执行，也不会有 future，许可必须在这里归还
             TOOL_PERMITS.release();
             throw e;
         }
+
+        // 【唯一释放点】放在 whenComplete 而不是任务体里的 finally：
+        // 若任务还在队列里排队就被 cancel(false)，supplier 根本不会执行、finally 也不会跑，
+        // 许可就永久泄漏了（32 个许可漏完，之后所有工具恒返回 AGENT_BUSY）。
+        // future 一定会落到某个终态（正常完成 / 任务抛异常 / 被取消），
+        // whenComplete 在三种情况下都会执行且只执行一次，因此这里释放既不漏也不重。
+        future.whenComplete((ignored, error) -> TOOL_PERMITS.release());
 
         try {
             return future.get(timeoutMs, TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             // CompletableFuture.cancel 不会中断底层 JDBC/HTTP 调用，真正的取消依赖
             // 查询侧超时（ES socket-timeout、GaussDB statement_timeout）；
-            // 这里只负责"不再占用请求线程 + 尽快把 TOOL_ERROR 交回模型"，
-            // 许可由任务自己在上面的 finally 里归还。
+            // 这里只负责"不再占用请求线程 + 尽快把 TOOL_ERROR 交回模型"。
+            // 许可不在这里还：任务还在跑就仍应计入并发，等它真正结束由 whenComplete 归还。
             future.cancel(false);
             throw new IllegalStateException("工具执行超时（>" + timeoutMs + "ms），请缩小查询范围后重试");
         }
