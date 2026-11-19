@@ -93,10 +93,14 @@ jobs:
           rustup toolchain install 1.90.0 --profile minimal
           rustup default 1.90.0
 
-      # C++ 系统依赖（libpq / OpenSSL；FetchContent 会下载 librdkafka/libpqxx/hiredis）
-      - name: 安装 C++ 构建依赖
-        if: inputs.service == '' || inputs.service == 'all' || inputs.service == 'cpp'
-        run: sudo apt-get update && sudo apt-get install -y libpq-dev libssl-dev zlib1g-dev
+      # 原生构建系统依赖（rust 的 rdkafka-sys cmake-build 与 cpp 都需要）
+      # 关键：librdkafka 启用 curl 支持，缺 libcurl4-openssl-dev 会报 fatal error: curl/curl.h
+      - name: 安装原生构建依赖（Rust/C++）
+        if: inputs.service == '' || inputs.service == 'all' || inputs.service == 'rust' || inputs.service == 'cpp'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential pkg-config \
+            libpq-dev libssl-dev zlib1g-dev libcurl4-openssl-dev
 
       - name: 构建各语言产物并组装
         shell: bash
