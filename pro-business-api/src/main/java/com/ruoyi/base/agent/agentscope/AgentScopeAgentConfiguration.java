@@ -105,9 +105,11 @@ public class AgentScopeAgentConfiguration {
     @Bean
     public AgentOrchestrator agentOrchestrator(ReActAgent agentScopeReActAgent,
                                                AgentScopeTools tools,
+                                               AgentScopeStateStore stateStore,
                                                AgentSessionStore sessionStore,
                                                AgentProperties properties) {
-        return new AgentScopeAgentOrchestrator(agentScopeReActAgent, tools, sessionStore, properties);
+        return new AgentScopeAgentOrchestrator(agentScopeReActAgent, tools, stateStore,
+                sessionStore, properties);
     }
 
     /**

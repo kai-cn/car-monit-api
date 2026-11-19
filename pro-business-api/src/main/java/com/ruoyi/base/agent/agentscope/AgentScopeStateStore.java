@@ -187,6 +187,12 @@ public class AgentScopeStateStore implements AgentStateStore {
         } catch (RuntimeException e) {
             log.warn("[AgentScope状态] Redis 删除失败: {}", e.getMessage());
         }
+        // 本地兜底缓存必须一起清：get/getList 在 Redis 返回空时会回落到本地，
+        // 不清就会"删完又冒出来"。
+        String statePrefix = properties.getKeyPrefix() + ":as:state:" + user(userId) + ":" + safe(sessionId) + ":";
+        String listPrefix = properties.getKeyPrefix() + ":as:list:" + user(userId) + ":" + safe(sessionId) + ":";
+        localState.keySet().removeIf(k -> k.startsWith(statePrefix));
+        localList.keySet().removeIf(k -> k.startsWith(listPrefix));
         localKeys.remove(keysKey);
         localSessions.getOrDefault(sessionsKey(userId), Collections.emptySet()).remove(safe(sessionId));
     }

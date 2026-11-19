@@ -196,7 +196,7 @@ public class AgentScopeTools {
                 }
                 Map<String, Object> error = new LinkedHashMap<>();
                 error.put("ok", false);
-                error.put("errorCode", "AGENT_TOOL_ERROR");
+                error.put("errorCode", "TOOL_ERROR");
                 error.put("message", message);
                 return ToolResultBlock.text(JSON.toJSONString(error));
             }
@@ -209,7 +209,7 @@ public class AgentScopeTools {
                 case AgentToolCatalog.QUERY_TRAFFIC -> toolService.queryTraffic(principal, args);
                 case AgentToolCatalog.VEHICLE_TRACK -> toolService.vehicleTrack(principal, args);
                 case AgentToolCatalog.BIGSCREEN_METRIC -> toolService.bigScreen(principal, args);
-                case AgentToolCatalog.SEARCH_KNOWLEDGE -> toolService.searchKnowledge(args);
+                case AgentToolCatalog.SEARCH_KNOWLEDGE -> toolService.searchKnowledge(principal, args);
                 case AgentToolCatalog.SUBMIT_EXPORT -> toolService.submitExport(
                         principal,
                         invocation == null ? "" : invocation.getSessionId(),

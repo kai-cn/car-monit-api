@@ -8,6 +8,7 @@ import com.ruoyi.base.agent.core.AgentException;
 import com.ruoyi.base.agent.core.AgentInvocation;
 import com.ruoyi.base.agent.core.AgentMessage;
 import com.ruoyi.base.agent.core.AgentOrchestrator;
+import com.ruoyi.base.agent.core.AgentPrincipal;
 import com.ruoyi.base.agent.core.AgentSessionStore;
 import com.ruoyi.base.agent.core.ToolContextKeys;
 import io.agentscope.core.ReActAgent;
@@ -64,15 +65,18 @@ public class AgentScopeAgentOrchestrator implements AgentOrchestrator {
 
     private final ReActAgent agent;
     private final AgentScopeTools tools;
+    private final AgentScopeStateStore stateStore;
     private final AgentSessionStore sessionStore;
     private final AgentProperties properties;
 
     public AgentScopeAgentOrchestrator(ReActAgent agent,
                                        AgentScopeTools tools,
+                                       AgentScopeStateStore stateStore,
                                        AgentSessionStore sessionStore,
                                        AgentProperties properties) {
         this.agent = agent;
         this.tools = tools;
+        this.stateStore = stateStore;
         this.sessionStore = sessionStore;
         this.properties = properties;
     }
@@ -133,6 +137,28 @@ public class AgentScopeAgentOrchestrator implements AgentOrchestrator {
                                     started, eventSink, sink, terminal));
             swap.update(disposable);
         }, FluxSink.OverflowStrategy.BUFFER);
+    }
+
+    /**
+     * 清空会话：内存槽位缓存 + Redis 状态双清。
+     *
+     * <p>{@code ReActAgent} 内部按 {@code (userId, sessionId)} 维护 {@code stateCache}（无 TTL），
+     * 只删 Redis 不清内存会出现"同一 JVM 内旧上下文复活"；反之只清内存不清 Redis，
+     * 下一轮又会从 Redis 读回旧上下文。两者必须一起做。</p>
+     */
+    @Override
+    public void clearSession(AgentPrincipal principal, String sessionId) {
+        if (principal == null || sessionId == null || sessionId.isBlank()) {
+            return;
+        }
+        String scopeUser = principal.tenantId() + ":" + principal.userId();
+        try {
+            agent.clearStateCache(scopeUser, sessionId);
+            stateStore.delete(scopeUser, sessionId);
+        } catch (RuntimeException e) {
+            // 清理失败不阻断接口：UI 历史仍会被清空，最坏情况是模型上下文多活一个 TTL。
+            log.warn("[AgentScope] 清空会话状态失败 session={}: {}", sessionId, e.getMessage());
+        }
     }
 
     /**

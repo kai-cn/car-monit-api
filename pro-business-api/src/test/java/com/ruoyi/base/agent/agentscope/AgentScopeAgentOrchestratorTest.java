@@ -45,9 +45,10 @@ class AgentScopeAgentOrchestratorTest {
         AgentScopeTools tools = mock(AgentScopeTools.class);
         when(tools.registeredTools()).thenReturn(Set.of("query_traffic_records"));
         AgentSessionStore sessionStore = mock(AgentSessionStore.class);
+        AgentScopeStateStore stateStore = mock(AgentScopeStateStore.class);
         AgentProperties properties = new AgentProperties();
         properties.setModel("qwen-plus");
-        orchestrator = new AgentScopeAgentOrchestrator(agent, tools, sessionStore, properties);
+        orchestrator = new AgentScopeAgentOrchestrator(agent, tools, stateStore, sessionStore, properties);
     }
 
     @Test
