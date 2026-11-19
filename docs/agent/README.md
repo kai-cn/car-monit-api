@@ -15,6 +15,7 @@
 | --- | --- | --- |
 | [agent-design.md](./agent-design.md) | 背景与目标、分支策略、分层架构、请求时序、安全模型（信任边界/越权/脱敏/二次确认/注入）、稳定性（限流/并发/预算/超时/降级）、可观测性、容量估算、**两分支横向对比与选型**、8 条踩坑记录、演进路线 | 架构评审、后端、运维、安全 |
 | [agent-spec.md](./agent-spec.md) | 8 个 HTTP 端点契约、9 类 SSE 事件字段级定义、7 个工具完整 JSON Schema 与限制、16 个错误码、27 项配置、Redis Key/日志 schema、验收用例（功能/安全/稳定性/契约）、兼容性变更策略 | 前端、backend/BFF、测试、运维 |
+| [agent-code-tour.md](./agent-code-tour.md) | **15 分钟读码路线**：请求时序对照代码、Java 8+ 语法速查（record/模式匹配/文本块/虚拟线程…）、AI 概念表、4 个常见改动场景、6 个易踩坑 | 第一次接触 Agent 的 Java 开发者 |
 
 ## 快速上手
 
@@ -30,11 +31,22 @@ TRAFFIC_AGENT_API_KEY=$KEY \
 TRAFFIC_INTERNAL_TOKEN=dev-token \
 java -jar pro-business-api/target/pro-business-api-1.0.jar
 
-# 3) 看能力清单与健康状态
+# 3) 端到端自测（假模型 + 真实 Redis/GaussDB，12 项断言）
+#    完整步骤见 agent-design.md §8.5；脚本：scripts/agent/e2e.sh + mock_llm.py
+APP_BASE_URL=http://127.0.0.1:9902 INTERNAL_TOKEN=dev-token \
+EXPECT_FRAMEWORK=spring-ai bash scripts/agent/e2e.sh
+
+# 4) 看能力清单与健康状态
 curl -s localhost:9902/api/v1/agent/tools  -H 'X-Internal-Token: dev-token' \
      -H 'X-Tenant-Id: t1' -H 'X-User-Id: u1' -H 'X-User-Roles: ops'
 curl -s localhost:9902/api/v1/agent/health -H 'X-Internal-Token: dev-token'
 ```
+
+## CI
+
+| 流水线 | 触发 | 内容 |
+| --- | --- | --- |
+| `.github/workflows/agent-e2e.yml` | push 到 `springAi`/`agentScope2java`、PR、手动 | 云 runner 上起 Redis + openGauss + 假模型，跑 12 项 E2E 断言，产物含 app.log / SSE 样本 / 模型请求 |
 
 ## 三条硬约束（改代码前请先确认）
 

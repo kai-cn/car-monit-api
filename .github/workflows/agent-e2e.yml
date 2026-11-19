@@ -1,0 +1,209 @@
+# =============================================================================
+# 文件：.github/workflows/agent-e2e.yml
+# 用途：Agent 端到端实测（GitHub 云 runner，真实 Redis + 真实 openGauss + 假模型）
+#
+# 为什么需要它：
+#   单测用 mock 覆盖了逻辑，但"SSE 能否真的推出去、工具能否真的查库、鉴权/限流是否
+#   在真实 HTTP 栈上生效"只能在完整环境验证。本流水线在两个分支上跑同一套断言，
+#   保证"换框架不改契约"这一承诺可被机器验证。
+#
+# 依赖编排（全部容器化，不依赖任何外部服务）：
+#   - redis:7-alpine        （service container）
+#   - enmotech/opengauss:3.0.0（docker run，需 privileged）
+#   - scripts/agent/mock_llm.py（OpenAI 兼容假模型，确定性返回 tool_call）
+#
+# 触发：
+#   - push 到 springAi / agentScope2java
+#   - pull_request（改动 agent 相关路径时）
+#   - workflow_dispatch：可指定任意 ref
+# =============================================================================
+name: agent-e2e
+
+on:
+  push:
+    branches: [springAi, agentScope2java]
+    paths:
+      - 'pro-business-api/**'
+      - 'pro-base-common/**'
+      - 'scripts/agent/**'
+      - '.github/workflows/agent-e2e.yml'
+      - 'pom.xml'
+  pull_request:
+    paths:
+      - 'pro-business-api/src/main/java/com/ruoyi/base/agent/**'
+      - 'pro-business-api/src/main/resources/agent/**'
+      - 'scripts/agent/**'
+      - '.github/workflows/agent-e2e.yml'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: '要验证的分支/Tag（留空则按矩阵默认分支）'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-e2e-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  MAVEN_ARGS: -B -ntp
+  APP_PORT: 9902
+  MOCK_PORT: 18080
+  INTERNAL_TOKEN: e2e-token
+  # 仅用于 CI 的一次性数据库密码；生产凭据绝不入库
+  GS_PASSWORD: ${{ secrets.CI_DB_TEST_PASSWORD || 'Passw0rd@123' }}
+
+jobs:
+  e2e:
+    name: e2e / ${{ matrix.framework }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - branch: springAi
+            framework: spring-ai
+          - branch: agentScope2java
+            framework: agentscope
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    steps:
+      - name: Checkout（${{ inputs.ref || matrix.branch }}）
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || matrix.branch }}
+          fetch-depth: 1
+
+      - name: 确认分支与工作流一致
+        run: |
+          echo "ref=$(git rev-parse --abbrev-ref HEAD) sha=$(git rev-parse --short HEAD)"
+          test -f pro-business-api/src/main/java/com/ruoyi/base/agent/core/AgentOrchestrator.java \
+            || { echo "::error::当前 ref 不含 agent 域层，检查 ref 是否选对"; exit 1; }
+
+      - name: JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: 构建可执行 jar
+        run: mvn $MAVEN_ARGS -pl pro-business-api -am package -DskipTests
+
+      - name: 启动 openGauss
+        run: |
+          set -euo pipefail
+          docker run -d --name og-e2e --privileged --shm-size=512m \
+            -e "GS_PASSWORD=$GS_PASSWORD" -e LD_LIBRARY_PATH=/usr/local/opengauss/lib \
+            -p 5432:5432 enmotech/opengauss:3.0.0
+          for i in $(seq 1 60); do
+            if docker exec -u 70 -e LD_LIBRARY_PATH=/usr/local/opengauss/lib og-e2e \
+                 /usr/local/opengauss/bin/gsql -d postgres -Atc 'select 1' >/dev/null 2>&1; then
+              echo "openGauss ready (${i}x3s)"; break
+            fi
+            sleep 3
+          done
+          docker exec -u 70 -e LD_LIBRARY_PATH=/usr/local/opengauss/lib og-e2e \
+            /usr/local/opengauss/bin/gsql -d postgres -Atc 'select version()' | head -1
+
+      - name: 建库并加载夹具
+        run: |
+          set -euo pipefail
+          OG="docker exec -u 70 -e LD_LIBRARY_PATH=/usr/local/opengauss/lib og-e2e /usr/local/opengauss/bin/gsql"
+          $OG -d postgres -c "create database ruoyi"
+          # openGauss 3.0 不支持 CREATE SCHEMA IF NOT EXISTS，用 DO 块幂等建 schema
+          sed 's/^CREATE SCHEMA IF NOT EXISTS jl_data01;/DO $$ BEGIN CREATE SCHEMA jl_data01; EXCEPTION WHEN duplicate_object THEN NULL; END $$;/' \
+            scripts/v3/ops/parity/sql/schema_jl_data01.sql > /tmp/schema.sql
+          gunzip -c scripts/v3/ops/parity/sql/seed_jl_data01.sql.gz > /tmp/seed.sql
+          docker cp /tmp/schema.sql og-e2e:/tmp/schema.sql
+          docker cp /tmp/seed.sql og-e2e:/tmp/seed.sql
+          $OG -d ruoyi -v ON_ERROR_STOP=1 -f /tmp/schema.sql > /tmp/schema.log
+          $OG -d ruoyi -v ON_ERROR_STOP=1 -f /tmp/seed.sql > /tmp/seed.log
+          rows=$($OG -d ruoyi -Atc "select count(*) from jl_data01.ods_szdn_gantry" | tr -d ' ')
+          echo "gantry rows=$rows"
+          test "$rows" -gt 0
+
+      - name: 启动假模型
+        run: |
+          set -euo pipefail
+          python3 scripts/agent/mock_llm.py --port "$MOCK_PORT" --record /tmp/mock-llm.jsonl \
+            > /tmp/mock.log 2>&1 &
+          for i in $(seq 1 20); do
+            curl -sf "http://127.0.0.1:$MOCK_PORT/health" && break || sleep 1
+          done
+
+      - name: 启动应用
+        env:
+          TRAFFIC_INTERNAL_TOKEN: ${{ env.INTERNAL_TOKEN }}
+          SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_URL: jdbc:postgresql://127.0.0.1:5432/ruoyi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai
+          SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_USERNAME: gaussdb
+          SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD: ${{ env.GS_PASSWORD }}
+          TRAFFIC_AGENT_ENABLED: 'true'
+          TRAFFIC_AGENT_BASE_URL: http://127.0.0.1:18080/v1
+          TRAFFIC_AGENT_API_KEY: mock-key
+          TRAFFIC_AGENT_MODEL: mock-model
+        run: |
+          set -euo pipefail
+          java -jar pro-business-api/target/pro-business-api-1.0.jar \
+            --server.port="$APP_PORT" \
+            --sync.full-sync-enabled=false \
+            --spring.kafka.producer.properties.max.block.ms=2000 \
+            > /tmp/app.log 2>&1 &
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' \
+              -H "X-Internal-Token: $INTERNAL_TOKEN" \
+              -H 'X-Tenant-Id: t1' -H 'X-User-Id: u1' \
+              "http://127.0.0.1:$APP_PORT/api/v1/agent/health" || true)
+            if [ "$code" = "200" ]; then echo "app ready (${i}x3s)"; exit 0; fi
+            sleep 3
+          done
+          echo "::error::应用未在 180s 内就绪"
+          tail -80 /tmp/app.log
+          exit 1
+
+      - name: 运行 E2E 断言
+        env:
+          APP_BASE_URL: http://127.0.0.1:9902
+          EXPECT_FRAMEWORK: ${{ matrix.framework }}
+          ARTIFACT_DIR: out/agent-e2e
+        run: bash scripts/agent/e2e.sh
+
+      - name: 上传证据（日志 / SSE 样本 / 模型请求）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-e2e-${{ matrix.framework }}
+          path: |
+            out/agent-e2e/**
+            /tmp/app.log
+            /tmp/mock.log
+            /tmp/mock-llm.jsonl
+            /tmp/schema.log
+            /tmp/seed.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: 现场诊断（失败时）
+        if: failure()
+        run: |
+          echo "=== app.log (tail 120) ==="; tail -120 /tmp/app.log || true
+          echo "=== mock.log ==="; tail -40 /tmp/mock.log || true
+          echo "=== docker ps ==="; docker ps --format '{{.Names}} {{.Status}}' || true
+
+      - name: 清理
+        if: always()
+        run: docker rm -f og-e2e >/dev/null 2>&1 || true

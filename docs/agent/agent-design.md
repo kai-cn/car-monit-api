@@ -532,6 +532,78 @@ Prometheus 命名自动转下划线：`agent_requests_total`、`agent_request_du
 3. 回滚：关闭开关即回到"端点返回 `AGENT_DISABLED`"，不影响既有业务接口；
 4. 数据回滚：会话/审计数据独立前缀，可直接 `DEL agent:*` 清理。
 
+### 8.5 E2E 与 CI（云 runner 真实链路）
+
+单测只能证明"逻辑对"，证明不了"真的能推流、真的能查库、鉴权在真实 HTTP 栈上真的生效"。
+因此提供一条**完全容器化的 E2E**（`.github/workflows/agent-e2e.yml`），在两个分支上跑同一套断言。
+
+**编排**（不依赖任何外部服务）：
+
+| 组件 | 来源 | 作用 |
+| --- | --- | --- |
+| Redis 7 | GitHub `services` 容器 | 会话、限流、确认令牌 |
+| openGauss 3.0 | `docker run --privileged` | 真实主库；加载 `scripts/v3/ops/parity/sql` 的 schema + seed（150 行门架数据） |
+| 假模型 | `scripts/agent/mock_llm.py` | OpenAI 兼容、确定性返回 `tool_call`（两轮：先调工具，再总结结果） |
+| 应用 | `java -jar`（fat jar） | 与生产启动方式一致 |
+| 断言 | `scripts/agent/e2e.sh` | 12 项，失败非零退出 |
+
+**断言清单**（两分支同脚本，仅 `EXPECT_FRAMEWORK` 不同）：
+
+| # | 用例 | 期望 |
+| --- | --- | --- |
+| T0 | 健康检查 | `framework` 与分支一致、`redis=UP`、`tools=7` |
+| T1 | 缺身份头 | 401 `AGENT_UNAUTHORIZED` |
+| T2 | 错误内部令牌 | 401 |
+| T3 | 提示词注入 | 400 `AGENT_PROMPT_REJECTED` |
+| T4 | SSE 契约 | 首帧 `meta` 且仅一次；`tool_call` 在 `tool_result` 前；`seq` 严格递增；末帧 `done/error`；`meta`/`done`/`tool_result` 字段完整 |
+| T5 | 同步接口 | `answer`/`usage`/`sessionId` 齐全，工具 `status=ok` |
+| T6 | 会话 | 历史 2 条；清空返回 `cleared=true`；清空后为空 |
+| T7 | 工具授权 | 无角色调用明细工具 → `FORBIDDEN`（且**未执行查询**） |
+| T8 | 限流 | 单用户连打 12 次出现 429 |
+| T9 | 工具清单 | `/tools` 返回 7 个且 `registered=true` |
+
+**本地复现**（与 CI 同脚本，便于改完先本地过一遍）：
+
+```bash
+# 1) 起依赖
+docker run -d --name redis-e2e -p 6379:6379 redis:7-alpine
+docker run -d --name og-e2e --privileged --shm-size=512m \
+  -e GS_PASSWORD='Passw0rd@123' -e LD_LIBRARY_PATH=/usr/local/opengauss/lib \
+  -p 5432:5432 enmotech/opengauss:3.0.0
+
+# 2) 建库 + 加载夹具（openGauss 3.0 不支持 CREATE SCHEMA IF NOT EXISTS，见下方 sed）
+docker exec -u 70 -e LD_LIBRARY_PATH=/usr/local/opengauss/lib og-e2e \
+  /usr/local/opengauss/bin/gsql -d postgres -c "create database ruoyi"
+sed 's/^CREATE SCHEMA IF NOT EXISTS jl_data01;/DO $$ BEGIN CREATE SCHEMA jl_data01; EXCEPTION WHEN duplicate_object THEN NULL; END $$;/' \
+  scripts/v3/ops/parity/sql/schema_jl_data01.sql > /tmp/schema.sql
+gunzip -c scripts/v3/ops/parity/sql/seed_jl_data01.sql.gz > /tmp/seed.sql
+docker cp /tmp/schema.sql og-e2e:/tmp/schema.sql && docker cp /tmp/seed.sql og-e2e:/tmp/seed.sql
+docker exec -u 70 -e LD_LIBRARY_PATH=/usr/local/opengauss/lib og-e2e \
+  /usr/local/opengauss/bin/gsql -d ruoyi -f /tmp/schema.sql
+docker exec -u 70 -e LD_LIBRARY_PATH=/usr/local/opengauss/lib og-e2e \
+  /usr/local/opengauss/bin/gsql -d ruoyi -f /tmp/seed.sql
+
+# 3) 假模型 + 应用
+python3 scripts/agent/mock_llm.py --port 18080 &
+TRAFFIC_INTERNAL_TOKEN=e2e-token TRAFFIC_AGENT_ENABLED=true \
+TRAFFIC_AGENT_BASE_URL=http://127.0.0.1:18080/v1 TRAFFIC_AGENT_API_KEY=mock-key \
+TRAFFIC_AGENT_MODEL=mock-model \
+SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_URL='jdbc:postgresql://127.0.0.1:5432/ruoyi?useSSL=false' \
+SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_USERNAME=gaussdb \
+SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD='Passw0rd@123' \
+  java -jar pro-business-api/target/pro-business-api-1.0.jar \
+  --server.port=9902 --sync.full-sync-enabled=false
+
+# 4) 断言
+APP_BASE_URL=http://127.0.0.1:9902 INTERNAL_TOKEN=e2e-token \
+EXPECT_FRAMEWORK=spring-ai bash scripts/agent/e2e.sh
+```
+
+**已知限制**：CI 不起 Elasticsearch。带车牌/路段的**模糊查询**必须走 ES（设计上禁止回退 GaussDB），
+因此明细查询在 E2E 中走的是"工具返回结构化错误"分支——断言只校验**错误被正确结构化并回给模型**，
+不校验命中行数。精确查询（数据质量、门架维度）与指标查询走真实 GaussDB，覆盖了"真的查到库"。
+需要验证完整检索链路时，按 `docs/agent/agent-spec.md` §7 的 ES 初始化步骤另行执行。
+
 ---
 
 ## 9. 两分支横向对比与选型
@@ -607,6 +679,11 @@ mvn -pl pro-business-api -am test -DskipTests=false \
 | 6 | 应用启动 `Connection to 127.0.0.1:5432 refused` | 本机无 GaussDB/Redis，Druid 初始化失败 | 属环境限制，非代码缺陷；用 `spring.datasource` 指向容器或跳过启动验证 | E2E 需 docker-compose（见 §10） |
 | 7 | AgentScope 历史无限增长导致 token 暴涨 | 框架无窗口配置 | `HistoryWindowMiddleware` 在 `onReasoning` 裁剪，且对齐 `user` 边界 | 引入任何"自动带历史"的框架都要显式设窗口 |
 | 8 | 长 `tenant:user` 拼接截断后不同租户命中同一 Redis Key | `substring(0,96)` 直接截断 | 截断 + SHA-256 短哈希后缀 | 所有外部输入进 Key 必须"清洗 + 限长 + 防碰撞" |
+| 9 | 应用启动刷屏 `BeanFactory has not been refreshed yet`，E2E 里直接启动失败 | `KafkaProducerService` / `SnapshotFlowSyncService` 在 `@PostConstruct` 里就提交后台线程查库/读 Redis，此时容器尚未 refresh 完成，还会与 `ConfigurationProperties` 绑定并发冲突 | 改为 `@EventListener(ApplicationReadyEvent.class)`，线程池换虚拟线程 | 任何"启动即干活"的后台任务都必须等容器就绪，不要写在 `@PostConstruct` |
+| 10 | AgentScope 状态存储误连集群，报 `Could not initialize cluster slots cache` | 误用了业务侧 `rediscluster.clusterNodes`（默认值指向一个公网集群地址），导致所有环境都走 `JedisCluster` | 只认 Spring Boot 标准 `spring.data.redis.cluster.nodes`；未配置即单机 `JedisPooled` | 不要把"某个业务模块的默认地址"当作全局基础设施配置 |
+| 11 | E2E 第二轮对话不调工具，直接"总结上一轮结果" | 假模型扫全表找 `role=tool` 消息，命中了历史残留 | 只看**最后一条**消息是否 `role=tool` | 桩件的行为要按"当前轮次"判断，不要按"历史上出现过"判断 |
+| 12 | openGauss 3.0 加载 schema 报 `CREATE SCHEMA IF NOT EXISTS` 语法错误 | 3.0 不支持该语法（7.x 才支持） | 用 `DO $$ ... EXCEPTION WHEN duplicate_object THEN NULL $$` 幂等建 schema | 夹具脚本要按"最低支持版本"写 |
+| 13 | 用 classpath 方式启动时 `NoClassDefFoundError: ChatMemory` | classpath 是在另一个分支生成的（AgentScope 分支无 spring-ai） | E2E 统一用 `java -jar`（fat jar），避免分支间 classpath 串用 | 跨分支验证时不要复用构建产物 |
 
 ---
 

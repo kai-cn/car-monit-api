@@ -171,12 +171,16 @@ AgentOrchestrator          循环：调模型 → 模型说"要查库" → 执�
 
 ## 7. 本地怎么跑（不接真模型）
 
+**最快路径**：`scripts/agent/mock_llm.py`（假模型）+ `scripts/agent/e2e.sh`（12 项断言），
+完整步骤见 `agent-design.md` §8.5。下面是手工版，适合边改边调：
+
 ```bash
 # 1. 起依赖（Redis 必须；GaussDB 按需）
 docker run -d --name redis -p 6379:6379 redis:7-alpine
 
 # 2. 起一个 OpenAI 兼容的假模型（任意实现 /v1/chat/completions 的服务）
-#    测试用见 scripts/agent/mock-llm.py（支持 SSE 流式 + tool_call）
+#    测试用见 scripts/agent/mock_llm.py（支持 SSE 流式 + tool_call，
+#    按"最后一条消息是否 role=tool"决定走工具轮还是总结轮）
 
 # 3. 起应用
 export JAVA_HOME=/opt/jdk25
