@@ -27,12 +27,39 @@ import java.util.concurrent.TimeoutException;
 /**
  * 工具回调装饰器：在不侵入业务工具的前提下，把 tool_call/tool_result 事件推给 SSE，
  * 并记录耗时、审计与指标。
+ *
+ * <h2>设计模式：装饰器（Decorator）</h2>
+ * <p>它实现和被测对象一样的 {@link ToolCallback}，内部持有 {@code delegate}，在调用前后插入
+ * "发事件 / 记指标 / 扣预算 / 卡超时 / 写审计"。这样 {@link AgentToolService} 完全不知道
+ * 自己被动观测了，将来要加"限流""缓存"也只改这一层。这比在每个工具方法里手写
+ * {@code metrics.record(...)} 更不易漏。</p>
+ *
+ * <h2>一次工具调用发生了什么</h2>
+ * <pre>
+ * 模型输出 tool_call
+ *   → 本类发 tool_call 事件（前端立刻显示"正在查询…"）
+ *   → 校验预算（超了就返回 TOOL_ERROR 的 JSON，不执行）
+ *   → 提交到虚拟线程执行（带超时）
+ *   → 拿到结果：脱敏/截断已在业务层完成
+ *   → 发 tool_result 事件（含 status/latencyMs）+ 写审计 + 打指标
+ *   → 把 JSON 字符串交回框架，框架再喂给模型
+ * </pre>
  */
 public class ObservableToolCallback implements ToolCallback {
 
     /**
-     * 工具执行线程：JDK 21+ 虚拟线程，每个工具调用一条，超时后可被中断回收，
-     * 不会因为某个慢查询把 Tomcat 线程或模型流线程钉住。
+     * 工具执行线程池：<b>每个任务一条虚拟线程</b>。
+     *
+     * <p>【Java 21 虚拟线程】虚拟线程是 JVM 调度的"轻量线程"：创建成本约几百字节（平台线程是 MB 级），
+     * 阻塞时自动把底层载体线程让出去。因此"给每个工具调用开一条线程"不再奢侈，
+     * 也避免了固定线程池被慢查询占满后其它工具饿死。</p>
+     *
+     * <p>写法拆解：{@code Thread.ofVirtual().name("agent-tool-", 0).factory()} 生成线程工厂
+     * （名字带自增编号，便于 jstack/火焰图定位）；{@code Executors.newThreadPerTaskExecutor}
+     * 把它包装成"一任务一线程"的执行器。</p>
+     *
+     * <p><b>注意</b>：虚拟线程适合"阻塞等待 I/O"，但<b>不能解决</b> CPU 密集或连接池上限问题，
+     * 所以下面还有一个信号量。</p>
      */
     private static final ExecutorService TOOL_EXECUTOR =
             Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("agent-tool-", 0).factory());
@@ -68,7 +95,9 @@ public class ObservableToolCallback implements ToolCallback {
 
     @Override
     public String call(String toolInput) {
-        return delegate.call(toolInput);
+        // Spring AI 的 ToolCallingManager 始终调用双参版本；单参版本若被外部直接调用，
+        // 会绕过预算/审计/超时。这里统一走同一条受控路径（无上下文 → 业务层会因缺少主体返回错误）。
+        return call(toolInput, null);
     }
 
     @Override

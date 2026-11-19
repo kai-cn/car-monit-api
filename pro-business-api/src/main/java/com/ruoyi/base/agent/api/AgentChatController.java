@@ -42,11 +42,32 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 对话入口：
+ * 对话入口（HTTP 层，只管连接与会话，不碰 AI 细节）。
+ *
  * <ul>
  *   <li>{@code POST /api/v1/agent/chat}：SSE 流式（前端默认）；</li>
- *   <li>{@code POST /api/v1/agent/chat/sync}：同步聚合（backend/BFF 调用）。</li>
+ *   <li>{@code POST /api/v1/agent/chat/sync}：同步聚合（backend/BFF 调用，内部仍是流，最后拼成一个 JSON）。</li>
  * </ul>
+ *
+ * <h2>为什么是 SseEmitter 而不是直接返回 Flux</h2>
+ * <p>本工程是 Spring MVC（Servlet 栈），不是 WebFlux。MVC 里做流式响应的标准做法就是
+ * {@link SseEmitter}：Controller 立刻返回一个"空壳"，之后在别的线程里不断
+ * {@code emitter.send(...)}，直到 {@code complete()}。它本质是 AsyncContext 的封装，
+ * 所以<b>不会占住 Tomcat 工作线程</b>——否则 200 个并发对话就能把线程池打满。</p>
+ *
+ * <h2>三个回调为什么都要接</h2>
+ * <ul>
+ *   <li>{@code onTimeout}：客户端可能一直挂着不关；到点必须主动收尾，否则背后的模型调用
+ *       与并发许可会一直泄漏。</li>
+ *   <li>{@code onError}：网络中断/客户端 reset。要区分"我方异常"与"对方断开"，
+ *       后者不该记成系统错误。</li>
+ *   <li>{@code onCompletion}：正常结束，负责幂等释放许可、停心跳。</li>
+ * </ul>
+ * <p>三者可能任意顺序触发，所以 {@code ChatStream} 内部用 {@link AtomicBoolean} 做"只执行一次"。</p>
+ *
+ * <h2>心跳（heartbeat）为什么必要</h2>
+ * <p>模型"思考"时可能十几秒没有输出；中间如果有 Nginx/ELB，空闲连接会被判死。
+ * 定时发一条注释帧/心跳事件，既保活又让前端知道"服务端还活着，不是卡死了"。</p>
  */
 @Slf4j
 @RestController
@@ -208,6 +229,19 @@ public class AgentChatController {
         return response;
     }
 
+    /**
+     * 请求准入（"三道闸"），任何一道不过都直接抛 {@link AgentException}，由全局异常处理器转成
+     * 标准错误响应——注意 SSE 接口在"尚未开始推流"时失败，仍可返回普通 HTTP 错误码。
+     *
+     * <ol>
+     *   <li><b>输入闸</b> {@link AgentGuard}：长度 + 提示词注入启发式，挡住明显的越权指令；</li>
+     *   <li><b>速率闸</b> {@link AgentRateLimiter}：用户级 + 租户级固定窗口计数；</li>
+     *   <li><b>并发闸</b> {@link AgentConcurrencyLimiter}：同时在跑的对话数上限（保护下游 LLM 与 DB）。</li>
+     * </ol>
+     *
+     * <p>为什么并发闸的许可要在 {@code ChatStream} 里释放而不是这里：请求是异步流式的，
+     * 方法返回时对话还没结束；许可必须跟着"流结束"走（完成/异常/超时/取消四条路径都要释放）。</p>
+     */
     private void prepare(AgentPrincipal principal, AgentChatRequest body) {
         guard.validateMessage(body.getMessage());
         String limited = rateLimiter.tryAcquire(principal);
@@ -238,6 +272,13 @@ public class AgentChatController {
 
     /**
      * 单次 SSE 会话：负责序号、心跳、审计、并发释放与资源清理。
+     *
+     * <p>为什么做成内部类而不是拆出去：它需要直接操作 Controller 的 emitter 与各项限流器，
+     * 生命周期又严格绑定这一次 HTTP 请求；做成 {@code private final class} 可以天然访问外部实例字段，
+     * 也让"一次会话的所有状态"聚在一处（seq/finished/released/disposable/heartbeat）。</p>
+     *
+     * <p>【线程安全】三个 {@link AtomicBoolean}/{@link AtomicLong} 是必须的：emit 可能发生在
+     * 模型流线程，onTimeout 发生在调度线程，onCompletion 发生在 Tomcat 线程——三者会并发进入。</p>
      */
     private final class ChatStream implements AgentEventSink {
 

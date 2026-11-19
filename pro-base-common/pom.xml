@@ -100,10 +100,11 @@
         </dependency>
 
         <!--自定义注释-->
+        <!-- AspectJ：1.9.27 修复 JDK 25 下 bytecode 版本识别与切点匹配的已知问题 -->
         <dependency>
             <groupId>org.aspectj</groupId>
             <artifactId>aspectjweaver</artifactId>
-            <version>1.9.24</version>
+            <version>1.9.27</version>
         </dependency>
 
         <dependency>
@@ -118,10 +119,12 @@
             <version>4.5.14</version>
         </dependency>
 
+        <!-- Jsoup：1.9.2（2016 年）存在多个已公开的解析器 DoS/XXE 类问题，
+             且 API 停留在 select/absUrl 早期形态；升到 1.24.x（API 向后兼容，无调用点改动） -->
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
-            <version>1.9.2</version>
+            <version>1.24.1</version>
         </dependency>
 
         <dependency>
@@ -168,10 +171,11 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <!-- Javassist：3.33 支持到 class file v25（JDK 25）；3.30 生成 mapper 时会读不到新版本字节码 -->
         <dependency>
             <groupId>org.javassist</groupId>
             <artifactId>javassist</artifactId>
-            <version>3.30.2-GA</version>
+            <version>3.33.0-GA</version>
         </dependency>
     </dependencies>
 
