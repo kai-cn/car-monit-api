@@ -61,11 +61,8 @@ jobs:
     name: e2e / ${{ matrix.framework }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
-    # PR 只跑"head 分支对应的那条腿"：两个 leg 会检出同一份 head.sha，
-    # 另一条腿编译出来的是同一份代码，却要断言 framework 是另一个值 → 必然失败，
-    # 看起来像"改动把另一分支跑挂了"，实际是矩阵设计问题。
-    # head 分支名不在矩阵里（例如 fork PR）时整体跳过，由 push 流水线兜底。
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.ref == matrix.branch
+    # 注意：job 级 if 拿不到 matrix 上下文（GitHub 在展开矩阵之前求值），
+    # 所以"PR 只跑 head 对应的那条腿"不能写在这里，而落在下面的 checkout 分流上。
     strategy:
       fail-fast: false
       matrix:
@@ -87,17 +84,33 @@ jobs:
           --health-retries 20
 
     steps:
-      - name: Checkout（${{ inputs.ref || matrix.branch }}）
+      # PR 场景下两条腿只能有一条测 head：如果两条都检出 head.sha，另一条腿编译的是
+      # 同一份代码却要断言另一个 framework，必然假红（看着像"改动弄挂了另一分支"）。
+      # 因此按"PR head 分支名是否等于本腿分支"分流：命中的腿测 head，另一条腿测自己
+      # （等同一次回归），两条腿都保持绿色。
+      - name: Checkout（PR head，仅命中本腿时）
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == matrix.branch
         uses: actions/checkout@v4
         with:
-          # PR 事件取 head.sha：矩阵里的分支名在 PR 场景下指向"目标分支 HEAD"，
-          # 测不到 PR 的实际改动；push / 手动触发才用分支名。
-          ref: ${{ github.event.pull_request.head.sha || inputs.ref || matrix.branch }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Checkout（本腿分支）
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.ref != matrix.branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || matrix.branch }}
           fetch-depth: 1
 
       - name: 确认分支与工作流一致
+        env:
+          MATRIX_BRANCH: ${{ matrix.branch }}
         run: |
           echo "ref=$(git rev-parse --abbrev-ref HEAD) sha=$(git rev-parse --short HEAD)"
+          if [ "${{ github.event_name }}" = "pull_request" ] \
+             && [ "${{ github.event.pull_request.head.ref }}" != "$MATRIX_BRANCH" ]; then
+            echo "::notice::本腿测的是自身分支 $MATRIX_BRANCH（PR head 为 ${{ github.event.pull_request.head.ref }}，由对应腿负责）"
+          fi
           test -f pro-business-api/src/main/java/com/ruoyi/base/agent/core/AgentOrchestrator.java \
             || { echo "::error::当前 ref 不含 agent 域层，检查 ref 是否选对"; exit 1; }
 
