@@ -408,6 +408,7 @@ sequenceDiagram
 | 租户限流 | 120 次/分钟 | HTTP 429（`tenant` 维度） | 防单租户打爆模型配额 |
 | 并发闸门 | 32 | HTTP 429 `AGENT_BUSY` | 保护 Tomcat 线程与模型连接 |
 | 工具/轮次预算 | 工具调用 6 次（`max-iters`） | 工具返回 `AGENT_MAX_ITERS`；AgentScope 另有框架级轮次上限 → `done.finishReason=max_iters` | 防"工具死循环"烧钱 |
+| 工具并发 | 32（信号量） | 立即返回 `TOOL_ERROR`（"工具并发已满"） | 防慢查询累积打满 ES/GaussDB 连接池 |
 
 ### 6.2 超时分层
 
@@ -416,7 +417,7 @@ sequenceDiagram
 | SSE 连接 | `request-timeout=120s` | `SseEmitter.onTimeout` → 下发 `error(AGENT_MODEL_TIMEOUT)` |
 | 编排流 | `request-timeout`（Reactor `timeout`） | `error` 事件 + 释放并发 |
 | 单次模型调用 | `model-timeout=60s`（框架级） | 框架重试 2 次后失败 → `AGENT_MODEL_TIMEOUT` |
-| 单次工具 | `tool-timeout=20s`（两分支均实现：AgentScope 用 `toolExecutionConfig`，Spring AI 用虚拟线程 + 超时包装） | 超时 → `tool_result(status=error)`（`TOOL_ERROR`），模型可换参重试 |
+| 单次工具 | `tool-timeout=20s`（两分支均实现：AgentScope 用 `toolExecutionConfig`，Spring AI 用虚拟线程 + 超时包装 + 32 许可并发闸） | 超时 → `tool_result(status=error)`（`TOOL_ERROR`），模型可换参重试 |
 
 ### 6.3 降级矩阵
 
@@ -435,6 +436,7 @@ sequenceDiagram
 - SSE 侧用 `SseEmitter`，发送失败即终止（`finished` 置位 + 释放并发 + dispose）；
 - 编排侧 `Flux.create(..., OverflowStrategy.BUFFER)`，事件量级为"每 token 一条"，缓冲可控；
 - 取消信号先注册后订阅（`Disposables.swap()`），避免"订阅瞬间断开"漏掉取消（AgentScope 分支已修）。
+- **工具超时 ≠ 查询被取消**：`CompletableFuture.cancel` 不会中断 JDBC/HTTP 调用，真正的取消依赖查询侧超时（ES `socket-timeout`、GaussDB `statement_timeout`）；应用层只保证"请求线程不被钉住 + 尽快把 `TOOL_ERROR` 交回模型"，并用工具并发闸限制在跑的慢查询数量。
 
 ---
 
