@@ -53,8 +53,8 @@
 类路径上互斥且都较重（Spring AI 会引入 `spring-ai-*` 自动配置与 `ChatClient`；AgentScope 引入
 自己的 `Model`/`Toolkit`/`AgentStateStore` 体系），把两者塞进同一个 Maven 构建会带来三类问题：
 
-1. **依赖仲裁不可控**：`agentscope-extensions-redis` 强制 `jedis 7.4.1`，与本工程锁定的 `jedis 4.4.8`
-   冲突（详见 §11 踩坑 2）；
+1. **依赖仲裁不可控**：`spring-ai-*` 与 `agentscope-*` 各自管理模型/工具/记忆，同进程共存时
+   自动配置与线程模型会互相干扰（jedis 版本已按"以框架为基准"统一到 7.4.1，见 §11 踩坑 2）；
 2. **自动配置互相干扰**：两个框架都可能注册"默认模型/默认工具执行器"；
 3. **对比失真**：同进程共存时，线程池、连接池、缓存会相互影响，压测数据不可比。
 
@@ -274,7 +274,7 @@ sequenceDiagram
 | 维度 | Spring AI 分支 | AgentScope 分支 |
 | --- | --- | --- |
 | 模型上下文载体 | `ChatMemory`（`MessageChatMemoryAdvisor`） | `ReActAgent` 的 `AgentState`（`(userId, sessionId)` 槽位） |
-| 持久化实现 | 自研 `RedisChatMemory`（只存文本，滑动窗口 + TTL） | 自研 `AgentScopeStateStore`（`AgentState` JSON + 列表） |
+| 持久化实现 | 自研 `RedisChatMemory`（Spring AI 无官方 Redis 记忆实现，只存文本 + 滑动窗口 + TTL） | **官方** `RedisAgentStateStore`（`agentscope-extensions-redis`，Jedis 适配器） |
 | 窗口控制 | 写入时裁剪（保留最近 N 轮） | 回灌时裁剪（`HistoryWindowMiddleware`，不动持久化状态） |
 | 工具循环 | `ToolCallingAdvisor` 隐式循环 + 回调侧预算兜底 | `ReActAgent.maxIters` 显式循环 + 工具预算 |
 | UI 历史 | `AgentSessionStore`（两侧一致） | `AgentSessionStore`（两侧一致） |
@@ -543,7 +543,7 @@ Prometheus 命名自动转下划线：`agent_requests_total`、`agent_request_du
 | 编排抽象 | `ChatClient` + `ToolCallingAdvisor`（工具循环隐式） | `ReActAgent`（显式 ReAct 循环，`maxIters` 可控） |
 | 工具注册 | `ToolCallback`（自定义 `JsonToolCallback` 手写 Schema） | `AgentTool`（`Toolkit.registerAgentTool`） |
 | 工具上下文 | `ToolContext`（Map 透传） | `RuntimeContext`（userId/sessionId + 属性袋） |
-| 会话记忆 | `ChatMemory` + `MessageChatMemoryAdvisor`（需自研 Redis 实现） | `AgentStateStore`（自带状态模型，需自研 Redis 实现以避依赖冲突） |
+| 会话记忆 | `ChatMemory` + `MessageChatMemoryAdvisor`（官方仅有内存实现，Redis 需自研） | `AgentStateStore` + 官方 `RedisAgentStateStore`（自带状态模型与版本化） |
 | 流式事件 | `ChatClientResponse` 增量（文本 + usage） | 32 类细粒度事件（文本/思考/工具/模型调用/超限） |
 | 中断/取消 | 依赖 `Disposable` | 原生 `interrupt(ctx)` + 取消传播 |
 | 依赖重量 | 中（`spring-ai-openai` + `client-chat`，自带 micrometer/observation） | 较重（core 带 okhttp5、mcp sdk、tree-sitter、opentelemetry） |
@@ -580,7 +580,7 @@ Prometheus 命名自动转下划线：`agent_requests_total`、`agent_request_du
 | 层次 | 内容 | 现状 |
 | --- | --- | --- |
 | 域层单测 | `ToolSupport`（时间窗/脱敏/截断）、`AgentGuard`（注入用例）、`KnowledgeBase`（检索命中） | 9 个用例，全绿 |
-| 适配层单测 | Spring AI：`SpringAiToolCallbacksTest`（3）、`SpringAiAgentOrchestratorTest`（1，假模型跑完整 ReAct 循环）；AgentScope：`AgentScopeToolsTest`（4）、`AgentScopeAgentOrchestratorTest`（4）、`AgentScopeStateStoreTest`（5）、`HistoryWindowMiddlewareTest`（3） | `springAi` 分支 13 个、`agentScope2java` 分支 19 个，全绿 |
+| 适配层单测 | Spring AI：`SpringAiToolCallbacksTest`（3）、`SpringAiAgentOrchestratorTest`（1，假模型跑完整 ReAct 循环）；AgentScope：`AgentScopeToolsTest`（4）、`AgentScopeAgentOrchestratorTest`（4）、`HistoryWindowMiddlewareTest`（3） | `springAi` 分支 19 个、`agentScope2java` 分支 26 个，全绿 |
 | 契约测试 | `/tools` 返回的 Schema 与 `AgentToolCatalog` 一致；启动期工具名一致性校验 | 启动即校验（失败即拒绝启动） |
 | 端到端 | 真模型 + 真 ES/GaussDB（需环境），覆盖：明细问答、轨迹回放、指标、知识问答、导出确认 | 待环境（本机缺 GaussDB/Redis） |
 | 混沌 | Redis 断连、模型 429/超时、客户端中途断开 | 单测覆盖降级分支；混沌待补 |
@@ -600,7 +600,7 @@ mvn -pl pro-business-api -am test -DskipTests=false \
 | # | 现象 | 根因 | 修复 | 预防 |
 | --- | --- | --- | --- | --- |
 | 1 | Spring AI 分支模型被调用 2 次但无 `tool_call` 事件、无 delta | `ToolCallingAdvisor.adviseStream` 首行判断 `options instanceof ToolCallingChatOptions`，不满足直接透传；假模型未覆盖 `getOptions()`，默认 `ChatOptions` | 假模型 `getOptions()` 返回 `OpenAiChatOptions` | 单测用"最小可用真配置"，不要用默认空 options |
-| 2 | 引入 `agentscope-extensions-redis` 后 `UnifiedJedis` 运行时 `NoSuchMethodError` | 扩展强制 jedis 7.4.1/redisson 4.2.0，根 pom 锁定 jedis 4.4.8（`JedisCluster` 构造签名在 5.x 变化） | 不引该扩展，自研 `AgentScopeStateStore`（`StringRedisTemplate`） | 引三方扩展前先 `dependency:tree` 比对锁定版本 |
+| 2 | 曾因 `UnifiedJedis` 运行时 `NoSuchMethodError` 而放弃官方 Redis 扩展、自研状态存储 | 扩展按 jedis 7.4.1 编译，根 pom 当时锁 4.4.8 | **以框架为基准**：jedis 升到 7.4.1（`JedisCluster(Set<HostAndPort>)` 仍保留，业务代码零改动），改用官方 `RedisAgentStateStore`，自研实现删除 | 三方扩展的编译期版本就是事实标准；先升依赖再考虑绕行 |
 | 3 | AgentScope 分支编译报 `io.micrometer...不存在` | 域层 `AgentMetrics` 直接用 Micrometer，之前靠 `spring-ai-client-chat` 传递 | 显式声明 `micrometer-core` | 域层直接使用的库必须显式声明，不依赖传递 |
 | 4 | 同一个 SSE 流出现两条 `meta` | 控制器与编排器各自 emit | 统一由编排器首发，控制器只负责心跳/seq/终态 | 契约类事件只允许一个产出点 |
 | 5 | `mvn test -Dtest=X` 报 "No tests matching pattern" | surefire 3.x 严格模式 | 加 `-Dsurefire.failIfNoSpecifiedTests=false` | 写进 CI 脚本与本文档 §10 |
@@ -634,6 +634,6 @@ mvn -pl pro-business-api -am test -DskipTests=false \
 | 限流/并发 | `agent/core/AgentRateLimiter.java`、`agent/core/AgentConcurrencyLimiter.java` |
 | 确认令牌 | `agent/core/AgentConfirmationService.java` |
 | Spring AI 适配 | `agent/springai/SpringAiAgentOrchestrator.java`、`SpringAiToolCallbacks.java` |
-| AgentScope 适配 | `agent/agentscope/AgentScopeAgentOrchestrator.java`、`AgentScopeTools.java`、`AgentScopeStateStore.java` |
+| AgentScope 适配 | `agent/agentscope/AgentScopeAgentOrchestrator.java`、`AgentScopeTools.java`、`AgentScopeAgentConfiguration.java`（官方 `RedisAgentStateStore` 装配） |
 | 提示词/知识库 | `resources/agent/prompts/system.md`、`resources/agent/knowledge/*.md` |
 | 配置 | `resources/application.yml`（`traffic.agent.*`） |

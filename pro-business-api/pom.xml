@@ -35,11 +35,12 @@
         </dependency>
 
         <!-- ==================== Agent 运行时：AgentScope Java 2.0.5 ====================
-             仅引入 core + OpenAI 兼容模型扩展：
+             仅引入 core + OpenAI 兼容模型扩展 + 官方 Redis 状态存储扩展：
              - 不引 agentscope-spring-boot-starter，避免自动配置与现有 Spring 上下文耦合；
-             - 不引 agentscope-extensions-redis：它强制 jedis 7.4.1 / redisson 4.2.0 / lettuce 6.4.2，
-               与根 pom 固定的 jedis 4.4.8 冲突，会引发 UnifiedJedis API 的 NoSuchMethodError。
-               会话状态改由本模块自实现的 AgentStateStore（StringRedisTemplate）承载。
+             - 引 agentscope-extensions-redis（<b>官方实现</b>）：它编译期要求 jedis 7.4.1，因此根 pom
+               的 jedis 也随之升到 7.4.1（以框架为基准，不为兼容旧版本而自研存储）；
+             - 排除 redisson 与 lettuce 传递依赖：本分支只用 Jedis 适配器，
+               留着会平白多出 netty/redisson 的版本面，且 lettuce 会与 Boot 管理的 7.5.2 打架。
              版本由 agentscope-bom 统一管理。 -->
         <dependency>
             <groupId>io.agentscope</groupId>
@@ -48,6 +49,20 @@
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-extensions-model-openai</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-extensions-redis</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.redisson</groupId>
+                    <artifactId>redisson</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.lettuce</groupId>
+                    <artifactId>lettuce-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Spring Kafka：Boot 4 把 KafkaAutoConfiguration 拆成独立模块，

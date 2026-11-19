@@ -32,6 +32,25 @@ import java.util.UUID;
 /**
  * 把框架无关的 {@link AgentToolCatalog} 装配成 AgentScope {@link Toolkit}。
  *
+ * <h2>AgentScope 的工具模型（与 Spring AI 对照）</h2>
+ * <p>Spring AI 里工具是 {@code ToolCallback}（同步返回 String）；AgentScope 里是
+ * {@link AgentTool}（异步返回 {@code Mono<ToolResultBlock>}）。两者字段一一对应：</p>
+ * <table border="1">
+ *   <caption>两分支工具适配对照</caption>
+ *   <tr><th>概念</th><th>Spring AI</th><th>AgentScope</th></tr>
+ *   <tr><td>工具定义</td><td>ToolDefinition(name, description, inputSchema)</td><td>getName/getDescription/getParameters</td></tr>
+ *   <tr><td>执行</td><td>call(String json, ToolContext)</td><td>callAsync(ToolCallParam) → Mono&lt;ToolResultBlock&gt;</td></tr>
+ *   <tr><td>上下文</td><td>ToolContext（Map）</td><td>ToolCallParam#getRuntimeContext()</td></tr>
+ *   <tr><td>注册</td><td>ChatClient.toolCallbacks(list)</td><td>Toolkit.registerAgentTool(tool)</td></tr>
+ * </table>
+ *
+ * <h2>【Java 8+ 说明】为什么返回 Mono</h2>
+ * <p>{@code Mono<T>} 是 Reactor 的"0..1 个元素的异步结果"，可以理解为"未来会有一个值的 Promise"。
+ * 它和 Spring 的 {@code DeferredResult} 类似，但支持组合与超时。这里用
+ * {@code Mono.fromCallable(...).subscribeOn(Schedulers.boundedElastic())}：把<b>阻塞的查库操作</b>
+ * 挪到弹性线程池，避免堵住框架的事件循环线程（这是响应式编程的一条铁律：
+ * 不要在非阻塞线程上做阻塞 I/O）。</p>
+ *
  * <p>设计要点：</p>
  * <ul>
  *   <li><b>Schema 单一事实源</b>：工具名、描述、JSON Schema 全部来自 {@link AgentToolCatalog}，

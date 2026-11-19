@@ -8,15 +8,25 @@ import com.ruoyi.base.agent.tools.AgentToolCatalog;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.model.ExecutionConfig;
 import io.agentscope.core.model.GenerateOptions;
+import io.agentscope.core.state.AgentStateStore;
 import io.agentscope.extensions.model.openai.OpenAIChatModel;
+import io.agentscope.extensions.redis.state.RedisAgentStateStore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.data.redis.autoconfigure.DataRedisProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import redis.clients.jedis.DefaultJedisClientConfig;
+import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.JedisCluster;
+import redis.clients.jedis.JedisPooled;
+import redis.clients.jedis.UnifiedJedis;
 
+import java.time.Duration;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * AgentScope 分支装配。
@@ -33,15 +43,74 @@ import java.util.Set;
 @ConditionalOnProperty(prefix = "traffic.agent", name = "enabled", havingValue = "true")
 public class AgentScopeAgentConfiguration {
 
-    @Bean
-    public AgentScopeStateStore agentScopeStateStore(StringRedisTemplate redisTemplate,
-                                                     AgentProperties properties) {
-        return new AgentScopeStateStore(redisTemplate, properties);
+    /**
+     * Jedis 客户端（AgentScope 状态的底层连接）。
+     *
+     * <p>为什么单独建一个 Jedis 而不是复用 Spring Data Redis 的 Lettuce：
+     * {@link RedisAgentStateStore} 的 Jedis 适配器是<b>按 jedis 7.x 编译</b>的，
+     * 用同一大版本能彻底避免二进制不兼容（{@code NoSuchMethodError}）；而 Spring Data Redis
+     * 的 native client 属于连接工厂内部资源，交给第三方组件管理生命周期容易互相关闭。</p>
+     *
+     * <p>连接是<b>懒建立</b>的：{@code new JedisPooled} 不会在启动时握手，因此 Redis 短暂不可用
+     * 不会阻断应用启动；真正失败会发生在第一次对话，并按 {@code error} 事件返回。</p>
+     *
+     * <p>集群：只认 Spring Boot 标准配置 {@code spring.data.redis.cluster.nodes}，
+     * 不读业务侧的 {@code rediscluster.clusterNodes}（那是字典同步用的集群地址，
+     * 默认值指向公网实例，会让所有环境都误走集群分支）。
+     * 集群模式该构造器不支持密码；集群+密码请改用
+     * {@code JedisCluster(HostAndPort, JedisClientConfig, int, GenericObjectPoolConfig)}。</p>
+     */
+    @Bean(destroyMethod = "close")
+    public UnifiedJedis agentScopeJedis(DataRedisProperties redis) {
+        Duration timeout = redis.getTimeout() == null ? Duration.ofSeconds(3) : redis.getTimeout();
+        int timeoutMs = (int) Math.max(500, timeout.toMillis());
+        DefaultJedisClientConfig config = DefaultJedisClientConfig.builder()
+                .database(Math.max(0, redis.getDatabase()))
+                .connectionTimeoutMillis(timeoutMs)
+                .socketTimeoutMillis(timeoutMs)
+                .user(redis.getUsername())
+                .password(redis.getPassword())
+                .clientName("agent-scope-state")
+                .build();
+
+        List<String> clusterNodes = redis.getCluster() == null ? List.of() : redis.getCluster().getNodes();
+        if (clusterNodes != null && !clusterNodes.isEmpty()) {
+            Set<HostAndPort> nodes = clusterNodes.stream()
+                    .map(String::trim)
+                    .filter(node -> node.contains(":"))
+                    .map(node -> new HostAndPort(node.substring(0, node.lastIndexOf(':')),
+                            Integer.parseInt(node.substring(node.lastIndexOf(':') + 1))))
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+            log.info("[AgentScope] 状态存储使用 Redis 集群 nodes={}", nodes);
+            return new JedisCluster(nodes, timeoutMs);
+        }
+        String host = redis.getHost() == null || redis.getHost().isBlank() ? "127.0.0.1" : redis.getHost();
+        int port = redis.getPort() <= 0 ? 6379 : redis.getPort();
+        log.info("[AgentScope] 状态存储使用 Redis 单机 {}:{} db={}", host, port, config.getDatabase());
+        return new JedisPooled(new HostAndPort(host, port), config);
+    }
+
+    /**
+     * 官方 Redis 状态存储：{@code (userId, sessionId, key)} → Redis。
+     *
+     * <p>{@code keyPrefix} 与工程的 {@code agent.key-prefix} 对齐（默认 {@code agent:as}），
+     * TTL 由 {@code RedisAgentStateStore} 内部按写入刷新；本 Bean 不负责过期策略。</p>
+     *
+     * <p>{@code destroyMethod = ""}：{@link RedisAgentStateStore#close()} 会关闭传入的 jedis，
+     * 而该 jedis 是共享 Bean（由 {@link #agentScopeJedis} 管理）。让 Spring 各关各的，
+     * 避免"状态存储关闭时把连接池也关了、其它组件再用就报 pool destroyed"。</p>
+     */
+    @Bean(destroyMethod = "")
+    public AgentStateStore agentStateStore(UnifiedJedis agentScopeJedis, AgentProperties properties) {
+        return RedisAgentStateStore.builder()
+                .jedisClient(agentScopeJedis)
+                .keyPrefix(properties.getKeyPrefix() + ":as")
+                .build();
     }
 
     @Bean
     public ReActAgent agentScopeReActAgent(AgentScopeTools tools,
-                                           AgentScopeStateStore stateStore,
+                                           AgentStateStore stateStore,
                                            PromptLibrary promptLibrary,
                                            AgentProperties properties) {
         if (properties.getApiKey() == null || properties.getApiKey().isBlank()) {
@@ -105,7 +174,7 @@ public class AgentScopeAgentConfiguration {
     @Bean
     public AgentOrchestrator agentOrchestrator(ReActAgent agentScopeReActAgent,
                                                AgentScopeTools tools,
-                                               AgentScopeStateStore stateStore,
+                                               AgentStateStore stateStore,
                                                AgentSessionStore sessionStore,
                                                AgentProperties properties) {
         return new AgentScopeAgentOrchestrator(agentScopeReActAgent, tools, stateStore,

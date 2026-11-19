@@ -109,7 +109,7 @@ AgentOrchestrator          循环：调模型 → 模型说"要查库" → 执�
 | `var` | 10 | `SpringAiAgentOrchestrator.consume()` | 局部变量类型推断，**不是动态类型**；只在右侧能明确推出类型时用，方法签名/字段不要用 |
 | 虚拟线程 | 21 | `ObservableToolCallback.TOOL_EXECUTOR` | `Thread.ofVirtual()` + `newThreadPerTaskExecutor`：一任务一线程，阻塞时自动让出载体线程。适合 I/O 等待，不解决连接池上限（故另配 32 许可信号量） |
 | `List.of` / `Map.of` / `Set.of` | 9 | `AgentToolCatalog.SPECS`、各处小集合 | 不可变集合，**不接受 null**；元素多时注意重载上限（10 个） |
-| `Optional` | 8 | `AgentScopeStateStore.get()` 等 | 表达"可能没有"，不要用它当字段类型或参数类型 |
+| `Optional` | 8 | `AgentStateStore#get()`（AgentScope 官方 Redis 实现） | 表达"可能没有"，不要用它当字段类型或参数类型 |
 | `CompletableFuture` | 8 | `ObservableToolCallback.invokeWithTimeout()` | 组合异步 + `get(timeout)` 做超时；注意 `cancel` 不会中断 JDBC |
 | `Stream` | 8 | `AgentToolCatalog.specs().stream()...` | 声明式集合处理；**不要在 Stream 里做阻塞 I/O**（会占住调用线程） |
 | `java.time` | 8 | `ToolSupport.parseTime()`、`AgentProperties` 的 `Duration` | 替代 `Date`/`SimpleDateFormat`（后者非线程安全） |
@@ -203,7 +203,7 @@ curl -N -X POST http://127.0.0.1:8080/api/v1/agent/chat \
 2. **`seq` 从 1 自增**，超时/错误帧也要带 `id`，否则前端排序会乱。
 3. **工具返回 `ok:false` 不是异常**：模型需要读错误码自我修正，别改成抛异常。
 4. **`ChatMemory` 与 `AgentSessionStore` 是两份数据**：前者给模型、后者给 UI；删会话时两份都要清。
-5. **`AgentScopeStateStore` 的 userId 是 `tenant:user` 拼接**：不要改成只用 userId，否则跨租户同 ID 会串会话。
+5. **AgentScope 的 `RuntimeContext.userId` 是 `tenant:user` 拼接**：不要改成只用 userId，否则跨租户同 ID 会串会话槽位（官方 Redis 实现按 `(userId, sessionId)` 存）。
 6. **超时 ≠ 查询被取消**：`CompletableFuture.cancel` 不会中断 JDBC，真正的取消靠 ES `socket-timeout` 与 GaussDB `statement_timeout`。
 
 ---

@@ -20,6 +20,7 @@ import io.agentscope.core.event.TextBlockDeltaEvent;
 import io.agentscope.core.event.ThinkingBlockDeltaEvent;
 import io.agentscope.core.model.ChatUsage;
 import io.agentscope.core.model.transport.HttpTransportException;
+import io.agentscope.core.state.AgentStateStore;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
@@ -35,6 +36,22 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * AgentScope Java 2.0.5 实现：{@link ReActAgent#streamEvents} → 统一 SSE 事件契约。
  *
+ * <h2>AgentScope 的核心对象</h2>
+ * <ul>
+ *   <li><b>ReActAgent</b>：框架内置的"思考-行动"循环体。给它模型 + 工具 + 系统提示词，
+ *       它自己会跑"推理 → 要工具 → 拿结果 → 再推理"，直到给出答案或达到 {@code maxIters}。
+ *       对比 Spring AI：那边循环藏在 {@code ToolCallingAdvisor} 里，这边是一个显式对象——
+ *       好处是轮数、重试、中间件都可以直接配置。</li>
+ *   <li><b>RuntimeContext</b>：一次调用的"随身包"。{@code userId}/{@code sessionId} 决定读哪个会话槽位，
+ *       其余键值对只在内存中传递（principal/令牌/预算/事件出口），<b>不持久化、不发给模型</b>。</li>
+ *   <li><b>streamEvents</b>：返回 {@code Flux<AgentEvent>}，把循环中每个动作都暴露成事件
+ *       （共 32 类）。我们要做的是"翻译"：把 32 类收敛成前端认识的 8 类。</li>
+ * </ul>
+ *
+ * <p><b>单例为什么安全</b>：{@code ReActAgent} 是 Spring 单例，但内部按
+ * {@code (userId, sessionId)} 维护独立槽位，并对同一槽位的调用串行化；不同会话可并发。
+ * 因此不需要"每请求 new 一个 Agent"——那样反而每次都要重建工具集与状态缓存。</p>
+ *
  * <p>与 Spring AI 分支的关键差异：</p>
  * <ul>
  *   <li><b>编排由框架完成</b>：{@code ReActAgent} 内部跑完整的 ReAct 循环（推理 → 工具 → 再推理），
@@ -44,7 +61,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *       因此逐字段一致，前端不需要按框架分支）；</li>
  *   <li><b>会话状态由 {@code AgentStateStore} 承载</b>：模型上下文、工具上下文都在
  *       {@code (userId, sessionId)} 槽位里，天然支持多实例（Redis 实现见
- *       {@link AgentScopeStateStore}）。</li>
+ *       官方 RedisAgentStateStore）。</li>
  * </ul>
  *
  * <p>事件映射表：</p>
@@ -65,13 +82,13 @@ public class AgentScopeAgentOrchestrator implements AgentOrchestrator {
 
     private final ReActAgent agent;
     private final AgentScopeTools tools;
-    private final AgentScopeStateStore stateStore;
+    private final AgentStateStore stateStore;
     private final AgentSessionStore sessionStore;
     private final AgentProperties properties;
 
     public AgentScopeAgentOrchestrator(ReActAgent agent,
                                        AgentScopeTools tools,
-                                       AgentScopeStateStore stateStore,
+                                       AgentStateStore stateStore,
                                        AgentSessionStore sessionStore,
                                        AgentProperties properties) {
         this.agent = agent;

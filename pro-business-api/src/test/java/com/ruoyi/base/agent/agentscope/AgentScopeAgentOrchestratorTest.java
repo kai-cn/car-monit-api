@@ -7,6 +7,7 @@ import com.ruoyi.base.agent.core.AgentInvocation;
 import com.ruoyi.base.agent.core.AgentPrincipal;
 import com.ruoyi.base.agent.core.AgentSessionStore;
 import io.agentscope.core.ReActAgent;
+import io.agentscope.core.state.AgentStateStore;
 import io.agentscope.core.event.AgentResultEvent;
 import io.agentscope.core.event.ExceedMaxItersEvent;
 import io.agentscope.core.event.ModelCallEndEvent;
@@ -45,7 +46,7 @@ class AgentScopeAgentOrchestratorTest {
         AgentScopeTools tools = mock(AgentScopeTools.class);
         when(tools.registeredTools()).thenReturn(Set.of("query_traffic_records"));
         AgentSessionStore sessionStore = mock(AgentSessionStore.class);
-        AgentScopeStateStore stateStore = mock(AgentScopeStateStore.class);
+        AgentStateStore stateStore = mock(AgentStateStore.class);
         AgentProperties properties = new AgentProperties();
         properties.setModel("qwen-plus");
         orchestrator = new AgentScopeAgentOrchestrator(agent, tools, stateStore, sessionStore, properties);

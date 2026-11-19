@@ -7,11 +7,11 @@ import com.ruoyi.base.mapper.KafkaMessageRecordMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
-
-import jakarta.annotation.PostConstruct;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -70,16 +70,21 @@ public class KafkaProducerService {
     private ExecutorService retryExecutor;
 
     /**
-     * 初始化方法
-     * 
-     * 思路：在Bean初始化后自动执行，启动后台重试线程
-     * 目的：确保应用启动后立即开始处理失败消息的重试
+     * 启动后台重试线程。
+     *
+     * <p><b>为什么监听 {@link ApplicationReadyEvent} 而不是 {@code @PostConstruct}</b>：
+     * {@code @PostConstruct} 在 Bean 初始化阶段执行，此时容器尚未 refresh 完成。后台线程一旦
+     * 立刻查库/读配置，就会踩到"BeanFactory 未就绪"（{@code ... has not been refreshed yet}），
+     * 轻则刷一屏 ERROR，重则与配置绑定线程并发冲突导致启动失败。改为容器完全就绪后启动，
+     * 语义不变（只是晚几秒开始重试），却彻底消除启动期竞态。</p>
+     *
+     * <p>【Java 21 虚拟线程】重试任务是"睡 30 秒 → 查一次库"的 I/O 型循环，
+     * 用虚拟线程承载比平台线程更轻，且不会因为大量阻塞任务耗尽线程。</p>
      */
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     public void init() {
-        // 创建单线程池，用于执行后台重试任务
-        retryExecutor = Executors.newSingleThreadExecutor();
-        // 启动重试任务
+        retryExecutor = Executors.newSingleThreadExecutor(
+                Thread.ofVirtual().name("kafka-retry-", 0).factory());
         startRetryTask();
         log.info("[Kafka生产者服务] 初始化完成，集成可靠性保障机制");
     }
