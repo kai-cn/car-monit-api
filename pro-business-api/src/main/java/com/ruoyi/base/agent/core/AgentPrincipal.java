@@ -29,9 +29,14 @@ public record AgentPrincipal(
         if (value == null || value.isBlank()) {
             return fallback;
         }
-        String v = value.trim();
-        // 请求头进入 Redis key/日志前做字符白名单，避免 key 注入与日志伪造。
-        return v.length() > 64 ? v.substring(0, 64) : v.replaceAll("[^A-Za-z0-9_.:@-]", "_");
+        // 请求头进入 Redis key/日志前先做字符白名单，避免 key 注入与日志伪造；
+        // 超长时不能直接截断——截断会让两个不同主体折叠成同一身份（共用会话/限流桶/审计哈希，
+        // 等于可以读他人历史），因此保留前 48 字符 + 不可逆短哈希保证唯一。
+        String cleaned = value.trim().replaceAll("[^A-Za-z0-9_.:@-]", "_");
+        if (cleaned.length() <= 64) {
+            return cleaned;
+        }
+        return cleaned.substring(0, 48) + "~" + shortHash(cleaned);
     }
 
     public boolean hasRole(String role) {

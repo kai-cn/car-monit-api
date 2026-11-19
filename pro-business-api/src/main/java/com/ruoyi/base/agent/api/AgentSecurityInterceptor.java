@@ -50,12 +50,11 @@ public class AgentSecurityInterceptor implements HandlerInterceptor {
         String tenant = header(request, properties.getTenantHeader());
         String user = header(request, properties.getUserHeader());
         if (tenant == null || user == null) {
-            if (!isLoopback(request)) {
-                return deny(response, AgentErrorCode.AGENT_UNAUTHORIZED,
-                        "缺少 " + properties.getTenantHeader() + " / " + properties.getUserHeader());
-            }
-            tenant = tenant == null ? "default" : tenant;
-            user = user == null ? "anonymous" : user;
+            // 身份缺失一律拒绝：绝不兜底成 default/anonymous——那会让所有缺头请求共用
+            // 同一个会话槽位与限流桶（等于互相能读历史）。回环地址同样要求带身份，
+            // 本地联调用 curl 显式加头即可。
+            return deny(response, AgentErrorCode.AGENT_UNAUTHORIZED,
+                    "缺少 " + properties.getTenantHeader() + " / " + properties.getUserHeader());
         }
         Set<String> roles = new LinkedHashSet<>();
         String rolesHeader = header(request, properties.getRolesHeader());

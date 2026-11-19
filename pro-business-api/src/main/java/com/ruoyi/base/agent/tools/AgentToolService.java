@@ -84,6 +84,10 @@ public class AgentToolService {
     // query_traffic_records
     // ------------------------------------------------------------------
     public Map<String, Object> queryTraffic(AgentPrincipal principal, Map<String, Object> args) {
+        Map<String, Object> denied = authorize(principal, AgentToolCatalog.QUERY_TRAFFIC);
+        if (denied != null) {
+            return denied;
+        }
         try {
             TrafficTable table = TrafficTable.fromParam(str(args, "table", "snapshot"));
             long end = orNow(parse(args, "end_time", true));
@@ -151,6 +155,10 @@ public class AgentToolService {
     // get_vehicle_track
     // ------------------------------------------------------------------
     public Map<String, Object> vehicleTrack(AgentPrincipal principal, Map<String, Object> args) {
+        Map<String, Object> denied = authorize(principal, AgentToolCatalog.VEHICLE_TRACK);
+        if (denied != null) {
+            return denied;
+        }
         try {
             if (!principal.canSeeFullPlate()) {
                 return ToolSupport.error("FORBIDDEN", "当前角色无权回放车辆轨迹");
@@ -267,6 +275,10 @@ public class AgentToolService {
     // get_bigscreen_metric
     // ------------------------------------------------------------------
     public Map<String, Object> bigScreen(AgentPrincipal principal, Map<String, Object> args) {
+        Map<String, Object> denied = authorize(principal, AgentToolCatalog.BIGSCREEN_METRIC);
+        if (denied != null) {
+            return denied;
+        }
         try {
             String metric = str(args, "metric", null);
             if (metric == null) {
@@ -300,7 +312,11 @@ public class AgentToolService {
     // ------------------------------------------------------------------
     // search_knowledge
     // ------------------------------------------------------------------
-    public Map<String, Object> searchKnowledge(Map<String, Object> args) {
+    public Map<String, Object> searchKnowledge(AgentPrincipal principal, Map<String, Object> args) {
+        Map<String, Object> denied = authorize(principal, AgentToolCatalog.SEARCH_KNOWLEDGE);
+        if (denied != null) {
+            return denied;
+        }
         String query = str(args, "query", null);
         if (query == null || query.isBlank()) {
             return ToolSupport.error("BAD_ARGUMENT", "query 必填");
@@ -331,6 +347,10 @@ public class AgentToolService {
     // ------------------------------------------------------------------
     public Map<String, Object> submitExport(AgentPrincipal principal, String sessionId,
                                             String confirmToken, Map<String, Object> args) {
+        Map<String, Object> denied = authorize(principal, AgentToolCatalog.SUBMIT_EXPORT);
+        if (denied != null) {
+            return denied;
+        }
         try {
             if (!properties.isAllowExport()) {
                 return ToolSupport.error("EXPORT_DISABLED", "导出能力未开启，请联系管理员");
@@ -338,10 +358,8 @@ public class AgentToolService {
             if (!principal.canExport()) {
                 return ToolSupport.error("FORBIDDEN", "仅管理员可提交导出任务");
             }
-            if (!confirmationService.consume(principal, sessionId, "export", confirmToken)) {
-                return ToolSupport.error("CONFIRM_REQUIRED",
-                        "导出需要用户在界面二次确认；请先让用户确认导出范围，再由客户端携带 confirmToken 重试");
-            }
+            // 先校验参数再消费令牌：参数不合法时不该把用户的"已确认"白白消耗掉，
+            // 否则用户每次改参数都要重新点一次确认。
             TrafficTable table = TrafficTable.fromParam(str(args, "table", "snapshot"));
             long end = orNow(parse(args, "end_time", true));
             long start = orDefault(parse(args, "start_time", false), end - QUERY_DEFAULT_WINDOW.toMillis());
@@ -349,6 +367,15 @@ public class AgentToolService {
             String purpose = str(args, "purpose", null);
             if (purpose == null || purpose.isBlank()) {
                 return ToolSupport.error("BAD_ARGUMENT", "purpose 必填（导出用途会写入审计）");
+            }
+            if (confirmToken == null || confirmToken.isBlank()) {
+                return ToolSupport.error("CONFIRM_REQUIRED",
+                        "导出需要用户在界面二次确认；请先让用户确认导出范围，再由客户端携带 confirmToken 重试");
+            }
+            if (!confirmationService.consume(principal, sessionId, "export", confirmToken)) {
+                // 令牌存在但无效：已过期/已用过/四要素不匹配，与"没带令牌"是两种不同的用户动作。
+                return ToolSupport.error("CONFIRM_INVALID",
+                        "确认令牌无效或已过期，请让用户重新确认导出范围");
             }
 
             ExportRequest request = new ExportRequest();
@@ -391,6 +418,10 @@ public class AgentToolService {
     }
 
     public Map<String, Object> exportStatus(AgentPrincipal principal, Map<String, Object> args) {
+        Map<String, Object> denied = authorize(principal, AgentToolCatalog.EXPORT_STATUS);
+        if (denied != null) {
+            return denied;
+        }
         try {
             String taskId = str(args, "task_id", null);
             if (taskId == null || taskId.isBlank()) {
@@ -400,8 +431,9 @@ public class AgentToolService {
             if (task == null) {
                 return ToolSupport.error("NOT_FOUND", "任务不存在或已过期");
             }
-            if (!principal.hasRole("admin") && task.getRequestedBy() != null
-                    && !task.getRequestedBy().equals(principal.userId())) {
+            // 归属校验：非 admin 只能查本人任务；requestedBy 缺失时按"无权"处理（默认拒绝）。
+            if (!principal.hasRole("admin")
+                    && (task.getRequestedBy() == null || !task.getRequestedBy().equals(principal.userId()))) {
                 return ToolSupport.error("FORBIDDEN", "只能查询本人提交的导出任务");
             }
             Map<String, Object> data = ToolSupport.ok();
@@ -425,6 +457,10 @@ public class AgentToolService {
     // get_data_quality
     // ------------------------------------------------------------------
     public Map<String, Object> dataQuality(AgentPrincipal principal, Map<String, Object> args) {
+        Map<String, Object> denied = authorize(principal, AgentToolCatalog.DATA_QUALITY);
+        if (denied != null) {
+            return denied;
+        }
         try {
             Long start = parse(args, "start_time", false);
             Long end = parse(args, "end_time", true);
@@ -455,7 +491,27 @@ public class AgentToolService {
     }
 
     // ------------------------------------------------------------------
+    // 授权
+    // ------------------------------------------------------------------
+
+    /**
+     * 工具级角色校验（授权唯一入口）。
+     *
+     * <p>目录里 {@code requiredRoles} 是权限矩阵的单一事实源；模型只决定"想调哪个工具"，
+     * 能不能调由这里按请求头注入的主体判定。返回 {@code null} 表示放行。</p>
+     */
+    private Map<String, Object> authorize(AgentPrincipal principal, String toolName) {
+        if (AgentToolCatalog.allows(principal, toolName)) {
+            return null;
+        }
+        log.warn("[Agent工具] 角色不足 tool={} roles={}", toolName,
+                principal == null ? "null" : principal.roles());
+        return ToolSupport.error("FORBIDDEN", "当前角色无权调用该工具，请联系管理员开通权限");
+    }
+
+    // ------------------------------------------------------------------
     // helpers
+    // ------------------------------------------------------------------
     // ------------------------------------------------------------------
     private static void putCodes(TrafficSearchRequest req, String field, Map<String, Object> args, String key) {
         Object value = args.get(key);

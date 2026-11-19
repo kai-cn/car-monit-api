@@ -21,4 +21,17 @@ public interface AgentOrchestrator {
     default java.util.Set<String> registeredTools() {
         return java.util.Set.of();
     }
+
+    /**
+     * 清理某个会话在<b>框架侧</b>的模型上下文（记忆/状态）。
+     *
+     * <p>调用方是 {@code DELETE /api/v1/agent/sessions/{id}}：用户点"清空会话"时，
+     * 只删 UI 历史而保留模型记忆会出现"历史清空了，再问一句模型还记得"的隐私问题，
+     * 因此由适配层负责把框架内部状态一并清掉。</p>
+     *
+     * <p>默认空实现（便于新增框架时先跑通再补清理逻辑）；实现方必须做租户隔离。</p>
+     */
+    default void clearSession(AgentPrincipal principal, String sessionId) {
+        // 默认无框架侧状态
+    }
 }

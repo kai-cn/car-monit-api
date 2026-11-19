@@ -319,7 +319,10 @@ public class AgentChatController {
         void onTimeout() {
             if (finished.compareAndSet(false, true)) {
                 try {
-                    emitter.send(SseEmitter.event().name(AgentEvent.ERROR)
+                    // 补 id：SSE 约定每帧都带自增 id，超时帧也不例外，否则前端无法按 id 排序/去重。
+                    emitter.send(SseEmitter.event()
+                            .id(String.valueOf(seq.incrementAndGet()))
+                            .name(AgentEvent.ERROR)
                             .data(JSON.toJSONString(Map.of(
                                     "code", AgentErrorCode.AGENT_MODEL_TIMEOUT.name(),
                                     "message", "请求超时，请缩小查询范围后重试",
