@@ -6,7 +6,33 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Agent 流式事件。SSE 的 {@code event} 名即 {@link #type}，{@code data} 为 {@link #payload} 的 JSON。
+ * Agent 流式事件——前后端之间唯一的"合同"。
+ *
+ * <p>SSE 的 {@code event} 名即 {@link #type}，{@code data} 为 {@link #payload} 的 JSON。</p>
+ *
+ * <h2>给只写过 CRUD 的 Java 开发者的 30 秒入门</h2>
+ * <p>普通 HTTP 接口是"一问一答"：客户端等到服务端把整个结果算完才拿到响应。但大模型是
+ * <b>一个 token 一个 token 往外吐字</b>的（token 可以粗略理解为"词片"，1 个汉字约 1~2 token），
+ * 一次回答可能要 3~10 秒。如果等全部生成完再返回，用户会盯着空白屏。所以改用
+ * <b>SSE（Server-Sent Events）</b>：一条 HTTP 长连接上，服务端可以持续往客户端推小段文本，
+ * 浏览器用 {@code EventSource} 或 fetch 流式读取即可实现"打字机效果"。</p>
+ *
+ * <p>本类就是"一小段要推给前端的东西"。为什么不让框架直接推自己的事件？因为
+ * <b>Spring AI 和 AgentScope 的事件模型完全不同</b>（前者是 ChatResponse 增量，后者是 32 类
+ * {@code AgentEventType}）。把两者都翻译成本类的 8 种类型，前端就只写一套解析逻辑，
+ * 将来换框架不用改页面——这就是"适配器模式"在 AI 场景的用处。</p>
+ *
+ * <h2>事件顺序（前端可以依赖的不变式）</h2>
+ * <pre>
+ * meta → (delta | thinking | tool_call | tool_result)* → usage → done | error
+ * </pre>
+ * <p>{@code seq} 是单条流的自增序号（从 1 开始），用于前端排序、去重和"断线后判断丢了哪一段"。
+ * 并发下不要用时间戳排序：同一毫秒内可能到达多个事件。</p>
+ *
+ * <p>【Java 8+ 说明】本类刻意保持为普通 POJO + 静态工厂，而不是 {@code record}：
+ * record 的组件是 final 且会自动生成 {@code equals/hashCode}，而事件对象要频繁创建、
+ * 又需要 Lombok 的 {@code @Getter} 与 Jackson 序列化约定；此外工厂方法能表达
+ * "每种事件的 payload 结构不同"这一语义，record 的单一构造器反而表达不了。</p>
  */
 @Getter
 public class AgentEvent {

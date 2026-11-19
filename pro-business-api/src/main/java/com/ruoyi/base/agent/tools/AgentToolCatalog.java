@@ -5,21 +5,48 @@ import com.ruoyi.base.agent.core.AgentPrincipal;
 import java.util.List;
 
 /**
- * 工具目录：与框架无关的单一事实源。
+ * 工具目录：与框架无关的单一事实源（Single Source of Truth）。
  *
- * <p>用途：</p>
+ * <h2>AI 概念：什么是"工具（Tool / Function Calling）"</h2>
+ * <p>大模型只会生成文本，不能直接查库。所谓"给模型配工具"，是指把一组函数用
+ * <b>JSON Schema</b> 描述出来（函数名、干什么用、参数结构），随对话一起发给模型。
+ * 模型如果判断"这问题需要查数据"，就会输出一段结构化 JSON：
+ * {@code {"name":"query_traffic_records","arguments":{"table":"fee","plate":"赣B21E85"}}}。
+ * 宿主程序解析这段 JSON、真正执行对应方法、把返回值作为一条消息塞回对话，模型再继续推理。
+ * ——所以工具描述写得好不好，直接决定模型"会不会用、用得对不对"：描述是给模型看的文档。</p>
+ *
+ * <h2>为什么要有这个目录</h2>
  * <ul>
  *   <li>{@code GET /api/v1/agent/tools} 对外暴露能力清单；</li>
- *   <li>启动时校验框架实际注册的工具名与目录一致，防止契约漂移；</li>
- *   <li>设计/Spec 文档与代码同源，评审时可直接比对。</li>
+ *   <li>启动时校验框架实际注册的工具名与目录一致，防止契约漂移（少注册/多注册都 fail-fast）；</li>
+ *   <li>设计/Spec 文档与代码同源，评审时可直接比对；</li>
+ *   <li>权限矩阵 {@link #allows} 与执行入口共用同一份 {@code requiredRoles}，避免"文档说有权限、代码没校验"。</li>
+ * </ul>
+ *
+ * <p>【Java 9+ List.of / Java 16+ record / Java 15+ 文本块】本文件集中用了三处现代语法：</p>
+ * <ul>
+ *   <li>{@code List.of(...)}：创建<b>不可变</b>列表，任何 {@code add} 都会抛
+ *       {@link UnsupportedOperationException}，防止运行期被误改。</li>
+ *   <li>{@code record ToolSpec(...)}：见 {@link com.ruoyi.base.agent.core.AgentPrincipal} 的说明。</li>
+ *   <li>{@code """ ... """}：文本块，写多行 JSON Schema 不用再拼 {@code \n} 和转义引号。</li>
  * </ul>
  */
 public final class AgentToolCatalog {
 
+    /** 工具风险级别：{@code READ} 可自动执行；{@code WRITE} 必须经用户二次确认（见 submit_export）。 */
     public enum Risk {
         READ, WRITE
     }
 
+    /**
+     * 一个工具的完整契约。
+     *
+     * @param name         工具名（模型看到的函数名，蛇形命名，全局唯一）
+     * @param description  <b>给模型看的说明书</b>——写清"什么时候该用、返回什么"，不要写成内部术语
+     * @param risk         读写级别，决定是否需要二次确认
+     * @param requiredRoles 允许调用的角色，逗号分隔；空串表示"仅需登录"
+     * @param inputSchema  JSON Schema（draft-07 子集），启动时会做基本校验
+     */
     public record ToolSpec(String name, String description, Risk risk, String requiredRoles, String inputSchema) {
     }
 
