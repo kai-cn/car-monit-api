@@ -49,6 +49,8 @@
         <hutool.version>5.8.48</hutool.version>
         <forest.version>1.8.0</forest.version>
         <lombok.version>1.18.48</lombok.version>
+        <!-- Spring AI 2.x：与 Spring Boot 4 / Jackson 3 对齐的 GA 版本 -->
+        <spring-ai.version>2.0.2</spring-ai.version>
     </properties>
 
     <modules>
@@ -58,6 +60,14 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- Spring AI BOM：统一管理 spring-ai-* 与 openai-java 客户端版本 -->
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <!-- 通用工具-->
             <dependency>
                 <groupId>com.ruoyi</groupId>

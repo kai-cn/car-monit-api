@@ -26,6 +26,20 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- ==================== Agent 能力（Spring AI 2.x） ====================
+             只引模型客户端与 ChatClient，不引 starter：Agent 默认关闭，
+             由 AgentConfiguration 在 traffic.agent.enabled=true 时手动装配，
+             避免缺少 API Key 时自动配置在启动阶段失败。
+             spring-ai-openai 同时支持 OpenAI 官方接口与 vLLM/DashScope/DeepSeek
+             等 OpenAI 兼容端点（通过 base-url 切换）。 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-openai</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-client-chat</artifactId>
+        </dependency>
         <!-- Spring Kafka：Boot 4 把 KafkaAutoConfiguration 拆成独立模块，
              必须用 starter 才能拿到 kafkaListenerContainerFactory（原来只引 spring-kafka） -->
         <dependency>
