@@ -206,7 +206,7 @@ Agent **不新建数据通路**，只做"自然语言 → 既有服务"的路由
 | --- | --- | --- | --- |
 | `query_traffic_records` | `TrafficSearchService` | ES（`traffic.query.engine` 可回退 GaussDB） | 复用 PIT 深分页与总数封顶 |
 | `get_vehicle_track` | `TrailPointLoader` + `ISysUtilService` | GaussDB 轨迹表 | 按里程等距抽稀到 ≤200 点 |
-| `get_bigscreen_metric` | `BigScreenStatsService` | DWS 预聚合 | `traffic.bigscreen.stats-enabled=false` 时由服务内部回退 |
+| `get_bigscreen_metric` | `BigScreenStatsService` | DWS 预聚合 | `stats-enabled=false`/表缺失时服务抛 503，由 backend hybrid 模式回退 legacy |
 | `submit_export` / `get_export_status` | `ExportTaskService` | 异步任务 | 高风险，需二次确认令牌 |
 | `get_data_quality` | `DataLossDetectionService` | Kafka/入库对账 | 窗口 ≤24h |
 | `search_knowledge` | `KnowledgeBase` | classpath Markdown | 24 块 / 1086 词项 |
@@ -348,7 +348,7 @@ sequenceDiagram
 | 闸 | 位置 | 例子 |
 | --- | --- | --- |
 | 角色闸 | `AgentToolCatalog.requiredRoles` + `AgentToolService` | `get_vehicle_track` 仅 `audit/admin`；`submit_export` 仅 `admin` |
-| 数据闸 | 服务层（复用 V3 查询服务的租户/机构过滤） | 查询请求带 `orgcode/sectioncode/...`，越权机构返回空集而非报错（避免探测） |
+| 数据闸 | 服务层（复用 V3 查询服务） | 请求按 `orgcode/sectioncode/roadcode/gantrycode/tollcode` 下推过滤，越权机构查不到数据 |
 | 令牌闸 | `AgentConfirmationService` | 导出必须携带 `confirmToken`，`getAndDelete` 保证一次性 |
 
 ### 5.4 脱敏规则
