@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import jakarta.annotation.PreDestroy;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
@@ -184,6 +185,10 @@ public class KafkaProducerService {
                     
                     // 休眠30秒后再次查询
                     Thread.sleep(30000);
+                } catch (InterruptedException ie) {
+                    // 先于 Exception 捕获：中断是"要求退出"的信号，不能落进通用分支再睡 60 秒
+                    Thread.currentThread().interrupt();
+                    break;
                 } catch (Exception e) {
                     log.error("[Kafka生产者] 重试任务异常", e);
                     try {
@@ -197,6 +202,14 @@ public class KafkaProducerService {
                 }
             }
         });
+    }
+
+    /** 应用关闭时中断重试循环（虚拟线程为守护线程，但显式关闭更利于快速停机与资源回收）。 */
+    @PreDestroy
+    public void shutdown() {
+        if (retryExecutor != null) {
+            retryExecutor.shutdownNow();
+        }
     }
 
     /**
