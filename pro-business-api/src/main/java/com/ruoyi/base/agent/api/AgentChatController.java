@@ -191,8 +191,9 @@ public class AgentChatController {
             throw e;
         } catch (RuntimeException e) {
             // Reactor 不好直接抛受检异常：block() 会把 TimeoutException 包成 ReactiveException，
-            // 所以要顺着 cause 链判断，而不是 catch (TimeoutException)。
-            if (!(e.getCause() instanceof TimeoutException)) {
+            // 且不同版本可能多包一层，所以要顺着 cause 链判断，而不是 catch (TimeoutException)
+            // 或只看直接 cause。
+            if (!hasCause(e, TimeoutException.class)) {
                 throw e;
             }
             // 同步接口的超时要回 504 AGENT_MODEL_TIMEOUT（见 spec §3.x），
@@ -200,14 +201,36 @@ public class AgentChatController {
             auditLogger.chat(invocation, "error", System.currentTimeMillis() - started, null,
                     AgentErrorCode.AGENT_MODEL_TIMEOUT.name());
             metrics.error(orchestrator.framework(), AgentErrorCode.AGENT_MODEL_TIMEOUT.name());
-            throw new AgentException(AgentErrorCode.AGENT_MODEL_TIMEOUT);
+            // 把原始异常挂在 cause 上：日志里要能看到是"哪一段"超时，而不是只剩一句提示
+            throw new AgentException(AgentErrorCode.AGENT_MODEL_TIMEOUT,
+                    AgentErrorCode.AGENT_MODEL_TIMEOUT.defaultMessage(), e);
         } finally {
             concurrencyLimiter.release();
         }
     }
 
-    private AgentChatResponse aggregate(String requestId, String sessionId, List<AgentEvent> events, long started) {
-        StringBuilder answer = new StringBuilder();
+    /**
+     * 沿 cause 链判断异常类型（最多 8 层，防止自引用导致的死循环）。
+     *
+     * <p>为什么要走链：Reactor 把受检异常包成 {@code ReactiveException}，
+     * 不同版本/不同操作符包装层数不一样，只看直接 cause 容易漏判，
+     * 表现就是"明明超时却回 500"。</p>
+     */
+    private static boolean hasCause(Throwable error, Class<? extends Throwable> type) {
+        Throwable cur = error;
+        for (int depth = 0; cur != null && depth < 8; depth++) {
+            if (type.isInstance(cur)) {
+                return true;
+            }
+            if (cur.getCause() == cur) {
+                return false;
+            }
+            cur = cur.getCause();
+        }
+        return false;
+    }
+
+    private AgentChatResponse aggregate(String requestId, String sessionId, List<AgentEvent> events, long started) {        StringBuilder answer = new StringBuilder();
         List<Map<String, Object>> tools = new ArrayList<>();
         Map<String, Object> usage = new LinkedHashMap<>();
         String finishReason = "stop";

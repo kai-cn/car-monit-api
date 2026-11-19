@@ -638,7 +638,7 @@ es.addEventListener('error',  e => fail(JSON.parse(e.data)));  // 注意：与 E
 | Key | 类型 | 值 | TTL |
 | --- | --- | --- | --- |
 | `{prefix}:session:{tenant}:{user}:{sessionId}` | List | `AgentMessage` JSON（`role/content/createdAt`） | `session-ttl` |
-| `{prefix}:sessions:{tenant}:{user}` | ZSet | member=sessionId，score=最后活跃毫秒 | `session-ttl` |
+| `{prefix}:sessions:{tenant}:{user}` | ZSet | member=**清洗后的** sessionId（与 List key 用同一个 `safe()` 结果，因此列表项可直接回传复用），score=最后活跃毫秒 | `session-ttl` |
 | `{prefix}:rl:u:{tenant}:{user}:{minute}` | String | 计数（INCR） | 90s |
 | `{prefix}:rl:t:{tenant}:{minute}` | String | 计数（INCR） | 90s |
 | `{prefix}:confirm:{token}` | String | `tenant\|user\|sessionId\|action` | `confirm-ttl` |
