@@ -158,9 +158,12 @@ public class AgentScopeAgentOrchestrator implements AgentOrchestrator {
                 .build();
     }
 
-    /** 单请求工具调用上限：轮数上限 × 2，兼顾“每轮 1 个工具”与“单轮少量并行”。 */
+    /**
+     * 单请求工具调用上限：与 Spring AI 分支的 {@code ToolBudget(maxIters)} 对齐，
+     * 保证两个分支"最多几次工具调用"语义一致（轮数上限由 {@code ReActAgent.maxIters} 额外兜一层）。
+     */
     private int toolBudget() {
-        return Math.max(1, properties.getMaxIters()) * 2;
+        return Math.max(1, properties.getMaxIters());
     }
 
     private void consume(io.agentscope.core.event.AgentEvent event,
