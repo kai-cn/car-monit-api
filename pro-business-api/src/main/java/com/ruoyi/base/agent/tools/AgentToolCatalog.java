@@ -1,5 +1,7 @@
 package com.ruoyi.base.agent.tools;
 
+import com.ruoyi.base.agent.core.AgentPrincipal;
+
 import java.util.List;
 
 /**
@@ -154,5 +156,30 @@ public final class AgentToolCatalog {
 
     public static boolean contains(String name) {
         return SPECS.stream().anyMatch(s -> s.name().equals(name));
+    }
+
+    public static ToolSpec find(String name) {
+        return SPECS.stream().filter(s -> s.name().equals(name)).findFirst().orElse(null);
+    }
+
+    /**
+     * 主体是否具备调用该工具的角色。
+     *
+     * <p>角色校验放在工具层（而不是提示词或适配层）的原因：模型可能被诱导调用任意工具，
+     * 提示词只是"建议"，真正的授权必须在服务端按 {@code requiredRoles} 判定。
+     * 未登记的工具一律拒绝（默认拒绝优于默认放行）。</p>
+     */
+    public static boolean allows(AgentPrincipal principal, String name) {
+        ToolSpec spec = find(name);
+        if (spec == null || principal == null) {
+            return false;
+        }
+        for (String role : spec.requiredRoles().split(",")) {
+            String r = role.trim();
+            if (!r.isEmpty() && principal.hasRole(r)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
