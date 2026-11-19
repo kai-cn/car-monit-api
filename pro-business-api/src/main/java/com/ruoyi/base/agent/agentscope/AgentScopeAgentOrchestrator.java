@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *   <li><b>RuntimeContext</b>：一次调用的"随身包"。{@code userId}/{@code sessionId} 决定读哪个会话槽位，
  *       其余键值对只在内存中传递（principal/令牌/预算/事件出口），<b>不持久化、不发给模型</b>。</li>
  *   <li><b>streamEvents</b>：返回 {@code Flux<AgentEvent>}，把循环中每个动作都暴露成事件
- *       （共 32 类）。我们要做的是"翻译"：把 32 类收敛成前端认识的 8 类。</li>
+ *       （共 31 种）。我们要做的是"翻译"：收敛成前端认识的 8 类业务事件（+ 心跳）。</li>
  * </ul>
  *
  * <p><b>单例为什么安全</b>：{@code ReActAgent} 是 Spring 单例，但内部按
@@ -56,7 +56,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * <ul>
  *   <li><b>编排由框架完成</b>：{@code ReActAgent} 内部跑完整的 ReAct 循环（推理 → 工具 → 再推理），
  *       不需要像 Spring AI 那样依赖 {@code ToolCallingAdvisor} 的隐式循环；</li>
- *   <li><b>事件源是 32 类细粒度事件</b>：这里只挑出 4 类做映射，工具事件由
+ *   <li><b>事件源是 31 种细粒度事件</b>：这里只挑出 4 类做映射，工具事件由
  *       {@link AgentScopeTools} 在工具内部产出（两个分支的 {@code tool_call}/{@code tool_result}
  *       因此逐字段一致，前端不需要按框架分支）；</li>
  *   <li><b>会话状态由 {@code AgentStateStore} 承载</b>：模型上下文、工具上下文都在
@@ -173,7 +173,8 @@ public class AgentScopeAgentOrchestrator implements AgentOrchestrator {
             agent.clearStateCache(scopeUser, sessionId);
             stateStore.delete(scopeUser, sessionId);
         } catch (RuntimeException e) {
-            // 清理失败不阻断接口：UI 历史仍会被清空，最坏情况是模型上下文多活一个 TTL。
+            // 清理失败不阻断接口：UI 历史仍会被清空，最坏情况是模型上下文残留到下一次清理
+            // （官方 RedisAgentStateStore 不设 TTL，因此必须依赖 DELETE 会话或运维清理脚本）。
             log.warn("[AgentScope] 清空会话状态失败 session={}: {}", sessionId, e.getMessage());
         }
     }
