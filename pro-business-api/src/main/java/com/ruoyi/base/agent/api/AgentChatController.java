@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -131,7 +132,15 @@ public class AgentChatController {
         emitter.onTimeout(stream::onTimeout);
         emitter.onError(stream::onError);
         emitter.onCompletion(stream::onCompletion);
-        stream.start();
+        // prepare() 已经拿走并发许可，若 start() 在这里抛异常（调度器已关闭、Flux 构造失败等），
+        // 四条正常释放路径（emit/finish/onTimeout/onError）一条都不会触发，许可会永久泄漏。
+        // 因此必须显式兜底：发一帧 error 再把许可还回去，客户端也能看到明确原因而不是断流。
+        try {
+            stream.start();
+        } catch (RuntimeException e) {
+            log.error("[Agent] 启动流失败 requestId={}", requestId, e);
+            stream.failFast(e);
+        }
         return emitter;
     }
 
@@ -155,9 +164,15 @@ public class AgentChatController {
 
         long started = System.currentTimeMillis();
         try {
+            // 用 Reactor 的 timeout 而不是 block(Duration)：
+            // block(Duration) 超时抛的是 IllegalStateException("Timeout on blocking read")，
+            // 类型上与"流内部自身抛的 IllegalStateException"无法区分，只能靠字符串匹配；
+            // timeout 操作符抛 java.util.concurrent.TimeoutException，语义明确。
+            // 另外超时后必须让上游真正终止（timeout 会 cancel 上游订阅），否则模型还在烧 token。
             List<AgentEvent> events = orchestrator.stream(invocation)
                     .collectList()
-                    .block(Duration.ofMillis(properties.getRequestTimeout().toMillis()));
+                    .timeout(Duration.ofMillis(properties.getRequestTimeout().toMillis()))
+                    .block();
             if (events == null) {
                 throw new AgentException(AgentErrorCode.AGENT_MODEL_TIMEOUT);
             }
@@ -174,6 +189,18 @@ public class AgentChatController {
             auditLogger.chat(invocation, "error", System.currentTimeMillis() - started, null, e.getCode().name());
             metrics.error(orchestrator.framework(), e.getCode().name());
             throw e;
+        } catch (RuntimeException e) {
+            // Reactor 不好直接抛受检异常：block() 会把 TimeoutException 包成 ReactiveException，
+            // 所以要顺着 cause 链判断，而不是 catch (TimeoutException)。
+            if (!(e.getCause() instanceof TimeoutException)) {
+                throw e;
+            }
+            // 同步接口的超时要回 504 AGENT_MODEL_TIMEOUT（见 spec §3.x），
+            // 让前端能区分"模型/工具慢"与"服务内部错"，而不是笼统的 500。
+            auditLogger.chat(invocation, "error", System.currentTimeMillis() - started, null,
+                    AgentErrorCode.AGENT_MODEL_TIMEOUT.name());
+            metrics.error(orchestrator.framework(), AgentErrorCode.AGENT_MODEL_TIMEOUT.name());
+            throw new AgentException(AgentErrorCode.AGENT_MODEL_TIMEOUT);
         } finally {
             concurrencyLimiter.release();
         }
@@ -386,6 +413,38 @@ public class AgentChatController {
                 dispose();
                 audit("error");
             }
+        }
+
+        /**
+         * 启动阶段就失败时的兜底：发一帧 error 事件（客户端可读）→ 归还许可 → 关闭连接。
+         *
+         * <p>与 {@link #onError} 的区别：{@code onError} 由容器在连接已异常时回调，
+         * 此时再写数据没有意义；这里是"连接还健康、但流根本没起来"，所以要把原因写出去。</p>
+         */
+        void failFast(Throwable throwable) {
+            if (!finished.compareAndSet(false, true)) {
+                return;
+            }
+            errorCode = AgentErrorCode.AGENT_INTERNAL.name();
+            try {
+                emitter.send(SseEmitter.event()
+                        .id(String.valueOf(seq.incrementAndGet()))
+                        .name(AgentEvent.ERROR)
+                        .data(JSON.toJSONString(Map.of(
+                                "code", errorCode,
+                                "message", "服务暂时不可用，请稍后重试",
+                                "retryable", true))));
+            } catch (Exception ignored) {
+                // 客户端已断开，直接走清理
+            }
+            release();
+            dispose();
+            try {
+                emitter.complete();
+            } catch (Exception ignored) {
+                // ignore
+            }
+            audit("error");
         }
 
         void onCompletion() {

@@ -77,6 +77,9 @@ public class AgentMetaController {
     @GetMapping("/tools")
     public Map<String, Object> tools() {
         AgentOrchestrator orchestrator = orchestratorProvider.getIfAvailable();
+        // 目录（静态）与注册（运行期）是两件事：目录里有的工具不一定真的注册到了框架。
+        // 这里严格按实际注册结果回填 registered，不做"取不到就都算注册"的兜底——
+        // 那种兜底会让 /tools 在框架装配失败时依然显示"全部就绪"，把故障藏起来。
         Set<String> registered = orchestrator == null ? Set.of() : orchestrator.registeredTools();
         List<Map<String, Object>> specs = AgentToolCatalog.specs().stream().map(spec -> {
             Map<String, Object> m = new LinkedHashMap<>();
@@ -84,7 +87,7 @@ public class AgentMetaController {
             m.put("description", spec.description());
             m.put("risk", spec.risk().name());
             m.put("requiredRoles", spec.requiredRoles());
-            m.put("registered", registered.isEmpty() || registered.contains(spec.name()));
+            m.put("registered", registered.contains(spec.name()));
             m.put("inputSchema", JSON.parseObject(spec.inputSchema()));
             return m;
         }).collect(Collectors.toList());

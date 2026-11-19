@@ -157,6 +157,11 @@ public class ObservableToolCallback implements ToolCallback {
      *
      * <p>Spring AI 的 {@code ToolCallingManager} 不提供单工具超时，若不包一层，一个慢查询会一直
      * 占用并发许可直到 SSE 总超时（默认 120s），期间其它请求只能排队或直接 {@code AGENT_BUSY}。</p>
+     *
+     * <p><b>许可的所有权</b>：{@link #TOOL_PERMITS} 限制的是"真正在跑的查询数"，不是"在等结果的
+     * 请求线程数"。因此 acquire 之后所有权就交给了任务本身，由任务在 {@code finally} 里 release。
+     * 若在这里的 {@code finally} 释放（曾这么写），超时返回时底层 JDBC/HTTP 还在跑，
+     * 许可却已经还回去了——超时越多、并发越高，恰恰与限流目的相反。</p>
      */
     private String invokeWithTimeout(String toolInput, ToolContext toolContext) throws Exception {
         long timeoutMs = properties.getToolTimeout() == null || properties.getToolTimeout().isNegative()
@@ -172,20 +177,32 @@ public class ObservableToolCallback implements ToolCallback {
         if (!acquired) {
             throw new IllegalStateException("工具并发已满（>" + timeoutMs + "ms 未获得执行许可），请稍后重试");
         }
+
+        CompletableFuture<String> future;
         try {
-            CompletableFuture<String> future = CompletableFuture.supplyAsync(
-                    () -> delegate.call(toolInput, toolContext), TOOL_EXECUTOR);
-            try {
-                return future.get(timeoutMs, TimeUnit.MILLISECONDS);
-            } catch (TimeoutException e) {
-                // CompletableFuture.cancel 不会中断底层 JDBC/HTTP 调用，真正的取消依赖
-                // 查询侧超时（ES socket-timeout、GaussDB statement_timeout）；
-                // 这里只负责"不再占用请求线程 + 尽快把 TOOL_ERROR 交回模型"。
-                future.cancel(false);
-                throw new IllegalStateException("工具执行超时（>" + timeoutMs + "ms），请缩小查询范围后重试");
-            }
-        } finally {
+            future = CompletableFuture.supplyAsync(() -> {
+                try {
+                    return delegate.call(toolInput, toolContext);
+                } finally {
+                    // 真正的"执行结束"点：无论成功、异常还是被取消，都在这里归还许可
+                    TOOL_PERMITS.release();
+                }
+            }, TOOL_EXECUTOR);
+        } catch (RuntimeException e) {
+            // 提交失败（如线程池已关闭）说明任务不会执行，许可必须在这里归还
             TOOL_PERMITS.release();
+            throw e;
+        }
+
+        try {
+            return future.get(timeoutMs, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            // CompletableFuture.cancel 不会中断底层 JDBC/HTTP 调用，真正的取消依赖
+            // 查询侧超时（ES socket-timeout、GaussDB statement_timeout）；
+            // 这里只负责"不再占用请求线程 + 尽快把 TOOL_ERROR 交回模型"，
+            // 许可由任务自己在上面的 finally 里归还。
+            future.cancel(false);
+            throw new IllegalStateException("工具执行超时（>" + timeoutMs + "ms），请缩小查询范围后重试");
         }
     }
 

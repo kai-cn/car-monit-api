@@ -61,6 +61,11 @@ jobs:
     name: e2e / ${{ matrix.framework }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    # PR 只跑"head 分支对应的那条腿"：两个 leg 会检出同一份 head.sha，
+    # 另一条腿编译出来的是同一份代码，却要断言 framework 是另一个值 → 必然失败，
+    # 看起来像"改动把另一分支跑挂了"，实际是矩阵设计问题。
+    # head 分支名不在矩阵里（例如 fork PR）时整体跳过，由 push 流水线兜底。
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.ref == matrix.branch
     strategy:
       fail-fast: false
       matrix:
@@ -103,12 +108,11 @@ jobs:
           java-version: '25'
           cache: maven
 
-      - name: 单测（Agent 域/工具/中间件）
-        run: >
-          mvn $MAVEN_ARGS -pl pro-business-api -am test
-          -DskipTests=false
-          -Dtest='Agent*Test,*MiddlewareTest,KnowledgeBaseTest,ToolSupportTest'
-          -Dsurefire.failIfNoSpecifiedTests=false
+      - name: 单测（整模块，不做 -Dtest 过滤）
+        # 不用 -Dtest 过滤：过滤名单一旦漏掉某个测试类（曾漏掉 SpringAi*Test），
+        # 配上 -Dsurefire.failIfNoSpecifiedTests=false 就会静默跳过、制造"测过了"的假象。
+        # 本模块单测总数在 30 上下、跑完 10s 级，没有过滤的必要。
+        run: mvn $MAVEN_ARGS -pl pro-business-api -am test -DskipTests=false
 
       - name: 构建可执行 jar
         run: mvn $MAVEN_ARGS -pl pro-business-api -am package -DskipTests

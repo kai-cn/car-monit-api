@@ -289,9 +289,14 @@ sequenceDiagram
 | 限流（用户） | `agent:rl:u:{tenant}:{user}:{minute}` | String（INCR） | 90s |
 | 限流（租户） | `agent:rl:t:{tenant}:{minute}` | String（INCR） | 90s |
 | 确认令牌 | `agent:confirm:{token}`（value = `tenant\|user\|sessionId\|action`） | String | `confirm-ttl` |
-| AgentScope 状态 | `agent:as:state:{tenant:user}:{sessionId}:{key}` | String（JSON） | `session-ttl` |
-| AgentScope 列表态 | `agent:as:list:{tenant:user}:{sessionId}:{key}` | List | `session-ttl` |
-| AgentScope 会话索引 | `agent:as:sessions:{tenant:user}` | Set | `session-ttl` |
+| AgentScope 状态 | `agent:as:{tenant:user}/{sessionId}:{key}` | String（JSON） | **无**（需运维清理） |
+| AgentScope 列表态 | `agent:as:{tenant:user}/{sessionId}:{key}:list` | List | **无** |
+| AgentScope 状态版本 | `agent:as:{tenant:user}/{sessionId}:{key}:ver` | String | **无** |
+| AgentScope 会话索引 | `agent:as:{tenant:user}/{sessionId}:_keys` | Set | **无** |
+
+> 上表 AgentScope 四行来自官方 `RedisAgentStateStore` 的 V0 布局（`keyPrefix` 传 `agent:as:`，
+> **结尾冒号是布局的一部分**）。官方实现全程不设 TTL，清理靠"用户清空会话"与
+> `scripts/agent/cleanup-agent-state.sh`，详见 `agent-spec.md` §8.1。
 
 > 关键点：AgentScope 的会话槽位是 `(userId, sessionId)`，若直接用 `userId`，两个租户用同一个
 > `sessionId` 时会命中同一槽位 → 串号。因此适配层把 `userId` 传成 `tenant:user` 复合值（见
@@ -305,7 +310,7 @@ sequenceDiagram
   `truncated` 标记替代（保持 JSON 合法，模型不会解析失败）；
 - 单次回复 ≤1024 token（`max-output-tokens`）；工具调用次数 ≤ `max-iters`（默认 6），AgentScope 另有同值轮次上限。
 
-> AgentScope 的 `AgentState` 会持久化完整对话上下文（`HistoryWindowMiddleware` 只裁回灌给模型的部分，不改持久化状态），长会话的 Redis 写入量随轮次增长；当前用 `session-ttl`（默认 7 天）+ 用户主动 `DELETE /sessions/{id}` 控制，后续可按轮次做服务端压缩（见 §12 P3）。
+> AgentScope 的 `AgentState` 会持久化完整对话上下文（`HistoryWindowMiddleware` 只裁回灌给模型的部分，不改持久化状态），长会话的 Redis 写入量随轮次增长；官方状态存储**不设 TTL**，因此靠"用户主动 `DELETE /sessions/{id}`" + 运维脚本按空闲时间清理（§8.1），后续可按轮次做服务端压缩（见 §12 P3）。`session-ttl` 只作用于 UI 历史与 Spring AI 记忆，对 AgentScope 状态无效。
 
 ### 4.5 提示词与知识库
 

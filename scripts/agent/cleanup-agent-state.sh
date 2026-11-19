@@ -16,6 +16,10 @@
 #   REDIS_HOST=10.0.0.5 REDIS_PORT=6379 REDIS_PASSWORD=xxx ./cleanup-agent-state.sh
 #
 # 建议：与 Redis maxmemory-policy（allkeys-lru）配合；生产按日跑一次即可。
+#
+# 限制：脚本用单节点 SCAN，**只适合单机/主从**。集群模式下每条 Key 分散在不同节点，
+#   需要按节点分别执行（REDIS_HOST/REDIS_PORT 指向各节点），或改用支持集群的客户端；
+#   `redis-cli -c` 也无法让 SCAN 跨节点遍历。
 # =============================================================================
 set -euo pipefail
 
@@ -66,6 +70,8 @@ while IFS= read -r key <&3; do
   idle=$(cli object idletime "$key" </dev/null 2>/dev/null || echo "")
   # key 可能在扫描与判断之间过期/被删
   if [ -z "$idle" ] || [ "$idle" = "nil" ]; then continue; fi
+  # 非数字直接跳过：`[ "$idle" -gt N ]` 遇到非数字会在 set -e 下把整个脚本打掉
+  case "$idle" in *[!0-9]*) continue ;; esac
   if [ "$idle" -gt "$IDLE_SECONDS" ]; then
     if [ "$DRY_RUN" -eq 1 ]; then
       echo "  would delete: $key (idle=${idle}s)"

@@ -89,7 +89,9 @@ public class RedisAgentSessionStore implements AgentSessionStore {
             redis.opsForList().trim(key, -MAX_MESSAGES_PER_SESSION, -1);
             Duration ttl = properties.getSessionTtl();
             redis.expire(key, ttl);
-            redis.opsForZSet().add(indexKey(principal), sessionId, System.currentTimeMillis());
+            // ZSet 成员必须与 List key 用同一个清洗后的 id，否则索引里会留下
+            // 一条指向不存在 List 的"幽灵会话"（历史列表点进去是空的）。
+            redis.opsForZSet().add(indexKey(principal), safe(sessionId), System.currentTimeMillis());
             redis.expire(indexKey(principal), ttl);
         } catch (RuntimeException e) {
             log.warn("[Agent会话] Redis 写入失败，使用本地兜底: {}", e.getMessage());
@@ -109,7 +111,7 @@ public class RedisAgentSessionStore implements AgentSessionStore {
         fallback.remove(key);
         try {
             redis.delete(key);
-            redis.opsForZSet().remove(indexKey(principal), sessionId);
+            redis.opsForZSet().remove(indexKey(principal), safe(sessionId));
         } catch (RuntimeException e) {
             log.warn("[Agent会话] Redis 删除失败: {}", e.getMessage());
         }
