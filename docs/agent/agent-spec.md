@@ -43,7 +43,7 @@
 | `ops` | 明细/指标/知识/质量查询、导出状态查询 |
 | `audit` | 上述 + **全量车牌** + 轨迹回放 |
 | `admin` | 上述 + **提交导出**（还需全局开关与确认令牌） |
-| （无角色） | 仅知识问答与指标查询（明细工具会因角色校验失败） |
+| （无角色） | **无任何工具**（授权在 `AgentToolService.authorize` 统一判定，返回 `FORBIDDEN`，由模型向用户解释） |
 
 ### 2.2 响应包装
 
@@ -182,7 +182,14 @@ data: {"finishReason":"stop","usage":{"promptTokens":1820,"completionTokens":96,
 
 ### 3.5 `DELETE /sessions/{sessionId}` — 清空会话
 
-响应：`{"sessionId":"a1b2","cleared":true}`。语义为删除 UI 历史；模型侧上下文按框架实现在下一次请求时自然过期（AgentScope 状态键随 `session-ttl` 过期，Spring AI 记忆键随 TTL 过期）。
+响应：`{"sessionId":"a1b2","cleared":true}`。语义为**同时删除 UI 历史与框架侧模型上下文**：
+
+| 分支 | 清理动作 |
+| --- | --- |
+| Spring AI | `ChatMemory.clear(conversationKey)`（删除 `{prefix}:chat:{tenant}:{user}:{sessionId}`） |
+| AgentScope | `agent.clearStateCache(user, session)` + `stateStore.delete(user, session)`（内存槽位 + Redis 状态双清） |
+
+清理失败不阻断接口（仍返回 `cleared=true`），最坏情况是模型上下文多存活一个 `session-ttl`。
 
 ### 3.6 `GET /tools` — 能力清单
 
@@ -371,7 +378,8 @@ es.addEventListener('error',  e => fail(JSON.parse(e.data)));  // 注意：与 E
 | `EXPORT_DISABLED` | 导出开关未开启 |
 | `NOT_FOUND` | 任务不存在或过期 |
 | `TRAFFIC_QUERY_*` | 底层查询错误（透传 V3 错误码） |
-| `TOOL_INTERNAL` | 工具内部错误，提示稍后重试 |
+| `TOOL_INTERNAL` | 工具业务实现内部错误（`AgentToolService` 捕获后返回），提示稍后重试 |
+| `TOOL_ERROR` | 适配层捕获的异常（含**工具执行超时**），提示缩小范围或稍后重试 |
 | `UNKNOWN_TOOL` | 未知工具名 |
 
 ### 5.1 `query_traffic_records`
@@ -579,8 +587,8 @@ es.addEventListener('error',  e => fail(JSON.parse(e.data)));  // 注意：与 E
 | `AGENT_FORBIDDEN` | 403 | 否 | 角色不足或能力未开启 | 提示无权限，不重试 |
 | `AGENT_MODEL_TIMEOUT` | 504 | **是** | 模型超时或编排流超时 | 提示缩小范围后重试 |
 | `AGENT_MODEL_ERROR` | 502 | **是** | 模型 4xx/5xx、鉴权失败、响应异常 | 提示稍后重试 |
-| `AGENT_MAX_ITERS` | 200 | 否 | 工具轮次达上限（通常以工具错误 JSON 出现） | 提示缩小范围 |
-| `AGENT_TOOL_ERROR` | 200 | 否 | 工具内部异常（以工具错误 JSON 出现） | 提示稍后重试 |
+| `AGENT_MAX_ITERS` | — | 否 | **工具错误 JSON 里的 `errorCode`**（不是 SSE `error` 事件）：工具调用次数达上限 | 提示缩小范围 |
+| `TOOL_ERROR` / `TOOL_INTERNAL` | — | 否 | **工具错误 JSON 里的 `errorCode`**：适配层异常（含超时）/ 业务实现内部异常 | 提示稍后重试 |
 | `AGENT_CIRCUIT_OPEN` | 503 | **是** | 模型侧 503/熔断 | 退避重试 |
 | `AGENT_INTERNAL` | 500 | 否 | 未预期异常、确认服务不可用 | 提示稍后重试并上报 requestId |
 

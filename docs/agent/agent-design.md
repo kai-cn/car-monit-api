@@ -305,6 +305,8 @@ sequenceDiagram
   `truncated` 标记替代（保持 JSON 合法，模型不会解析失败）；
 - 单次回复 ≤1024 token（`max-output-tokens`）；工具调用次数 ≤ `max-iters`（默认 6），AgentScope 另有同值轮次上限。
 
+> AgentScope 的 `AgentState` 会持久化完整对话上下文（`HistoryWindowMiddleware` 只裁回灌给模型的部分，不改持久化状态），长会话的 Redis 写入量随轮次增长；当前用 `session-ttl`（默认 7 天）+ 用户主动 `DELETE /sessions/{id}` 控制，后续可按轮次做服务端压缩（见 §12 P3）。
+
 ### 4.5 提示词与知识库
 
 - 提示词为 classpath 资源 `agent/prompts/system.md`，含 8 条硬性规则（禁止生成 SQL、时间窗默认、
@@ -323,7 +325,7 @@ sequenceDiagram
 
 | 威胁 | 场景 | 控制点 |
 | --- | --- | --- |
-| Spoofing | 绕过网关直连 Agent 端点 | `X-Internal-Token`（常量时间比较）；非回环必须携带 |
+| Spoofing | 绕过网关直连 Agent 端点 | `X-Internal-Token`（常量时间比较）；非回环必须携带；缺身份头一律 401（不兜底匿名） |
 | Tampering | 模型被诱导篡改 tenant/role | 身份只从请求头来，**工具上下文由服务端写入**，不读模型参数 |
 | Repudiation | 事后否认查过某车牌 | `AGENT_AUDIT` 记录 requestId/tenant/userHash/tool/summary |
 | Information disclosure | 跨租户查询、车牌外泄、提示词套取 | 租户过滤在服务层、车牌按角色脱敏、注入启发式 + 提示词硬规则 |
@@ -341,13 +343,13 @@ sequenceDiagram
 - **模型输出永远是"建议"**：工具名走白名单（`AgentToolCatalog`），参数走 `AgentToolService` 二次校验；
 - **令牌不进模型上下文**：`confirmToken` 只存在于 `RuntimeContext` 属性袋（不持久化、不进提示词）；
 - **`principal` 不可被模型影响**：工具从 `RuntimeContext.get(ToolContextKeys.PRINCIPAL)` 取，
-  缺失即返回 `AGENT_TOOL_ERROR`，绝不 use "anonymous" 兜底。
+  缺失即返回 `TOOL_ERROR`（不执行查询），绝不以"匿名主体"兜底。
 
 ### 5.3 越权防护的三道闸
 
 | 闸 | 位置 | 例子 |
 | --- | --- | --- |
-| 角色闸 | `AgentToolCatalog.requiredRoles` + `AgentToolService` | `get_vehicle_track` 仅 `audit/admin`；`submit_export` 仅 `admin` |
+| 角色闸 | `AgentToolCatalog.allows()` + `AgentToolService.authorize()`（每个工具入口第一行） | `get_vehicle_track` 仅 `audit/admin`；`submit_export` 仅 `admin`；未知工具/空主体默认拒绝 |
 | 数据闸 | 服务层（复用 V3 查询服务） | 请求按 `orgcode/sectioncode/roadcode/gantrycode/tollcode` 下推过滤，越权机构查不到数据 |
 | 令牌闸 | `AgentConfirmationService` | 导出必须携带 `confirmToken`，`getAndDelete` 保证一次性 |
 
@@ -414,13 +416,13 @@ sequenceDiagram
 | SSE 连接 | `request-timeout=120s` | `SseEmitter.onTimeout` → 下发 `error(AGENT_MODEL_TIMEOUT)` |
 | 编排流 | `request-timeout`（Reactor `timeout`） | `error` 事件 + 释放并发 |
 | 单次模型调用 | `model-timeout=60s`（框架级） | 框架重试 2 次后失败 → `AGENT_MODEL_TIMEOUT` |
-| 单次工具 | `tool-timeout=20s`（框架级） | 工具异常 → `tool_result(status=error)`，模型可换参重试 |
+| 单次工具 | `tool-timeout=20s`（两分支均实现：AgentScope 用 `toolExecutionConfig`，Spring AI 用虚拟线程 + 超时包装） | 超时 → `tool_result(status=error)`（`TOOL_ERROR`），模型可换参重试 |
 
 ### 6.3 降级矩阵
 
 | 故障 | 影响 | 降级策略 | 可见信号 |
 | --- | --- | --- | --- |
-| Redis 不可用 | 会话/限流/令牌 | 会话与状态退化为进程内缓存；限流退化为单机计数；确认令牌走本地 Map | `/health` → `status=DEGRADED`，`redis=DEGRADED`；WARN 日志 |
+| Redis 不可用 | 会话/限流/令牌 | 会话与状态退化为进程内缓存；限流退化为单机计数；确认令牌 **fail-closed**（签发与校验都抛 `AGENT_INTERNAL`，绝不降级放行） | `/health` → `status=DEGRADED`，`redis=DEGRADED`；WARN 日志 |
 | 模型 429 | 无法推理 | 返回 `AGENT_RATE_LIMITED`（`retryable=true`），前端指数退避 | `agent.errors{code}` 指标 |
 | 模型 5xx/503 | 无法推理 | `AGENT_MODEL_ERROR` / `AGENT_CIRCUIT_OPEN` | 同上 |
 | ES 不可用 | 明细查不到 | 复用 V3 的 `legacy` 回退（服务层能力，Agent 无感） | 工具返回 `ok=false` + 原因 |
@@ -552,7 +554,7 @@ Prometheus 命名自动转下划线：`agent_requests_total`、`agent_request_du
 | --- | --- | --- |
 | 单轮直接回答 | meta → delta → usage → done | 同（事件源不同：`TEXT_BLOCK_DELTA`） |
 | 工具调用 | `tool_call → tool_result → delta → usage → done` | 同（工具事件由适配层产出，顺序一致） |
-| 轮数超限 | 预算拦第 N+1 次工具，模型基于已有结果作答，`finishReason=stop` | 框架产出 `EXCEED_MAX_ITERS` + 兜底总结，`finishReason=max_iters` |
+| 轮数超限 | 预算拦第 N+1 次工具，模型基于已有结果作答，`finishReason=stop`（本分支无独立轮次上限） | 框架产出 `EXCEED_MAX_ITERS` + 兜底总结，`finishReason=max_iters` |
 | 客户端断开 | dispose 上游，停止生成 | 同（`Disposables.swap` 保证取消不丢） |
 | 单测成本 | 需假 `ChatModel`（注意 `getOptions()` 必须返回 `ToolCallingChatOptions`） | 可 mock `ReActAgent` 直接投喂事件 Flux，更轻 |
 
