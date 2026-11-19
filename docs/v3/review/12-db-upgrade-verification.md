@@ -53,7 +53,11 @@
 - 迁移：`gs_dump` 真实导出 **2,985,813 B**，在 7.0.0 GA 还原成功。
 - 一致性：79 端点 status_match=79、exact=69、semantic=69、nondet=10、fails=0。
 - 资源/性能：启动 15336→14742 ms；稳态 RSS 551.0→527.1 MB；平均延迟 25.16→23.7 ms；DB CPU 1.02%→1.89%；DB 内存 446.1→660.5 MiB。
-- 另三个 api 分支（jdk21/jdk17/java-V3）GA 验证 run：`44285673201`/`44285699892`/`44285716860`。
+- 另三个 api 分支 GA 验证均已恢复并完成（结论 success）：
+  - jdk21 run `44285673201`：79 端点 status_match=79、exact=69、semantic=69、nondet=10、**fails=0**；版本串 3.0.0 build 02c14696 → 7.0.0 build 2397a86f。
+  - jdk17 run `44285699892`：同上 79/79 **fails=0**。
+  - java-V3 run `44285716860`：同上 79/79 **fails=0**。
+  - 三分支均使用 `gs_dump`（容器内位置参数 `RuoYi`、uid70 socket）真实迁移，非夹具回退。
 
 ## 5. 踩坑点（如实记录）
 
