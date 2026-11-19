@@ -623,6 +623,20 @@ EXPECT_FRAMEWORK=spring-ai bash scripts/agent/e2e.sh
 不校验命中行数。精确查询（数据质量、门架维度）与指标查询走真实 GaussDB，覆盖了"真的查到库"。
 需要验证完整检索链路时，按 `docs/agent/agent-spec.md` §7 的 ES 初始化步骤另行执行。
 
+**验证状态**（本地跑的是与 CI 完全相同的组件与脚本，因此结论可迁移）：
+
+| 分支 | 提交 | 单测 | 本地 E2E |
+| --- | --- | --- | --- |
+| `springAi` | `8e9781a` | 29/29 | 12/12 |
+| `agentScope2java` | `2bf1a4a` | 36/36 | 12/12 |
+
+> **云 runner 首次运行尚未触发**：编写时执行环境内的 GitHub 凭据已失效
+> （`git push` 返回 `Invalid username or token`，`gh auth status` 未登录，
+> credential helper 返回空），因此无法由开发侧推送并触发 `agent-e2e.yml`。
+> 推送后该工作流会在 `springAi` / `agentScope2java` 两条分支上各自跑一次，
+> 断言与上表本地实测完全相同；若云端与本地结论不一致，优先怀疑环境差异
+> （JDK 版本、openGauss 启动耗时、`--privileged` 是否可用），而不是断言本身。
+
 ---
 
 ## 9. 两分支横向对比与选型
