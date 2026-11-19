@@ -700,6 +700,7 @@ mvn -pl pro-business-api -am test -DskipTests=false \
 | 13 | 用 classpath 方式启动时 `NoClassDefFoundError: ChatMemory` | classpath 是在另一个分支生成的（AgentScope 分支无 spring-ai） | E2E 统一用 `java -jar`（fat jar），避免分支间 classpath 串用 | 跨分支验证时不要复用构建产物 |
 | 14 | 本地跑 E2E 构建阶段报 `invalid flag: -proc:full` | 复用了机器上已设的 `JAVA_HOME`（JDK 20），而工程按 JDK 25 编译，该参数 JDK 21+ 才认识 | 脚本用独立变量 `E2E_JAVA_HOME`（默认 `/opt/jdk25`），不继承 `JAVA_HOME` | 构建脚本要显式钉住工具链，不要"看环境变量脸色" |
 | 15 | E2E 断言突然全绿/全红但代码没动 | 上一轮的 jar 仍占着 9902，请求打到旧实例 | `run-e2e-local.sh` 启动前探测端口，占用即报错退出 | 长驻进程的测试必须自己保证"测的是本次构建" |
+| 16 | 运维按 `agent:as:*` 清理 AgentScope 状态，扫到 0 个 Key | 官方 `keyPrefix` 是"前缀 + userId 直接拼接"，我们传 `agent:as` 少了结尾冒号，实际 Key 粘成 `agent:ast1:u1/...` | `keyPrefix` 改为 `agent:as:`；同时把布局更正为 `{prefix}:as:{tenant:user}/{sessionId}:{key}`（user 与 session 之间是 `/`） | 三方组件的前缀类配置先反编译看 `DEFAULT_*` 常量的写法，照着它的惯例传 |
 
 ---
 

@@ -643,14 +643,16 @@ es.addEventListener('error',  e => fail(JSON.parse(e.data)));  // 注意：与 E
 | `{prefix}:rl:t:{tenant}:{minute}` | String | 计数（INCR） | 90s |
 | `{prefix}:confirm:{token}` | String | `tenant\|user\|sessionId\|action` | `confirm-ttl` |
 | `{prefix}:chat:{tenant}:{user}:{sessionId}`（Spring AI） | List | 模型上下文消息 JSON | `session-ttl` |
-| `{prefix}:as:{tenant:user}:{sessionId}:{key}`（AgentScope，官方 V0 布局） | String | `State` JSON | **无**（需运维清理） |
-| `{prefix}:as:{tenant:user}:{sessionId}:{key}:list`（AgentScope） | List | State JSON 列表 | **无** |
-| `{prefix}:as:{tenant:user}:{sessionId}:_keys`（AgentScope） | Set | 该会话写过的 key 索引 | **无** |
+| `{prefix}:as:{tenant:user}/{sessionId}:{key}`（AgentScope，官方 V0 布局） | String | `State` JSON | **无**（需运维清理） |
+| `{prefix}:as:{tenant:user}/{sessionId}:{key}:list`（AgentScope） | List | State JSON 列表 | **无** |
+| `{prefix}:as:{tenant:user}/{sessionId}:{key}:ver`（AgentScope） | String | 状态版本号（乐观并发写用） | **无** |
+| `{prefix}:as:{tenant:user}/{sessionId}:_keys`（AgentScope） | Set | 该会话写过的 key 索引 | **无** |
 
 约束：
 
 - `tenant/user/sessionId` 进 Key 前做字符白名单清洗，超长时"保留前缀（48/64 字符）+ SHA-256 短哈希"防碰撞（**禁止直接截断**：会让不同主体/会话落到同一 Key）；
-- AgentScope 官方实现会拒绝含 `{` `}` `/` 的 userId/sessionId（防止 SCAN glob 注入与 hash tag 冲突），这也是"不要在 sessionId 里塞路径"的原因；
+- AgentScope 官方 `keyPrefix` **必须以 `:` 结尾**（官方默认值 `agentscope:session:` 同理）：布局是"前缀 + userId 直接拼接"，少了冒号会粘成 `agent:ast1:u1/...`，功能可用但按 `agent:as:*` 的运维清理/监控全部失配；
+- AgentScope 官方实现会拒绝含 `{` `}` `/` 的 userId/sessionId（`/` 是官方布局里 user 与 session 的分隔符，`{` `}` 会和集群 hash tag 冲突），这也是"不要在 sessionId 里塞路径"的原因；
 - 会话消息列表上限 200 条（LRU 截断）；
 - Redis 故障：会话/状态退化进程内缓存，限流退化单机计数，确认令牌 **fail-closed**。
 

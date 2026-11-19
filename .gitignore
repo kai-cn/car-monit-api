@@ -88,3 +88,6 @@ car-monit-api-python/coverage/
 car-monit-api-python/.coverage
 car-monit-api-python/.coverage.*
 .services-tmp/
+
+# Agent E2E 证据目录（本地复现产物，不上库）
+out/

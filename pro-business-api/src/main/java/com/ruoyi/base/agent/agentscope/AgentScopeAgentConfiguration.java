@@ -144,9 +144,13 @@ public class AgentScopeAgentConfiguration {
     /**
      * 官方 Redis 状态存储：{@code (userId, sessionId, key)} → Redis。
      *
-     * <p>{@code keyPrefix} 与工程的 {@code agent.key-prefix} 对齐（默认 {@code agent:as}）。
-     * 官方 V0 布局为 {@code {prefix}:{tenant:user}:{sessionId}:{key}}、{@code ...:{key}:list}、
-     * {@code ...:_keys}（会话索引）。</p>
+     * <p><b>keyPrefix 必须以冒号结尾</b>：官方默认值是 {@code "agentscope:session:"}，
+     * 布局是"前缀 + userId 直接拼接"，前缀里不带分隔符就会粘成一个词。
+     * 这里传 {@code agent:as:}，最终 Key 形如
+     * {@code agent:as:{tenant:user}/{sessionId}:{key}}（V0 布局，user 与 session 之间是 {@code /}），
+     * 另有 {@code ...:{key}:list}（列表状态）与 {@code ...:_keys}（该会话写过的 key 索引）。
+     * 少写这个冒号会得到 {@code agent:ast1:u1/...}——功能上能用，但按 {@code agent:as:*}
+     * 做的运维清理与监控全部匹配不到（本项目真踩过）。</p>
      *
      * <p><b>注意：官方实现不设置 TTL</b>（反编译确认全程无 EXPIRE/PEXPIRE），
      * 状态会一直保留到被显式删除。生产必须配套清理策略：
@@ -163,7 +167,8 @@ public class AgentScopeAgentConfiguration {
     public AgentStateStore agentStateStore(UnifiedJedis agentScopeJedis, AgentProperties properties) {
         return RedisAgentStateStore.builder()
                 .jedisClient(agentScopeJedis)
-                .keyPrefix(properties.getKeyPrefix() + ":as")
+                // 结尾的 ':' 是布局的一部分（官方默认值 agentscope:session: 同理），不能省
+                .keyPrefix(properties.getKeyPrefix() + ":as:")
                 .build();
     }
 
