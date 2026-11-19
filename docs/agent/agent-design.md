@@ -625,10 +625,12 @@ EXPECT_FRAMEWORK=spring-ai bash scripts/agent/e2e.sh
 
 **验证状态**（本地跑的是与 CI 完全相同的组件与脚本，因此结论可迁移）：
 
-| 分支 | 提交 | 单测 | 本地 E2E |
+| 分支 | 被测代码提交 | 单测 | 本地 E2E |
 | --- | --- | --- | --- |
 | `springAi` | `8e9781a` | 29/29 | 12/12 |
 | `agentScope2java` | `2bf1a4a` | 36/36 | 12/12 |
+
+> 上表提交之后只有文档改动，代码未变；以 `git log --oneline -5` 为准。
 
 > **云 runner 首次运行尚未触发**：编写时执行环境内的 GitHub 凭据已失效
 > （`git push` 返回 `Invalid username or token`，`gh auth status` 未登录，
