@@ -49,6 +49,8 @@
         <hutool.version>5.8.48</hutool.version>
         <forest.version>1.8.0</forest.version>
         <lombok.version>1.18.48</lombok.version>
+        <!-- AgentScope Java：agentScope2java 分支的 Agent 运行时（JDK 17+，Reactor 原生） -->
+        <agentscope.version>2.0.5</agentscope.version>
     </properties>
 
     <modules>
@@ -58,6 +60,14 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- AgentScope Java BOM：统一 agentscope-core / extensions 的版本，避免逐个写版本号 -->
+            <dependency>
+                <groupId>io.agentscope</groupId>
+                <artifactId>agentscope-bom</artifactId>
+                <version>${agentscope.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <!-- 通用工具-->
             <dependency>
                 <groupId>com.ruoyi</groupId>

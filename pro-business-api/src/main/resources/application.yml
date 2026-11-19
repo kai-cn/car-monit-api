@@ -314,6 +314,38 @@ traffic:
     internal-token: ${TRAFFIC_INTERNAL_TOKEN:}
   # 业务时区：查询解析/JDBC 时间窗/导出格式化统一口径（容器默认 UTC 时避免偏 8 小时）
   timezone: Asia/Shanghai
+  # ==================== 路网数据智能助手（AgentScope Java 2.0.5 分支） ====================
+  # 默认关闭：没有模型凭据的环境不影响现有接口与启动流程。
+  # 开启方式（生产必须用环境变量注入 Key，禁止写入仓库）：
+  #   TRAFFIC_AGENT_ENABLED=true
+  #   TRAFFIC_AGENT_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+  #   TRAFFIC_AGENT_API_KEY=***
+  # framework 仅用于健康检查/审计展示，本分支固定 agentscope。
+  agent:
+    enabled: ${TRAFFIC_AGENT_ENABLED:false}
+    framework: agentscope
+    base-url: ${TRAFFIC_AGENT_BASE_URL:}
+    api-key: ${TRAFFIC_AGENT_API_KEY:}
+    model: ${TRAFFIC_AGENT_MODEL:qwen-plus}
+    temperature: 0.2
+    max-output-tokens: 1024
+    max-iters: 6
+    model-timeout: 60s
+    request-timeout: 120s
+    tool-timeout: 20s
+    history-window: 10
+    max-message-chars: 4000
+    max-tool-result-chars: 8000
+    rate-limit-per-user-per-minute: 10
+    rate-limit-per-tenant-per-minute: 120
+    max-concurrent-requests: 32
+    allow-export: ${TRAFFIC_AGENT_ALLOW_EXPORT:false}
+    expose-thinking: false
+    audit-log-question: false
+    allow-loopback-without-token: ${TRAFFIC_AGENT_ALLOW_LOOPBACK:true}
+    key-prefix: agent
+    session-ttl: 7d
+    confirm-ttl: 5m
   query:
     # 安全默认：legacy（旧 GaussDB Mapper）。ES 初始化+回灌完成后显式切 es；
     # 即使配置为 es，启动时若 ES/读别名不可用也会自动回退 legacy 并打 WARN。
