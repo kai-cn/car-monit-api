@@ -187,9 +187,11 @@ data: {"finishReason":"stop","usage":{"promptTokens":1820,"completionTokens":96,
 | 分支 | 清理动作 |
 | --- | --- |
 | Spring AI | `ChatMemory.clear(conversationKey)`（删除 `{prefix}:chat:{tenant}:{user}:{sessionId}`） |
-| AgentScope | `agent.clearStateCache(user, session)` + `stateStore.delete(user, session)`（内存槽位 + Redis 状态双清） |
+| AgentScope | `agent.clearStateCache(tenant:user, session)` + 官方 `AgentStateStore.delete(tenant:user, session)`（内存槽位 + Redis 状态双清） |
 
-清理失败不阻断接口（仍返回 `cleared=true`），最坏情况是模型上下文多存活一个 `session-ttl`。
+清理失败不阻断接口（仍返回 `cleared=true`），最坏情况是模型上下文残留到下一次清理。
+
+> AgentScope 分支用的是官方 `RedisAgentStateStore`，它**不设置 TTL**；因此"清空会话"是唯一的常规清理手段，离线会话需配合 `scripts/agent/cleanup-agent-state.sh`（按 `OBJECT IDLETIME` 清理）。
 
 ### 3.6 `GET /tools` — 能力清单
 
@@ -620,7 +622,7 @@ es.addEventListener('error',  e => fail(JSON.parse(e.data)));  // 注意：与 E
 | `audit-log-question` | bool | `false` | — | 审计是否记录问题原文 |
 | `allow-loopback-without-token` | bool | `true` | `TRAFFIC_AGENT_ALLOW_LOOPBACK` | 仅单机联调；生产必须 `false` |
 | `key-prefix` | string | `agent` | — | Redis 前缀 |
-| `session-ttl` | duration | `7d` | — | 会话/状态 TTL |
+| `session-ttl` | duration | `7d` | — | UI 历史与 Spring AI 记忆的 TTL；AgentScope 官方状态存储不读该值（见 §8.1） |
 | `confirm-ttl` | duration | `5m` | — | 确认令牌 TTL |
 | `heartbeat-interval` | duration | `15s` | — | SSE 保活间隔 |
 | `knowledge-location` | string | `classpath*:agent/knowledge/*.md` | — | 知识库位置 |
@@ -641,14 +643,14 @@ es.addEventListener('error',  e => fail(JSON.parse(e.data)));  // 注意：与 E
 | `{prefix}:rl:t:{tenant}:{minute}` | String | 计数（INCR） | 90s |
 | `{prefix}:confirm:{token}` | String | `tenant\|user\|sessionId\|action` | `confirm-ttl` |
 | `{prefix}:chat:{tenant}:{user}:{sessionId}`（Spring AI） | List | 模型上下文消息 JSON | `session-ttl` |
-| `{prefix}:as:state:{tenant:user}:{sessionId}:{key}`（AgentScope） | String | `AgentState` JSON | `session-ttl` |
-| `{prefix}:as:list:{tenant:user}:{sessionId}:{key}`（AgentScope） | List | State JSON 列表 | `session-ttl` |
-| `{prefix}:as:keys:{tenant:user}:{sessionId}`（AgentScope） | Set | `s:key` / `l:key` 登记表 | `session-ttl` |
-| `{prefix}:as:sessions:{tenant:user}`（AgentScope） | Set | sessionId 索引 | `session-ttl` |
+| `{prefix}:as:{tenant:user}:{sessionId}:{key}`（AgentScope，官方 V0 布局） | String | `State` JSON | **无**（需运维清理） |
+| `{prefix}:as:{tenant:user}:{sessionId}:{key}:list`（AgentScope） | List | State JSON 列表 | **无** |
+| `{prefix}:as:{tenant:user}:{sessionId}:_keys`（AgentScope） | Set | 该会话写过的 key 索引 | **无** |
 
 约束：
 
 - `tenant/user/sessionId` 进 Key 前做字符白名单清洗，超长时"保留前缀（48/64 字符）+ SHA-256 短哈希"防碰撞（**禁止直接截断**：会让不同主体/会话落到同一 Key）；
+- AgentScope 官方实现会拒绝含 `{` `}` `/` 的 userId/sessionId（防止 SCAN glob 注入与 hash tag 冲突），这也是"不要在 sessionId 里塞路径"的原因；
 - 会话消息列表上限 200 条（LRU 截断）；
 - Redis 故障：会话/状态退化进程内缓存，限流退化单机计数，确认令牌 **fail-closed**。
 

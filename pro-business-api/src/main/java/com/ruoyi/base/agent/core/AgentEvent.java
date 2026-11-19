@@ -18,9 +18,9 @@ import java.util.Map;
  * 浏览器用 {@code EventSource} 或 fetch 流式读取即可实现"打字机效果"。</p>
  *
  * <p>本类就是"一小段要推给前端的东西"。为什么不让框架直接推自己的事件？因为
- * <b>Spring AI 和 AgentScope 的事件模型完全不同</b>（前者是 ChatResponse 增量，后者是 32 类
- * {@code AgentEventType}）。把两者都翻译成本类的 8 种类型，前端就只写一套解析逻辑，
- * 将来换框架不用改页面——这就是"适配器模式"在 AI 场景的用处。</p>
+ * <b>Spring AI 和 AgentScope 的事件模型完全不同</b>（前者是 ChatResponse 增量，后者是 31 种
+ * {@code AgentEventType}）。把两者都翻译成本类的 9 个常量（8 类业务事件 + 心跳），
+ * 前端就只写一套解析逻辑，将来换框架不用改页面——这就是"适配器模式"在 AI 场景的用处。</p>
  *
  * <h2>事件顺序（前端可以依赖的不变式）</h2>
  * <pre>
@@ -29,10 +29,11 @@ import java.util.Map;
  * <p>{@code seq} 是单条流的自增序号（从 1 开始），用于前端排序、去重和"断线后判断丢了哪一段"。
  * 并发下不要用时间戳排序：同一毫秒内可能到达多个事件。</p>
  *
- * <p>【Java 8+ 说明】本类刻意保持为普通 POJO + 静态工厂，而不是 {@code record}：
- * record 的组件是 final 且会自动生成 {@code equals/hashCode}，而事件对象要频繁创建、
- * 又需要 Lombok 的 {@code @Getter} 与 Jackson 序列化约定；此外工厂方法能表达
- * "每种事件的 payload 结构不同"这一语义，record 的单一构造器反而表达不了。</p>
+ * <p>【Java 8+ 说明】本类刻意保持为普通 POJO + 静态工厂，而不是 {@code record}。
+ * 理由不是"record 做不到"（record 同样可以带静态工厂和附加构造器，Jackson 也支持），
+ * 而是：① 事件对象由框架侧高频创建、字段语义固定，用 record 的 {@code equals/hashCode}
+ * 没有收益，反而在把它放进 {@code Set} 去重时容易误用；② Lombok 的 {@code @Getter}
+ * 与既有序列化配置保持一致，避免在 9 个工厂方法之外再引入一套访问器风格。</p>
  */
 @Getter
 public class AgentEvent {

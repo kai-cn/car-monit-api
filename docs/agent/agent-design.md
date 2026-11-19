@@ -102,7 +102,7 @@ pro-business-api/src/main/java/com/ruoyi/base/agent/
 │   ├── AgentConfirmationService.java   # 一次性确认令牌（getAndDelete）
 │   ├── AgentSessionStore.java          # UI 会话历史抽象
 │   ├── RedisAgentSessionStore.java     # List + ZSet 实现，Redis 故障退化为 LRU
-│   ├── KnowledgeBase.java              # Markdown 切块 + BM25-lite 中英检索
+│   ├── KnowledgeBase.java              # Markdown 切块 + 简化 TF-IDF 中英检索
 │   ├── PromptLibrary.java              # 提示词加载 + 占位符渲染
 │   ├── AgentAuditLogger.java           # AGENT_AUDIT 独立 logger
 │   ├── AgentMetrics.java               # Micrometer（可空，无 registry 则 no-op）
@@ -315,7 +315,7 @@ sequenceDiagram
   （Spring AI：`PromptLibrary.render` 直接生成 system 消息；AgentScope：`PerRequestPromptMiddleware`
   在 `onSystemPrompt` 钩子里渲染），避免单例 Agent 复用固定提示词造成租户上下文串号；
 - 知识库为 5 个 Markdown（表结构、指标口径、查询指南、数据质量、FAQ），启动时切块（按标题），
-  检索用 BM25-lite（英文分词 + 中文二元组），返回带 `title/source/score` 的片段，便于回答里给出处。
+  检索用简化 TF-IDF（英文分词 + 中文二元组，公式 `tf × idf / sqrt(len)`，非严格 BM25），返回带 `title/source/score` 的片段，便于回答里给出处。
 
 ---
 
@@ -692,7 +692,7 @@ mvn -pl pro-business-api -am test -DskipTests=false \
 | 阶段 | 事项 | 说明 |
 | --- | --- | --- |
 | P1（已交付） | 双框架实现 + 7 工具 + 统一 SSE + 安全/限流/审计 | 本文档描述的现状 |
-| P2 | 向量检索替代 BM25-lite（pgvector/ES kNN），知识库扩到制度文件 | `search_knowledge` 接口不变 |
+| P2 | 向量检索替代简化 TF-IDF（pgvector/ES kNN），知识库扩到制度文件 | `search_knowledge` 接口不变 |
 | P3 | 多轮澄清与主动追问（槽位填充）、问题改写 | 提示词 + 少量编排逻辑 |
 | P4 | 子 Agent：稽核 Agent（批量核查）、值班 Agent（告警解释） | AgentScope 的 `subagent`/`AgentTool` 更顺手 |
 | P5 | 离线评测集（问题 → 期望工具/期望数字）+ 回归门禁 | 用 `AGENT_FEEDBACK` 差评沉淀用例 |

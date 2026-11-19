@@ -48,7 +48,7 @@ AgentOrchestrator          循环：调模型 → 模型说"要查库" → 执�
 | 8 | `core/AgentPrincipal.java` | 身份模型：为什么模型不能决定"以谁的身份查" |
 | 9 | `core/AgentGuard.java`、`AgentRateLimiter.java`、`AgentConcurrencyLimiter.java` | 安全与容量 |
 | 10 | `core/PromptLibrary.java` + `resources/agent/prompts/system.md` | 提示词工程 |
-| 11 | `core/KnowledgeBase.java` | RAG 的最小实现（BM25 检索） |
+| 11 | `core/KnowledgeBase.java` | RAG 的最小实现（简化 TF-IDF 检索） |
 | 12 | `config/AgentProperties.java` | 所有可调参数 |
 
 `agentScope2java` 分支把第 4、5 步换成 `agentscope/AgentScopeAgentOrchestrator.java`、
@@ -130,7 +130,7 @@ AgentOrchestrator          循环：调模型 → 模型说"要查库" → 执�
 | **tool calling** | 把函数用 JSON Schema 描述给模型，模型输出"调用哪个、参数是什么"，由宿主执行 | `AgentToolCatalog` + `AgentToolService` |
 | **ReAct** | Reason + Act 循环：想 → 调工具 → 看结果 → 再想，直到能回答 | 两分支的 Orchestrator |
 | **系统提示词** | system 角色的规则文本，是"编程模型行为"的主要手段，但**不是安全边界** | `resources/agent/prompts/system.md` |
-| **RAG** | 先检索私有文档，再把片段塞进提示词，弥补模型不懂业务口径 | `KnowledgeBase`（BM25）+ `search_knowledge` 工具 |
+| **RAG** | 先检索私有文档，再把片段塞进提示词，弥补模型不懂业务口径 | `KnowledgeBase`（简化 TF-IDF）+ `search_knowledge` 工具 |
 | **流式（streaming）** | 模型边生成边返回，前端做打字机效果 | `Flux<AgentEvent>` → SSE `delta` |
 | **记忆 / 会话** | 模型无状态，"记得上文"靠每次重发历史 | Spring AI `ChatMemory`；AgentScope `AgentStateStore` |
 | **提示词注入** | 用户用话术让模型越权（"忽略以上规则…"） | `AgentGuard` 启发式拦截（**只是第一道，真正防线是工具授权**） |
