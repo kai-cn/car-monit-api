@@ -41,6 +41,17 @@ REPOS = ("kai-cn/car-monit-api", "kai-cn/car-monit-backend")
 
 
 def token():
+    # 先读仓库外的本地缓存（由 D:/work/runtime-logs/gh_cred.py 生成），
+    # 避免每次 git credential fill 触发 GCM 账号选择弹窗。
+    import os
+    cache = r"D:\work\runtime-logs\.gh_token_cache"
+    try:
+        with open(cache, "r", encoding="utf-8") as f:
+            t = f.read().strip()
+        if t:
+            return t
+    except Exception:
+        pass
     p = subprocess.run(["git", "credential", "fill"],
                        input="protocol=https\nhost=github.com\n\n",
                        capture_output=True, text=True, timeout=30)
