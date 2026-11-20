@@ -83,7 +83,8 @@ app/ai_agent/
 对外 HTTP 契约与 LangGraph 分支**完全一致**（见 SPEC §2），便于 A/B 对比。
 
 ### 4.1 工具实现原则（同 LangGraph 分支）
-- 调已有 Service，不重写 SQL；
+- 调已有 Service（`TrafficSearchService` / `BigScreenStatsService` / `ExportTaskService`，
+  见 `service/v3/v3_services.py`），不重写 SQL；
 - 异常结构化返回；
 - 参数 Pydantic 约束；
 - 工具白名单固定。
