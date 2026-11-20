@@ -254,6 +254,16 @@ def health_ready() -> Any:
 _ROUTE_COUNT = register_routes(app)
 log.info("Registered %s controller route(s)", _ROUTE_COUNT)
 
+# 【AI Agent · LangGraph 分支】Python 独有路由，不进 generated.py（Java 镜像路由表）。
+# AI 依赖是可选 extras：未安装 langgraph 时服务仍可正常启动（不影响原 110 业务路由）。
+try:
+    from app.ai_agent.api import router as ai_agent_router
+
+    app.include_router(ai_agent_router)
+    log.info("AI Agent (LangGraph) routes registered: /ai/agent/**")
+except ImportError as _ai_exc:  # pragma: no cover - extras 未安装时的降级
+    log.warning("AI Agent routes disabled (langgraph extras not installed): %s", _ai_exc)
+
 # P0-5：路由注册不完整 → 与 Spring 的容器 refresh 失败一致，直接抛错退出
 # （此前仅记 error 日志继续跑，报告 B5）。逃生口同上：CAR_MONIT_STARTUP_FAIL_FAST=false。
 _route_report = getattr(app.state, "route_report", None)
