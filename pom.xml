@@ -44,7 +44,6 @@
         <flink.version>1.20.3</flink.version>
         <flink-connector-kafka.version>3.3.0-1.20</flink-connector-kafka.version>
         <!-- Jedis 4.x：JedisCluster/HostAndPort 用法与 4.x 对齐，5/6 起构造 API 变化 -->
-        <jedis.version>4.4.8</jedis.version>
         <fastjson2.version>2.0.66</fastjson2.version>
         <hutool.version>5.8.48</hutool.version>
         <forest.version>1.8.0</forest.version>
@@ -141,10 +140,9 @@
             </dependency>
             <!-- Jedis：固定在 4.x，保持 JedisCluster 构造用法不变 -->
             <dependency>
-                <groupId>redis.clients</groupId>
-                <artifactId>jedis</artifactId>
-                <version>${jedis.version}</version>
-            </dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
             <dependency>
                 <groupId>com.alibaba.fastjson2</groupId>
                 <artifactId>fastjson2</artifactId>
