@@ -93,8 +93,8 @@
 
         <!-- MySQL JDBC：仅用于读取 carmonitdb.plate_color 字典（单一事实源） -->
         <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
 
