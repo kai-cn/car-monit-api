@@ -217,7 +217,8 @@ def check_routes(reporter: Reporter) -> None:
     controllers = {route["controller"] for route in ROUTES}
     reporter.check("路由数 = %d" % EXPECTED_ROUTES,
                    len(ROUTES) == EXPECTED_ROUTES, len(ROUTES))
-    reporter.check("Controller 数 = 24", len(controllers) == 24, len(controllers))
+    # 【Java V3 对齐】24 (master) → 29 (V3，新增 5 个 controller/v3/*Controller)
+    reporter.check("Controller 数 = 29", len(controllers) == 29, len(controllers))
     paths = [route["path"] for route in ROUTES]
     reporter.check("无重复 path+verb",
                    len({(r["path"], r["http"]) for r in ROUTES}) == len(paths))
