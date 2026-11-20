@@ -143,10 +143,6 @@
             </dependency>
             <!-- Jedis：固定在 4.x，保持 JedisCluster 构造用法不变 -->
             <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
-        </dependency>
-            <dependency>
                 <groupId>com.alibaba.fastjson2</groupId>
                 <artifactId>fastjson2</artifactId>
                 <version>${fastjson2.version}</version>
