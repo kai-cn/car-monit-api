@@ -564,7 +564,7 @@ Prometheus 命名自动转下划线：`agent_requests_total`、`agent_request_du
 | T5 | 同步接口 | `answer`/`usage`/`sessionId` 齐全，工具 `status=ok` |
 | T6 | 会话 | 历史 2 条；清空返回 `cleared=true`；清空后为空 |
 | T7 | 工具授权 | 无角色调用明细工具 → `FORBIDDEN`（且**未执行查询**） |
-| T8 | 限流 | 单用户连打 12 次出现 429 |
+| T8 | 限流 | 单用户连打 24 次出现 429（避开分钟边界，见下方说明） |
 | T9 | 工具清单 | `/tools` 返回 7 个且 `registered=true` |
 
 **本地复现**（与 CI 同脚本，便于改完先本地过一遍）：
@@ -625,19 +625,19 @@ EXPECT_FRAMEWORK=spring-ai bash scripts/agent/e2e.sh
 
 **验证状态**（本地跑的是与 CI 完全相同的组件与脚本，因此结论可迁移）：
 
-| 分支 | 被测代码提交 | 单测 | 本地 E2E |
-| --- | --- | --- | --- |
-| `springAi` | `8e9781a` | 29/29 | 12/12 |
-| `agentScope2java` | `2bf1a4a` | 36/36 | 12/12 |
+| 分支 | 被测代码提交 | 单测 | 本地 E2E | 云端 runner（首次） |
+| --- | --- | --- | --- | --- |
+| `springAi` | `ff3ee4c` | 29/29 | 12/12 | 全部绿（当时矩阵还是静态的，跑了 4 个 job） |
+| `agentScope2java` | `8932be1` | 36/36 | 12/12 | 3/4 绿：`agentscope` 腿的 **T8 限流**失败 |
 
-> 上表提交之后只有文档改动，代码未变；以 `git log --oneline -5` 为准。
+> 云端首次运行的失败**不是代码问题**：同一提交在另一个 run 里通过，日志时间戳
+> `02:20:59.329` 开始、`02:21:00.127` 结束 —— 12 次请求跨了自然分钟边界，
+> 被限流器切成 6+6 两个桶，各自都没超过每分钟 10 次。这与踩坑 19 同源。
+> 已按"避边界 + 24 次（跨两桶必有一桶超限）"修复，并把静态矩阵换成动态矩阵
+> （4 个 job → 2 个），修完需再推一次复跑确认。
 
-> **云 runner 首次运行尚未触发**：编写时执行环境内的 GitHub 凭据已失效
-> （`git push` 返回 `Invalid username or token`，`gh auth status` 未登录，
-> credential helper 返回空），因此无法由开发侧推送并触发 `agent-e2e.yml`。
-> 推送后该工作流会在 `springAi` / `agentScope2java` 两条分支上各自跑一次，
-> 断言与上表本地实测完全相同；若云端与本地结论不一致，优先怀疑环境差异
-> （JDK 版本、openGauss 启动耗时、`--privileged` 是否可用），而不是断言本身。
+> 若云端与本地结论不一致，优先怀疑环境差异（JDK 版本、openGauss 启动耗时、
+> `--privileged` 是否可用），而不是断言本身。
 
 ---
 
@@ -723,7 +723,8 @@ mvn -pl pro-business-api -am test -DskipTests=false \
 | 15 | E2E 断言突然全绿/全红但代码没动 | 上一轮的 jar 仍占着 9902，请求打到旧实例 | `run-e2e-local.sh` 启动前探测端口，占用即报错退出 | 长驻进程的测试必须自己保证"测的是本次构建" |
 | 16 | 运维按 `agent:as:*` 清理 AgentScope 状态，扫到 0 个 Key | 官方 `keyPrefix` 是"前缀 + userId 直接拼接"，我们传 `agent:as` 少了结尾冒号，实际 Key 粘成 `agent:ast1:u1/...` | `keyPrefix` 改为 `agent:as:`；同时把布局更正为 `{prefix}:as:{tenant:user}/{sessionId}:{key}`（user 与 session 之间是 `/`） | 三方组件的前缀类配置先反编译看 `DEFAULT_*` 常量的写法，照着它的惯例传 |
 | 17 | 工具并发许可"越用越少"，最终全部请求返回 AGENT_BUSY | 许可在请求线程 `finally` 里释放，超时返回时底层查询仍在跑；改成"任务 finally 释放"后又踩到反例：任务还在队列里就被 `cancel(false)`，supplier 根本不执行，`finally` 永不运行 | 唯一释放点放到 `CompletableFuture.whenComplete`——正常完成/任务异常/被取消三种终态都恰好触发一次（已用 JDK25 实测三条路径） | 任何"配对的资源计数"都要找一个**一定执行**的收口点，`finally` 只在"函数真的进入"时才成立 |
-| 18 | PR 里 `springAi` 腿必红，日志显示"framework 不一致" | matrix 两条腿都检出 `head.sha`，另一条腿编译同一份代码却断言另一个框架 | 判据用 `base.ref`（改动归属哪个分支）而非 `head.ref`：命中的腿测 head，另一条腿测自己的基线 | 矩阵 + 单 ref 的组合要么按目标分支分流，要么别用矩阵 |
+| 18 | PR 里 `springAi` 腿必红，日志显示"framework 不一致" | matrix 两条腿都检出 `head.sha`，另一条腿编译同一份代码却断言另一个框架 | 最终改成**动态矩阵**（`prepare` job 按事件算出唯一一条腿），静态矩阵的分流分支全部删除 | 矩阵 + 单 ref 的组合要么按目标分支分流，要么别用矩阵 |
+| 19 | 云端 `agentScope2java` 腿 T8 限流失败，同一提交在另一个 run 里却通过 | 限流按**自然分钟**分桶（`currentTimeMillis()/60000` + Redis INCR），12 次请求刚好跨边界被切成 6+6，两边都没超 10；日志时间戳 `02:20:59.3` 起、`02:21:00.1` 止 | T8 先避边界（分钟剩余 <20s 则等到下一分钟），次数提到 24（跨两桶时"两桶都 ≤10"与总数 24 矛盾，必有一桶超限） | 固定窗口的限流测试必须显式处理窗口边界，否则失败率约等于"请求耗时/60s" |
 
 ---
 

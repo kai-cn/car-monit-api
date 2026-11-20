@@ -14,8 +14,15 @@
 #
 # 触发：
 #   - push 到 springAi / agentScope2java
-#   - pull_request（改动 agent 相关路径时）
-#   - workflow_dispatch：可指定任意 ref
+#   - pull_request（改动 agent 相关路径、目标分支为上面两者之一）
+#   - workflow_dispatch：可指定 springAi / agentScope2java；留空则两条腿都跑
+#
+# 矩阵为什么是动态的：
+#   事件已经决定了这次该验证哪个分支（push→当前分支，PR→目标分支）。
+#   用静态矩阵会把两个分支都跑一遍：push springAi 时另一条腿会去检 agentScope2java
+#   再跑一次，同一份代码跑两遍、白烧一半 runner 时间（实测出过 4 个 job 实际只需 2 个）。
+#   而 job 级 if 又拿不到 matrix 上下文（GitHub 在展开矩阵之前求值），
+#   所以只能先用一个 prepare job 算出矩阵，再由 e2e job 消费。
 # =============================================================================
 name: agent-e2e
 
@@ -29,8 +36,8 @@ on:
       - '.github/workflows/agent-e2e.yml'
       - 'pom.xml'
   pull_request:
-    # 必须限定目标分支：PR 打到 master 等分支时，base.ref 不命中任何一条腿，
-    # 两条腿都会去测自己的基线，PR 代码没被验证却全绿（就是本次要消灭的假绿）。
+    # 必须限定目标分支：PR 打到 master 等分支时，base.ref 不命中任何一个框架，
+    # 若还按"两条腿各测自己的基线"跑，PR 代码没被验证却全绿（假绿）。
     branches: [springAi, agentScope2java]
     paths:
       - 'pro-business-api/src/main/java/com/ruoyi/base/agent/**'
@@ -40,7 +47,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: '要验证的分支（springAi / agentScope2java；留空按矩阵，两条腿全跑）'
+        description: '要验证的分支（springAi / agentScope2java；留空则两条腿都跑）'
         required: false
         type: string
 
@@ -60,20 +67,71 @@ env:
   GS_PASSWORD: ${{ secrets.CI_DB_TEST_PASSWORD || 'Passw0rd@123' }}
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # 只做一件事：算出"这次跑哪条腿、检出哪个 commit/分支"。
+  # 放在独立 job 里是因为 job 级 if 拿不到 matrix，而 checkout 之前又必须知道 ref。
+  # ---------------------------------------------------------------------------
+  prepare:
+    name: 选择矩阵
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.pick.outputs.matrix }}
+      ref: ${{ steps.pick.outputs.ref }}
+      note: ${{ steps.pick.outputs.note }}
+    steps:
+      - id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base.ref }}
+          REF_NAME: ${{ github.ref_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_SHA: ${{ github.sha }}
+          INPUT_REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          # 三种事件各取"本次改动的归宿"：
+          #   PR   → 目标分支（功能分支发起的 PR 也归属到目标框架）
+          #   push → 当前分支
+          #   手动 → 输入的 ref（为空则两条腿都跑）
+          case "$EVENT" in
+            pull_request) target="${BASE_REF#refs/heads/}"; use_ref="$HEAD_SHA" ;;
+            push)         target="${REF_NAME#refs/heads/}"; use_ref="$PUSH_SHA" ;;
+            *)            target="${INPUT_REF#refs/heads/}"; use_ref="" ;;
+          esac
+
+          case "$target" in
+            springAi)        fw="spring-ai" ;;
+            agentScope2java) fw="agentscope" ;;
+            "")              fw="" ;;
+            *) echo "::error::不支持的 ref：$target（只接受 springAi / agentScope2java）"; exit 1 ;;
+          esac
+
+          if [ -z "$target" ]; then
+            # 手动触发且未填 ref：两条腿都跑，checkout 各自分支（ref 留空）
+            matrix='{"include":[{"branch":"springAi","framework":"spring-ai"},{"branch":"agentScope2java","framework":"agentscope"}]}'
+            note="未指定 ref，两条腿都跑"
+          else
+            matrix=$(printf '{"include":[{"branch":"%s","framework":"%s"}]}' "$target" "$fw")
+            note="单腿：$target（$fw）"
+            [ -n "$use_ref" ] || use_ref="$target"
+          fi
+
+          {
+            echo "matrix=$matrix"
+            echo "ref=$use_ref"
+            echo "note=$note"
+          } >> "$GITHUB_OUTPUT"
+          echo "矩阵：$note"
+
   e2e:
     name: e2e / ${{ matrix.framework }}
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 35
-    # 注意：job 级 if 拿不到 matrix 上下文（GitHub 在展开矩阵之前求值），
-    # 所以"PR 只跑 head 对应的那条腿"不能写在这里，而落在下面的 checkout 分流上。
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - branch: springAi
-            framework: spring-ai
-          - branch: agentScope2java
-            framework: agentscope
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
 
     services:
       redis:
@@ -87,50 +145,21 @@ jobs:
           --health-retries 20
 
     steps:
-      - name: 校验手动触发的 ref（必须在 checkout 之前）
-        # 放在 checkout 之前：不存在的 ref 会让 checkout 先失败，
-        # 下面这条"说清楚为什么"的提示就永远看不到。
-        # 也接受 refs/heads/ 前缀的写法，避免只因写法不同就被误杀。
-        if: github.event_name == 'workflow_dispatch' && inputs.ref != ''
-        env:
-          REQUESTED: ${{ inputs.ref }}
-        run: |
-          ref="${REQUESTED#refs/heads/}"
-          case "$ref" in
-            springAi|agentScope2java) echo "ref=$ref 合法" ;;
-            *) echo "::error::workflow_dispatch 的 ref 只能是 springAi 或 agentScope2java（收到：$REQUESTED）"; exit 1 ;;
-          esac
-
-      # PR 场景下两条腿只能有一条测 head：如果两条都检出 head.sha，另一条腿编译的是
-      # 同一份代码却要断言另一个 framework，必然假红（看着像"改动弄挂了另一分支"）。
-      # 判据用 **base.ref（目标分支）** 而不是 head.ref：PR 的来源常是功能分支
-      # （feat/xxx），而"这次改动最终属于哪个框架"由目标分支决定；用 head.ref 判断
-      # 会让功能分支的 PR 两条腿都测自己的基线，导致 PR 代码根本没被验证却全绿。
-      - name: Checkout（PR head，仅命中本腿时）
-        if: github.event_name == 'pull_request' && github.base.ref == matrix.branch
+      - name: Checkout（${{ matrix.branch }}）
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          # prepare 出来的 ref 精确到 commit（push 用 sha、PR 用 head.sha）；
+          # 手动触发未填 ref 时为空，退回本腿分支名。
+          ref: ${{ needs.prepare.outputs.ref || matrix.branch }}
           fetch-depth: 1
 
-      - name: Checkout（本腿分支）
-        if: github.event_name != 'pull_request' || github.base.ref != matrix.branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref || matrix.branch }}
-          fetch-depth: 1
-
-      - name: 确认分支与工作流一致
-        env:
-          MATRIX_BRANCH: ${{ matrix.branch }}
+      - name: 确认检出的代码包含 agent 域层
+        # 兜底：ref 选错（比如指到没有 agent 代码的基线分支）时，
+        # 后面会以"编译失败"或"接口 404"收场，不如在这里一句话说清。
         run: |
           echo "ref=$(git rev-parse --abbrev-ref HEAD) sha=$(git rev-parse --short HEAD)"
-          if [ "${{ github.event_name }}" = "pull_request" ] \
-             && [ "${{ github.base.ref }}" != "$MATRIX_BRANCH" ]; then
-            echo "::notice::本腿测的是自身分支 $MATRIX_BRANCH（PR 目标为 ${{ github.base.ref }}，由对应腿测 head）"
-          fi
           test -f pro-business-api/src/main/java/com/ruoyi/base/agent/core/AgentOrchestrator.java \
-            || { echo "::error::当前 ref 不含 agent 域层，检查 ref 是否选对"; exit 1; }
+            || { echo "::error::当前 ref 不含 agent 域层，检查 prepare 选出的 ref"; exit 1; }
 
       - name: JDK 25
         uses: actions/setup-java@v4
