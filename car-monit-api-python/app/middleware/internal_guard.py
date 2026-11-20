@@ -29,6 +29,11 @@ log = logging.getLogger(__name__)
 #: Java: ``InternalEndpointGuardConfig.PROTECTED_PREFIXES``
 PROTECTED_PREFIXES = ("/api/v3/", "/api/v1/large/export/")
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "0:0:0:0:0:0:0:1"})
+#: ASGI ``TestClient`` 的合成 host（进程内直连，无真实网络跳）。
+# 【Java→Python 差异】Java 的 MockMvc/Servlet 测试同样不经过真实 socket，
+# ``isAllowedRemoteAddr`` 看到的是 127.0.0.1；Starlette TestClient 则填 "testclient"。
+# 若不纳入，CI 的 smoke_all_routes 会把本该等价的调用误判成 403（云 runner 实测发现）。
+IN_PROCESS_HOSTS = frozenset({"testclient"})
 
 
 def _configured_token() -> str:
@@ -56,7 +61,7 @@ async def internal_endpoint_guard(request: Request, call_next: Callable[[Request
             return JSONResponse(status_code=403, content={"code": 403, "msg": "forbidden"})
     else:
         host = request.client.host if request.client else ""
-        if host not in LOOPBACK_HOSTS:
+        if host not in LOOPBACK_HOSTS and host not in IN_PROCESS_HOSTS:
             log.warning("[内部守卫] 未配置 token 且非回环来源 -> 403 path=%s host=%s",
                         request.url.path, host)
             return JSONResponse(status_code=403, content={"code": 403, "msg": "forbidden"})
