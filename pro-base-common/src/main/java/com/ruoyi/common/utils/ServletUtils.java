@@ -146,7 +146,7 @@ public class ServletUtils
             response.setCharacterEncoding("utf-8");
             response.getWriter().print(string);
         }
-        catch (IOException e)
+        catch (Exception e)
         {
             e.printStackTrace();
         }

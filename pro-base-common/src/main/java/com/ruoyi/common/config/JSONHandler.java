@@ -85,7 +85,7 @@ public class JSONHandler<T extends Object> extends BaseTypeHandler<T> {
     public T getNullableResult(ResultSet resultSet, String s) throws SQLException {
         try {
             return toObject(resultSet.getString(s), clazz);
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error(">>>> convert json string to object failed, error message:{} <<<<",e.getMessage());
         }
         return null;
@@ -95,7 +95,7 @@ public class JSONHandler<T extends Object> extends BaseTypeHandler<T> {
     public T getNullableResult(ResultSet resultSet, int i) throws SQLException {
         try {
             return toObject(resultSet.getString(i), clazz);
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error(">>>> convert json string to object failed, error message:{} <<<<",e.getMessage());
         }
         return null;
@@ -105,7 +105,7 @@ public class JSONHandler<T extends Object> extends BaseTypeHandler<T> {
     public T getNullableResult(CallableStatement callableStatement, int i) throws SQLException {
         try {
             return toObject(callableStatement.getString(i), clazz);
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error(">>>> convert json string to object failed, error message:{} <<<<",e.getMessage());
         }
         return null;

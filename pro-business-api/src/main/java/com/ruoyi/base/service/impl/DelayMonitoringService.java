@@ -443,7 +443,7 @@ public class DelayMonitoringService {
             } finally {
                 try {
                     cursor.close();
-                } catch (IOException e) {
+                } catch (Exception e) {
                     log.warn("[延迟监控] 关闭 SCAN 游标异常", e);
                 }
             }

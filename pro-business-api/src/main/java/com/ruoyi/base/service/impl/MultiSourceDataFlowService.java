@@ -543,7 +543,7 @@ public class MultiSourceDataFlowService {
             } finally {
                 try {
                     cursor.close();
-                } catch (IOException e) {
+                } catch (Exception e) {
                     log.warn("[待处理队列] 关闭 SCAN 游标异常", e);
                 }
             }
