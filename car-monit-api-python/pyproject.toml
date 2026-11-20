@@ -18,6 +18,13 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-mock>=3.14", "pytest-cov>=7.0"]
+# AI Agent 可选依赖（与 requirements-ai.txt 同源）
+ai = [
+    "langchain>=1.5,<2.0",
+    "langgraph>=1.0,<2.0",
+    "langchain-openai>=1.8,<2.0",
+    "pydantic>=2.7,<3.0",
+]
 
 # The project is executed from source (the Java-mirrored trees are import
 # roots registered by bootstrap.py), so no wheel is built.
