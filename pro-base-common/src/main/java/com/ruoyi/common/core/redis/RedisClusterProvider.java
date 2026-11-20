@@ -2,14 +2,14 @@ package com.ruoyi.common.core.redis;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import redis.clients.jedis.JedisCluster;
+import com.ruoyi.common.core.redis.LettuceClusterClient;
 
 import javax.annotation.PreDestroy;
 
 /**
- * JedisCluster 单例提供者。
+ * LettuceClusterClient 单例提供者。
  *
- * <p>JedisCluster 内部持有每个节点的连接池，属于线程安全且应长期复用的重量级客户端。
+ * <p>LettuceClusterClient 内部持有每个节点的连接池，属于线程安全且应长期复用的重量级客户端。
  * 本类采用懒加载：首次使用时才创建，避免应用启动时因外部 Redis 集群不可达而启动失败；
  * 容器关闭时统一 close，避免每次调用新建实例造成连接/句柄泄漏。</p>
  */
@@ -21,7 +21,7 @@ public class RedisClusterProvider {
 
     private final RedisConfig redisConfig;
 
-    private volatile JedisCluster jedisCluster;
+    private volatile LettuceClusterClient jedisCluster;
 
     public RedisClusterProvider(RedisSourceFactory redisSourceFactory, RedisConfig redisConfig) {
         this.redisSourceFactory = redisSourceFactory;
@@ -29,10 +29,10 @@ public class RedisClusterProvider {
     }
 
     /**
-     * 获取共享的 JedisCluster 实例（线程安全，双重检查懒加载）。
+     * 获取共享的 LettuceClusterClient 实例（线程安全，双重检查懒加载）。
      */
-    public JedisCluster getCluster() {
-        JedisCluster local = jedisCluster;
+    public LettuceClusterClient getCluster() {
+        LettuceClusterClient local = jedisCluster;
         if (local == null) {
             synchronized (this) {
                 local = jedisCluster;
@@ -47,13 +47,13 @@ public class RedisClusterProvider {
 
     @PreDestroy
     public void close() {
-        JedisCluster local = jedisCluster;
+        LettuceClusterClient local = jedisCluster;
         if (local != null) {
             try {
                 local.close();
-                log.info("JedisCluster 已关闭");
+                log.info("LettuceClusterClient 已关闭");
             } catch (Exception e) {
-                log.warn("关闭 JedisCluster 异常", e);
+                log.warn("关闭 LettuceClusterClient 异常", e);
             }
             jedisCluster = null;
         }
