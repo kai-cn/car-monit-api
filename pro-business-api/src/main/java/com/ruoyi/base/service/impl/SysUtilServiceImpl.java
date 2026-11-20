@@ -20,7 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import redis.clients.jedis.JedisCluster;
+import com.ruoyi.common.core.redis.LettuceClusterClient;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
@@ -194,8 +194,8 @@ public class SysUtilServiceImpl implements ISysUtilService {
 
 
 
-        // ----------测试JedisCluster
-       /* JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
+        // ----------测试LettuceClusterClient
+       /* LettuceClusterClient jedisCluster  = redisSourceFactory.createSource(redisConfig);
         List<String> carList = new ArrayList<String>();
         carList.add("苏CMA262");
         carList.add("苏F5HK60");
@@ -292,7 +292,7 @@ public class SysUtilServiceImpl implements ISysUtilService {
         if (null != carlist && carlist.size() > 0) {
 
             log.info("获取的配置信息："+redisConfig.getClusterNodes()+"--本地配置："+isLocalhost +"--同步车辆数量："+carlist.size());
-            JedisCluster jedisCluster  = redisSourceFactory.createSource(redisConfig);
+            LettuceClusterClient jedisCluster  = redisSourceFactory.createSource(redisConfig);
 
             // 去掉重合的
             SimpleDateFormat format2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
