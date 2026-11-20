@@ -50,11 +50,20 @@
   python -m pytest tests/test_v3_alignment.py tests/test_phase2c.py -q
   ```
 
-## 4. 文档索引
+## 4. 云 runner 实测（2026-11-20 增补）
+
+复用现有 Python workflow 完成云实测，`python / python 3.12 (gates)`、`integration`、
+`image build` 全部 success（run `44712677650`）。云上暴露并已修复 3 个本地被掩盖的真实回归：
+t09c `submitExport` 签名（`32c52c94`）、smoke Controller 数断言（`53eae39f`）、
+内部守卫 TestClient host（`b3537c0b`）。跨语言对拍 `crosslang-parity-cloud.yml`
+（run `44713232995`）整条 success，Python vs Java8 `fails=0`。详见 `V3-CLOUD-VERIFICATION.md`。
+
+## 5. 文档索引
 
 * `V3-ALIGNMENT-PLAN.md` —— 端点差距矩阵与实施顺序（基线）
 * `V3-ALIGNMENT-INDEX.md` —— 文件级索引
 * `V3-ALIGNMENT-HANDOVER.md` —— 本文件（交接）
+* `V3-CLOUD-VERIFICATION.md` —— 云 runner 实测与对拍验收记录
 * `Java-to-Python-对照手册.md` —— 迁移期 master 基线对照手册（仍有效，V3 增量看本目录）
 * `迁移审阅报告.md` —— master 基线审阅记录
 
