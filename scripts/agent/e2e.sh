@@ -286,8 +286,21 @@ fi
 # T8 限流：单用户高频 → 429
 # ---------------------------------------------------------------------------
 say "[T8] 单用户高频触发限流"
+# 限流是"自然分钟固定窗口"（Redis INCR + 分桶），不是滑动窗口。
+# 若在分钟末尾发起，请求会被切成两个桶、各不超阈值 → 断言假绿。
+# 云端就撞过一次：02:20:59.3 起跑、02:21:00.1 结束，12 次被分成 6+6。
+# 两处对策：
+#   1) 分钟剩余不足 20s 时先等过边界，让全部请求落进同一个桶；
+#   2) 次数提到 24（阈值 10）：哪怕真的跨了两个桶，24 次分给两桶，
+#      只要两桶都不超 10 则总数 ≤20，与 24 矛盾 —— 必有桶超限，断言不会因分桶而假绿。
+sec=$((10#$(date +%S)))
+if [ "$sec" -ge 40 ]; then
+  wait_s=$((62 - sec))
+  echo "  距分钟边界 ${sec}s，等待 ${wait_s}s 后开始压测"
+  sleep "$wait_s"
+fi
 limited=0
-for _ in $(seq 1 12); do
+for _ in $(seq 1 24); do
   code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$APP_BASE_URL/api/v1/agent/chat/sync" \
     -H 'Content-Type: application/json' -H "X-Internal-Token: $INTERNAL_TOKEN" \
     -H 'X-Tenant-Id: t1' -H 'X-User-Id: flooder' -H 'X-User-Roles: ops' \
@@ -297,7 +310,7 @@ done
 if [ "$limited" -gt 0 ]; then
   ok "触发限流 $limited 次（429）"
 else
-  bad "未触发限流" "12 次连续请求均未被限流（检查 user-qps 配置）"
+  bad "未触发限流" "24 次连续请求均未被限流（检查 rate-limit-per-user-per-minute 配置与客户端 IP 是否被缓存）"
 fi
 
 # ---------------------------------------------------------------------------

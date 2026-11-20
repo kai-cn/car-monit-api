@@ -66,12 +66,23 @@ say "框架=$FRAMEWORK 分支=$(git branch --show-current)"
 # 1. 依赖容器（已存在则复用，不重建，省掉 openGauss 的 30s 启动）
 # ---------------------------------------------------------------------------
 say "确认 Redis / openGauss 容器"
-docker ps --format '{{.Names}}' | grep -qx "$REDIS_NAME" || \
-  docker run -d --name "$REDIS_NAME" -p 6379:6379 redis:7-alpine >/dev/null
-docker ps --format '{{.Names}}' | grep -qx "$OG_NAME" || \
+# 只判断"是否在运行"是不够的：机器重启或沙箱休眠后，容器会停在 Exited，
+# 此时 `docker ps` 里看不到它，脚本会去 docker run 同名容器 → 名字冲突直接失败。
+# 所以先看"是否存在"，存在就 start（保留数据，省掉 openGauss 的 30s 初始化）。
+ensure_container() {
+  local name="$1"; shift
+  if docker ps -a --format '{{.Names}}' | grep -qx "$name"; then
+    docker start "$name" >/dev/null
+  else
+    "$@" >/dev/null
+  fi
+}
+ensure_container "$REDIS_NAME" \
+  docker run -d --name "$REDIS_NAME" -p 6379:6379 redis:7-alpine
+ensure_container "$OG_NAME" \
   docker run -d --name "$OG_NAME" --privileged --shm-size=512m \
     -e "GS_PASSWORD=$GS_PASSWORD" -e LD_LIBRARY_PATH=/usr/local/opengauss/lib \
-    -p 5432:5432 enmotech/opengauss:3.0.0 >/dev/null
+    -p 5432:5432 enmotech/opengauss:3.0.0
 
 OG="docker exec -u 70 -e LD_LIBRARY_PATH=/usr/local/opengauss/lib $OG_NAME /usr/local/opengauss/bin/gsql"
 for i in $(seq 1 60); do
