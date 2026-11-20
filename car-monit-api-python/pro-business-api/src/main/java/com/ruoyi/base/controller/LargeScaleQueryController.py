@@ -74,13 +74,20 @@ class LargeScaleQueryController(object):
     def __init__(self,
                  unifiedQueryService: Optional[UnifiedQueryService] = None,
                  largeScaleQueryService: Optional[LargeScaleQueryService] = None,
-                 syncService: Optional[LargeScaleDataSyncService] = None) -> None:
+                 syncService: Optional[LargeScaleDataSyncService] = None,
+                 exportTaskService: Optional[Any] = None) -> None:
         # Java: @Autowired private UnifiedQueryService unifiedQueryService;
         self.unifiedQueryService = unifiedQueryService or UnifiedQueryService()
         # Java: @Autowired private LargeScaleQueryService largeScaleQueryService;
         self.largeScaleQueryService = largeScaleQueryService or LargeScaleQueryService()
         # Java: @Autowired private LargeScaleDataSyncService syncService;
         self.syncService = syncService or LargeScaleDataSyncService()
+        # 【Java V3 对齐】Java V3 注入 ExportTaskService；Python 从 V3 单例表取。
+        if exportTaskService is None:
+            from com.ruoyi.base.service.v3.v3_services import SERVICES
+
+            exportTaskService = SERVICES["exportTaskService"]
+        self.exportTaskService = exportTaskService
 
     # ================================================================
     # 模块1：三表全字段模糊查询 / Module 1: fuzzy query for 3 tables
@@ -185,6 +192,36 @@ class LargeScaleQueryController(object):
                     fields[key[len("fuzzyFields."):]] = value
         return fields
 
+    def extractFuzzyStringFields(self, fuzzyFields: Optional[Dict[str, str]]) -> Dict[str, str]:
+        """【Java V3 对齐】GET 查询的 ``Map<String,String>`` 版本（Java ``extractFuzzyStringFields``）。
+
+        Python 差异：Java 因为方法重载必须区分 ``Map<String,String>`` 与
+        ``Map<String,Object>`` 两个签名；Python 没有类型擦除/重载，两个方法体一致，
+        但保留独立方法名以满足方法级 parity 对照。
+        """
+        return self.extractFuzzyFields(fuzzyFields)
+
+    @staticmethod
+    def asString(value: Any) -> str:
+        """Java: ``asString(Object)`` —— null → 空串，其它走 ``String.valueOf``。"""
+        return "" if value is None else str(value)
+
+    def addCode(self, request: Any, field: str, value: str) -> None:
+        """Java: ``addCode(ExportRequest, String, String)`` —— 逗号多值去重追加。"""
+        codes = request.dimensionCodes.setdefault(field, [])
+        for item in str(value).split(","):
+            code = item.strip()
+            if code and code not in codes:
+                codes.append(code)
+
+    def addResolvedCodes(self, request: Any, field: str, codes: Optional[List[str]],
+                         nameField: str, value: str) -> None:
+        """Java: ``addResolvedCodes`` —— 名称未匹配到编码时抛 IllegalArgumentException。"""
+        if not codes:
+            raise ValueError("维度名称未匹配到编码: " + nameField + "=" + value)
+        for code in codes:
+            self.addCode(request, field, code)
+
     # ================================================================
     # 模块2：统计接口（ES aggregation，三表，type 参数）
     # ================================================================
@@ -230,11 +267,30 @@ class LargeScaleQueryController(object):
                      type: str = "snapshot",
                      startTime: Optional[str] = None,
                      endTime: Optional[str] = None,
-                     fuzzyFields: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
-        """提交导出任务（POST /api/v1/large/export/submit，type: snapshot/fee/trail）。"""
+                     mode: Optional[str] = None,
+                     body: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """提交导出任务（POST /api/v1/large/export/submit）。
+
+        【Java V3 对齐】Java V3 新增 ``mode=display|full`` 与 ``@RequestBody Map body``。
+        Python 差异：Java 的 ``@RequestParam(required=false) String mode`` 在参数表里排在
+        ``@RequestBody`` 之前；Python 同样保持这个顺序（registry 按位置绑定）。
+        不带 mode 时仍走 legacy ``largeScaleQueryService``，与 Java 的向后兼容分支一致。
+        """
         result: Dict[str, Any] = {}
         try:
-            fields: Dict[str, str] = self.extractFuzzyFields(fuzzyFields)
+            if self.isV3Mode(mode):
+                request = self.buildV3ExportRequest(type, startTime, endTime, body)
+                task = (self.exportTaskService.submit_full(request)
+                        if (mode or "").strip().lower() == "full"
+                        else self.exportTaskService.submit_display(request))
+                result["code"] = 200
+                result["message"] = "导出任务已提交"
+                result["type"] = type
+                result["mode"] = mode
+                result["taskId"] = task.taskId
+                return result
+
+            fields: Dict[str, str] = self.extractFuzzyFields(body)
             taskId: str = self.largeScaleQueryService.submitExportTask(
                 type, startTime, endTime, fields)
             result["code"] = 200
@@ -242,15 +298,42 @@ class LargeScaleQueryController(object):
             result["type"] = type
             result["taskId"] = taskId
         except Exception as e:
-            log.error("[导出-提交] 异常 type=%s", type, exc_info=True)
-            result["code"] = 500
+            log.error("[导出-提交] 异常 type=%s mode=%s", type, mode, exc_info=True)
+            # Java V3 此处是 400（master 是 500），照抄 V3。
+            result["code"] = 400
             result["message"] = str(e)
         return result
 
     def getExportStatus(self, taskId: str) -> Dict[str, Any]:
-        """查询导出任务状态（GET /api/v1/large/export/status/{taskId}）。"""
+        """查询导出任务状态：优先 V3 任务，重启后按文件恢复，再回落 legacy。"""
         result: Dict[str, Any] = {}
         try:
+            task = self.exportTaskService.get(taskId)
+            if task is not None:
+                result["code"] = 200
+                result["status"] = task.status
+                result["totalExported"] = task.rows
+                result["filePartCount"] = self.filePartCount(task)
+                result["submitTime"] = task.submitTime
+                result["endTime"] = task.finishTime
+                result["mode"] = task.mode
+                result["type"] = task.table
+                result["totalRows"] = task.total
+                result["error"] = task.error
+                return result
+
+            # Java V3: api 重启后任务内存丢失，只要文件存在仍可查询/下载。
+            if hasattr(self.exportTaskService, "resolveFinishedFile"):
+                finished = self.exportTaskService.resolveFinishedFile(taskId)
+                if finished is not None:
+                    result["code"] = 200
+                    result["status"] = "done"
+                    result["totalExported"] = -1
+                    result["filePartCount"] = 1
+                    result["submitTime"] = None
+                    result["endTime"] = int(getattr(finished, "lastModified", lambda: 0)())
+                    return result
+
             # Java: LargeScaleQueryService.ExportTaskStatus status = largeScaleQueryService.getExportStatus(taskId);
             status = self.largeScaleQueryService.getExportStatus(taskId)
             if status is None:
@@ -269,6 +352,65 @@ class LargeScaleQueryController(object):
             result["code"] = 500
             result["message"] = str(e)
         return result
+
+    def downloadExport(self, taskId: str) -> Dict[str, Any]:
+        """GET /api/v1/large/export/download/{taskId} —— V3 新增端点。
+
+        Java 返回 ``ResponseEntity<Resource>``（二进制流 + Content-Disposition）。Python 侧
+        registry 统一返回 JSON 可序列化对象，因此这里返回**契约描述 dict**，真实文件流由
+        ``app/routes/registry.py`` 的 ``JacksonResponse`` 在识别 ``_download`` 标记后写出。
+        未完成 409、不存在 404，文件名固定 ``<taskId>.csv.gz``（与 Java 一致）。
+        """
+        task = self.exportTaskService.get(taskId)
+        if task is not None:
+            if (task.status or "").lower() != "done":
+                return {"code": 409, "_download": True}
+            file_path = task.filePath
+        else:
+            file_path = None
+            if hasattr(self.exportTaskService, "resolveFinishedFile"):
+                finished = self.exportTaskService.resolveFinishedFile(taskId)
+                file_path = getattr(finished, "path", None) if finished is not None else None
+        if not file_path:
+            log.warning("[导出-下载] 文件不存在 taskId=%s", taskId)
+            return {"code": 404, "_download": True}
+        return {
+            "code": 200,
+            "_download": True,
+            "file": str(file_path),
+            "filename": taskId + ".csv.gz",
+            "contentType": "application/gzip",
+        }
+
+    @staticmethod
+    def isV3Mode(mode: Optional[str]) -> bool:
+        """Java: ``isV3Mode(String)`` —— trim + 忽略大小写。"""
+        return mode is not None and (mode.strip().lower() in ("display", "full"))
+
+    @staticmethod
+    def filePartCount(task: Any) -> int:
+        """Java: ``filePartCount(ExportTask)`` —— 只有 done 且文件存在才计 1。"""
+        import os
+
+        if (task.status or "").lower() != "done" or not task.filePath:
+            return 0
+        return 1 if os.path.isfile(task.filePath) else 0
+
+    def buildV3ExportRequest(self, type: str, startTime: Optional[str], endTime: Optional[str],
+                             body: Optional[Dict[str, Any]]) -> Any:
+        """Java: ``buildV3ExportRequest`` — body 的 fuzzyFields → plate / dimensionCodes。"""
+        from com.ruoyi.base.service.v3.v3_services import ExportRequest
+
+        data = body or {}
+        fuzzy = data.get("fuzzyFields") or {}
+        plate = (fuzzy.get("platenumber") or fuzzy.get("vehicleplate")
+                 or fuzzy.get("carNo") or data.get("plate"))
+        dimensions = {k: v for k, v in fuzzy.items() if k.endswith("code")}
+        return ExportRequest(
+            table=type, startTime=startTime, endTime=endTime,
+            dimensions=dimensions, plate=plate,
+            fields=list(data.get("fields") or []),
+        )
 
     # ================================================================
     # 模块4：数据同步运维接口（三表）

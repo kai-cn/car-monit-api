@@ -12,7 +12,7 @@
 
 自检内容（都是"迁移是否等价"的硬指标，不是业务功能测试）：
     1. ``/health`` 返回 200 且结构完整
-    2. 路由数量 = 85（24 个 Controller）
+    2. 路由数量 = 110（29 个 Controller；Java V3 新增 5 个 Controller / 25 个 handler）
     3. ``TableDataInfo`` 契约：``{total, rows, code, msg}``
     4. ``AjaxResult`` 契约：``{code, msg, data?}``
     5. ``UnifiedQueryController#list`` 的**裸 Map** 契约：
@@ -75,7 +75,8 @@ _seed_es()
 START = "2025-06-01 00:00:00"
 END = "2025-06-02 00:00:00"
 
-EXPECTED_ROUTES = 85
+# 【Java V3 对齐】master 24 Controller / 85 handler → V3 29 Controller / 110 handler
+EXPECTED_ROUTES = 110
 
 
 class Reporter:
