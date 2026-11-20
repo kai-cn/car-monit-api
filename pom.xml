@@ -17,6 +17,9 @@
     <packaging>pom</packaging>
 
     <properties>
+    <!-- Spring Boot BOM is the single source of truth for managed dependency versions.
+         Explicit versions are kept only for dependencies not managed by the BOM. -->
+
         <skipTests>true</skipTests>
         <api.version>1.0</api.version>
         <java.version>1.8</java.version>

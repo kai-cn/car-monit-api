@@ -46,7 +46,9 @@
         <!-- Redis -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
+                    <!-- Redis client: spring-boot-starter-data-redis uses Lettuce by default;
+             Jedis and its direct JedisCluster usage have been removed. -->
+<artifactId>spring-boot-starter-data-redis</artifactId>
             <exclusions>
                 <exclusion>
                     <artifactId>slf4j-api</artifactId>
