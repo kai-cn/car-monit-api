@@ -153,8 +153,8 @@
         </dependency>
 
         <dependency>
-            <groupId>redis.clients</groupId>
-            <artifactId>jedis</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
         <!--对象赋值（Orika 依赖 javassist 生成 mapper，JDK 17 下需显式引入较新 javassist）-->
