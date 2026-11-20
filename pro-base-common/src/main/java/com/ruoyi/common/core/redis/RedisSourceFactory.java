@@ -1,12 +1,9 @@
 package com.ruoyi.common.core.redis;
 
-import java.io.Serializable;
+import io.lettuce.core.RedisURI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
-import redis.clients.jedis.HostAndPort;
-import redis.clients.jedis.JedisCluster;
 
 import java.io.Serializable;
 import java.util.HashSet;
@@ -14,26 +11,21 @@ import java.util.Set;
 
 @Service
 public class RedisSourceFactory implements Serializable {
-
-
     private static final long serialVersionUID = 1L;
-
     private static final Logger logger = LoggerFactory.getLogger(RedisSourceFactory.class);
 
-    public  JedisCluster createSource(RedisConfig redisConfig) {
+    public LettuceClusterClient createSource(RedisConfig redisConfig) {
         if (redisConfig == null || redisConfig.getClusterNodes() == null || redisConfig.getClusterNodes().isEmpty()) {
             logger.error("Redis cluster node address 'cluster.nodes' is not configured.");
             throw new IllegalStateException("Redis cluster node address 'cluster.nodes' is not configured.");
         }
 
-        Set<HostAndPort> jedisClusterNodes = new HashSet<HostAndPort>();
-        String nodes = redisConfig.getClusterNodes();
-
-        for (String node : nodes.split(",")) {
+        Set<RedisURI> nodes = new HashSet<>();
+        for (String node : redisConfig.getClusterNodes().split(",")) {
             String[] hp = node.trim().split(":");
             if (hp.length == 2) {
                 try {
-                    jedisClusterNodes.add(new HostAndPort(hp[0], Integer.parseInt(hp[1])));
+                    nodes.add(RedisURI.create(hp[0], Integer.parseInt(hp[1])));
                     logger.info("Added Redis node: " + node);
                 } catch (NumberFormatException e) {
                     logger.warn("Invalid port number for Redis node: " + node + ". This node will be skipped.", e);
@@ -42,14 +34,17 @@ public class RedisSourceFactory implements Serializable {
                 logger.warn("Invalid node format (expected host:port): " + node + ". This node will be skipped.");
             }
         }
+        if (nodes.isEmpty()) {
+            throw new IllegalStateException("No valid Redis cluster nodes configured.");
+        }
 
         try {
-            JedisCluster jedisCluster = new JedisCluster(jedisClusterNodes);
-            logger.info("JedisCluster created successfully with nodes: " + jedisClusterNodes);
-            return jedisCluster;
+            LettuceClusterClient client = new LettuceClusterClient(nodes);
+            logger.info("Lettuce cluster client created successfully with nodes: " + nodes);
+            return client;
         } catch (Exception e) {
-            logger.error("Failed to create JedisCluster", e);
+            logger.error("Failed to create Lettuce cluster client", e);
             throw e;
         }
-    };
+    }
 }
