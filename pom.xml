@@ -93,10 +93,6 @@
             </dependency>
 
             <!-- Spring Kafka -->
-            <dependency>
-                <groupId>org.springframework.kafka</groupId>
-                <artifactId>spring-kafka</artifactId>
-            </dependency>
             <!-- RocketMQ Spring Boot Starter -->
             <dependency>
                 <groupId>org.apache.rocketmq</groupId>
@@ -104,10 +100,6 @@
                 <version>${rocketmq.version}</version>
             </dependency>
             <!-- RabbitMQ Spring Boot Starter -->
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-starter-amqp</artifactId>
-            </dependency>
             <!-- Elasticsearch High Level REST Client -->
             <dependency>
                 <groupId>org.elasticsearch.client</groupId>
