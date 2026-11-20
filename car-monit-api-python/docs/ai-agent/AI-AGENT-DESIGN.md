@@ -38,8 +38,9 @@ Agent 自动选择工具（查询/统计/导出/ES 状态），返回结构化�
 ## 3. LangGraph 专属设计
 
 ### 3.1 为什么不用 `create_react_agent`
-LangGraph v1 已弃用 `create_react_agent`（官方推荐 LangChain v1 的 `create_agent`）。
-但本分支的目标就是**用 LangGraph 原生显式编排**，所以采用：
+LangGraph v1 仍提供 `create_react_agent`（`langgraph.prebuilt`），官方推荐新项目用
+LangChain v1 的 `create_agent`。本分支**刻意采用 StateGraph 原生显式编排**以展示可控工作流，
+并非因为该 API 已弃用：
 
 ```
 Start → agent(LLM decides) ──┬─ has tool_calls → tools(ToolNode) → agent
@@ -89,8 +90,8 @@ car-monit-api-python/
 AI 路由**不进** `generated.py`（那是 Java 镜像路由表；AI 是 Python 独有功能）。
 
 ### 4.3 工具实现原则
-- 工具函数调**已有 Service**（`UnifiedQueryService` / `LargeScaleQueryService` / `ExportV3Service` 等），
-  不重复实现 SQL；
+- 工具函数调**已有 Service**（`TrafficSearchService` / `BigScreenStatsService` / `ExportTaskService` 等，
+  见 `service/v3/v3_services.py`），不重复实现 SQL；
 - 每个工具有 `try/except`，异常转结构化 `{"ok": false, "error": ...}`，不让 Agent 崩；
 - 工具参数用 Pydantic 约束（时间格式、表名枚举），防止 LLM 传入非法值。
 

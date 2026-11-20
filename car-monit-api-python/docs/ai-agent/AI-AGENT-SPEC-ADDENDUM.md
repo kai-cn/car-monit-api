@@ -70,10 +70,10 @@ API 用 `get_graph()`（单例），`thread_id = session_id or trace_id`。
 
 | 工具 | 真实调用 | 位置 |
 |---|---|---|
-| `query_snapshot` | `TrafficSearchService.search(TrafficSearchRequest)` | `.../service/v3/v3_services.py:327` |
-| `group_stats` | `TrafficSearchService.aggregate(...)`（若不存在则用 `BigScreenStatsService`） | 同文件 `:517` |
+| `query_snapshot` | `TrafficSearchService.search(TrafficSearchRequest)` | `.../service/v3/v3_services.py:327,337` |
+| `group_stats` | `BigScreenStatsService.warning_top(start_time, end_time, top_n)`（真实符号；返回 `List[Dict]`） | 同文件 `:517,529` |
 | `submit_export` | `ExportTaskService.submit_display(ExportRequest)` / `submit_full` | 同文件 `:184,216,219` |
-| `export_status` | `ExportTaskService.status(task_id)` | 同文件 |
+| `export_status` | `ExportTaskService.get(task_id) -> Optional[ExportTask]`（**不是** `status`） | 同文件 `:235` |
 | `es_status` | `TrafficEsIndexService` 的状态查询 | 同文件 `:386` |
 
 **降级**：Service 不可用（import 失败/未初始化）时工具返回 `{"ok": false, "error": "service_unavailable"}`,
@@ -103,7 +103,10 @@ DESIGN §3.1 改为："LangGraph v1 仍提供 `create_react_agent`（`langgraph.
 - `MAX_TOOL_ROUNDS` 唯一来源 = `settings.max_rounds`（环境变量），常量只作默认值；
 - `tools/ai_agent_smoke.py` 列入文件清单；
 - LangChain `AgentAnswer.confidence/sources` 映射进 `AgentQueryResponse`
-  （`answer` 用 AgentAnswer.answer，`tool_calls[].name` 用 sources 交叉校验）。
+  （`answer` 用 AgentAnswer.answer，`tool_calls[].name` 用 sources 交叉校验）；
+  **跨分支最终裁定**：`AgentQueryResponse` 不新增 confidence 字段，
+  `confidence` 仅记入 trace 日志，两分支响应字段完全一致（以 LangChain 专属
+  ADDENDUM L8 为准）。
 
 ## 审阅复结论
 以上 R1–R8 关闭 8 项 BLOCKED。实现必须同时遵守原 SPEC 与本文；冲突以本文为准。
