@@ -190,8 +190,16 @@ jobs:
           sudo mkdir -p /home/ruoyi/logs /home/ruoyi/uploadPath
           sudo chown -R "$(id -u):$(id -g)" /home/ruoyi
           for i in $(seq 1 90); do docker exec my mysql -h127.0.0.1 -P3306 --protocol=TCP -uroot -proot -e 'select 1' >/dev/null 2>&1 && break; sleep 2; done
-          docker exec -i my mysql -h127.0.0.1 -P3306 --protocol=TCP -uroot -proot -D carmonitdb < harness/scripts/v3/ops/parity/sql/schema_carmonitdb.sql
-          docker exec -i my mysql -h127.0.0.1 -P3306 --protocol=TCP -uroot -proot -D carmonitdb < harness/scripts/v3/ops/parity/sql/seed_carmonitdb.sql
+          docker run -d --name pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=RuoYi -p 5432:5432 postgres:16-alpine
+          for i in $(seq 1 60); do docker exec pg pg_isready -U postgres -d RuoYi >/dev/null 2>&1 && break; sleep 2; done
+          export PGPASSWORD=postgres
+          psql -h 127.0.0.1 -U postgres -d RuoYi -v ON_ERROR_STOP=1 -f harness/scripts/v3/ops/parity/sql/schema_jl_data01.sql >/dev/null
+          gunzip -c harness/scripts/v3/ops/parity/sql/seed_jl_data01.sql.gz > /tmp/seed.sql
+          psql -h 127.0.0.1 -U postgres -d RuoYi -v ON_ERROR_STOP=1 -f /tmp/seed.sql >/dev/null
+          for i in $(seq 1 10); do
+            docker exec -i my mysql -h127.0.0.1 -P3306 --protocol=TCP -uroot -proot < harness/scripts/v3/ops/parity/sql/mysql_dict.sql && break
+            echo "mysql dict load retry $i"; sleep 3
+          done
       - name: Download baseline reports
         if: steps.gate.outputs.run == yes
         uses: actions/download-artifact@v4
