@@ -2,7 +2,7 @@
 
 """
 @description 历史脚本 parity_compare.py：执行运维或验证流程中的辅助操作；保留原有执行逻辑，仅补充交接所需背景、用法和依赖，避免脚本意图随会话丢失。
-@author AI Assistant
+@author Tencent Hunyuan Hy
 @date 2026-11-22
 @usage python parity_compare.py [args]；具体参数以脚本 argparse 或源码说明为准。
 @dependencies Python 3 标准库及脚本原有第三方依赖
@@ -104,6 +104,7 @@ def main() -> None:
     ap.add_argument('--label', default='parity')
 
     ap.add_argument('--allow-diff-status', default='', help='comma-separated statuses that may differ')
+    ap.add_argument('--strict', action='store_true', help='require every endpoint exact/semantic match; NONDET is not a pass')
 
     a = ap.parse_args()
 
@@ -337,9 +338,14 @@ def main() -> None:
 
 
 
-    print('COMPARE label=%s endpoints=%d fails=%d' % (a.label, len(keys), fails))
+    strict_bad = 0
+    if a.strict:
+        for row in rows:
+            if row.get('verdict') != 'OK':
+                strict_bad += 1
+    print('COMPARE label=%s endpoints=%d fails=%d strict_bad=%d' % (a.label, len(keys), fails, strict_bad))
 
-    sys.exit(0 if fails == 0 else 1)
+    sys.exit(0 if fails == 0 and strict_bad == 0 else 1)
 
 
 
