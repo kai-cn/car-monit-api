@@ -222,9 +222,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m pip install -q -r src/car-monit-api-python/requirements.txt
-          sed -i 's#127\.0\.0\.1:3307#127.0.0.1:3306#g; s#useSSL=true#useSSL=false#g' src/car-monit-api-python/config/application.yml
-          (cd src/car-monit-api-python && TOKEN__SECRET=junit-cloud-secret-deterministic-0123456789abcdef python3 -m uvicorn app.main:app --host 127.0.0.1 --port 19903 > "$GITHUB_WORKSPACE/app.log" 2>&1) &
+          (cd src/car-monit-api-python && \
+            python3 -m pip install -q -r requirements.txt && \
+            TOKEN__SECRET=junit-cloud-secret-deterministic-0123456789abcdef \
+            python3 -m uvicorn app.main:app --host 127.0.0.1 --port 19903 > "$GITHUB_WORKSPACE/app.log" 2>&1) &
           echo $! > app.pid
       - name: Build and start Go
         if: steps.gate.outputs.run == 'yes' && matrix.lang == 'go'
