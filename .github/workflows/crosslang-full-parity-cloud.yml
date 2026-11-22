@@ -247,10 +247,6 @@ jobs:
           (cd src/car-monit-api-python && \
             python3 -m pip install -q -r requirements.txt && \
             TOKEN__SECRET=junit-cloud-secret-deterministic-0123456789abcdef \
-            SPRING__DATASOURCE__DRUID__MASTER__PASSWORD=postgres \
-            SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_URL='jdbc:postgresql://127.0.0.1:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false' \
-            SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_USERNAME=postgres \
-            SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD=postgres \
             python3 -m uvicorn app.main:app --host 127.0.0.1 --port 19903 > "$GITHUB_WORKSPACE/app.log" 2>&1) &
           echo $! > app.pid
       - name: Build and start Go
@@ -261,12 +257,9 @@ jobs:
           CARMONIT_REDIS_ADDR: "127.0.0.1:6379"
           CARMONIT_SERVER_PORT: "19903"
           CARMONIT_TOKEN_SECRET: "junit-cloud-secret-deterministic-0123456789abcdef"
-          APP_SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD: "postgres"
-          APP_SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_USERNAME: "postgres"
         run: |
           set -euo pipefail
           cd src/car-monit-api-go
-          sed -i 's#192\.168\.56\.10#127.0.0.1#g; s#username: gaussdb#username: postgres#g' configs/config.yaml
           go build -o bin/car-monit-go ./cmd/api
           ./bin/car-monit-go -config configs/config.yaml > "$GITHUB_WORKSPACE/app.log" 2>&1 &
           echo $! > "$GITHUB_WORKSPACE/app.pid"
@@ -275,10 +268,6 @@ jobs:
         shell: bash
         env:
           CM_SERVER_PORT: "19903"
-          CM_PG_PASSWORD: "postgres"
-          CM_PG_USER: "postgres"
-          CM_PG_HOST: "127.0.0.1"
-          CM_PG_PORT: "5432"
         run: |
           set -euo pipefail
           cd src-cpp/car-monit-api-cpp
@@ -287,7 +276,7 @@ jobs:
             -DVCPKG_TARGET_TRIPLET=x64-linux \
             -DCMAKE_EXE_LINKER_FLAGS="-static-libstdc++ -static-libgcc"
           cmake --build build-release --parallel 2
-          sed -i 's#192\.168\.56\.10#127.0.0.1#g; s#username: gaussdb#username: postgres#g' configs/config.yaml 2>/dev/null || true
+          sed -i 's#127\.0\.0\.1:3307#127.0.0.1:3306#g; s#useSSL=true#useSSL=false#g' configs/config.yaml 2>/dev/null || true
           ./build-release/car-monit-api --config configs/config.yaml > "$GITHUB_WORKSPACE/app.log" 2>&1 &
           echo $! > "$GITHUB_WORKSPACE/app.pid"
       - name: Build and start Rust
@@ -297,11 +286,9 @@ jobs:
           APP_DATABASE__URL: "mysql://root:root@127.0.0.1:3306/carmonitdb"
           APP_REDIS__URL: "redis://127.0.0.1:6379"
           APP_SERVER__PORT: "19903"
-          APP_SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD: "postgres"
         run: |
           set -euo pipefail
           cd src-rust/car-monit-api-rust
-          sed -i 's#192\.168\.56\.10#127.0.0.1#g; s#username: gaussdb#username: postgres#g' config/application.yaml
           cargo build --release
           sed -i 's#127\.0\.0\.1:3307#127.0.0.1:3306#g; s#useSSL=true#useSSL=false#g' src-rust/config/application.* 2>/dev/null || true
           ./target/release/car-monit-api-rust > "$GITHUB_WORKSPACE/app.log" 2>&1 &
