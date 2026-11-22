@@ -255,7 +255,7 @@ jobs:
           set -euo pipefail
           cd src/car-monit-api-go
           go build -o bin/car-monit-go ./cmd/api
-          ./bin/car-monit-go -c configs/config.yaml > "$GITHUB_WORKSPACE/app.log" 2>&1 &
+          ./bin/car-monit-go -config configs/config.yaml > "$GITHUB_WORKSPACE/app.log" 2>&1 &
           echo $! > "$GITHUB_WORKSPACE/app.pid"
       - name: Build and start C++
         if: steps.gate.outputs.run == 'yes' && matrix.lang == 'cpp'
@@ -265,13 +265,13 @@ jobs:
         run: |
           set -euo pipefail
           cd src-cpp/car-monit-api-cpp
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+          cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET=x64-linux \
             -DCMAKE_EXE_LINKER_FLAGS="-static-libstdc++ -static-libgcc"
-          cmake --build build --parallel 2
+          cmake --build build-release --parallel 2
           sed -i 's#127\.0\.0\.1:3307#127.0.0.1:3306#g; s#useSSL=true#useSSL=false#g' configs/config.yaml 2>/dev/null || true
-          ./build/car-monit-cpp --config config > "$GITHUB_WORKSPACE/app.log" 2>&1 &
+          ./build-release/car-monit-api --config configs/config.yaml > "$GITHUB_WORKSPACE/app.log" 2>&1 &
           echo $! > "$GITHUB_WORKSPACE/app.pid"
       - name: Build and start Rust
         if: steps.gate.outputs.run == 'yes' && matrix.lang == 'rust'
@@ -285,7 +285,7 @@ jobs:
           cd src-rust/car-monit-api-rust
           cargo build --release
           sed -i 's#127\.0\.0\.1:3307#127.0.0.1:3306#g; s#useSSL=true#useSSL=false#g' src-rust/config/application.* 2>/dev/null || true
-          ./target/release/car-monit-rust > "$GITHUB_WORKSPACE/app.log" 2>&1 &
+          ./target/release/car-monit-api-rust > "$GITHUB_WORKSPACE/app.log" 2>&1 &
           echo $! > "$GITHUB_WORKSPACE/app.pid"
 
       - name: Wait candidate and run JUnit
