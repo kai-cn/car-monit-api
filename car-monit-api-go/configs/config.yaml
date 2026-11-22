@@ -51,7 +51,7 @@ redis:
   pool-size: 16              # Go 侧新增：lettuce pool.max-active 等价物
 
 kafka:
-  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}   # application.yml:62
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:}   # application.yml:62
   group-id: car-monit-go              # Go 侧新增：对应 @KafkaListener groupId
   topic:
     snapshot-flow: ods-rt-szdn-snapshot-flow   # application.yml:147
