@@ -18,21 +18,8 @@ Response empty_ok() { return Response::raw(200, "", "application/json;charset=UT
 
 // Java 用 CompletableFuture.runAsync + 线程池异步执行；这里改走受控后台线程池
 // （固定 worker + 有界队列），不再为每个任务 detached 创建线程。
-void async_suspicious(int from, int to) {
-  for (int i = from; i <= to; ++i) {
-    const bool accepted = cm::background_pool().submit([i] {
-      try {
-        service::sync_suspicious_car(i);
-      } catch (const std::exception& e) {
-        CM_LOG_ERROR("sysutil") << "syncSuspiciousCar" << i << " 失败: " << e.what();
-      }
-    });
-    if (!accepted) {
-      // 队列满：与 Java 线程池拒绝策略一致——记录错误但不阻塞请求。
-      CM_LOG_ERROR("sysutil") << "后台队列已满，syncSuspiciousCar" << i << " 被拒绝";
-    }
-  }
-}
+// Blocked maintenance endpoints are intentionally no-ops in parity runs;
+// the original async batch helper is removed to satisfy -Werror.
 
 } // namespace
 
@@ -56,8 +43,7 @@ void register_systest(http::Router& r) {
   // /syncSuspiciousCar1..10：第 N 个端点处理 ((N-1)*10+1 .. N*10) 这 10 个下标。
   for (int n = 1; n <= 10; ++n) {
     const std::string pattern = "/base/sysutilTest/syncSuspiciousCar" + std::to_string(n);
-    const int from = (n - 1) * 10 + 1;
-    const int to = n * 10;
+    // Keep loop shape for endpoint generation; no async work in parity env.
     r.add("GET", pattern, [](Request&) {
       // Java/Rust/Python expose these blocked maintenance endpoints as no-op HTTP 200.
       // Keep the original batch semantics out of parity runs to avoid environment noise.
