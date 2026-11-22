@@ -358,7 +358,16 @@ def _line_of(text: str, offset: int) -> int:
 def build() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     controllers: list[dict[str, Any]] = []
     routes: list[dict[str, Any]] = []
-    for path in sorted(CONTROLLER_DIR.glob("*Controller.java")):
+    # 【Java→Python 对齐 V3】Java V3 把新增 Controller 放在 ``controller/v3`` 子包。
+    # 原生成器只扫 ``controller/*Controller.java``（单层），会漏掉 5 个 V3 Controller /
+    # 24 个端点。这里补一层递归扫描：Python 的 ``Path.glob`` 与 Java 的
+    # ``ClassPathScanningCandidateComponentProvider`` 不同，不会自动递归子包，必须显式列出。
+    # 排序保证生成表稳定，与 ``check_routes`` 的基线比对可重复。
+    controller_paths = sorted(
+        set(CONTROLLER_DIR.glob("*Controller.java"))
+        | set(CONTROLLER_DIR.glob("v3/*Controller.java"))
+    )
+    for path in controller_paths:
         controller, controller_routes = parse_controller(path)
         controllers.append(controller)
         routes.extend(controller_routes)

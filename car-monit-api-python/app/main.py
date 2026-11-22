@@ -196,6 +196,13 @@ app = FastAPI(
 # P1-3：请求 ID + 访问日志 + 指标采样（顺序上包裹全部路由）
 app.middleware("http")(request_context_middleware)
 
+# 【Java V3 对齐】InternalEndpointGuardConfig：拦截 /api/v3/** 与
+# /api/v1/large/export/**。最后注册 => 位于中间件链最外层，先于路由与日志执行，
+# 与 Java FilterRegistrationBean 的 URL pattern 拦截时机一致。
+from app.middleware.internal_guard import internal_endpoint_guard  # noqa: E402
+
+app.middleware("http")(internal_endpoint_guard)
+
 
 # --------------------------------------------------------------------- routes
 @app.get("/health", tags=["migration"], summary="Liveness/readiness (migration-only)")

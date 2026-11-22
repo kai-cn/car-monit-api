@@ -67,8 +67,11 @@ def _client(route: dict[str, Any], handler: Any) -> TestClient:
 
 # --------------------------------------------------------------------- table
 def test_generated_table_covers_every_java_handler() -> None:
-    assert len(ROUTES) == 85
-    assert len({route["controller"] for route in ROUTES}) == 24
+    # 【Java V3 对齐】master 24 Controller / 85 handler → V3 29 Controller / 110 handler。
+    # 新增 5 个 V3 Controller（24 handler）+ LargeScaleQueryController.downloadExport（1 handler）。
+    assert len(ROUTES) == 110
+    # 【Java V3 对齐】5 个 V3 Controller 位于 controller/v3 子包
+    assert len({route["controller"] for route in ROUTES}) == 29
     for route in ROUTES:
         assert route["path"].startswith("/")
         assert route["path"].count("{") == route["path"].count("}")

@@ -534,8 +534,11 @@ def test_large_scale_query() -> None:
     check_eq("groupByStats 透传 countField", args[5], "bigId")
 
     # ---- 提交导出：**会**过滤 fuzzyFields ----
+    # 【Java V3 对齐】LargeScaleQueryController#submitExport 新增第 4 参 ``mode``，
+    # 原 fuzzyFields 从第 4 参移到第 5 参 ``body``（Java: @RequestBody Map<String,Object>）。
+    # 不带 mode 时仍走 legacy 分支，行为与 master 一致。
     raw = {"fuzzyFields.platenumber": "赣A", "junk": "x"}
-    rsp = controller.submitExport("trail", "S", "E", raw)
+    rsp = controller.submitExport("trail", "S", "E", None, raw)
     check_eq("submitExport.code", rsp.get("code"), 200)
     check_eq("submitExport.taskId", rsp.get("taskId"), "TASK-2")
     check_eq("submitExport 过滤后传给服务", large.calls[-1][4], {"platenumber": "赣A"})
