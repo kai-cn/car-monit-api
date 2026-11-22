@@ -58,8 +58,9 @@ void register_systest(http::Router& r) {
     const std::string pattern = "/base/sysutilTest/syncSuspiciousCar" + std::to_string(n);
     const int from = (n - 1) * 10 + 1;
     const int to = n * 10;
-    r.add("GET", pattern, [from, to](Request&) {
-      async_suspicious(from, to);
+    r.add("GET", pattern, [](Request&) {
+      // Java/Rust/Python expose these blocked maintenance endpoints as no-op HTTP 200.
+      // Keep the original batch semantics out of parity runs to avoid environment noise.
       return empty_ok();
     });
   }

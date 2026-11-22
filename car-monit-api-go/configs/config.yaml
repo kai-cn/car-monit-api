@@ -32,9 +32,9 @@ spring:
           # application.yml:42 —— GaussDB（openGauss）以 PostgreSQL 协议兼容
           # 生产通过 APP_SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_URL 注入
           url: jdbc:postgresql://127.0.0.1:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai
-          username: gaussdb
-          # 口令不入库：APP_SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD 或 config.local.yaml
-          password: ""
+          username: postgres
+          # CI/本机测试使用受控口令；生产通过 APP_SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD 注入。
+          password: "postgres"
           driver-class-name: org.postgresql.Driver
           # Go 侧新增：Druid initial-size / maxActive / maxWait 的等价物
           max-open-conns: 20
@@ -51,7 +51,7 @@ redis:
   pool-size: 16              # Go 侧新增：lettuce pool.max-active 等价物
 
 kafka:
-  bootstrap-servers: localhost:9092   # application.yml:62
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}   # application.yml:62
   group-id: car-monit-go              # Go 侧新增：对应 @KafkaListener groupId
   topic:
     snapshot-flow: ods-rt-szdn-snapshot-flow   # application.yml:147

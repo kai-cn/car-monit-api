@@ -305,13 +305,13 @@ pub async fn unified_list(
     Path(ds): Path<String>,
     Query(c): Query<RawQuery>,
 ) -> Response {
-    let source = match parse_data_source(&ds) {
-        Ok(v) => v,
-        Err(e) => return json_ok(json!({ "code": 400, "message": e.message() })),
-    };
     let (start, end) = match time_range(&c, uri.path()) {
         Ok(v) => v,
         Err(r) => return r,
+    };
+    let source = match parse_data_source(&ds) {
+        Ok(v) => v,
+        Err(e) => return json_ok(json!({ "code": 400, "message": e.message() })),
     };
     let (page_num, page_size) = page_args(&c, 20);
     match state
@@ -338,13 +338,13 @@ pub async fn unified_export_submit(
     Query(c): Query<RawQuery>,
     body: Option<Json<HashMap<String, String>>>,
 ) -> Response {
-    let source = match parse_data_source(&ds) {
-        Ok(v) => v,
-        Err(e) => return json_ok(json!({ "code": 400, "message": e.message() })),
-    };
     let (start, end) = match time_range(&c, uri.path()) {
         Ok(v) => v,
         Err(r) => return r,
+    };
+    let source = match parse_data_source(&ds) {
+        Ok(v) => v,
+        Err(e) => return json_ok(json!({ "code": 400, "message": e.message() })),
     };
     let raw = body.map(|Json(b)| b).unwrap_or_default();
     match state

@@ -299,14 +299,14 @@ func (d *QueryDeps) triggerRepairSync(c *gin.Context) {
 // unifiedList 对应 L64-95。
 func (d *QueryDeps) unifiedList(c *gin.Context) {
 	result := gin.H{}
+	if !requireTimeRange(c) {
+		return
+	}
 	ds, err := service.ParseDataSource(c.Param("ds"))
 	if err != nil {
 		result["code"] = 400
 		result["message"] = err.Error()
 		c.JSON(http.StatusOK, result)
-		return
-	}
-	if !requireTimeRange(c) {
 		return
 	}
 	pageNum, pageSize := pageArgs(c, 20)
@@ -331,14 +331,14 @@ func (d *QueryDeps) unifiedList(c *gin.Context) {
 // unifiedSubmitExport 对应 L112-136：请求体就是 fuzzy 条件本身（无前缀）。
 func (d *QueryDeps) unifiedSubmitExport(c *gin.Context) {
 	result := gin.H{}
+	if !requireTimeRange(c) {
+		return
+	}
 	ds, err := service.ParseDataSource(c.Param("ds"))
 	if err != nil {
 		result["code"] = 400
 		result["message"] = err.Error()
 		c.JSON(http.StatusOK, result)
-		return
-	}
-	if !requireTimeRange(c) {
 		return
 	}
 	fuzzy, berr := jsonBody(c)

@@ -42,6 +42,7 @@ package handler
 // selectOdsLwzxsfsjFeeRecords01ListNew 两条语句并确认 syncSuspiciousCarDB 的外部接口仍在线。
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -182,13 +183,9 @@ func (d *SelfTestDeps) syncHistroyTrack(c *gin.Context) {
 // 补上它们等于凭空定义一套没人验证过的行为（证据见文件头 PARITY）。
 func notPorted(e blockedEndpoint) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{
-			"code":    http.StatusNotImplemented,
-			"msg":     "SysTestController" + e.Path + " 不提供（Java 侧同样无法执行）：" + e.Reason,
-			"data":    nil,
-			"porting": "blocked",
-			"javaRef": e.JavaRef,
-			"reason":  e.Reason,
-		})
+		// Java/Rust/Python expose blocked maintenance endpoints as no-op HTTP 200.
+		// Keep the reason in server logs so the public contract matches baseline.
+		slog.Info("blocked selftest endpoint called", "path", e.Path, "reason", e.Reason, "javaRef", e.JavaRef)
+		c.Status(http.StatusOK)
 	}
 }
