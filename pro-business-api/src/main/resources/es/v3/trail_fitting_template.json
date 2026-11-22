@@ -1,0 +1,93 @@
+{
+  "index_patterns": ["trail-fitting-*"],
+  "priority": 100,
+  "version": 3,
+  "_meta": {
+    "description": "V3 trail monthly index: plate_norm from envehicleid + route summary, no trailpoints",
+    "source_table": "jl_data01.zdata_trail_fitting",
+    "design": "architecture-traffic-query-design.md v1.3 §5.8.4 / §8.2"
+  },
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1,
+      "refresh_interval": "5s",
+      "index.codec": "best_compression",
+      "index.max_result_window": 10000,
+      "index.mapping.total_fields.limit": 200,
+      "index.lifecycle.name": "traffic_hot_warm_cold",
+      "analysis": {
+        "tokenizer": {
+          "plate_ngram_tokenizer": {
+            "type": "ngram",
+            "min_gram": 2,
+            "max_gram": 3,
+            "token_chars": ["letter", "digit"]
+          }
+        },
+        "analyzer": {
+          "plate_ngram": {
+            "type": "custom",
+            "tokenizer": "plate_ngram_tokenizer",
+            "filter": ["lowercase"]
+          }
+        }
+      }
+    },
+    "mappings": {
+      "dynamic": "strict",
+      "date_detection": false,
+      "numeric_detection": false,
+      "_source": {
+        "excludes": ["trailpoints"]
+      },
+      "properties": {
+        "cid": { "type": "keyword" },
+        "extime": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "entime": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "first_capture_time": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "last_capture_time": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "plate_norm": {
+          "type": "keyword",
+          "fields": {
+            "ngram": {
+              "type": "text",
+              "analyzer": "plate_ngram"
+            }
+          }
+        },
+        "envehicleid": { "type": "keyword", "index": false, "doc_values": false },
+        "exvehicleid": { "type": "keyword", "index": false, "doc_values": false },
+        "enaxlecount": { "type": "integer" },
+        "envehicleclass": { "type": "integer" },
+        "envehicletype": { "type": "integer" },
+        "exvehicleclass": { "type": "integer" },
+        "exvehicletype": { "type": "integer" },
+        "enweight": { "type": "long" },
+        "exweight": { "type": "long" },
+        "entolllaneid": { "type": "keyword" },
+        "extolllaneid": { "type": "keyword" },
+        "entollstationid": { "type": "keyword" },
+        "extollstationid": { "type": "keyword" },
+        "entollstationname": { "type": "keyword", "index": false, "doc_values": false },
+        "extollstationname": { "type": "keyword", "index": false, "doc_values": false },
+        "trailtype": { "type": "integer" },
+        "point_count": { "type": "integer" },
+        "route_sections": { "type": "keyword" },
+        "route_gantries": { "type": "keyword" }
+      }
+    }
+  }
+}

@@ -3,10 +3,20 @@ package com.ruoyi.base.controller;
 import com.ruoyi.base.service.optimization.LargeScaleDataSyncService;
 import com.ruoyi.base.service.optimization.LargeScaleQueryService;
 import com.ruoyi.base.service.optimization.UnifiedQueryService;
+import com.ruoyi.base.service.v3.export.ExportRequest;
+import com.ruoyi.base.service.v3.export.ExportTask;
+import com.ruoyi.base.service.v3.export.ExportTaskService;
+import com.ruoyi.base.service.v3.query.DimensionCodeResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.File;
 import java.util.*;
 
 /**
@@ -42,6 +52,12 @@ public class LargeScaleQueryController {
 
     @Autowired
     private LargeScaleDataSyncService syncService;
+
+    @Autowired
+    private ExportTaskService exportTaskService;
+
+    @Autowired
+    private DimensionCodeResolver dimensionCodeResolver;
 
     // ================================================================
     // 模块1：三表全字段模糊查询 / Module 1: fuzzy query for 3 tables
@@ -121,7 +137,7 @@ public class LargeScaleQueryController {
                                           int pageNum, int pageSize) {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
-            Map<String, String> fields = extractFuzzyFields(fuzzyFields);
+            Map<String, String> fields = extractFuzzyStringFields(fuzzyFields);
             List<?> list = unifiedQueryService.query(ds, startTime, endTime, fields, pageNum, pageSize);
             result.put("code", 200);
             result.put("message", "ok");
@@ -141,7 +157,7 @@ public class LargeScaleQueryController {
      * 从 Spring 注入的 Map 中提取 fuzzyFields.xxx 形式的字段
      * Extract fields of the form fuzzyFields.xxx from the injected map.
      */
-    private Map<String, String> extractFuzzyFields(Map<String, String> fuzzyFields) {
+    private Map<String, String> extractFuzzyStringFields(Map<String, String> fuzzyFields) {
         Map<String, String> fields = new HashMap<>();
         if (fuzzyFields != null) {
             for (Map.Entry<String, String> e : fuzzyFields.entrySet()) {
@@ -173,7 +189,7 @@ public class LargeScaleQueryController {
 
         Map<String, Object> result = new LinkedHashMap<>();
         try {
-            Map<String, String> fields = extractFuzzyFields(fuzzyFields);
+            Map<String, String> fields = extractFuzzyStringFields(fuzzyFields);
             Map<String, Long> stats = largeScaleQueryService.aggregationStats(
                     type, startTime, endTime, groupBy, countField, fields, topN);
             result.put("code", 200);
@@ -195,39 +211,87 @@ public class LargeScaleQueryController {
     // ================================================================
 
     /**
-     * 提交导出任务（type: snapshot/fee/trail，默认 snapshot）
-     * Submit export task (type selects table).
+     * 提交导出任务。
+     *
+     * <p>兼容两种调用：
+     * <ul>
+     *   <li>旧契约（不带 mode）：走 legacy {@code LargeScaleQueryService}；</li>
+     *   <li>新契约（mode=display/full）：走 V3 {@code ExportTaskService}，
+     *       display=ES PIT，full=GaussDB 游标。</li>
+     * </ul>
+     * 响应保持 {@code code/message/type/taskId}。</p>
      */
     @PostMapping("/export/submit")
     public Map<String, Object> submitExport(
             @RequestParam(defaultValue = "snapshot") String type,
             @RequestParam String startTime,
             @RequestParam String endTime,
-            @RequestBody(required = false) Map<String, String> fuzzyFields) {
+            @RequestParam(required = false) String mode,
+            @RequestBody(required = false) Map<String, Object> body) {
 
         Map<String, Object> result = new LinkedHashMap<>();
         try {
-            Map<String, String> fields = extractFuzzyFields(fuzzyFields);
+            if (isV3Mode(mode)) {
+                ExportRequest request = buildV3ExportRequest(type, startTime, endTime, body);
+                ExportTask task = "full".equalsIgnoreCase(mode)
+                        ? exportTaskService.submitFull(request)
+                        : exportTaskService.submitDisplay(request);
+                result.put("code", 200);
+                result.put("message", "导出任务已提交");
+                result.put("type", type);
+                result.put("mode", mode);
+                result.put("taskId", task.getTaskId());
+                return result;
+            }
+
+            Map<String, String> fields = extractFuzzyFields(body);
             String taskId = largeScaleQueryService.submitExportTask(type, startTime, endTime, fields);
             result.put("code", 200);
             result.put("message", "导出任务已提交");
             result.put("type", type);
             result.put("taskId", taskId);
         } catch (Exception e) {
-            log.error("[导出-提交] 异常 type={}", type, e);
-            result.put("code", 500);
+            log.error("[导出-提交] 异常 type={}, mode={}", type, mode, e);
+            result.put("code", 400);
             result.put("message", e.getMessage());
         }
         return result;
     }
 
     /**
-     * 查询导出任务状态 / Get export task status.
+     * 查询导出任务状态：优先 V3 任务，未命中回落 legacy。
      */
     @GetMapping("/export/status/{taskId}")
     public Map<String, Object> getExportStatus(@PathVariable String taskId) {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
+            ExportTask task = exportTaskService.get(taskId);
+            if (task != null) {
+                result.put("code", 200);
+                result.put("status", task.getStatus());
+                result.put("totalExported", task.getExportedRows());
+                result.put("filePartCount", filePartCount(task));
+                result.put("submitTime", task.getCreatedAt() == null ? null : task.getCreatedAt().getTime());
+                result.put("endTime", task.getFinishedAt() == null ? null : task.getFinishedAt().getTime());
+                result.put("mode", task.getMode());
+                result.put("type", task.getTable().getParamName());
+                result.put("totalRows", task.getTotalRows());
+                result.put("error", task.getError());
+                return result;
+            }
+
+            // api 重启后任务内存丢失：只要文件存在，仍可查询/下载
+            File finishedFile = exportTaskService.resolveFinishedFile(taskId);
+            if (finishedFile != null) {
+                result.put("code", 200);
+                result.put("status", "done");
+                result.put("totalExported", -1);
+                result.put("filePartCount", 1);
+                result.put("submitTime", null);
+                result.put("endTime", finishedFile.lastModified());
+                return result;
+            }
+
             LargeScaleQueryService.ExportTaskStatus status = largeScaleQueryService.getExportStatus(taskId);
             if (status == null) {
                 result.put("code", 404);
@@ -246,6 +310,179 @@ public class LargeScaleQueryController {
             result.put("message", e.getMessage());
         }
         return result;
+    }
+
+    /**
+     * 下载导出文件（backend 代理流式下载）。
+     *
+     * <p>仅 V3 任务有本地文件；未完成返回 409，不存在返回 404。</p>
+     */
+    @GetMapping("/export/download/{taskId}")
+    public ResponseEntity<Resource> downloadExport(@PathVariable String taskId) {
+        ExportTask task = exportTaskService.get(taskId);
+        File file;
+        if (task != null) {
+            if (!"done".equalsIgnoreCase(task.getStatus())) {
+                return ResponseEntity.status(409).build();
+            }
+            file = new File(task.getFilePath());
+        } else {
+            file = exportTaskService.resolveFinishedFile(taskId);
+        }
+        if (file == null || !file.exists() || !file.isFile()) {
+            log.warn("[导出-下载] 文件不存在 taskId={}", taskId);
+            return ResponseEntity.notFound().build();
+        }
+        Resource resource = new FileSystemResource(file);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + taskId + ".csv.gz\"")
+                .contentType(MediaType.parseMediaType("application/gzip"))
+                .contentLength(file.length())
+                .body(resource);
+    }
+
+    private boolean isV3Mode(String mode) {
+        return mode != null
+                && ("display".equalsIgnoreCase(mode.trim()) || "full".equalsIgnoreCase(mode.trim()));
+    }
+
+    private int filePartCount(ExportTask task) {
+        if (!"done".equalsIgnoreCase(task.getStatus()) || task.getFilePath() == null) {
+            return 0;
+        }
+        File file = new File(task.getFilePath());
+        return file.exists() ? 1 : 0;
+    }
+
+    /**
+     * body -> V3 ExportRequest：
+     * - fuzzyFields.platenumber/vehicleplate/carNo -> plate；
+     * - fuzzyFields.*code -> dimensionCodes；
+     * - fuzzyFields.*name -> 码表解析为编码（解析不到直接拒绝，避免导出全量）；
+     * - purpose 透传记录。
+     */
+    private ExportRequest buildV3ExportRequest(String type, String startTime, String endTime,
+                                               Map<String, Object> body) {
+        ExportRequest request = new ExportRequest();
+        request.setTable(type);
+        request.setStartTime(startTime);
+        request.setEndTime(endTime);
+        if (body == null) {
+            return request;
+        }
+        request.setPurpose(asString(body.get("purpose")));
+
+        Object fields = body.get("fields");
+        if (fields instanceof Collection) {
+            List<String> requested = new ArrayList<>();
+            for (Object item : (Collection<?>) fields) {
+                if (item != null && !String.valueOf(item).trim().isEmpty()) {
+                    requested.add(String.valueOf(item).trim());
+                }
+            }
+            request.setFields(requested);
+        }
+
+        for (Map.Entry<String, Object> entry : body.entrySet()) {
+            String key = entry.getKey();
+            if (!key.startsWith("fuzzyFields.") || entry.getValue() == null) {
+                continue;
+            }
+            String field = key.substring("fuzzyFields.".length());
+            String value = String.valueOf(entry.getValue()).trim();
+            if (value.isEmpty()) {
+                continue;
+            }
+            switch (field) {
+                case "platenumber":
+                case "vehicleplate":
+                case "carNo":
+                    request.setPlate(value);
+                    break;
+                case "plateColor":
+                case "plate_color":
+                    request.setColorCode(value);
+                    break;
+                case "orgcode":
+                    addCode(request, "orgcode", value);
+                    break;
+                case "sectioncode":
+                    addCode(request, "sectioncode", value);
+                    break;
+                case "roadcode":
+                    addCode(request, "roadcode", value);
+                    break;
+                case "gantrycode":
+                case "gantryid":
+                    addCode(request, "gantrycode", value);
+                    break;
+                case "tollcode":
+                    addCode(request, "tollcode", value);
+                    break;
+                case "orgname":
+                    addResolvedCodes(request, "orgcode", dimensionCodeResolver.resolveOrgCodes(value), field, value);
+                    break;
+                case "sectionname":
+                    addResolvedCodes(request, "sectioncode", dimensionCodeResolver.resolveSectionCodes(value), field, value);
+                    break;
+                case "roadname":
+                    addResolvedCodes(request, "roadcode", dimensionCodeResolver.resolveRoadCodes(value), field, value);
+                    break;
+                case "gantryname":
+                    addResolvedCodes(request, "gantrycode", dimensionCodeResolver.resolveGantryCodes(value), field, value);
+                    break;
+                case "tollname":
+                    addResolvedCodes(request, "tollcode", dimensionCodeResolver.resolveTollCodes(value), field, value);
+                    break;
+                default:
+                    // fields/purpose 等非过滤键忽略
+                    break;
+            }
+        }
+        return request;
+    }
+
+    private void addCode(ExportRequest request, String field, String value) {
+        List<String> codes = request.getDimensionCodes()
+                .computeIfAbsent(field, k -> new ArrayList<>());
+        for (String item : value.split(",")) {
+            String code = item.trim();
+            if (!code.isEmpty() && !codes.contains(code)) {
+                codes.add(code);
+            }
+        }
+    }
+
+    private void addResolvedCodes(ExportRequest request, String field, List<String> codes,
+                                  String nameField, String value) {
+        if (codes == null || codes.isEmpty()) {
+            throw new IllegalArgumentException("维度名称未匹配到编码: " + nameField + "=" + value);
+        }
+        for (String code : codes) {
+            addCode(request, field, code);
+        }
+    }
+
+    private String asString(Object value) {
+        return value == null ? "" : String.valueOf(value);
+    }
+
+    /**
+     * 兼容旧契约：只提取 fuzzyFields.xxx 扁平键。
+     */
+    private Map<String, String> extractFuzzyFields(Map<String, Object> fuzzyFields) {
+        Map<String, String> fields = new HashMap<>();
+        if (fuzzyFields != null) {
+            for (Map.Entry<String, Object> e : fuzzyFields.entrySet()) {
+                if (e.getKey().startsWith("fuzzyFields.") && e.getValue() != null
+                        && !String.valueOf(e.getValue()).isEmpty()) {
+                    fields.put(e.getKey().substring("fuzzyFields.".length()),
+                            String.valueOf(e.getValue()));
+                }
+            }
+        }
+        return fields;
     }
 
     // ================================================================

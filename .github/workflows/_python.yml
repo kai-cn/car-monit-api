@@ -31,7 +31,7 @@ jobs:
   # ── job: gates ──
   gates:
     name: python 3.12 (gates / openEuler)
-    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
+    runs-on: ubuntu-latest
     container:
       image: openeuler/openeuler:24.03-lts
     timeout-minutes: 45
@@ -131,7 +131,7 @@ jobs:
     # （redis / elasticsearch / kafka），不能用 127.0.0.1；Kafka advertised listener 同步改为 kafka:9092。
     name: python 3.12 (integration / openEuler)
     if: inputs.run-integration
-    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
+    runs-on: ubuntu-latest
     container:
       image: openeuler/openeuler:24.03-lts
     timeout-minutes: 30

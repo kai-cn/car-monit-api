@@ -8,8 +8,9 @@
 
 规则：
 
-1. **本仓库已知泄漏值**：``OpenGauss@123`` / ``redis321``（历史文档与注释），
-   仅允许出现在本脚本自身的拼接字面量中（脚本排除自己）。
+1. **本仓库已知泄漏值**：历史 GaussDB / Redis 口令（具体值以拼接字面量形式保存在
+   本脚本 ``_LEAKED_LITERALS`` 中，不在文档中复述），仅允许出现在本脚本自身
+   （脚本排除自己）。这些值已作废，轮换后应从 ``_LEAKED_LITERALS`` 移除。
 2. **通用高置信度模式**：PEM 私钥、AWS Access Key、GitHub/Slack token。
 3. **配置明文口令**：yml/yaml、properties、.env 中未走 ``${ENV}`` 占位符的
    password/secret/token 值（含注释掉的写法）。

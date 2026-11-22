@@ -20,6 +20,12 @@
             <groupId>com.ruoyi</groupId>
             <artifactId>pro-base-common</artifactId>
         </dependency>
+        <!-- 单元测试（仅 test scope；V3 修复项的自证用，不进入运行时依赖） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- Spring Kafka -->
         <dependency>
             <groupId>org.springframework.kafka</groupId>
@@ -83,6 +89,13 @@
         <dependency>
             <groupId>org.elasticsearch</groupId>
             <artifactId>elasticsearch</artifactId>
+        </dependency>
+
+        <!-- MySQL JDBC：仅用于读取 carmonitdb.plate_color 字典（单一事实源） -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
     </dependencies>

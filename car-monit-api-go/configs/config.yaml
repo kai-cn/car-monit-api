@@ -14,7 +14,8 @@ spring:
       datasource:
         master:
           # application.yml:42 —— GaussDB（openGauss）以 PostgreSQL 协议兼容
-          url: jdbc:postgresql://192.168.56.10:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai
+          # 生产通过 APP_SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_URL 注入
+          url: jdbc:postgresql://127.0.0.1:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai
           username: gaussdb
           password: ""                # 通过 APP_SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD 注入
           driver-class-name: org.postgresql.Driver
@@ -145,4 +146,4 @@ logging:
 
 app:
   env: local                                      # application.yml:141（isLocalhost: local）
-  sysbase-url: http://223.84.150.189:26066/prod-api  # application.yml:142
+  sysbase-url: http://127.0.0.1:8080/prod-api  # application.yml:142；生产通过 APP_SYSBASE_URL 注入

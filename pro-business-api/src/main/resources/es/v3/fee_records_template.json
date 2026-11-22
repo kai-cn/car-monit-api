@@ -1,0 +1,124 @@
+{
+  "index_patterns": ["fee-records-*"],
+  "priority": 100,
+  "version": 3,
+  "_meta": {
+    "description": "V3 fee records monthly index: plate_core + plate_color_code + plate ngram",
+    "source_table": "jl_data01.ods_lwzxsfsj_fee_records_01",
+    "design": "architecture-traffic-query-design.md v1.3 §5.1.6 / §5.3 / §8.2"
+  },
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1,
+      "refresh_interval": "5s",
+      "index.codec": "best_compression",
+      "index.max_result_window": 10000,
+      "index.mapping.total_fields.limit": 200,
+      "index.lifecycle.name": "traffic_hot_warm_cold",
+      "analysis": {
+        "tokenizer": {
+          "plate_ngram_tokenizer": {
+            "type": "ngram",
+            "min_gram": 2,
+            "max_gram": 3,
+            "token_chars": ["letter", "digit"]
+          }
+        },
+        "analyzer": {
+          "plate_ngram": {
+            "type": "custom",
+            "tokenizer": "plate_ngram_tokenizer",
+            "filter": ["lowercase"]
+          }
+        }
+      }
+    },
+    "mappings": {
+      "dynamic": "strict",
+      "date_detection": false,
+      "numeric_detection": false,
+      "_source": {
+        "excludes": [
+          "feeinfo1", "feeinfo2", "feeinfo3", "feecalcresult",
+          "feecalcspecial", "feecalcspecials",
+          "feegroup", "payfeegroup", "discountfeegroup", "params"
+        ]
+      },
+      "properties": {
+        "big_id": { "type": "keyword" },
+        "transtime": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "lastgantrytime": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "entime": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "extime": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "orgcode": { "type": "keyword" },
+        "sectioncode": { "type": "keyword" },
+        "roadcode": { "type": "keyword" },
+        "gantryid": { "type": "keyword" },
+        "gantrycode": { "type": "keyword" },
+        "tollcode": { "type": "keyword" },
+        "cid": { "type": "keyword" },
+        "passid": { "type": "keyword" },
+        "passstate": { "type": "keyword" },
+        "gantrytype": { "type": "keyword" },
+        "mediatype": { "type": "keyword" },
+        "dealstatus": { "type": "keyword" },
+        "matchstatus": { "type": "keyword" },
+        "gantryordernum": { "type": "integer" },
+        "axlecount": { "type": "integer" },
+        "vehiclehight": { "type": "integer" },
+        "envehicleclass": { "type": "integer" },
+        "exvehicleclass": { "type": "integer" },
+        "envehicletype": { "type": "integer" },
+        "exvehicletype": { "type": "integer" },
+        "enweight": { "type": "long" },
+        "exweight": { "type": "long" },
+        "fee": { "type": "double" },
+        "payfee": { "type": "double" },
+        "discountfee": { "type": "double" },
+        "feemileage": { "type": "double" },
+        "plate_norm": {
+          "type": "keyword",
+          "fields": {
+            "ngram": {
+              "type": "text",
+              "analyzer": "plate_ngram"
+            }
+          }
+        },
+        "plate_core": { "type": "keyword", "index": false, "doc_values": false },
+        "plate_color_code": { "type": "keyword" },
+        "plate_color_raw": { "type": "keyword", "index": false, "doc_values": false },
+        "plate_parse_status": { "type": "keyword" },
+        "plate_raw": { "type": "keyword", "index": false, "doc_values": false },
+        "vehicleplate": { "type": "keyword", "index": false, "doc_values": false },
+        "cpuvehicleplate": { "type": "keyword", "index": false, "doc_values": false },
+        "obuvehicleplate": { "type": "keyword", "index": false, "doc_values": false },
+        "obumac": { "type": "keyword", "index": false, "doc_values": false },
+        "entolllaneid": { "type": "keyword" },
+        "extolllaneid": { "type": "keyword" },
+        "entollstationid": { "type": "keyword" },
+        "extollstationid": { "type": "keyword" },
+        "entollstationname": { "type": "keyword", "index": false, "doc_values": false },
+        "extollstationname": { "type": "keyword", "index": false, "doc_values": false },
+        "orgname": { "type": "keyword", "index": false, "doc_values": false },
+        "sectionname": { "type": "keyword", "index": false, "doc_values": false },
+        "roadname": { "type": "keyword", "index": false, "doc_values": false },
+        "gantryname": { "type": "keyword", "index": false, "doc_values": false },
+        "tollname": { "type": "keyword", "index": false, "doc_values": false }
+      }
+    }
+  }
+}

@@ -1,5 +1,5 @@
 server:
-  port: 9901
+  port: 9902
   servlet:
     context-path: /
 spring:
@@ -38,15 +38,14 @@ spring:
         connectionProperties: druid.stat.mergeSql\=true;druid.stat.slowSqlMillis\=5000
       datasource:
         master:
-#          url: jdbc:postgresql://172.30.100.109:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
-          url: jdbc:postgresql://192.168.56.10:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
-          username: gaussdb
+          # 生产通过 SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_URL 注入，仓库内不落真实地址
+          url: ${SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_URL:jdbc:postgresql://127.0.0.1:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai}
+          username: ${SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_USERNAME:gaussdb}
           password: ${SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD:}
           driver-class-name: org.postgresql.Driver
   #redis 配置
   redis:
     database: 0
-#    host: 172.30.100.102
     host: 127.0.0.1
     port: 6379
 #    password: <通过 SPRING_REDIS_PASSWORD 注入，禁止写入仓库>
@@ -136,10 +135,12 @@ forest:
   retry-count: 2
   max-retry-interval: 1000
 rediscluster:
-  clusterNodes: 36.200.31.15:22400
+  # 生产通过 REDISCLUSTER_CLUSTERNODES 注入，仓库内不落真实地址
+  clusterNodes: ${REDISCLUSTER_CLUSTERNODES:127.0.0.1:7000}
   refresh-interval-ms: 300000      # 字典数据刷新间隔（毫秒）
 isLocalhost: local # 是否本地 prod生成
-sysbaseUrl: http://223.84.150.189:26066/prod-api
+# 生产通过 SYSBASE_URL 注入，仓库内不落真实地址
+sysbaseUrl: ${SYSBASE_URL:http://127.0.0.1:8080/prod-api}
 
 
 kafka:
@@ -294,3 +295,84 @@ monitoring:
   end-to-end-threshold-ms: 30000
   # 统计窗口大小（分钟）
   stats-window-minutes: 10
+
+# ==================== V3 架构（ES 主路径 + Outbox 同步 + 双路径导出） ====================
+# 设计文档：car-monit-backend-new/docs/architecture-traffic-query-design.md v1.3
+# 默认只读：auto-bootstrap / sync / reconcile 默认关闭，需要运维显式开启。
+traffic:
+  # 内部端点（/api/v3/**、/api/v1/large/export/**）服务间令牌。
+  # 为空时仅允许回环调用；多机部署必须配置为同一令牌，并由 backend/运维脚本注入 X-Internal-Token。
+  security:
+    internal-token: ${TRAFFIC_INTERNAL_TOKEN:}
+  # 业务时区：查询解析/JDBC 时间窗/导出格式化统一口径（容器默认 UTC 时避免偏 8 小时）
+  timezone: Asia/Shanghai
+  query:
+    # 安全默认：legacy（旧 GaussDB Mapper）。ES 初始化+回灌完成后显式切 es；
+    # 即使配置为 es，启动时若 ES/读别名不可用也会自动回退 legacy 并打 WARN。
+    # 可用环境变量 TRAFFIC_QUERY_ENGINE=es 覆盖，或在 /api/v3/es/activate 临时切换。
+    engine: legacy
+    max-page-size: 100
+    max-window: 10000
+    max-days: 365
+    default-days: 7
+    min-plate-fuzzy-length: 2
+    total-hits-cap: 10000
+  es:
+    # 启动自动创建 ILM/模板/月索引；生产建议 false，使用 scripts/v3/es-init.ps1
+    auto-bootstrap: false
+    bootstrap-months: 13
+    forward-months: 1
+    pit-keep-alive: 2m
+    read-alias-suffix: -read
+    write-alias-suffix: -write
+  plate:
+    color:
+      # 单一事实源：MySQL carmonitdb.sys_dict_type/sys_dict_data，dict_type=plate_color
+      # 启动加载 + 每 5 分钟刷新；MySQL 不可用时保留上次成功快照；代码内无码表兜底
+      dict:
+        enabled: true
+        url: jdbc:mysql://127.0.0.1:3307/carmonitdb?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&connectTimeout=3000&socketTimeout=3000
+        username: ${CARMONIT_MYSQL_USERNAME:}
+        password: ${CARMONIT_MYSQL_PASSWORD:}
+        dict-type: plate_color
+        refresh-interval-ms: 300000
+  sync:
+    # Outbox relay / Kafka 消费者总开关
+    enabled: false
+    topic: search-sync
+    group-id: search-sync-api
+    poll-interval-ms: 5000
+    batch-size: 500
+    max-retry: 5
+    bulk-size: 500
+    # 运维回灌允许略大于在线查询窗口（14 个整月最长 428 天，留余量取 450）
+    backfill-max-days: 450
+    # car-warning 增量采集（阶段一按 update_time 扫描 -> outbox；生产首选 Debezium CDC）
+    car-warning-enabled: true
+    car-warning-poll-interval-ms: 30000
+    car-warning-lookback-days: 7
+  reconcile:
+    enabled: false
+    cron: "0 30 2 * * ?"
+    lookback-minutes: 60
+    bucket-minutes: 1
+    drift-ratio: 0.001
+    max-repair-buckets: 12
+  export:
+    dir: ${java.io.tmpdir}/car-monit-export
+    workers: 2
+    page-size: 1000
+    max-hours: 24
+  bigscreen:
+    # 预聚合查询开关：dws_* 未回填前保持 false，backend 会按契约回退 legacy
+    stats-enabled: false
+    query-timeout-ms: 2000
+    etl:
+      # 阶段一批量回填：MySQL carmonitdb -> GaussDB dws_*；生产最终由 Flink 承担
+      enabled: false
+      mysql-url: jdbc:mysql://127.0.0.1:3307/carmonitdb?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&connectTimeout=3000&socketTimeout=3000
+      username: ${CARMONIT_MYSQL_USERNAME:}
+      password: ${CARMONIT_MYSQL_PASSWORD:}
+      interval-ms: 600000
+      lookback-days: 2
+

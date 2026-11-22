@@ -1,0 +1,107 @@
+{
+  "index_patterns": ["car-warning*"],
+  "priority": 100,
+  "version": 1,
+  "_meta": {
+    "description": "V3 realtime warning index: fixed single index, no ILM",
+    "source_table": "carmonitdb.car_warning_info (optional join car_info)",
+    "design": "architecture-traffic-query-design.md v1.3 §5.4.4"
+  },
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1,
+      "refresh_interval": "5s",
+      "index.codec": "best_compression",
+      "index.max_result_window": 10000,
+      "index.mapping.total_fields.limit": 200,
+      "analysis": {
+        "tokenizer": {
+          "plate_ngram_tokenizer": {
+            "type": "ngram",
+            "min_gram": 2,
+            "max_gram": 3,
+            "token_chars": ["letter", "digit"]
+          }
+        },
+        "analyzer": {
+          "plate_ngram": {
+            "type": "custom",
+            "tokenizer": "plate_ngram_tokenizer",
+            "filter": ["lowercase"]
+          }
+        }
+      }
+    },
+    "mappings": {
+      "dynamic": "strict",
+      "date_detection": false,
+      "numeric_detection": false,
+      "_source": {
+        "excludes": ["track_josn"]
+      },
+      "properties": {
+        "id": { "type": "keyword" },
+        "car_id": { "type": "keyword" },
+        "car_no": {
+          "type": "keyword",
+          "fields": {
+            "ngram": {
+              "type": "text",
+              "analyzer": "plate_ngram"
+            }
+          }
+        },
+        "car_type": { "type": "keyword" },
+        "car_vehicle": { "type": "keyword" },
+        "car_num": { "type": "long" },
+        "in_station_id": { "type": "keyword" },
+        "in_station": { "type": "keyword", "index": false, "doc_values": false },
+        "in_time": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "gantry_station_id": { "type": "keyword" },
+        "gantryt_station": { "type": "keyword", "index": false, "doc_values": false },
+        "gantry_code": { "type": "keyword" },
+        "gantry_time": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "file_ids": { "type": "keyword", "index": false, "doc_values": false },
+        "next_pass_time": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "next_pass_type": { "type": "keyword", "index": false, "doc_values": false },
+        "next_pass_address": { "type": "keyword", "index": false, "doc_values": false },
+        "next_pass_longitude": { "type": "keyword", "index": false, "doc_values": false },
+        "next_pass_latitude": { "type": "keyword", "index": false, "doc_values": false },
+        "road_code": { "type": "keyword" },
+        "road_name": { "type": "keyword", "index": false, "doc_values": false },
+        "section_code": { "type": "keyword" },
+        "section_name": { "type": "keyword", "index": false, "doc_values": false },
+        "toll_code": { "type": "keyword" },
+        "fwqbm": { "type": "keyword" },
+        "track_id": { "type": "keyword" },
+        "track_names": { "type": "keyword", "index": false, "doc_values": false },
+        "back_col1": { "type": "keyword" },
+        "back_col2": { "type": "keyword" },
+        "capture_type": { "type": "keyword" },
+        "status": { "type": "keyword" },
+        "escaped_type": { "type": "keyword" },
+        "escaped_amount": { "type": "double" },
+        "plate_color": { "type": "keyword" },
+        "create_time": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "update_time": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "del_flag": { "type": "keyword" }
+      }
+    }
+  }
+}

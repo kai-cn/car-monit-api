@@ -1,0 +1,130 @@
+-- =============================================================================
+-- V3 阶段一：搬运完成后创建分区索引（在 003_cutover.sql 之前执行）
+--
+-- 为什么单独一个脚本：
+--   8 亿行搬运期间持续维护索引会显著拖慢导入；影子表在搬运阶段不承载查询，
+--   因此先搬数据，再统一建 (time DESC, pk)、组织维度、车牌复合索引。
+--
+-- 幂等：索引已存在则跳过；父表不支持分区索引时自动退化为逐分区建索引。
+-- 用法：
+--   psql "$PGURL" -f 006_post_copy_indexes.sql
+-- =============================================================================
+
+\set ON_ERROR_STOP on
+SET search_path TO jl_data01, public;
+
+-- -----------------------------------------------------------------------------
+-- 通用索引创建：openGauss 3.0 不支持 CREATE INDEX IF NOT EXISTS；
+-- 分区表索引必须显式声明 LOCAL（否则与主键全局索引在分区键上冲突：
+-- "Global and local partition index should not be on same column"）。
+-- P1-11：同名索引必须确认归属目标表；回滚后重切时旧索引仍在旧表名下，
+-- 若只按名称判断会全部跳过。这里对“同名但归属其他表”的索引先改名让位再重建。
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION jl_data01.v3_create_index_any(
+    p_table   text,
+    p_index   text,
+    p_columns text
+) RETURNS void AS $$
+DECLARE
+    v_owned int;
+    v_stale int;
+    v_ts    text := to_char(now(), 'YYYYMMDD_HH24MISS');
+BEGIN
+    SELECT count(*) INTO v_owned
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      JOIN pg_index i ON i.indexrelid = c.oid
+     WHERE n.nspname = 'jl_data01'
+       AND c.relname = p_index
+       AND i.indrelid = ('jl_data01.' || quote_ident(p_table))::regclass;
+    IF v_owned > 0 THEN
+        RAISE NOTICE '[V3] 索引已存在且归属目标表，跳过: %.%', p_table, p_index;
+        RETURN;
+    END IF;
+
+    -- 同名索引存在但归属其他表（如回滚后遗留的分区表索引）：改名让位，保留可追溯
+    SELECT count(*) INTO v_stale
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'jl_data01'
+       AND c.relname = p_index
+       AND c.relkind IN ('i', 'I');
+    IF v_stale > 0 THEN
+        BEGIN
+            EXECUTE 'ALTER INDEX jl_data01.' || quote_ident(p_index)
+                    || ' RENAME TO ' || quote_ident(p_index || '_legacy_' || v_ts);
+            RAISE NOTICE '[V3] 同名索引归属其他表，已改名让位: % -> %',
+                p_index, p_index || '_legacy_' || v_ts;
+        EXCEPTION WHEN OTHERS THEN
+            EXECUTE 'DROP INDEX jl_data01.' || quote_ident(p_index);
+            RAISE NOTICE '[V3] 同名索引无法改名，已删除后重建: %', p_index;
+        END;
+    END IF;
+
+    EXECUTE 'CREATE INDEX ' || quote_ident(p_index)
+            || ' ON jl_data01.' || quote_ident(p_table)
+            || ' (' || p_columns || ') LOCAL';
+    RAISE NOTICE '[V3] 索引已创建（LOCAL）: %.%', p_table, p_index;
+END $$ LANGUAGE plpgsql;
+
+-- -----------------------------------------------------------------------------
+-- 1. 抓拍流水
+-- -----------------------------------------------------------------------------
+SELECT jl_data01.v3_create_index_any(
+    'ods_rt_szdn_snapshot_flow_addcode_v3',
+    'idx_v3_ods_rt_szdn_snapshot_flow_addcode_time',
+    'snapshottime DESC, big_id');
+
+SELECT jl_data01.v3_create_index_any(
+    'ods_rt_szdn_snapshot_flow_addcode_v3',
+    'idx_v3_ods_rt_szdn_snapshot_flow_addcode_org_time',
+    'orgcode, snapshottime DESC');
+
+SELECT jl_data01.v3_create_index_any(
+    'ods_rt_szdn_snapshot_flow_addcode_v3',
+    'idx_v3_ods_rt_szdn_snapshot_flow_addcode_plate_time',
+    'platenumber, snapshottime DESC');
+
+-- -----------------------------------------------------------------------------
+-- 2. 收费流水（派生车牌列 + 颜色）
+-- -----------------------------------------------------------------------------
+SELECT jl_data01.v3_create_index_any(
+    'ods_lwzxsfsj_fee_records_01_v3',
+    'idx_v3_ods_lwzxsfsj_fee_records_01_time',
+    'transtime DESC, big_id');
+
+-- 收费表无 orgcode 列（维度经 ods_szdn_gantry 关联），组织维度索引改用 gantryid
+SELECT jl_data01.v3_create_index_any(
+    'ods_lwzxsfsj_fee_records_01_v3',
+    'idx_v3_ods_lwzxsfsj_fee_records_01_gantry_time',
+    'gantryid, transtime DESC');
+
+SELECT jl_data01.v3_create_index_any(
+    'ods_lwzxsfsj_fee_records_01_v3',
+    'idx_v3_ods_lwzxsfsj_fee_records_01_plate_time',
+    'plate_core, plate_color_code, transtime DESC');
+
+-- -----------------------------------------------------------------------------
+-- 3. 轨迹表
+-- -----------------------------------------------------------------------------
+SELECT jl_data01.v3_create_index_any(
+    'zdata_trail_fitting_v3',
+    'idx_v3_zdata_trail_fitting_time',
+    'extime DESC, cid');
+
+SELECT jl_data01.v3_create_index_any(
+    'zdata_trail_fitting_v3',
+    'idx_v3_zdata_trail_fitting_plate_time',
+    'envehicleid, extime DESC');
+
+-- -----------------------------------------------------------------------------
+-- 4. 更新统计信息（让切换后计划器立即使用新索引）
+-- -----------------------------------------------------------------------------
+ANALYZE jl_data01.ods_rt_szdn_snapshot_flow_addcode_v3;
+ANALYZE jl_data01.ods_lwzxsfsj_fee_records_01_v3;
+ANALYZE jl_data01.zdata_trail_fitting_v3;
+
+DO $$
+BEGIN
+    RAISE NOTICE '索引创建与 ANALYZE 完成。下一步执行 003_cutover.sql。';
+END $$;
