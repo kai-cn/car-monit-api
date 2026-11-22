@@ -1,0 +1,65 @@
+{
+  "settings": {
+    "number_of_shards": __NUMBER_OF_SHARDS__,
+    "number_of_replicas": __NUMBER_OF_REPLICAS__,
+    "refresh_interval": "5s",
+    "index.max_ngram_diff": 2,
+    "analysis": {
+      "analyzer": {
+        "ngram_analyzer": {
+          "type": "custom",
+          "tokenizer": "ngram_tokenizer",
+          "filter": ["lowercase"]
+        }
+      },
+      "tokenizer": {
+        "ngram_tokenizer": {
+          "type": "ngram",
+          "min_gram": 2,
+          "max_gram": 4,
+          "token_chars": ["letter", "digit"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "dynamic_date_formats": ["yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis"],
+    "properties": {
+      "cid":              { "type": "keyword" },
+      "envehicleid": {
+        "type": "keyword",
+        "fields": {
+          "keyword": { "type": "keyword" },
+          "ngram": { "type": "text", "analyzer": "ngram_analyzer" }
+        }
+      },
+      "exvehicleid": {
+        "type": "keyword",
+        "fields": {
+          "keyword": { "type": "keyword" },
+          "ngram": { "type": "text", "analyzer": "ngram_analyzer" }
+        }
+      },
+      "entime":           { "type": "date", "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis" },
+      "extime":           { "type": "date", "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis" },
+      "entollstationid":  { "type": "keyword" },
+      "entollstationname": {
+        "type": "keyword",
+        "fields": {
+          "keyword": { "type": "keyword" },
+          "ngram": { "type": "text", "analyzer": "ngram_analyzer" }
+        }
+      },
+      "extollstationid":  { "type": "keyword" },
+      "extollstationname": {
+        "type": "keyword",
+        "fields": {
+          "keyword": { "type": "keyword" },
+          "ngram": { "type": "text", "analyzer": "ngram_analyzer" }
+        }
+      },
+      "envehicleclass":   { "type": "integer" },
+      "exvehicleclass":   { "type": "integer" }
+    }
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "settings": {
+    "number_of_shards": __NUMBER_OF_SHARDS__,
+    "number_of_replicas": __NUMBER_OF_REPLICAS__,
+    "refresh_interval": "5s",
+    "index.max_ngram_diff": 2,
+    "analysis": {
+      "analyzer": {
+        "ngram_analyzer": {
+          "type": "custom",
+          "tokenizer": "ngram_tokenizer",
+          "filter": ["lowercase"]
+        }
+      },
+      "tokenizer": {
+        "ngram_tokenizer": {
+          "type": "ngram",
+          "min_gram": 2,
+          "max_gram": 4,
+          "token_chars": ["letter", "digit"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "dynamic_date_formats": ["yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis"],
+    "properties": {
+      "big_id":       { "type": "keyword" },
+      "datauuid":     { "type": "keyword" },
+      "gantrycode":   { "type": "keyword" },
+      "gantryname": {
+        "type": "keyword",
+        "fields": {
+          "keyword": { "type": "keyword" },
+          "ngram": { "type": "text", "analyzer": "ngram_analyzer" }
+        }
+      },
+      "roadcode":     { "type": "keyword" },
+      "roadname": {
+        "type": "keyword",
+        "fields": {
+          "keyword": { "type": "keyword" },
+          "ngram": { "type": "text", "analyzer": "ngram_analyzer" }
+        }
+      },
+      "sectioncode":  { "type": "keyword" },
+      "sectionname": {
+        "type": "keyword",
+        "fields": {
+          "keyword": { "type": "keyword" },
+          "ngram": { "type": "text", "analyzer": "ngram_analyzer" }
+        }
+      },
+      "tollcode":     { "type": "keyword" },
+      "tollname": {
+        "type": "keyword",
+        "fields": {
+          "keyword": { "type": "keyword" },
+          "ngram": { "type": "text", "analyzer": "ngram_analyzer" }
+        }
+      },
+      "orgcode":      { "type": "keyword" },
+      "orgname": {
+        "type": "keyword",
+        "fields": {
+          "keyword": { "type": "keyword" },
+          "ngram": { "type": "text", "analyzer": "ngram_analyzer" }
+        }
+      },
+      "platenumber": {
+        "type": "keyword",
+        "fields": {
+          "keyword": { "type": "keyword" },
+          "ngram": { "type": "text", "analyzer": "ngram_analyzer" }
+        }
+      },
+      "platecolor":   { "type": "keyword" },
+      "platecolorcode": { "type": "keyword" },
+      "platetype":    { "type": "keyword" },
+      "platetypecode": { "type": "keyword" },
+      "snapshottime": { "type": "date", "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis" },
+      "snapshottimeunix": { "type": "long" }
+    }
+  }
+}

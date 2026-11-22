@@ -1,0 +1,7 @@
+/target
+/.run
+.env
+/export
+*.log
+# 根 .gitignore 的 *.lock 会误伤 Rust 依赖锁文件
+!Cargo.lock

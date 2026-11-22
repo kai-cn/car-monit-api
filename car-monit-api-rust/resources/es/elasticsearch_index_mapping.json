@@ -1,0 +1,620 @@
+# ================================================================
+# Elasticsearch 索引创建脚本
+# 版本：7.17.0 及以上兼容
+#
+# 核心优化：
+#   1. 使用 keyword + text 双类型存储车牌号等字段
+#   2. 精确匹配走 keyword（B-tree 性能）
+#   3. 模糊查询走 text（倒排索引性能）
+#   4. 时间字段使用 date 类型存储，支持 range 查询
+#   5. 使用 ILM 策略自动管理冷热数据（生命周期管理）
+# ================================================================
+
+# ================================================================
+# 索引1：ods_rt_szdn_snapshot_flow_addcode (门架抓拍流水)
+# 数据规模：日增70万条，月增2000万条
+# ================================================================
+PUT /ods_rt_szdn_snapshot_flow_addcode
+{
+  "settings": {
+    "number_of_shards": 5,
+    "number_of_replicas": 1,
+    "refresh_interval": "5s",
+    "index": {
+      "max_result_window": 100000,
+      "sort": {
+        "field": "snapshottime",
+        "order": "desc"
+      }
+    },
+    "analysis": {
+      "analyzer": {
+        "plate_analyzer": {
+          "type": "custom",
+          "tokenizer": "keyword",
+          "filter": ["uppercase"]
+        },
+        "chinese_analyzer": {
+          "type": "standard",
+          "stopwords": "_chinese_"
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "big_id": {
+        "type": "keyword"
+      },
+      "datauuid": {
+        "type": "keyword"
+      },
+      "snapshottime": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd'T'HH:mm:ss.SSSZ||epoch_millis"
+      },
+      "snapshottimeunix": {
+        "type": "long"
+      },
+      "receivedtime": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm:ss"
+      },
+      "gantrycode": {
+        "type": "keyword"
+      },
+      "gantryname": {
+        "type": "text",
+        "analyzer": "chinese_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "roadcode": {
+        "type": "keyword"
+      },
+      "roadname": {
+        "type": "text",
+        "analyzer": "chinese_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "sectioncode": {
+        "type": "keyword"
+      },
+      "sectionname": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "tollcode": {
+        "type": "keyword"
+      },
+      "orgcode": {
+        "type": "keyword"
+      },
+      "orgname": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "platenumber": {
+        "type": "text",
+        "analyzer": "plate_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "platetypecode": {
+        "type": "keyword"
+      },
+      "platecolor": {
+        "type": "keyword"
+      },
+      "deviceid": {
+        "type": "keyword"
+      },
+      "hexcode": {
+        "type": "keyword"
+      },
+      "pileno": {
+        "type": "keyword"
+      },
+      "lon": {
+        "type": "float"
+      },
+      "lat": {
+        "type": "float"
+      },
+      "direction": {
+        "type": "integer"
+      },
+      "carbrand": {
+        "type": "keyword"
+      },
+      "cartype": {
+        "type": "keyword"
+      },
+      "cartypecode": {
+        "type": "keyword"
+      },
+      "cardirection": {
+        "type": "keyword"
+      },
+      "gradelevel": {
+        "type": "integer"
+      },
+      "snappicturepath": {
+        "type": "keyword"
+      }
+    }
+  }
+}
+
+# ================================================================
+# 索引2：ods_lwzxsfsj_fee_records_01 (交易流水记录)
+# 数据规模：日增70万条，月增2000万条
+# ================================================================
+PUT /ods_lwzxsfsj_fee_records_01
+{
+  "settings": {
+    "number_of_shards": 5,
+    "number_of_replicas": 1,
+    "refresh_interval": "5s",
+    "index": {
+      "max_result_window": 100000,
+      "sort": {
+        "field": "transtime",
+        "order": "desc"
+      }
+    },
+    "analysis": {
+      "analyzer": {
+        "plate_analyzer": {
+          "type": "custom",
+          "tokenizer": "keyword",
+          "filter": ["uppercase"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "big_id": {
+        "type": "keyword"
+      },
+      "transtime": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd'T'HH:mm:ss.SSSZ||epoch_millis"
+      },
+      "transtype": {
+        "type": "keyword"
+      },
+      "vehicleplate": {
+        "type": "text",
+        "analyzer": "plate_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "vehicletype": {
+        "type": "keyword"
+      },
+      "axiscount": {
+        "type": "integer"
+      },
+      "vehiclehight": {
+        "type": "float"
+      },
+      "fee": {
+        "type": "float"
+      },
+      "payfee": {
+        "type": "float"
+      },
+      "gantryid": {
+        "type": "keyword"
+      },
+      "gantryhex": {
+        "type": "keyword"
+      },
+      "passstate": {
+        "type": "keyword"
+      },
+      "dealstatus": {
+        "type": "keyword"
+      },
+      "entime": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm:ss"
+      },
+      "extime": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm:ss"
+      },
+      "lastgantrytime": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm:ss"
+      },
+      "obuelectrical": {
+        "type": "float"
+      },
+      "obumac": {
+        "type": "keyword"
+      },
+      "cpuvehicleplate": {
+        "type": "keyword"
+      },
+      "sectioncode": {
+        "type": "keyword"
+      },
+      "cid": {
+        "type": "long"
+      }
+    }
+  }
+}
+
+# ================================================================
+# 索引3：zdata_trail_fitting (轨迹拟合)
+# 数据规模：日增70万条，月增2000万条
+# ================================================================
+PUT /zdata_trail_fitting
+{
+  "settings": {
+    "number_of_shards": 5,
+    "number_of_replicas": 1,
+    "refresh_interval": "5s",
+    "index": {
+      "max_result_window": 100000,
+      "sort": {
+        "field": "extime",
+        "order": "desc"
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "cid": {
+        "type": "long"
+      },
+      "envehicleid": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "envehicletype": {
+        "type": "keyword"
+      },
+      "enaxiscount": {
+        "type": "integer"
+      },
+      "enweight": {
+        "type": "float"
+      },
+      "entime": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm:ss"
+      },
+      "entollstationid": {
+        "type": "keyword"
+      },
+      "entollstationname": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "extime": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm:ss"
+      },
+      "extollstationid": {
+        "type": "keyword"
+      },
+      "extollstationname": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "exvehicleid": {
+        "type": "keyword"
+      },
+      "exvehicletype": {
+        "type": "keyword"
+      },
+      "exaxiscount": {
+        "type": "integer"
+      },
+      "exweight": {
+        "type": "float"
+      },
+      "trailpoints": {
+        "type": "keyword"
+      }
+    }
+  }
+}
+
+# ================================================================
+# ILM 策略：索引生命周期管理（冷热分离 + 自动归档）
+# 数据保留策略：热(30天) -> 暖(60天) -> 冷(180天) -> 删除
+# ================================================================
+PUT _ilm/policy/large_data_policy
+{
+  "policy": {
+    "phases": {
+      "hot": {
+        "min_age": "0d",
+        "actions": {
+          "rollover": {
+            "max_age": "30d",
+            "max_docs": 50000000
+          },
+          "set_priority": {
+            "priority": 100
+          }
+        }
+      },
+      "warm": {
+        "min_age": "30d",
+        "actions": {
+          "set_priority": {
+            "priority": 50
+          },
+          "shrink": {
+            "number_of_shards": 1
+          },
+          "forcemerge": {
+            "max_num_segments": 1
+          }
+        }
+      },
+      "cold": {
+        "min_age": "90d",
+        "actions": {
+          "set_priority": {
+            "priority": 0
+          },
+          "freeze": {}
+        }
+      },
+      "delete": {
+        "min_age": "180d",
+        "actions": {
+          "delete": {}
+        }
+      }
+    }
+  }
+}
+
+# ================================================================
+# 将 ILM 策略应用到三个索引
+# ================================================================
+PUT /ods_rt_szdn_snapshot_flow_addcode/_settings
+{
+  "index": {
+    "lifecycle": {
+      "name": "large_data_policy",
+      "rollover_alias": "ods_rt_szdn_snapshot_flow_addcode"
+    }
+  }
+}
+
+PUT /ods_lwzxsfsj_fee_records_01/_settings
+{
+  "index": {
+    "lifecycle": {
+      "name": "large_data_policy",
+      "rollover_alias": "ods_lwzxsfsj_fee_records_01"
+    }
+  }
+}
+
+PUT /zdata_trail_fitting/_settings
+{
+  "index": {
+    "lifecycle": {
+      "name": "large_data_policy",
+      "rollover_alias": "zdata_trail_fitting"
+    }
+  }
+}
+
+# ================================================================
+# 测试查询
+# ================================================================
+
+# 测试1：车牌号精确匹配
+GET /ods_rt_szdn_snapshot_flow_addcode/_search
+{
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "range": {
+            "snapshottime": {
+              "gte": "2024-01-01 00:00:00",
+              "lte": "2024-01-31 23:59:59",
+              "format": "yyyy-MM-dd HH:mm:ss"
+            }
+          }
+        },
+        {
+          "term": {
+            "platenumber.keyword": "赣A12345"
+          }
+        }
+      ]
+    }
+  },
+  "size": 100,
+  "sort": [{"snapshottime": "desc"}]
+}
+
+# 测试2：车牌模糊查询（前缀匹配）
+GET /ods_rt_szdn_snapshot_flow_addcode/_search
+{
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "range": {
+            "snapshottime": {
+              "gte": "2024-01-01 00:00:00",
+              "lte": "2024-01-31 23:59:59",
+              "format": "yyyy-MM-dd HH:mm:ss"
+            }
+          }
+        },
+        {
+          "prefix": {
+            "platenumber.keyword": "赣A1"
+          }
+        }
+      ]
+    }
+  },
+  "size": 100
+}
+
+# 测试3：全模糊查询（通配符）
+GET /ods_rt_szdn_snapshot_flow_addcode/_search
+{
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "range": {
+            "snapshottime": {
+              "gte": "2024-01-01 00:00:00",
+              "lte": "2024-01-31 23:59:59",
+              "format": "yyyy-MM-dd HH:mm:ss"
+            }
+          }
+        },
+        {
+          "wildcard": {
+            "platenumber.keyword": "*赣A1*"
+          }
+        },
+        {
+          "term": {
+            "gantrycode": "GZ001"
+          }
+        }
+      ]
+    }
+  },
+  "size": 100
+}
+
+# 测试4：多字段组合查询
+GET /ods_rt_szdn_snapshot_flow_addcode/_search
+{
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "range": {
+            "snapshottime": {
+              "gte": "2024-01-01 00:00:00",
+              "lte": "2024-06-30 23:59:59",
+              "format": "yyyy-MM-dd HH:mm:ss"
+            }
+          }
+        },
+        {
+          "term": {
+            "sectioncode": "200R500450642000"
+          }
+        },
+        {
+          "term": {
+            "gantrycode": "S003636011001710010"
+          }
+        },
+        {
+          "wildcard": {
+            "platenumber.keyword": "*赣*"
+          }
+        }
+      ]
+    }
+  },
+  "size": 100,
+  "sort": [{"snapshottime": "desc"}]
+}
+
+# 测试5：聚合查询 - 按门架统计抓拍次数
+GET /ods_rt_szdn_snapshot_flow_addcode/_search
+{
+  "query": {
+    "range": {
+      "snapshottime": {
+        "gte": "2024-01-01 00:00:00",
+        "lte": "2024-01-31 23:59:59",
+        "format": "yyyy-MM-dd HH:mm:ss"
+      }
+    }
+  },
+  "size": 0,
+  "aggs": {
+    "gantry_stats": {
+      "terms": {
+        "field": "gantrycode",
+        "size": 100
+      },
+      "aggs": {
+        "daily_stats": {
+          "date_histogram": {
+            "field": "snapshottime",
+            "calendar_interval": "day",
+            "format": "yyyy-MM-dd"
+          }
+        }
+      }
+    }
+  }
+}
+
+# ================================================================
+# 健康检查命令
+# ================================================================
+
+# 查看索引健康状态
+GET /_cat/indices/ods*,zdata*?v&s=index
+
+# 查看索引大小
+GET /_cat/indices?v&h=index,store.size,pri.store.size&s=store.size:desc
+
+# 查看索引分片分布
+GET /_cat/shards/ods*,zdata*?v
+
+# 集群健康检查
+GET /_cluster/health?pretty
