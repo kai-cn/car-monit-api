@@ -112,6 +112,6 @@
          select
          <include refid="selectDwdLcztFwqjcxxVo"/>
          from jl_data01.ods_szdn_service t
-         where t.id = #{agentPk}
+         where t.id = CAST(#{agentPk} AS INTEGER)
     </select>
 </mapper>
