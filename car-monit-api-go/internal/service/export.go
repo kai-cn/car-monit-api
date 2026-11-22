@@ -56,21 +56,27 @@ type UnifiedExportService struct {
 	query *UnifiedQueryService
 	cfg   config.OptimizationConfig
 
-	mu     sync.RWMutex
-	tasks  map[string]*ExportTaskStatus
-	sem    chan struct{} // 并发上限，等价于 ThreadPoolExecutor 的线程数
-	wg     sync.WaitGroup
-	cancel context.CancelFunc
+	mu    sync.RWMutex
+	tasks map[string]*ExportTaskStatus
+	sem   chan struct{} // 并发上限，等价于 ThreadPoolExecutor 的线程数
+	wg    sync.WaitGroup
+	// baseCtx/baseCancel 是进程级任务上下文：既不被 HTTP 请求取消（导出要跨请求存活），
+	// 又能在 Close() 时一次性取消所有在途任务（对应 Java 线程池的 shutdownNow）。
+	baseCtx    context.Context
+	baseCancel context.CancelFunc
 }
 
 // NewUnifiedExportService 构造（对应 @Value 注入 scrollBatchSize/exportBatchSize/exportDir）
 func NewUnifiedExportService(esClient *es.Client, query *UnifiedQueryService, cfg config.OptimizationConfig) *UnifiedExportService {
+	baseCtx, baseCancel := context.WithCancel(context.Background())
 	return &UnifiedExportService{
-		es:    esClient,
-		query: query,
-		cfg:   cfg,
-		tasks: make(map[string]*ExportTaskStatus),
-		sem:   make(chan struct{}, 2),
+		es:         esClient,
+		query:      query,
+		cfg:        cfg,
+		tasks:      make(map[string]*ExportTaskStatus),
+		sem:        make(chan struct{}, 2),
+		baseCtx:    baseCtx,
+		baseCancel: baseCancel,
 	}
 }
 
@@ -78,7 +84,10 @@ func NewUnifiedExportService(esClient *es.Client, query *UnifiedQueryService, cf
 //
 // DIFF: Java 用 exportExecutor.submit(...) 把任务丢掉线程池；Go 用 goroutine，
 // 但必须自己维护 WaitGroup，否则进程退出时正在写盘的文件会被截断。
-func (s *UnifiedExportService) SubmitExportTask(ctx context.Context, ds DataSource,
+//
+// 注意第一个参数不再参与任务生命周期：导出必须跨 HTTP 请求存活，改用进程级 baseCtx
+// （Close() 时统一取消）。保留形参是为了不动 handler 的调用点。
+func (s *UnifiedExportService) SubmitExportTask(_ context.Context, ds DataSource,
 	startTime, endTime string, fuzzy map[string]string) (string, error) {
 
 	// 校验：导出必须带时间范围（对应 QueryValidationService.validateExportQuery 的拦截）
@@ -99,8 +108,8 @@ func (s *UnifiedExportService) SubmitExportTask(ctx context.Context, ds DataSour
 	s.tasks[taskID] = st
 	s.mu.Unlock()
 
-	// 任务使用独立 context：HTTP 请求结束时导出不应被取消
-	taskCtx := context.WithoutCancel(ctx)
+	// 任务使用进程级 context：HTTP 请求结束时导出不应被取消，但 Close() 时必须能取消。
+	taskCtx := s.baseCtx
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
@@ -142,11 +151,15 @@ func (s *UnifiedExportService) CleanExpiredTasks(maxAge time.Duration) {
 	}
 }
 
-// Close 对应 @PreDestroy destroy()：等待在途任务结束。
+// Close 对应 @PreDestroy destroy()：取消在途任务并等待它们退出。
 //
 // DIFF: Java 的线程池 shutdownNow 会中断线程；Go 的 goroutine 不能被强行中断，
-// 只能"等它自己结束"——因此导出循环必须频繁检查 ctx（这里是每批 scroll 检查一次）。
+// 所以这里先 cancel baseCtx，让导出循环在下一次 scroll/写盘前退出，再 Wait。
+// 调用方（main.shutdown）仍应加超时兜底：极端情况下 ES 请求可能卡在 TCP 层。
 func (s *UnifiedExportService) Close() {
+	if s.baseCancel != nil {
+		s.baseCancel()
+	}
 	s.wg.Wait()
 }
 

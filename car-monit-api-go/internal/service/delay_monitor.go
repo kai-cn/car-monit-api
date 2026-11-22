@@ -234,15 +234,15 @@ func (s *DelayMonitoringService) CalculateStats(ctx context.Context) DelayStats 
 
 // getDelays 对应 getDelays()（L378-393）：把当天所有维度 key 的样本摊平成一个切片。
 //
-// PARITY: Java 用 keys(prefix + "*:" + today)（KEYS 命令，生产会阻塞 Redis）。
-// Go 保持同为 Keys 以对齐行为；README「已知风险」已登记：>1 万 key 时应改 SCAN 游标遍历。
+// DIFF（报告 02 P1-2）: Java 用 keys(prefix + "*:" + today)（KEYS 会阻塞 Redis）。
+// Go 改为 SCAN 游标遍历（ScanKeys，内部去重），大库下不再阻塞主线程。
 func (s *DelayMonitoringService) getDelays(ctx context.Context, prefix string) []int64 {
 	if s.cache == nil {
 		return nil
 	}
 	rdb := s.cache.Raw()
 	pattern := prefix + "*:" + utils.FormatCompactDate(time.Now())
-	keys, err := rdb.Keys(ctx, pattern).Result()
+	keys, err := s.cache.ScanKeys(ctx, pattern, 500)
 	if err != nil || len(keys) == 0 {
 		return nil
 	}

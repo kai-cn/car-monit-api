@@ -6,8 +6,6 @@ package model
 // 关键映射: @TableName(value='ods_cxzt_fwqclls', schema=None) → TableName()/Schema()；@TableId(None) → primaryKey；
 // DIFF: Lombok @Data 的 getter/setter 不再生成；Go 侧字段直接导出，JSON 名与 Java 字段名保持一致。
 
-import ()
-
 // OdsCxztFwqclls 对应 Java 类 OdsCxztFwqclls
 type OdsCxztFwqclls struct {
 	BigId            *int64     `json:"bigId" gorm:"column:big_id"`                      // JAVA L26

@@ -26,6 +26,8 @@ type KafkaBus struct {
 	cfg    Configure
 	writer *kafka.Writer
 	reader *kafka.Reader
+	// health 记录消费循环心跳；/readyz 通过 Healthy() 读取，避免"启动过就当健康"
+	health *Heartbeat
 }
 
 // NewKafka 构造 Kafka 总线。
@@ -71,7 +73,7 @@ func NewKafka(cfg Configure) *KafkaBus {
 		StartOffset:    kafka.FirstOffset,
 	})
 
-	return &KafkaBus{cfg: cfg, writer: w, reader: r}
+	return &KafkaBus{cfg: cfg, writer: w, reader: r, health: NewHeartbeat()}
 }
 
 // Publish 对应 KafkaProducerService.sendSnapshotFlowData 的发送段（application.yml:145-148 topic）
@@ -127,6 +129,9 @@ func (b *KafkaBus) Consume(ctx context.Context, handler Handler) error {
 	}
 	lg := slog.Default().With("component", "kafka-consumer", "topic", b.cfg.Topic, "group", b.cfg.GroupID)
 	lg.Info("消费者已启动")
+	// 心跳：进入循环即登记 running，退出/panic 时置 false（defer 覆盖所有返回路径）。
+	b.health.markRunning()
+	defer b.health.stop()
 
 	for {
 		if ctx.Err() != nil {
@@ -140,12 +145,17 @@ func (b *KafkaBus) Consume(ctx context.Context, handler Handler) error {
 		cancel()
 		if err != nil {
 			if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+				// 空闲 topic 的正常超时：循环仍在前进，刷新心跳。
+				b.health.tick()
 				continue
 			}
+			// 非预期失败：不刷新心跳，连续 3 次会让 Healthy() 转 false。
+			b.health.fail(err)
 			lg.Error("拉取消息失败", "err", err)
 			time.Sleep(time.Second)
 			continue
 		}
+		b.health.tick()
 
 		msg := Message{
 			Topic: raw.Topic,
@@ -167,7 +177,27 @@ func (b *KafkaBus) Consume(ctx context.Context, handler Handler) error {
 		if err := b.reader.CommitMessages(ctx, raw); err != nil && ctx.Err() == nil {
 			lg.Error("提交 offset 失败", "err", err)
 		}
+		// 一轮完整处理（含慢 handler）结束后刷新心跳，避免"处理慢但确实在前进"被误判。
+		b.health.tick()
 	}
+}
+
+// Healthy 返回消费循环的心跳状态（供 /readyz 与指标使用）。
+//
+// 语义：未启动、已退出、连续拉取失败或心跳超过 HeartbeatStaleAfter 未刷新，均返回 false。
+func (b *KafkaBus) Healthy() bool {
+	if b == nil {
+		return false
+	}
+	return b.health.Healthy()
+}
+
+// HealthSnapshot 暴露心跳明细（registered/running/lastTick/连续失败数/最近错误）。
+func (b *KafkaBus) HealthSnapshot() (registered, running bool, lastTick time.Time, consecutiveErrors int, lastErr string) {
+	if b == nil {
+		return false, false, time.Time{}, 0, ""
+	}
+	return b.health.Snapshot()
 }
 
 func (b *KafkaBus) handleWithRetry(ctx context.Context, lg *slog.Logger, handler Handler, msg Message) error {

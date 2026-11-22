@@ -8,9 +8,10 @@
 - Java 惯用法翻译成 Go 惯用法处标 `// DIFF:`；行为与 Java 完全一致但有坑处标 `// PARITY:`；
 - `Java 独有概念 → Go 等价物` 的决策理由写在对应文件头部注释里，也在本文件第 4、9 节汇总。
 
-**规模**：112 个 Go 文件 / 22,132 行（含注释）；共 **100 条 HTTP 路由** —— 85 条业务路由与 Java 的
-85 个端点**一一对应**，另有 15 条 Go 侧探针（`/healthz` `/readyz` `/health` + 12 条 `/debug/pprof/*`）；
-21 个定时任务（默认配置下 9 个在跑）；35 个单元测试函数（8 个测试文件，零外部依赖）。
+**规模**：127 个 Go 文件（109 个源码 + 18 个测试）/ 22,331 行（含注释）；共 **101 条 HTTP 路由** —— 85 条业务路由与 Java 的
+85 个端点**一一对应**，另有 16 条 Go 侧探针/运维端点（`/healthz` `/readyz` `/health` `/metrics`
++ 12 条 `/debug/pprof/*`，后两组按配置开关决定是否挂载）；
+21 个定时任务（默认配置下 9 个在跑）；73 个单元测试函数（18 个测试文件，零外部依赖）。
 
 ---
 
@@ -215,9 +216,12 @@ go test ./internal/router/ -run TestRoutesRegistered -v
 
 ### 6.3 启动服务
 
-前置：`configs/config.yaml` 中的 GaussDB（`192.168.56.10:5432/RuoYi`）与 Redis（`127.0.0.1:6379`）可达。
+前置：`configs/config.local.yaml` 里的 GaussDB（`<db-host>:5432/RuoYi`）与 Redis（默认 `127.0.0.1:6379`）可达。
+仓库内的 `configs/config.yaml` 只含占位符与空口令，启动前必须填本地覆盖文件（见 §7.4）。
 
 ```bash
+# 首次：复制并填入真实地址/口令（该文件已被 .gitignore 忽略）
+cp configs/config.local.yaml.example configs/config.local.yaml
 go run ./cmd/api -config configs/config.yaml
 ```
 
@@ -238,6 +242,9 @@ INFO HTTP 服务已启动 addr=:9901 mode=release contextPath=/
 
 > 若 `kafka.bootstrap-servers` 为空，会看到 `WARN 未配置 kafka.bootstrap-servers，消息总线降级为本地模式`，
 > 此时消费端不启动，`/readyz` 里 `mqConsumer=DOWN` —— 这是预期行为，不是故障。
+> 消费端启动后 `mqConsumer` 读的是**消费循环心跳**（45s 无心跳或连续 3 次拉取失败即 DOWN），
+> 不是"启动过一次"的常量；默认不改变 HTTP 状态码，`server.consumer-required-for-ready=true`
+> 时才升级为 503。
 
 ### 6.4 冒烟验证
 
@@ -323,6 +330,39 @@ dlv debug ./cmd/api -- -config configs/config.yaml
 #   (dlv) break internal/handler/crud.go:167
 #   (dlv) continue
 ```
+
+### 7.4 配置与凭据（本地开发必读）
+
+仓库内的三份配置**都不含任何真实口令**，可安全入库：
+
+| 文件 | 用途 | 含口令 |
+|---|---|---|
+| `configs/config.yaml` | 非敏感基线（完整键位，主机名用 `*.example.internal` 占位） | 否 |
+| `configs/config.verify.yaml` | 差分/灰度校验副本（9903 + db1） | 否 |
+| `configs/config.example.yaml` | 最小可运行示例 | 否 |
+
+真实值有两个入口，优先级：**主配置 < 本地覆盖 < `APP_` 环境变量**。
+
+1. **本地覆盖文件**（推荐本地开发）
+
+   ```bash
+   cp configs/config.local.yaml.example configs/config.local.yaml     # 已 gitignore
+   # 编辑填入真实 host / password 后照常启动，Load() 会自动合并
+   go run ./cmd/api -config configs/config.yaml
+   ```
+
+   `config.verify.yaml` 同理用 `config.verify.local.yaml`。
+   启动日志会打印 `override=<实际合并的覆盖文件>`（只打路径，不打口令）。
+
+2. **环境变量**（推荐部署）
+
+   ```bash
+   export APP_SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD='...'
+   export APP_ELASTICSEARCH_PASSWORD='...'
+   ```
+
+启动失败时错误文本会做脱敏（`internal/utils.RedactString`）：配置里的口令、
+`password=`/`token=` 等键值形态、URL-encode 后的口令都会替换成 `***`。
 
 ---
 
@@ -418,14 +458,16 @@ dlv debug ./cmd/api -- -config configs/config.yaml
    `fwqjcxx`（33 个过滤条件里 28 个引用的是 SELECT 别名，如 `t.id agent_pk` 却被写成
    `and t.agent_pk = #{agentPk}`，Java 侧带任一这类过滤即 `column does not exist` → 500）。
    本轮另外补齐了 `trailtracks` 缺的 6 个条件（此前 `?type=0` 在 Java 过滤生效、Go 全量返回）。
-3. **`total` 的语义差异**：轨迹查询（`/base/sysutil/carTrackQuery*`）的 total 用「本页行数」，
-   因为对应的 COUNT 会打穿 8 亿级表（`handler/sysutil.go` 头部有说明）。
+3. **`total` 已按 Java 语义对齐（P-PAGE-8）**：轨迹查询（`/base/sysutil/carTrackQuery*`）的 total
+   走与取数**同谓词**的 COUNT（`CountHistoryTrail`），越界页按 PageHelper 的 reasonable 回夹末页。
+   早期版本曾用「本页行数」代替 total，已修复（`docs/parity-2026-11-02/09`）。
 4. **`trail:realtime:*` / `trail:pending:*` 不能跨版本共用**：Java 用 JDK 序列化，Go 用 JSON。
    灰度切换前需清空这两类 key（`multisource.go` 头部的 PARITY）。
 5. **`KEYS` 命令**：`ProcessPendingQueue` 与 `CheckOfflineDevices` 沿用了 Java 的 `KEYS pattern`，
-   生产环境 Redis 数据量大时会阻塞 —— 与 Java 行为一致，重构方向是改 `SCAN`（README 已登记）。
-6. **定时任务并发模型变化**：Spring 默认 `poolSize=1`（全部串行），Go 每个任务一个 goroutine。
-   这是**唯一有意改变并发语义**的地方，理由见 `scheduler.go:Start` 的 DIFF。
+   生产环境 Redis 数据量大时会阻塞 —— 与 Java 行为一致；V2 已改为 `SCAN` 游标遍历（见 14 节）。
+6. **定时任务并发模型**：Java 侧 `SchedulingConfig.java:44` 显式 `setPoolSize(10)`（任务并行，
+   同一任务不重入）；Go 每个任务一个 goroutine，语义接近，差异仅在「同一时刻就绪任务 >10」时
+   Java 排队、Go 全并行（当前 9 个任务在跑，不触发）。见 `scheduler.go:Start` 的 DIFF。
 7. **`saveOrUpdate` 是两次 SQL**（先查后写），与 MyBatis-Plus 一致；高并发下可能出现
    「查到不存在 → 双 insert」的竞态，Java 侧同样存在，未在此修复。
 8. **实时轨迹的第二个 Redis 集群未接入**：`syncTrack` 在生产模式下用
@@ -461,15 +503,15 @@ CI `setup-go` 通过 `go-version-file: go.mod` 自动安装 1.26.10。
 | 编译 | `go build ./...` | 通过 |
 | 静态检查 | `go vet ./...` | 通过 |
 | 格式 | `gofmt -l cmd internal` | 无输出 |
-| 单元测试 | `go test ./internal/...` | handler / router / scheduler / service / utils **5 个包全绿**（24 个测试函数，零外部依赖） |
-| 路由完整性 | `go test ./internal/router/ -run TestRoutesRegistered` | 100 条路由，50 条关键路径逐条断言 + 总数下限 60 |
+| 单元测试 | `go test ./...` | config / db / handler / metrics / middleware / mq / repo / router / scheduler / service / utils **11 个包全绿**（73 个测试函数，零外部依赖） |
+| 路由完整性 | `go test ./internal/router/ -run TestRoutesRegistered` | 101 条路由，50 条关键路径逐条断言 + 总数下限 60 |
 | 自测端点行为 | `go test ./internal/router/ -run TestSelfTestEndpoints` | 3 个已实现返回 200；4 个抽样 501 带 `javaRef` / `reason` |
 | cron 降级 | `go test ./internal/scheduler/` | 21 个 Quartz 表达式全部可算下次触发时间 |
 | 定时任务登记 | `go test ./internal/scheduler/ -run TestRegisterAllTrackJobs` | 15 条（全依赖为 nil 时）：TrackTask 2 条在跑、CarTask 11 条 Disabled |
 | 404 兜底 | `go test ./internal/router/ -run TestRouterMiddlewareChain` | 返回 `{code:404,msg,data}` + `X-Request-Id` |
 | 实体字段完整性 | 一次性审计脚本（未入库） | 30 类 / 901 字段 ↔ 901 字段，缺 0 |
 | Mapper 方法覆盖 | 同上 | 23 个 Mapper / 64 个方法，0 静默缺口（分类见 9.3） |
-| 锚点完整性 | 同上 | 104 个非测试 `.go` 文件**全部**带 `// JAVA 对照:`，且每个文件至少含一处 `DIFF`/`PARITY`/架构决策标记 |
+| 锚点完整性 | 同上 | 104 个业务迁移 `.go` 文件全部带 `// JAVA 对照:`，且每个文件至少含一处 `DIFF`/`PARITY`/架构决策标记；V2 新增的 3 个基础设施文件（`metrics.go`/`health.go`/`wait.go`）标为「Go 侧新增」 |
 | **双端 HTTP 差分回归** | `docs/parity-2026-11-02/tools/parity.py` | 364 条用例 **OK 329 / DIFF 13 / STATUS 22 / NONDET 0**（r12 定稿）；自 r5 起到 r12 零回归（明细见第 13 节） |
 | **谓词覆盖度机械对照** | `docs/parity-2026-11-02/tools/predicates.py` | 19 张表 × Java `<if>` 列 vs Go `tx.Where` 列：**17/19 零缺项**，剩 2 张是 Java 侧自身缺语句 |
 
@@ -498,7 +540,7 @@ CI `setup-go` 通过 `go-version-file: go.mod` 自动安装 1.26.10。
 |---|---|
 | Java 基准 | `pro-business-api-1.0.jar`，**:9902**（jar 构建 2026-10-31 12:47，与当前源码一致，可作为基准） |
 | Go 被测 | `bin/api.exe` + `configs/config.verify.yaml`，**:9903** |
-| 数据库 | **共用**同一个 GaussDB `192.168.56.10:5432/RuoYi` |
+| 数据库 | **共用**同一个 GaussDB（地址见 `config.verify.local.yaml`，不入库） |
 | Redis | 同实例 **不同库**：Java `db0` / Go `db1` |
 | ES | 共用，索引确实存在（7.15.2：`snapshot_flow` 300 / `fee_records` 369 / `trail_fitting` 1 篇）。第五轮实测更正：**`range` 不报错**（时间列 `snapshottime`/`transtime`/`extime` 是 `text`，于是按**词项字典序**比日期 —— 静默给错数据，比报错更危险）；真正失败的是 **`sort`**（`all shards failed`，`Text fields are not optimised for sorting`）。两端都无条件附加该 sort，**路由决策与失败点逐字等价**，故这不是 Go 的差异；要修 mapping 属独立排期（会同时改变两端行为） |
 | **磁盘（红线）** | 11-04 实测 **C: 98%、D: 95%**，`D:\pagefile.sys` 22.2 GB 与 ES 数据同卷 → ES 反复进 flood stage 并给索引挂 `read_only_allow_delete` 锁（**磁盘回落后不会自动清**），Java/ES 因此在 18:07 与次日先后停摆。**在释放约 14 GB 之前：不要重启 ES、不要清锁、不要在降级状态下跑差分**。详见 `docs/parity-2026-11-02/11` §1.1 |
@@ -580,3 +622,41 @@ python predicates.py                                                          # 
 ```
 写接口默认不执行（`--allow-write` 才跑）；`/large/sync/*` 始终不跑 —— 它会用同 `_id`
 覆盖 Java 写进 ES 的 `_source`，之后所有读对比的基准都会失真。
+
+---
+
+## 14. V2 生产化改造（2026-11-08，分支 `car-monit-api-go-V2`）
+
+依据 `docs/review-2026-11-07/` 的两份审阅报告，本轮只做「不改对外契约」的生产加固。
+所有新增开关的默认值都保持 V1/Java 行为；部署形态与告警建议见 [docs/deploy.md](docs/deploy.md)。
+
+| # | 改动 | 位置 | 默认行为 |
+|---|---|---|---|
+| 1 | **GORM 慢 SQL/错误分级**：慢 SQL → `WARN`、SQL 错误 → `ERROR`（原先全部 `DEBUG`） | `internal/db/db.go:gormSlogLogger` | 不变（只是日志可见性） |
+| 2 | **`/readyz` 消费端心跳化**：`mq.Heartbeat` 记录 running/lastTick/连续失败；45s 无心跳或连续 3 次拉取失败 → `mqConsumer=DOWN` | `internal/mq/health.go`、`internal/service/snapshot_consumer.go` | 响应体可见；状态码不变 |
+| 3 | **消费循环无限重试**：异常 → 5s 退避 → 重启（原实现只重试一次就退出） | `internal/service/snapshot_consumer.go:Start` | 与 Java `while(true)` 对齐 |
+| 4 | **优雅关闭补全**：导出服务 `Close()` 接入 shutdown（先 cancel 进程级 ctx 再等）、常驻协程补 recover、后台组件共享 60s 超时预算 | `cmd/api/main.go:shutdown`、`service/export.go`、`service/large.go`、`service/snapshot_sync.go` | 关闭更慢但不再截断 CSV / 不再无限等待 |
+| 5 | **Prometheus 指标**：`/metrics`（HTTP RED、依赖健康、消费心跳/耗时、同步计数、连接池） | `internal/metrics`、`internal/router/router.go` | `server.metrics-enabled: true` |
+| 6 | **pprof 开关**：`/debug/pprof/*` 从"始终挂载"改为默认关闭 | `internal/router/router.go` | `server.pprof-enabled: false` |
+| 7 | **时区固定**：`app.timezone`（默认 `Asia/Shanghai`）启动时赋值 `time.Local`，消除 DB 路径与绑定/JSON 路径双轨 | `cmd/api/main.go`、`internal/config/config.go:ResolveTimezone` | 与 JVM 部署基线一致 |
+| 8 | **依赖安全水位**：x/net v0.25→v0.42、x/crypto v0.23→v0.40；gin 1.10→1.11、go-redis 9.5→9.17、gorm 1.25→1.31.1、pg driver 1.5→1.6 | `go.mod` | 无行为变化（受 go1.24.1 工具链上限约束） |
+| 9 | **CI 门禁**：gofmt(只查) + goimports + build + vet + test + **`-race`** + govulncheck，任一失败阻断 | `.github/workflows/car-monit-api-go-ci.yml`、`check.bat` | 本地脚本不再 `gofmt -w` |
+| 10 | **`KEYS` → `SCAN`**：待处理队列、设备心跳、延迟统计、丢失检测四处 | `internal/cache/redis.go:ScanKeys` + 4 个调用点 | 结果集一致（内部去重） |
+| 11 | **缓存击穿防护**：`GetOrLoad` 用 singleflight 合并同 key 并发回源 | `internal/cache/redis.go` | 目前无生产调用点，为后续接入准备 |
+| 12 | **请求级超时兜底**：`server.request-timeout`（默认 0=关闭） | `internal/middleware/middleware.go:Timeout` | 关闭 |
+| 13 | **口令出库**：三份入库配置口令置空、主机名占位；本地覆盖 `configs/*.local.yaml`（gitignore）+ 自动合并；启动报错脱敏 | `internal/config`、`internal/utils/redact.go`、`configs/` | 启动需 env 或 local 覆盖提供口令 |
+| 14 | **定时任务分布式租约锁**：Redis `SET NX PX` + 续约 + compare-and-delete | `internal/scheduler/lock.go` | `scheduler.distributed-lock.enabled: false`（单副本零影响） |
+| 15 | **配置与部署物料**：`configs/config.example.yaml`（最小可运行示例）、`config.local.yaml.example`、`deploy/k8s.yaml`（单副本 + Recreate + 90s grace）、`docs/deploy.md` | 新增 | 不改运行时行为 |
+
+**未做（按「无事实依据不改线上契约」处理）**：
+
+- 接口鉴权：与 Java 一致（`SecurityInterceptor` 整文件被注释），依赖网络层隔离；
+- CSV 列结构：Java 产物列数 `{4,39}` 且标准解析器读不回来，Go 是合法 RFC4180（恒 4 列），
+  切换前需由下游消费方确认，不在本轮擅自改动；
+- **go 指令 / toolchain 提升到 1.26**：本机与镜像都是 go1.24.1，且 gin 1.12 / prometheus 1.25
+  等依赖要求 go≥1.25，先升工具链才能继续升依赖 —— 属环境变更，不在本分支处理；
+- 导出任务状态持久化（当前与 Java 一致放进程内存）、ES 客户端重试退避、repo 层自动化回归。
+
+**验证**：`go build ./...`、`go vet ./...`、`go test ./...`（11 个包）全部通过；
+`gofmt -l` / `goimports -l` 在 LF 检出下无输出；`go test -race` 需 CGO，本机不可用，
+由 CI 的 Linux runner 承担（见 `.github/workflows/car-monit-api-go-ci.yml`）。

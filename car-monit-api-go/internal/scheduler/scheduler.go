@@ -18,7 +18,7 @@
 //	@EnableScheduling                      → main() 里显式构造 Scheduler 并 Start(ctx)
 //	@Scheduled(cron = "0 */1 * * * ?")     → Add("名字", "*/1 * * * *", fn)
 //	@Scheduled(fixedRate = 300000)         → Every("名字", 5*time.Minute, fn)
-//	Spring 的单线程调度器（默认 poolSize=1） → 每个 job 一个 goroutine（见 DIFF）
+//	Spring 的调度线程池（SchedulingConfig.java:44 setPoolSize(10)） → 每个 job 一个 goroutine（见 DIFF）
 //	@Scheduled 方法抛异常被 Spring 吞掉      → run() 里的 recover + 日志（语义一致，进程不退出）
 //
 // 架构决策（为什么不用 robfig/cron）:
@@ -59,6 +59,9 @@ type Scheduler struct {
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 	loc    *time.Location
+	// locker 为 nil 表示不启用分布式锁（单副本默认形态，行为与 V1 完全一致）。
+	locker  Locker
+	lockTTL time.Duration
 }
 
 // New 构造调度器。loc 传 nil 时使用本地时区（与 JVM 的 serverTimezone=Asia/Shanghai 对齐）。
@@ -67,6 +70,19 @@ func New(loc *time.Location) *Scheduler {
 		loc = time.Local
 	}
 	return &Scheduler{loc: loc}
+}
+
+// SetLocker 启用任务级分布式租约锁（默认不启用，见 lock.go 头部的语义与失效场景）。
+//
+// 只在 Start 之前调用有效；ttl<=0 时取 5 分钟默认值。
+func (s *Scheduler) SetLocker(l Locker, ttl time.Duration) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if ttl <= 0 {
+		ttl = 5 * time.Minute
+	}
+	s.locker = l
+	s.lockTTL = ttl
 }
 
 // Add 登记一条 cron 任务；表达式非法时立刻返回错误。
@@ -120,9 +136,10 @@ func (s *Scheduler) Every(name string, interval time.Duration, fn func(ctx conte
 
 // Start 为每个任务起一个 goroutine。
 //
-// DIFF: Spring 默认 poolSize=1（所有 @Scheduled 串行，一个慢任务会拖垮全部）；
-// Go 侧每个任务独立 goroutine，互不影响——这是本次迁移里**唯一有意改变并发语义**的地方，
-// 因为 8 亿级表的补偿/检测任务耗时差异极大，串行会导致分钟级任务长时间漂移。
+// DIFF: Java 侧 SchedulingConfig.java:44 显式 setPoolSize(10)（线程池 10，任务并行；
+// 同一任务的下一次触发要等上一次结束）。Go 侧每个任务一个 goroutine，语义与之接近；
+// 差别只出现在「同一时刻就绪的任务超过 10 个」时：Java 在池里排队，Go 全部并行。
+// 当前默认配置只有 9 个任务在跑，实际不触发该差异；将来任务数增长时需重新评估。
 //
 // PARITY: Disabled 的任务不参与调度，也不会起 goroutine（启动时只打一条 Info）。
 func (s *Scheduler) Start(ctx context.Context) {
@@ -208,7 +225,28 @@ func (s *Scheduler) runCron(ctx context.Context, j *Job) {
 //
 // PARITY: Java 的 @Scheduled 方法抛异常由 TaskUtils 记日志后继续下次调度——进程不会退出；
 // Go 里 goroutine panic 会杀掉整个进程，所以 recover 是**必需**的。
+//
+// 分布式锁（可选，默认关闭）：抢到租约才执行；抢不到说明别的副本正在跑，本次触发跳过。
+// 这一层对单副本部署完全透明（locker == nil 时直接执行）。
 func (s *Scheduler) run(ctx context.Context, j *Job) {
+	s.mu.Lock()
+	locker := s.locker
+	lockTTL := s.lockTTL
+	s.mu.Unlock()
+
+	if locker != nil {
+		release, ok, err := locker.TryLock(ctx, j.Name, lockTTL)
+		if err != nil {
+			slog.Warn("[定时任务] 抢占租约失败，本次触发跳过", "job", j.Name, "err", err)
+			return
+		}
+		if !ok {
+			slog.Debug("[定时任务] 其他副本持有租约，本次触发跳过", "job", j.Name)
+			return
+		}
+		defer release()
+	}
+
 	start := time.Now()
 	defer func() {
 		if r := recover(); r != nil {

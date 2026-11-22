@@ -6,8 +6,6 @@ package model
 // 关键映射: @TableName(value='ods_lwzxsfsj_fee_gantry_fusion_01', schema=None) → TableName()/Schema()；@TableId(None) → primaryKey；
 // DIFF: Lombok @Data 的 getter/setter 不再生成；Go 侧字段直接导出，JSON 名与 Java 字段名保持一致。
 
-import ()
-
 // OdsLwzxsfsjFeeGantryFusion01 对应 Java 类 OdsLwzxsfsjFeeGantryFusion01
 type OdsLwzxsfsjFeeGantryFusion01 struct {
 	BigId                  string     `json:"bigId" gorm:"column:big_id"`                                  // JAVA L27

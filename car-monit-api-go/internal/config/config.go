@@ -15,6 +15,8 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -43,13 +45,44 @@ type Config struct {
 	Monitoring    MonitoringConfig   `mapstructure:"monitoring"`
 	Logging       LoggingConfig      `mapstructure:"logging"`
 	App           AppConfig          `mapstructure:"app"`
+	Scheduler     SchedulerConfig    `mapstructure:"scheduler"`
+
+	// loadedOverride 记录本次实际合并的本地覆盖文件（不参与 mapstructure 解析）。
+	loadedOverride string
+}
+
+// SchedulerConfig 是 Go 侧新增（Java 无对应）：定时任务的部署形态开关。
+//
+// 默认 DistributedLock.Enabled=false → 单副本部署行为与 V1 完全一致。
+// 多副本部署必须置 true，否则每个副本都会执行写共享状态的 job（报告 02 R5）。
+type SchedulerConfig struct {
+	DistributedLock DistributedLockConfig `mapstructure:"distributed-lock"`
+}
+
+// DistributedLockConfig 对应 scheduler/lock.go 的 LockConfig。
+type DistributedLockConfig struct {
+	Enabled   bool          `mapstructure:"enabled"`
+	KeyPrefix string        `mapstructure:"key-prefix"`
+	TTL       time.Duration `mapstructure:"ttl"`
 }
 
 // ServerConfig 对应 application.yml:1-4
+//
+// Go 侧新增项（Java 无对应，均带默认值以保持既有行为）：
+//   - PprofEnabled：/debug/pprof/* 默认关闭（报告 02 P0-5，避免与业务同端口裸暴露）；
+//   - MetricsEnabled：/metrics（Prometheus）默认开启（报告 02 P0-7）；
+//   - ConsumerRequiredForReady：mqConsumer 不健康时 /readyz 是否返回 503，默认 false
+//     （保持既有『MQ 非强依赖』语义，需要强约束的部署可打开）。
 type ServerConfig struct {
-	Port        int    `mapstructure:"port"`
-	ContextPath string `mapstructure:"context-path"`
-	Mode        string `mapstructure:"mode"` // gin 模式：debug/release
+	Port                     int    `mapstructure:"port"`
+	ContextPath              string `mapstructure:"context-path"`
+	Mode                     string `mapstructure:"mode"` // gin 模式：debug/release
+	PprofEnabled             bool   `mapstructure:"pprof-enabled"`
+	MetricsEnabled           bool   `mapstructure:"metrics-enabled"`
+	ConsumerRequiredForReady bool   `mapstructure:"consumer-required-for-ready"`
+	// RequestTimeout 为基础查询链路提供统一 ctx 超时（0 = 关闭，保持 Java 既有行为）。
+	// 报告 02 P1-9：/base/*/list 之前完全依赖 pgx 默认行为，慢依赖会拖住 goroutine。
+	RequestTimeout time.Duration `mapstructure:"request-timeout"`
 }
 
 // DatasourceConfig 对应 application.yml 的 spring: 节点（本项目的 spring 下只有 datasource）。
@@ -279,9 +312,14 @@ type LoggingConfig struct {
 }
 
 // AppConfig 对应 application.yml:141-142（isLocalhost / sysbaseUrl）
+//
+// Timezone 是 Go 侧新增：Java 由 JVM 默认时区决定（部署基线 Asia/Shanghai），
+// Go 若依赖宿主机 TZ 会出现『DB 路径固定 +08:00、绑定/JSON 路径跟随 Local』的双轨
+// （报告 01 Q7）。进程启动时按此项显式固定 time.Local，非法值在 Validate 阶段拒绝。
 type AppConfig struct {
 	Env        string `mapstructure:"env"`         // local | prod（原 isLocalhost）
 	SysBaseURL string `mapstructure:"sysbase-url"` // 原 sysbaseUrl
+	Timezone   string `mapstructure:"timezone"`    // 默认 Asia/Shanghai
 }
 
 // Load 读取配置文件并叠加环境变量。
@@ -290,6 +328,9 @@ type AppConfig struct {
 // 显式顺序复刻：配置文件 → 环境变量（前缀 APP_，`.` 变 `_`）→ 代码默认值。
 // 注意 Viper 不会做类型校验，所以 Load 末尾必须显式 Validate()。
 func Load(path string) (*Config, error) {
+	var cfg Config
+	var loadedOverride string
+
 	v := viper.New()
 	v.SetConfigFile(path)
 	v.SetConfigType("yaml")
@@ -298,6 +339,12 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("server.port", 9901)
 	v.SetDefault("server.context-path", "/")
 	v.SetDefault("server.mode", "release")
+	// Go 侧新增开关：pprof 默认关（安全），metrics 默认开（可观测性），consumer 不阻断 readiness
+	v.SetDefault("server.pprof-enabled", false)
+	v.SetDefault("server.metrics-enabled", true)
+	v.SetDefault("server.consumer-required-for-ready", false)
+	v.SetDefault("server.request-timeout", 0) // 0 = 不启用（保持 Java 行为）
+	v.SetDefault("app.timezone", "Asia/Shanghai")
 	v.SetDefault("redis.host", "127.0.0.1")
 	v.SetDefault("redis.port", 6379)
 	v.SetDefault("redis.database", 0)
@@ -323,8 +370,16 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("monitoring.stats-window-minutes", 10)
 	v.SetDefault("pulsar.idempotent-ttl-seconds", 86400)
 	v.SetDefault("pulsar.max-retry-times", 3)
+	// 定时任务分布式锁：默认关闭（单副本部署零影响）；多副本必须显式开启。
+	v.SetDefault("scheduler.distributed-lock.enabled", false)
+	v.SetDefault("scheduler.distributed-lock.key-prefix", "scheduler:lock:")
+	v.SetDefault("scheduler.distributed-lock.ttl", "5m")
 
 	// 环境变量：APP_SERVER_PORT 覆盖 server.port（对应 Spring 的 relaxed binding）
+	//
+	// 已知约束（报告 02 §3.3）：Viper 的 AutomaticEnv 只在 Unmarshal 时对
+	// 『已出现在 yaml 或 defaults 中的键』生效。新增配置项必须同时写入 defaults
+	// （或 yaml），否则 APP_XXX 注入会被静默丢弃 —— 加配置时请先看这一行。
 	v.SetEnvPrefix("APP")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 	v.AutomaticEnv()
@@ -332,15 +387,58 @@ func Load(path string) (*Config, error) {
 	if err := v.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("读取配置 %s 失败: %w", path, err)
 	}
-	var cfg Config
+
+	// 本地覆盖（报告 02 P0-3 收尾）：与主配置同目录的 <name>.local.yaml 若存在则合并。
+	//
+	// 用途：仓库内的 config.yaml 只保留非敏感基线，真实口令放 config.local.yaml（已 gitignore）。
+	// 优先级：主配置 < 本地覆盖 < APP_ 环境变量 < 代码 defaults（与 Spring 的
+	// profile > env > yaml 顺序一致）。
+	//
+	// 注意：这里只支持"同目录 + .local 后缀"的约定，不做任意路径搜索 —— 避免不同工作目录
+	// 下静默加载到不同的覆盖文件，导致"同样的命令、不同的配置"。
+	if localPath := localOverridePath(path); localPath != "" {
+		if _, statErr := os.Stat(localPath); statErr == nil {
+			f, openErr := os.Open(localPath)
+			if openErr != nil {
+				return nil, fmt.Errorf("打开本地覆盖配置 %s 失败: %w", localPath, openErr)
+			}
+			defer f.Close()
+			if mergeErr := v.MergeConfig(f); mergeErr != nil {
+				return nil, fmt.Errorf("合并本地覆盖配置 %s 失败: %w", localPath, mergeErr)
+			}
+			loadedOverride = localPath
+		}
+	}
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("解析配置失败: %w", err)
 	}
+	cfg.loadedOverride = loadedOverride
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
 	return &cfg, nil
 }
+
+// localOverridePath 由主配置路径推导本地覆盖文件路径。
+//
+//	configs/config.yaml        → configs/config.local.yaml
+//	configs/config.verify.yaml → configs/config.verify.local.yaml
+//
+// 该文件应被 .gitignore 忽略（见仓库根的 .gitignore 与 docs/deploy.md）。
+func localOverridePath(path string) string {
+	dir := filepath.Dir(path)
+	base := filepath.Base(path)
+	ext := filepath.Ext(base)
+	if ext == "" {
+		return ""
+	}
+	return filepath.Join(dir, strings.TrimSuffix(base, ext)+".local"+ext)
+}
+
+// LoadedOverride 返回本次加载实际合并的本地覆盖文件路径（未合并时为空串）。
+//
+// 启动日志会打印它（只有路径，不含口令），便于确认"到底用了哪份配置"。
+func (c *Config) LoadedOverride() string { return c.loadedOverride }
 
 // Validate 手工校验必填项。
 //
@@ -360,8 +458,40 @@ func (c *Config) Validate() error {
 	if c.Redis.Host == "" {
 		problems = append(problems, "redis.host 不能为空")
 	}
+	// 时区：非法值必须在启动阶段拒绝（报告 01 Q7：time.Local 是绑定/JSON/cron 的共同输入）
+	if _, err := c.ResolveTimezone(); err != nil {
+		problems = append(problems, err.Error())
+	}
+	// 导出目录：非 local 环境必须是绝对路径（报告 02 P1-8：Linux 上相对路径语义随 cwd 变化）
+	if !strings.EqualFold(strings.TrimSpace(c.App.Env), "local") && c.App.Env != "" {
+		if dir := strings.TrimSpace(c.Optimization.Export.Dir); dir != "" && !filepath.IsAbs(dir) {
+			problems = append(problems, "optimization.export.dir 在非 local 环境必须为绝对路径，当前为 "+dir)
+		}
+	}
 	if len(problems) > 0 {
 		return fmt.Errorf("配置校验失败: %s", strings.Join(problems, "; "))
 	}
 	return nil
+}
+
+// ResolveTimezone 解析 app.timezone。
+//
+// PARITY: Java 侧时区由 JVM 默认时区（部署基线 Asia/Shanghai）决定，代码里没有显式设置；
+// Go 侧必须显式固定 time.Local，否则绑定解析、JSON 反序列化、cron 触发会跟随宿主机 TZ，
+// 与 DB 路径的 javaZone（固定 +08:00）形成双轨。
+//
+// 精简镜像可能没有 tzdata：Asia/Shanghai 退化为固定 +08:00（中国 1991 年后无夏令时，
+// 与 model.javaZone 的兜底策略保持一致）；其他时区名缺 tzdata 则报错，避免静默用错时区。
+func (c *Config) ResolveTimezone() (*time.Location, error) {
+	name := strings.TrimSpace(c.App.Timezone)
+	if name == "" {
+		name = "Asia/Shanghai"
+	}
+	if loc, err := time.LoadLocation(name); err == nil {
+		return loc, nil
+	}
+	if name == "Asia/Shanghai" || name == "PRC" {
+		return time.FixedZone("Asia/Shanghai", 8*3600), nil
+	}
+	return nil, fmt.Errorf("app.timezone 非法或缺少 tzdata: %q", name)
 }

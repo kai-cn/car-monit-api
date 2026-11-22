@@ -26,11 +26,26 @@ import (
 
 	"github.com/ruoyi/car-monit-api-go/internal/config"
 	"github.com/ruoyi/car-monit-api-go/internal/handler"
+	"github.com/ruoyi/car-monit-api-go/internal/metrics"
 	"github.com/ruoyi/car-monit-api-go/internal/router"
 )
 
 func newTestEngine() *gin.Engine {
 	return router.New(router.Options{
+		// pprof 在默认配置下关闭（server.pprof-enabled=false）；路由清单测试需要它，
+		// 这里显式打开。默认关闭的行为由 TestPprofDisabledByDefault 单独断言。
+		Config:   &config.Config{Server: config.ServerConfig{PprofEnabled: true}},
+		Base:     &handler.BaseDeps{},
+		Query:    &handler.QueryDeps{},
+		SysUtil:  &handler.SysUtilDeps{},
+		SelfTest: &handler.SelfTestDeps{},
+		Health:   &router.Health{},
+	})
+}
+
+// TestPprofDisabledByDefault 锁住报告 02 P0-5 的默认值：零值配置不得暴露 /debug/pprof。
+func TestPprofDisabledByDefault(t *testing.T) {
+	engine := router.New(router.Options{
 		Config:   &config.Config{},
 		Base:     &handler.BaseDeps{},
 		Query:    &handler.QueryDeps{},
@@ -38,6 +53,31 @@ func newTestEngine() *gin.Engine {
 		SelfTest: &handler.SelfTestDeps{},
 		Health:   &router.Health{},
 	})
+	for _, r := range engine.Routes() {
+		if strings.Contains(r.Path, "/debug/pprof") {
+			t.Fatalf("默认配置不应注册 pprof 路由，发现 %s %s", r.Method, r.Path)
+		}
+	}
+}
+
+// TestMetricsEndpointRegistered /metrics 是 Go 侧新增端点（报告 02 P0-7），
+// 与 context-path 无关，始终挂在根路径。
+func TestMetricsEndpointRegistered(t *testing.T) {
+	engine := router.New(router.Options{
+		Config:   &config.Config{Server: config.ServerConfig{MetricsEnabled: true}},
+		Base:     &handler.BaseDeps{},
+		Query:    &handler.QueryDeps{},
+		SysUtil:  &handler.SysUtilDeps{},
+		SelfTest: &handler.SelfTestDeps{},
+		Health:   &router.Health{},
+		Metrics:  metrics.New(),
+	})
+	for _, r := range engine.Routes() {
+		if r.Method == http.MethodGet && r.Path == "/metrics" {
+			return
+		}
+	}
+	t.Fatal("未注册 GET /metrics")
 }
 
 // TestRoutesRegistered 断言 Java 侧的关键 URL 在 Go 侧一一存在。

@@ -306,7 +306,8 @@ func (s *DataLossDetectionService) GetDeviceReportStats(ctx context.Context,
 		return stats, nil
 	}
 
-	keys, err := rdb.Keys(ctx, deviceCountPrefix+"*:"+day).Result()
+	// DIFF（报告 02 P1-2）: 原为 KEYS 枚举，改为 SCAN 游标遍历，避免大库阻塞 Redis。
+	keys, err := s.cache.ScanKeys(ctx, deviceCountPrefix+"*:"+day, 500)
 	if err != nil {
 		return nil, fmt.Errorf("枚举设备上报计数失败: %w", err)
 	}

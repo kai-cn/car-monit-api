@@ -392,7 +392,9 @@ func (s *MultiSourceDataFlowService) ProcessPendingQueue(ctx context.Context) {
 	slog.Info("[待处理队列] 开始处理")
 	rdb := s.cache.Raw()
 
-	keys, err := rdb.Keys(ctx, pendingQueueKeyPrefix+"*").Result()
+	// DIFF（报告 02 P1-2）: Java 用 KEYS 枚举，Go 改为 SCAN 游标遍历 —— 大库上 KEYS 是
+	// O(N) 且阻塞 Redis 单线程。ScanKeys 内部去重（SCAN 可能重复返回同一个键）。
+	keys, err := s.cache.ScanKeys(ctx, pendingQueueKeyPrefix+"*", 500)
 	if err != nil {
 		slog.Error("[待处理队列] 读取队列 key 失败", "err", err)
 		return

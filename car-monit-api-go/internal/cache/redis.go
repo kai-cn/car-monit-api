@@ -26,6 +26,9 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/sync/singleflight"
+
+	"github.com/ruoyi/car-monit-api-go/internal/utils"
 )
 
 // Client 是 Redis 门面。
@@ -55,7 +58,8 @@ func New(ctx context.Context, o Options) (*Client, error) {
 	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	if err := rdb.Ping(pingCtx).Err(); err != nil {
-		return nil, fmt.Errorf("连接 Redis %s 失败: %w", o.Addr, err)
+		// 脱敏：go-redis 的错误可能带 AUTH 参数回显。
+		return nil, fmt.Errorf("连接 Redis %s 失败: %w", o.Addr, utils.RedactError(err, o.Password))
 	}
 	return &Client{rdb: rdb}, nil
 }
@@ -158,6 +162,46 @@ func (c *Client) Exists(ctx context.Context, key string) (bool, error) {
 	return n > 0, err
 }
 
+// ScanKeys 用 SCAN 游标遍历替代 KEYS（报告 02 P1-2）。
+//
+// KEYS 在大库上是 O(N) 且阻塞 Redis 单线程；SCAN 是增量式、不阻塞。
+// 语义对齐点：
+//   - 返回值与 KEYS 一样是去重后的键集合（SCAN 在 rehash 期间可能重复返回同一个键，
+//     这里用 map 去重，代价是键数量的内存 —— 本项目 4 个调用点的键空间都按
+//     设备/车牌/日期分片，量级可控）；
+//   - count 只是每次迭代的建议值，不保证返回数量；默认 500。
+func (c *Client) ScanKeys(ctx context.Context, pattern string, count int64) ([]string, error) {
+	if c == nil {
+		return nil, errors.New("cache: 客户端未初始化")
+	}
+	if count <= 0 {
+		count = 500
+	}
+	seen := make(map[string]struct{})
+	var cursor uint64
+	for {
+		keys, next, err := c.rdb.Scan(ctx, cursor, pattern, count).Result()
+		if err != nil {
+			return nil, err
+		}
+		for _, k := range keys {
+			seen[k] = struct{}{}
+		}
+		cursor = next
+		if cursor == 0 {
+			break
+		}
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for k := range seen {
+		out = append(out, k)
+	}
+	return out, nil
+}
+
 // Incr 对应 redisTemplate.opsForValue().increment(key)
 func (c *Client) Incr(ctx context.Context, key string, delta int64) (int64, error) {
 	return c.rdb.IncrBy(ctx, key, delta).Result()
@@ -172,17 +216,41 @@ func (c *Client) SetNXWithTTL(ctx context.Context, key string, value any, ttl ti
 //
 // DIFF: Spring 的 @Cacheable 由 AOP 拦截方法调用，缓存逻辑对业务透明；
 // Go 没有方法拦截器，必须显式写成"先查缓存、未命中回源、写回缓存"的模板方法。
-// 注意：这里不处理缓存击穿（并发回源），需要时用 singleflight 包再包一层。
+//
+// 击穿防护（报告 02 P1-3）：同一个 key 的并发回源用 singleflight 合并，
+// 只有第一个请求真正打到 DB/ES，其余等待并共享结果。
+// 注意：真正执行 load 的是第一个调用者，它的 ctx 取消会让同批等待者一起失败 ——
+// 这是 singleflight 的固有语义，回源函数应使用调用方可承受的超时。
 func GetOrLoad(ctx context.Context, c *Client, key string, ttl time.Duration, load func(ctx context.Context) (any, error)) (any, error) {
 	if v, ok, err := c.Get(ctx, key); err == nil && ok {
 		return v, nil
 	}
-	val, err := load(ctx)
-	if err != nil {
-		return nil, err
+
+	ch := loadGroup.DoChan(key, func() (any, error) {
+		// 双检：排队期间可能已有别的请求把值写进缓存。
+		if v, ok, err := c.Get(ctx, key); err == nil && ok {
+			return v, nil
+		}
+		val, err := load(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if val != nil {
+			_ = c.SetJSON(ctx, key, val, ttl)
+		}
+		return val, nil
+	})
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case res := <-ch:
+		if res.Err != nil {
+			return nil, res.Err
+		}
+		return res.Val, nil
 	}
-	if val != nil {
-		_ = c.SetJSON(ctx, key, val, ttl)
-	}
-	return val, nil
 }
+
+// loadGroup 按 key 合并并发回源。包级变量是有意的：击穿防护必须跨请求生效。
+var loadGroup singleflight.Group

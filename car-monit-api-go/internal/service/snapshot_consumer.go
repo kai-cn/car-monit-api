@@ -34,6 +34,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ruoyi/car-monit-api-go/internal/cache"
@@ -65,6 +66,15 @@ type SnapshotFlowConsumer struct {
 	cache     *cache.Client
 	ttl       time.Duration
 	consumerT string
+	// wg 追踪消费循环，供 Close() 等待退出（ctx 取消后 FetchMessage 最多 1s 感知）。
+	wg sync.WaitGroup
+	// observer 是可选指标回调（result=ok/error + 单条耗时），由 main 注入 metrics。
+	observer func(result string, cost time.Duration)
+}
+
+// SetObserver 注入消息处理观测回调（可为 nil）。
+func (s *SnapshotFlowConsumer) SetObserver(obs func(result string, cost time.Duration)) {
+	s.observer = obs
 }
 
 // NewSnapshotFlowConsumer 构造。
@@ -98,29 +108,84 @@ func (s *SnapshotFlowConsumer) Start(ctx context.Context) {
 		slog.Warn("[快照消费者] 未配置消息总线，消费端不启动")
 		return
 	}
+	s.wg.Add(1)
 	go func() {
+		defer s.wg.Done()
 		defer func() {
 			if r := recover(); r != nil {
 				slog.Error("[快照消费者] 消费循环 panic 退出", "panic", r)
 			}
 		}()
 		slog.Info("[快照消费者] 消费循环已启动")
-		if err := s.bus.Consume(ctx, s.Handle); err != nil && ctx.Err() == nil {
-			slog.Error("[快照消费者] 消费循环异常退出", "err", err)
-			s.retryAfterDelay(ctx)
+		// DIFF（R2 关联）: Java 的 while(true) 在 catch 后 sleep(5s) 再进入下一轮，永不放弃；
+		// 旧 Go 实现只重试一次就退出，导致消费端"静默死亡"且探针仍为 UP。这里改为循环重试。
+		for ctx.Err() == nil {
+			err := s.bus.Consume(ctx, s.Handle)
+			if ctx.Err() != nil {
+				break
+			}
+			if err == nil {
+				// Consume 只在 ctx 取消时返回 nil，正常退出。
+				break
+			}
+			slog.Error("[快照消费者] 消费循环异常退出，5 秒后重启", "err", err)
+			if !s.retryAfterDelay(ctx) {
+				break
+			}
 		}
 		slog.Info("[快照消费者] 消费循环已退出")
 	}()
+}
+
+// Close 等待消费循环退出（调用方需先取消启动时传入的 ctx）。
+//
+// 对应 @PreDestroy：Java 侧容器关闭会等待 in-flight 消息处理完；这里靠
+// Consume 的『当前消息处理完才退出』语义 + wg 等待达到同样效果。
+func (s *SnapshotFlowConsumer) Close() {
+	if s == nil {
+		return
+	}
+	s.wg.Wait()
+}
+
+// Healthy 返回消费端是否健康（供 /readyz 与指标使用）。
+//
+// 未配置消息总线（本地降级模式）→ false；实现了 mq.HealthChecker 的总线
+// 按真实心跳判定；其他实现退回"已启动即健康"。
+func (s *SnapshotFlowConsumer) Healthy() bool {
+	if s == nil || s.bus == nil {
+		return false
+	}
+	if hc, ok := s.bus.(interface{ Healthy() bool }); ok {
+		return hc.Healthy()
+	}
+	return true
+}
+
+// HealthSnapshot 透传总线的心跳明细；总线不支持时返回零值。
+func (s *SnapshotFlowConsumer) HealthSnapshot() (registered, running bool, lastTick time.Time, consecutiveErrors int, lastErr string) {
+	if s == nil || s.bus == nil {
+		return false, false, time.Time{}, 0, ""
+	}
+	if hb, ok := s.bus.(interface {
+		HealthSnapshot() (bool, bool, time.Time, int, string)
+	}); ok {
+		return hb.HealthSnapshot()
+	}
+	return true, true, time.Time{}, 0, ""
 }
 
 // retryAfterDelay 对应 catch 块里的 TimeUnit.SECONDS.sleep(5)（L224-229）。
 //
 // PARITY: Java 在这里固定睡 5 秒再重新进入循环；Go 的 Consume 自己会重建 reader，
 // 所以这 5 秒只是"不要立刻重连"的退避，语义与 Java 一致。
-func (s *SnapshotFlowConsumer) retryAfterDelay(ctx context.Context) {
+// 返回 false 表示 ctx 已取消，调用方应退出重试循环。
+func (s *SnapshotFlowConsumer) retryAfterDelay(ctx context.Context) bool {
 	select {
 	case <-ctx.Done():
+		return false
 	case <-time.After(5 * time.Second):
+		return true
 	}
 }
 
@@ -130,9 +195,21 @@ func (s *SnapshotFlowConsumer) retryAfterDelay(ctx context.Context) {
 //
 //	nil   → ack（Java 的 return true，含"确认丢弃"的格式错误/重复消息）
 //	error → nack（Java 的 return false，触发 Broker 重投）
-func (s *SnapshotFlowConsumer) Handle(ctx context.Context, msg mq.Message) error {
+//
+// 指标：通过 SetObserver 注入回调（metrics 包），记录处理结果与耗时；
+// 不直接依赖 prometheus，保持 service 层可单测。
+func (s *SnapshotFlowConsumer) Handle(ctx context.Context, msg mq.Message) (err error) {
 	startTime := time.Now()
 	dataID := msg.Key
+	if s.observer != nil {
+		defer func() {
+			result := "ok"
+			if err != nil {
+				result = "error"
+			}
+			s.observer(result, time.Since(startTime))
+		}()
+	}
 
 	// 1. 解析消息信封
 	var envelope SnapshotFlowMessage

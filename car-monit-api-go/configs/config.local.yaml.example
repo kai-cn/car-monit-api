@@ -1,0 +1,28 @@
+# ============================================================================
+# 本地覆盖配置示例（可入库，无任何真实口令）。
+#
+# 用法：
+#   cp configs/config.local.yaml.example configs/config.local.yaml
+#   # 填入真实值后正常启动，Load() 会自动把它合并到 config.yaml 之上
+#   go run ./cmd/api -config configs/config.yaml
+#
+# config.local.yaml 已被 .gitignore 忽略，禁止把真实口令提交入库。
+# 只需写"要覆盖的键"，其余沿用 config.yaml。
+# ============================================================================
+
+spring:
+  datasource:
+    dynamic:
+      datasource:
+        master:
+          url: jdbc:postgresql://db.example.internal:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai
+          password: "<在此填入数据库口令>"
+
+elasticsearch:
+  password: "<在此填入 ES 口令>"
+
+# 需要时再放开：
+# rabbitmq:
+#   password: "<在此填入 MQ 口令>"
+# app:
+#   sysbase-url: "http://<内网地址>/prod-api"

@@ -21,7 +21,6 @@ package service
 
 import (
 	"context"
-	"github.com/ruoyi/car-monit-api-go/internal/model"
 	"log/slog"
 	"strconv"
 	"sync"
@@ -29,6 +28,7 @@ import (
 
 	"github.com/ruoyi/car-monit-api-go/internal/cache"
 	"github.com/ruoyi/car-monit-api-go/internal/config"
+	"github.com/ruoyi/car-monit-api-go/internal/model"
 	"github.com/ruoyi/car-monit-api-go/internal/repo"
 	"github.com/ruoyi/car-monit-api-go/internal/utils"
 )
@@ -70,6 +70,13 @@ func (s *SnapshotFlowSyncService) Start(ctx context.Context) {
 		s.wg.Add(1)
 		go func() {
 			defer s.wg.Done()
+			// PARITY/规范：常驻协程必须自带 recover —— repo 层的 panic 若逃逸会直接杀掉进程，
+			// 而 Java 侧 @PostConstruct 线程池里的异常只终止该任务。此处与仓库内其他后台协程一致。
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("[快照同步] 全量同步协程 panic 退出", "panic", r)
+				}
+			}()
 			if err := s.FullSync(ctx); err != nil {
 				slog.Error("[快照同步] 全量同步异常", "err", err)
 			}
@@ -78,6 +85,11 @@ func (s *SnapshotFlowSyncService) Start(ctx context.Context) {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("[快照同步] 增量同步协程 panic 退出", "panic", r)
+			}
+		}()
 		s.IncrementalSync(ctx)
 	}()
 	slog.Info("[快照同步] 已启动", "fullSyncEnabled", s.cfg.FullSyncEnabled,

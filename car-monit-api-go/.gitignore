@@ -1,0 +1,26 @@
+# car-monit-api-go 专属忽略规则
+# 根仓库的 .gitignore 只覆盖 Java 侧的 bin/ 与 IDE 文件，这里补 Go 侧产物与本地凭据。
+
+# 构建产物（历史上 bin/api.exe 曾入库，现不再跟踪）
+/bin/
+*.exe
+
+# 校验脚本的日志（check.bat 会写 _gofmt.log 等）
+/_gofmt.log
+/_build.log
+/_vet.log
+/_test.log
+
+# 本地配置覆盖：含真实口令，绝不能入库
+/configs/config.local.yaml
+/configs/config.verify.local.yaml
+# 保留示例文件
+!/configs/config.local.yaml.example
+
+# 运行时数据（导出 CSV、临时文件）
+/data/
+
+# 依赖/编辑器
+/vendor/
+/.idea/
+*.swp

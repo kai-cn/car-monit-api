@@ -1,0 +1,79 @@
+# ============================================================================
+# 最小可运行示例（无任何真实口令/内网地址）。
+#
+# 用途：从零部署时的起点。完整键位见 configs/config.yaml（非敏感基线，可入库）。
+#
+# 敏感值只通过环境变量注入（Viper 的 APP_ 前缀，`.`/`-` 转 `_` 并大写）：
+#   APP_SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD
+#   APP_ELASTICSEARCH_PASSWORD
+#   APP_RABBITMQ_PASSWORD（可选）
+#
+# 注意：AutomaticEnv 只覆盖「本文件或代码 defaults 中已出现的键」，
+# 新增配置项必须同时写进这里，否则 APP_ 注入会被静默丢弃。
+# ============================================================================
+server:
+  port: 9901
+  context-path: /
+  mode: release
+  pprof-enabled: false              # /debug/pprof/* 默认关闭
+  metrics-enabled: true             # /metrics（Prometheus）
+  consumer-required-for-ready: false
+  request-timeout: 0                # 0 = 不注入请求级 deadline
+
+spring:
+  datasource:
+    dynamic:
+      datasource:
+        master:
+          url: jdbc:postgresql://db.example.internal:5432/RuoYi?characterEncoding=UTF-8&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai
+          username: gaussdb
+          password: ""                 # ← APP_..._MASTER_PASSWORD
+          max-open-conns: 20
+          max-idle-conns: 5
+          conn-max-lifetime: 30m
+          slow-threshold: 5s
+          log-sql: true
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  password: ""
+  database: 0
+  pool-size: 16
+
+kafka:
+  bootstrap-servers: localhost:9092
+  group-id: car-monit-go
+  topic:
+    snapshot-flow: ods-rt-szdn-snapshot-flow
+  max-retry-count: 10
+
+elasticsearch:
+  host: localhost
+  port: 9200
+  scheme: http
+  username: elastic
+  password: ""                     # ← APP_ELASTICSEARCH_PASSWORD
+  index:
+    snapshot: snapshot_flow
+    fee: fee_records
+    trail: trail_fitting
+
+optimization:
+  export:
+    dir: /data/export              # 非 local 环境必须是绝对路径
+
+scheduler:
+  distributed-lock:
+    enabled: false                 # 多副本部署必须置 true
+    key-prefix: "scheduler:lock:"
+    ttl: 5m
+
+logging:
+  level: info
+  format: text
+
+app:
+  env: local                       # prod 时导出目录必须绝对路径、实时轨迹走严格分支
+  sysbase-url: http://sys-api.example.internal/prod-api
+  timezone: Asia/Shanghai

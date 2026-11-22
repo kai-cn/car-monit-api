@@ -443,14 +443,14 @@ func (s *DataReliabilityService) UpdateDeviceHeartbeat(ctx context.Context, devi
 
 // CheckOfflineDevices 对应 @Scheduled(fixedRate = 300000) checkOfflineDevices()（L482-512）。
 //
-// DIFF: Java 用 redisTemplate.keys(pattern)（KEYS 命令，会阻塞 Redis）；
-// Go 侧同样用 Keys（行为对齐），但注释里标注它是生产隐患，推荐改 SCAN —— 见 README「已知风险」。
+// DIFF（报告 02 P1-2）: Java 用 redisTemplate.keys(pattern)（KEYS 会阻塞 Redis）；
+// Go 改为 SCAN 游标遍历（cache.ScanKeys），键空间按设备数增长，大库下不再阻塞主线程。
 func (s *DataReliabilityService) CheckOfflineDevices(ctx context.Context) {
 	if s.cache == nil {
 		return
 	}
 	rdb := s.cache.Raw()
-	keys, err := rdb.Keys(ctx, deviceHeartbeatPref+"*").Result()
+	keys, err := s.cache.ScanKeys(ctx, deviceHeartbeatPref+"*", 500)
 	if err != nil || len(keys) == 0 {
 		return
 	}
