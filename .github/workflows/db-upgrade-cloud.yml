@@ -22,6 +22,11 @@ on:
       linux_runner:
         type: string
         default: ubuntu-latest
+      og_image_source:
+        description: openGauss 7 image for NEW side
+        type: choice
+        options: [dockerhub, ga]
+        default: dockerhub
 
 permissions:
   contents: read
@@ -93,6 +98,19 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client
 
+      - name: Load openGauss 7.0.0 GA image (official tarball)
+        if: matrix.db == 'opengauss' && inputs.og_image_source == 'ga'
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://opengauss.obs.cn-south-1.myhuaweicloud.com/7.0.0/openEuler24.03/x86/openGauss-Docker-7.0.0-x86_64.tar"
+          echo "Downloading openGauss 7.0.0 GA image (~2.4GB)..."
+          curl -fsSL --retry 3 -o /tmp/og-ga.tar "$url"
+          docker load -i /tmp/og-ga.tar
+          rm -f /tmp/og-ga.tar
+          echo "Loaded GA image:"
+          docker images --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep -i opengauss | head -10
+
       - name: Build application jar
         shell: bash
         run: |
@@ -127,6 +145,7 @@ jobs:
         shell: bash
         env:
           CI_DB_PASSWORD: ${{ secrets.CI_DB_TEST_PASSWORD }}
+          OG_NEW_IMAGES: ${{ inputs.og_image_source == 'ga' && 'opengauss:7.0.0' || '' }}
         run: |
           set -uo pipefail
           bash scripts/v3/ops/dbupgrade/db_cell.sh api "${{ matrix.db }}" new out/app.jar "${LABEL}-new" || {
