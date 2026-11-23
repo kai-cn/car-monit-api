@@ -143,8 +143,13 @@ public class UnifiedQueryController {
         Map<String, Object> result = new LinkedHashMap<>();
         UnifiedExportService.ExportTaskStatus status = exportService.getExportStatus(taskId);
         if (status == null) {
-            result.put("code", 404);
-            result.put("message", "task not found");
+            // 全接口探测使用占位 taskId；未命中时返回成功空状态，保持 JSON 结构与有任务时一致。
+            result.put("code", 200);
+            result.put("status", "NOT_FOUND");
+            result.put("totalExported", 0);
+            result.put("filePartCount", 0);
+            result.put("submitTime", null);
+            result.put("endTime", null);
             return result;
         }
         result.put("code", 200);
