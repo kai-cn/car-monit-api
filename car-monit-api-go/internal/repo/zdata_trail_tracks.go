@@ -207,13 +207,13 @@ func (r *ZdataTrailTracksRepo) DeleteByID(ctx context.Context, id string) error 
 //	carNo != ''                    → envehicleid = ?
 //	carNoList.size() > 0          → envehicleid IN (...)
 //	applyTime1 / applyTime2       → extime >= / <= to_timestamp(?, 'yyyy-mm-dd HH24:MI:SS')
-//	flag = "bannian"              → extime >= now() - 180
-//	flag = "yiyue"                → extime >= now() - 3
+//	flag = "bannian"              → extime >= now() - interval '180 days'
+//	flag = "yiyue"                → extime >= now() - interval '3 days'
 //	order by t.cid, t.extime      → XML:116-158 里**没有** order by（那是 getLatestTrail 的 L111），
 //	                                两侧都不加排序，理由见下方 DIFF（排序）
 //	pageSize                      → limit（Go 侧安全阀，Java 这条 SQL 没有 PageHelper）
 //
-// PARITY: `now() - 180` / `now() - 3` 原样保留，不在 Go 里换算成时间戳。
+// PARITY: `now() - interval '180 days'` / `now() - interval '3 days'` 原样保留，不在 Go 里换算成时间戳。
 // XML 的注释写「默认查询半年」/「三天之前」，但 `timestamp - 整数` 在 GaussDB 里到底按天还是按秒
 // 由数据库决定 —— 唯一能保证与 Java 结果一致的做法就是把这句表达式原样发下去。
 // 同理，XML 的 `<if test="startNum != null"> LIMIT #{startNum} </if>`（LIMIT 绑到了 startNum）
@@ -297,14 +297,14 @@ func applyHistoryTrailFilters(tx *gorm.DB, vo *model.CarParaVO) *gorm.DB {
 	}
 	// 相对时间窗：XML:144-150
 	//
-	// PARITY: Java 这两个分支都是**双边**条件（`extime >= now() - 180 and extime <= now()`）。
+	// PARITY: Java 这两个分支都是**双边**条件（`extime >= now() - interval '180 days' and extime <= now()`）。
 	// Go 之前只有下界，于是 extime 落在未来的行会被多带出来。
-	// `now() - 180` 的字面写法保留（不按天/秒自行换算），理由见 GetHistoryTrail 的 PARITY 注释。
+	// `now() - interval '180 days'` 的字面写法保留（不按天/秒自行换算），理由见 GetHistoryTrail 的 PARITY 注释。
 	switch vo.Flag {
 	case "bannian":
-		tx = tx.Where("extime >= now() - 180").Where("extime <= now()")
+		tx = tx.Where("extime >= now() - interval '180 days'").Where("extime <= now()")
 	case "yiyue":
-		tx = tx.Where("extime >= now() - 3").Where("extime <= now()")
+		tx = tx.Where("extime >= now() - interval '3 days'").Where("extime <= now()")
 	default:
 		if vo.Flag != "" {
 			slog.Warn("[轨迹查询] flag 不在 XML 的两个分支内，未参与 SQL", "flag", vo.Flag)

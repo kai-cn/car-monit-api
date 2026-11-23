@@ -142,11 +142,11 @@
             <if test="applyTime2 != null  and applyTime2 != ''">and t.extime <![CDATA[<=]]> to_timestamp(#{applyTime2},'yyyy-mm-dd HH24:MI:SS') </if>
             <!-- 默认查询半年-->
             <if test="flag != null and flag == 'bannian' ">
-                and t.extime >= now() - 180 and t.extime <![CDATA[<=]]> now()
+                and t.extime >= now() - interval '180 days' and t.extime <![CDATA[<=]]> now()
             </if>
             <!-- 默认查询三天之前的-->
             <if test="flag != null and flag == 'yiyue' ">
-                and t.extime >= now() - 3 and t.extime <![CDATA[<=]]> now()
+                and t.extime >= now() - interval '3 days' and t.extime <![CDATA[<=]]> now()
             </if>
             <if test="carNoList != null and carNoList.size() > 0">
                and  t.envehicleid in

@@ -735,8 +735,8 @@ cm::repo::SqlFragment history_where(const Para& p) {
   if (!p.apply2.empty())
     f.sql += " AND t.extime <= to_timestamp(" + cm::repo::bind_param(f.params, p.apply2) +
              ",'YYYY-MM-DD HH24:MI:SS')";
-  if (p.flag == "bannian") f.sql += " AND t.extime >= now()-180 AND t.extime <= now()";
-  if (p.flag == "yiyue") f.sql += " AND t.extime >= now()-3 AND t.extime <= now()";
+  if (p.flag == "bannian") f.sql += " AND t.extime >= now()-interval '180 days' AND t.extime <= now()";
+  if (p.flag == "yiyue") f.sql += " AND t.extime >= now()-interval '3 days' AND t.extime <= now()";
   if (!p.car_no_list.empty())
     f.sql += " AND t.envehicleid IN " + cm::repo::bind_in(f.params, p.car_no_list);
   return f;
