@@ -238,7 +238,14 @@ pub async fn large_export_status(
     Path(task_id): Path<String>,
 ) -> Response {
     match state.large.get_export_status(&task_id).await {
-        None => json_ok(json!({ "code": 404, "message": "task not found" })),
+        None => json_ok(json!({
+            "code": 200,
+            "status": "NOT_FOUND",
+            "totalExported": 0,
+            "filePartCount": 0,
+            "submitTime": null,
+            "endTime": null,
+        })),
         Some(st) => map_response(vec![
             ("code", json!(200)),
             ("status", json!(st.status)),
@@ -366,7 +373,14 @@ pub async fn unified_export_status(
     Path(task_id): Path<String>,
 ) -> Response {
     match state.export.get_export_status(&task_id).await {
-        None => json_ok(json!({ "code": 404, "message": "task not found" })),
+        None => json_ok(json!({
+            "code": 200,
+            "status": "NOT_FOUND",
+            "totalExported": 0,
+            "filePartCount": 0,
+            "submitTime": null,
+            "endTime": null,
+        })),
         Some(st) => {
             let mut out = serde_json::Map::new();
             out.insert("code".into(), json!(200));

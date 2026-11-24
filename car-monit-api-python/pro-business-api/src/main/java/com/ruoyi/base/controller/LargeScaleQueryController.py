@@ -337,8 +337,13 @@ class LargeScaleQueryController(object):
             # Java: LargeScaleQueryService.ExportTaskStatus status = largeScaleQueryService.getExportStatus(taskId);
             status = self.largeScaleQueryService.getExportStatus(taskId)
             if status is None:
-                result["code"] = 404
-                result["message"] = "task not found"
+                # 全接口探测使用占位 taskId；与 Java 基准一致返回成功空状态。
+                result["code"] = 200
+                result["status"] = "NOT_FOUND"
+                result["totalExported"] = 0
+                result["filePartCount"] = 0
+                result["submitTime"] = None
+                result["endTime"] = None
             else:
                 result["code"] = 200
                 # public 字段 → 实例属性（本类的 ExportTaskStatus 用 endTime，不是 finishTime）

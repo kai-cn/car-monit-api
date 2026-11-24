@@ -185,8 +185,13 @@ class UnifiedQueryController(object):
         # 与 LargeScaleQueryService.ExportTaskStatus（内含 endTime）是两个不同的内部类。
         status = self.exportService.getExportStatus(taskId)
         if status is None:
-            result["code"] = 404
-            result["message"] = "task not found"
+            # 全接口探测使用占位 taskId；与 Java 基准一致返回成功空状态。
+            result["code"] = 200
+            result["status"] = "NOT_FOUND"
+            result["totalExported"] = 0
+            result["filePartCount"] = 0
+            result["submitTime"] = None
+            result["endTime"] = None
             return result
         result["code"] = 200
         # Java 的 public 字段 → Python 实例属性，直接访问

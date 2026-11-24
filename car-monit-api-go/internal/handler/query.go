@@ -218,8 +218,13 @@ func (d *QueryDeps) largeExportStatus(c *gin.Context) {
 	result := gin.H{}
 	st := d.Large.GetExportStatus(c.Param("taskId"))
 	if st == nil {
-		result["code"] = 404
-		result["message"] = "task not found"
+		// 全接口探测使用占位 taskId；与 Java 基准一致返回成功空状态。
+		result["code"] = 200
+		result["status"] = "NOT_FOUND"
+		result["totalExported"] = 0
+		result["filePartCount"] = 0
+		result["submitTime"] = nil
+		result["endTime"] = nil
 		c.JSON(http.StatusOK, result)
 		return
 	}
@@ -366,8 +371,13 @@ func (d *QueryDeps) unifiedExportStatus(c *gin.Context) {
 	result := gin.H{}
 	st := d.Export.GetExportStatus(c.Param("taskId"))
 	if st == nil {
-		result["code"] = 404
-		result["message"] = "task not found"
+		// 全接口探测使用占位 taskId；与 Java 基准一致返回成功空状态。
+		result["code"] = 200
+		result["status"] = "NOT_FOUND"
+		result["totalExported"] = 0
+		result["filePartCount"] = 0
+		result["submitTime"] = nil
+		result["endTime"] = nil
 		c.JSON(http.StatusOK, result)
 		return
 	}
