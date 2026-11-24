@@ -125,13 +125,8 @@ void register_optimization(http::Router& r) {
     Json status = service::unified_export().export_status(task_id);
     if (status.is_null()) {
       Json out = Json::object();
-      // 当前 Java 基准对占位 taskId 返回成功空状态。
-      out["code"] = 200;
-      out["status"] = "NOT_FOUND";
-      out["totalExported"] = 0;
-      out["filePartCount"] = 0;
-      out["submitTime"] = nullptr;
-      out["endTime"] = nullptr;
+      out["code"] = 404;
+      out["message"] = "task not found";
       return http::Response::ok(out);
     }
     return http::Response::ok(status);
@@ -259,13 +254,8 @@ void register_optimization(http::Router& r) {
       Json status = service::large_scale_query().export_status(task_id);
       if (status.is_null()) {
         Json out = Json::object();
-        // 当前 Java 基准对占位 taskId 返回成功空状态。
-        out["code"] = 200;
-        out["status"] = "NOT_FOUND";
-        out["totalExported"] = 0;
-        out["filePartCount"] = 0;
-        out["submitTime"] = nullptr;
-        out["endTime"] = nullptr;
+        out["code"] = 404;
+        out["message"] = "task not found";
         return http::Response::ok(out);
       }
       return http::Response::ok(status);
