@@ -1,2 +1,9 @@
+# 全局兜底：所有文本文件统一 LF，自动跳过二进制文件
+* text=auto eol=lf
 # 供 Linux 执行的脚本必须保持 LF，避免 bash 因 CRLF 报错。
 *.sh text eol=lf
+# 明确标记二进制文件，防止任何意外转换
+*.png  binary
+*.jpg  binary
+*.exe  binary
+*.zip  binary

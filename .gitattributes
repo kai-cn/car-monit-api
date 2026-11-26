@@ -1,3 +1,12 @@
+# 全局兜底：所有文本文件统一 LF，自动跳过二进制文件
+* text=auto eol=lf
+# 明确标记二进制文件，防止任何意外转换
+*.png  binary
+*.jpg  binary
+*.exe  binary
+*.zip  binary
+
+
 # mapper XML 必须与 Java 源逐字节一致（tools/check_mappers.py 门禁比对磁盘文件）；
 # 锁定 LF，禁止 checkout 时的 LF->CRLF 转换（merge 后主仓曾因此漂移）。
 # M1（2026-11-08 审阅）：Java 源树同样要覆盖，否则 Windows 新 clone 会把
